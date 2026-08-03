@@ -93,6 +93,24 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
                         ),
                       ),
                       _buildSection(
+                        title: 'AI Practice Tests',
+                        icon: Icons.auto_awesome_rounded,
+                        color: AppColors.accent,
+                        emptyText: 'No practice tests taken yet',
+                        items: List<Map<String, dynamic>>.from(
+                            (_data!['practice'] as Map?)?['recent'] ?? const []),
+                        itemBuilder: (p) => _ActivityTile(
+                          // Generated tests have no title — the subject and
+                          // topic they were built from identify them.
+                          title: [p['subject'], p['topic']]
+                              .where((v) => v != null && v.toString().trim().isNotEmpty)
+                              .join(' — '),
+                          subtitle: 'Score: ${p['score']}/${p['total']}',
+                          date: p['completed_at'],
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      _buildSection(
                         title: 'Experiments',
                         icon: Icons.science_rounded,
                         color: AppColors.accent,

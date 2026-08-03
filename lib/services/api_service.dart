@@ -2039,6 +2039,26 @@ class ApiService {
 
   // ── Student Activity Summary ────────────────────────────────────────────
 
+  /// AI practice tests have no `tests` row, so a finished one is recorded
+  /// here rather than through submitAttempt.
+  static Future<void> recordPracticeAttempt(Map<String, dynamic> body) async {
+    final token = await _studentToken();
+    await http.post(
+      Uri.parse(ApiConstants.practiceAttempts()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+  }
+
+  static Future<List<dynamic>> getPracticeAttempts() async {
+    final token = await _studentToken();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.practiceAttempts()),
+      headers: _headers(token),
+    );
+    return _parse(res)['attempts'] as List? ?? [];
+  }
+
   static Future<Map<String, dynamic>> getStudentActivitySummary() async {
     final token = await _studentToken();
     final res = await safeGet(

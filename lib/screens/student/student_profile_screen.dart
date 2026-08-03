@@ -112,18 +112,30 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     setState(() => _loadingResults = true);
     try {
       final summary = await ApiService.getStudentActivitySummary();
-      final recent = (summary['test_series'] as Map?)?['recent'] as List? ?? [];
-      _results = recent.map((r) {
-        final m = Map<String, dynamic>.from(r as Map);
+      final tests = (summary['test_series'] as Map?)?['recent'] as List? ?? [];
+      final practice = (summary['practice'] as Map?)?['recent'] as List? ?? [];
+
+      Map<String, dynamic> row(Map m, String title) {
         final total = (m['total'] as num?)?.toDouble() ?? 0;
         final score = (m['score'] as num?)?.toDouble() ?? 0;
         return {
-          'title': m['title'],
+          'title': title,
           'score': m['score'] ?? 0,
           'total': m['total'] ?? 0,
           'pct': total > 0 ? score / total * 100 : 0,
+          'at': m['completed_at']?.toString() ?? '',
         };
-      }).toList();
+      }
+
+      _results = [
+        for (final t in tests) row(t as Map, (t['title'] ?? 'Test').toString()),
+        // Practice tests are generated on the fly and have no title of their
+        // own — the subject/topic they came from is what identifies them.
+        for (final p in practice)
+          row(p as Map, [p['subject'], p['topic']]
+              .where((v) => v != null && v.toString().trim().isNotEmpty)
+              .join(' — ')),
+      ]..sort((a, b) => (b['at'] as String).compareTo(a['at'] as String));
     } catch (_) {}
     if (mounted) setState(() => _loadingResults = false);
   }

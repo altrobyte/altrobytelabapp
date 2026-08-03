@@ -5,11 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/api_constants.dart';
+import '../../services/api_service.dart';
 
 const _accent = AppColors.accent;
 
 /// Self-practice: student generates an AI test and attempts it inline.
-/// Questions are not saved to the institute — pure practice mode.
+/// The generated questions are not saved as institute `tests`, but the
+/// finished attempt is recorded in practice_attempts so the student and
+/// admins can see what was taken and scored.
 class StudentPracticeScreen extends StatefulWidget {
   final String? initialSubject;
   const StudentPracticeScreen({super.key, this.initialSubject});
@@ -177,6 +180,36 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
       if (_answers[i] != null && _answers[i] == _questions[i]['correct']) s++;
     }
     return s;
+  }
+
+  /// The result used to live only in this widget's state, so closing the
+  /// screen erased any record that the test was ever taken. Persist it so it
+  /// shows up in My Test Results and the admin activity view.
+  bool _recorded = false;
+  Future<void> _recordAttempt() async {
+    if (_recorded) return;
+    _recorded = true;
+    try {
+      await ApiService.recordPracticeAttempt({
+        'subject': _subject,
+        'topic': _topicCtrl.text.trim(),
+        'difficulty': _difficulty,
+        'language': _language,
+        'score': _score,
+        'total': _questions.length,
+        'answers': [
+          for (int i = 0; i < _questions.length; i++)
+            {
+              'q': _questions[i]['question'],
+              'chosen': _answers[i],
+              'correct': _questions[i]['correct'],
+            },
+        ],
+      });
+    } catch (_) {
+      // Recording is best-effort — never block the student from seeing
+      // their result because the write failed.
+    }
   }
 
   /// Leaving mid-quiz throws the generated questions away and still burns a
@@ -562,6 +595,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                     });
                   } else {
                     setState(() => _phase = 'done');
+                    _recordAttempt();
                   }
                 },
                 child: Text(
@@ -659,6 +693,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                 onPressed: () => setState(() {
                   _phase = 'form';
                   _questions = [];
+                  _recorded = false;
                 }),
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: Text('New Test',

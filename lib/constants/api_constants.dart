@@ -111,6 +111,7 @@ class ApiConstants {
 
   // student self-practice generation
   static String studentGenerateTest() => '$baseUrl/student/tests/generate';
+  static String practiceAttempts() => '$baseUrl/student/practice-attempts';
 
   // institute AI generation usage (admin quota meter)
   static String instituteGenerationUsage(int id) =>

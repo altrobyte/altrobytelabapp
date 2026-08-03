@@ -17,6 +17,15 @@ String _displayPhone(dynamic rawPhone) {
   return _isPlaceholderPhone(phone) ? 'Signed in via Google' : phone;
 }
 
+String _fmtDate(dynamic v) {
+  if (v == null) return '';
+  try {
+    return DateFormat('d MMM yyyy').format(DateTime.parse(v.toString()));
+  } catch (_) {
+    return '';
+  }
+}
+
 /// Admin roster of real platform users (student_users) — who registered,
 /// their plan, and their activity across courses/interviews/experiments/
 /// events/sessions/jobs. Distinct from the legacy institute-scoped
@@ -191,14 +200,6 @@ class _PlatformUsersScreenState extends State<PlatformUsersScreen> {
     );
   }
 
-  static String _fmtDate(dynamic v) {
-    if (v == null) return '';
-    try {
-      return DateFormat('d MMM yyyy').format(DateTime.parse(v.toString()));
-    } catch (_) {
-      return '';
-    }
-  }
 }
 
 class _UserCard extends StatelessWidget {
@@ -272,6 +273,8 @@ class _ActivityDetail extends StatelessWidget {
     final events = (activity['events'] as List?) ?? [];
     final sessions = (activity['live_sessions'] as List?) ?? [];
     final jobs = (activity['jobs'] as List?) ?? [];
+    final testAttempts = (activity['test_attempts'] as List?) ?? [];
+    final practice = (activity['practice_attempts'] as List?) ?? [];
 
     return ListView(
       controller: scrollController,
@@ -300,6 +303,28 @@ class _ActivityDetail extends StatelessWidget {
                 dense: true, contentPadding: EdgeInsets.zero,
                 title: Text(i['role'] ?? ''),
                 subtitle: Text('${i['status']} · score ${i['overall_score'] ?? '-'}'),
+              )).toList()),
+        _section('Tests Attempted', Icons.quiz_rounded, testAttempts.isEmpty
+            ? [_empty('None yet')]
+            : testAttempts.map((t) => ListTile(
+                dense: true, contentPadding: EdgeInsets.zero,
+                title: Text(t['title'] ?? ''),
+                subtitle: Text(_fmtDate(t['completed_at'])),
+                trailing: Text('${t['score'] ?? 0}/${t['total'] ?? 0}',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              )).toList()),
+        _section('AI Practice Tests', Icons.auto_awesome_rounded, practice.isEmpty
+            ? [_empty('None yet')]
+            : practice.map((p) => ListTile(
+                dense: true, contentPadding: EdgeInsets.zero,
+                // Generated on the fly, so there is no test title — the
+                // subject/topic it was built from is the only label.
+                title: Text([p['subject'], p['topic']]
+                    .where((v) => v != null && v.toString().trim().isNotEmpty)
+                    .join(' — ')),
+                subtitle: Text(_fmtDate(p['completed_at'])),
+                trailing: Text('${p['score'] ?? 0}/${p['total'] ?? 0}',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               )).toList()),
         _section('Events', Icons.event_rounded, events.isEmpty
             ? [_empty('None yet')]
