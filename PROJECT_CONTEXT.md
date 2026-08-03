@@ -101,6 +101,12 @@ still exists but is not the primary path. Firebase Auth
 - [x] Platform Users (`/platform-users`) — admin roster of
       `student_users` with per-user activity drill-down
 - [x] Student Activity summary screen (`/student/activity`)
+- [x] AI practice attempts are recorded (`practice_attempts` table, new in
+      the backend) and shown in My Test Results, My Activity and the admin
+      Platform Users drill-down. Practice tests used to be scored purely in
+      client state and left no trace. NOT YET DEPLOYED/VERIFIED — the
+      backend change needs to ship before any of this works in production.
+- [x] Test in progress asks for confirmation before you leave it
 - [x] Image upload widget + Firebase Storage rules (`storage.rules`)
 - [x] Branded landing per institute slug (catch-all `/:slug` route)
 - [ ] Course catalog browsing (public preview) — still NOT BUILT as a
