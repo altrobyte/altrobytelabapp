@@ -179,9 +179,49 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
     return s;
   }
 
+  /// Leaving mid-quiz throws the generated questions away and still burns a
+  /// generation against the monthly quota, so make it a deliberate choice.
+  Future<bool> _confirmExit() async {
+    if (_phase != 'quiz') return true;
+    final answered = _answers.where((a) => a != null).length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Leave this test?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Text(
+          answered > 0
+              ? 'You have answered $answered of ${_questions.length} questions. '
+                  'Leaving now discards them and this test cannot be resumed.'
+              : 'Leaving now discards this test and it cannot be resumed.',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep going', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text('Leave', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _phase != 'quiz',
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final nav = Navigator.of(context);
+        if (await _confirmExit()) nav.pop();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: _accent,
@@ -211,6 +251,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
         'done' => _buildResult(),
         _ => _buildForm(),
       },
+      ),
     );
   }
 

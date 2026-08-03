@@ -341,7 +341,14 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     final q = _test!.questions[_currentQ];
     final total = _test!.questions.length;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final nav = Navigator.of(context);
+        if (await _confirmExit()) nav.pop();
+      },
+      child: Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
@@ -534,7 +541,38 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
           ]),
         ),
       ]),
+      ),
     );
+  }
+
+  /// A test in progress is timed and single-attempt, so a stray back gesture
+  /// must not silently discard it. Submitting is the only clean way out.
+  Future<bool> _confirmExit() async {
+    final total = _test?.questions.length ?? 0;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Leave the test?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Text(
+          'You have answered ${_answers.length} of $total questions. '
+          'Leaving now abandons the attempt — it will not be scored or saved.',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep going', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: Text('Leave', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
   }
 
   Widget _buildLimitReachedScreen() {
