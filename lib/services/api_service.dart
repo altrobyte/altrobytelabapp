@@ -1429,6 +1429,18 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Resolves the institute server-side from the student's token, falling
+  /// back to the Altrobyte Lab institute. Use this instead of passing an
+  /// institute id the app may not actually have.
+  static Future<Map<String, dynamic>> getTestSeriesForStudent() async {
+    final token = await _studentToken();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.testSeriesForStudent()),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> createTestSeries(
       int instituteId, Map<String, dynamic> body) async {
     final token = await _token();

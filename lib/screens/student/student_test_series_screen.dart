@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
@@ -33,13 +32,11 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final instituteId = prefs.getInt('student_institute_id');
-      if (instituteId == null) {
-        setState(() { _series = []; _moduleTests = []; _loading = false; });
-        return;
-      }
-      final data = await ApiService.getTestSeriesStudent(instituteId);
+      // Don't gate on the locally stored institute id. Login writes
+      // `institute_id ?? 0`, so a student without one ended up asking for
+      // institute 0 and always got an empty tab. The server resolves it from
+      // the token and falls back to the Altrobyte Lab institute.
+      final data = await ApiService.getTestSeriesForStudent();
       if (!mounted) return;
       setState(() {
         _series = data['series'] as List? ?? [];

@@ -191,6 +191,7 @@ class ApiConstants {
   // test series
   static String testSeriesAdmin(int instituteId) =>
       '$baseUrl/institutes/$instituteId/test-series';
+  static String testSeriesForStudent() => '$baseUrl/student/test-series';
   static String testSeriesStudent(int instituteId) =>
       '$baseUrl/institutes/$instituteId/student/test-series';
   static String testSeries(int id) => '$baseUrl/test-series/$id';
