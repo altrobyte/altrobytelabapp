@@ -69,10 +69,39 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     try {
       final sessions = await ApiService.getLiveSessions(featured: true);
       if (!mounted) return;
-      setState(() => _featuredSessions = sessions);
+      setState(() => _featuredSessions = _sortFeatured(sessions));
     } catch (_) {
       // Non-critical — home feed must not break if this fails.
     }
+  }
+
+  /// The API returns featured sessions in its own order, which left ended
+  /// ones sitting in front of the session you can still register for.
+  /// Upcoming first (soonest first), then past ones newest-first, so the
+  /// most relevant card is always the one the carousel opens on.
+  static List<dynamic> _sortFeatured(List<dynamic> sessions) {
+    DateTime? dateOf(dynamic s) {
+      try {
+        final raw = (s as Map)['session_date'];
+        return raw != null ? DateTime.parse(raw.toString()) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final now = DateTime.now();
+    final sorted = List<dynamic>.from(sessions);
+    sorted.sort((a, b) {
+      final da = dateOf(a);
+      final db = dateOf(b);
+      // Undated sessions can't be ranked — park them at the end.
+      if (da == null || db == null) return da == null ? (db == null ? 0 : 1) : -1;
+      final aPast = da.isBefore(now);
+      final bPast = db.isBefore(now);
+      if (aPast != bPast) return aPast ? 1 : -1;
+      return aPast ? db.compareTo(da) : da.compareTo(db);
+    });
+    return sorted;
   }
 
   bool get _isLoggedIn => _token != null;
