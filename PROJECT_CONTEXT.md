@@ -32,12 +32,6 @@ generating any category, quiz topic, or practice test subject.
 - AI/ML for Embedded (TinyML, Edge AI, OpenCV)
 - FreeRTOS / Real-Time Systems
 
-### Correct "What's Coming" categories (implemented):
-- "IoT & Embedded Hackathons"
-- "Embedded/IoT Internships"
-- "Product Engineer Job Board"
-- "Mentorship with Industry Engineers"
-
 (Same UI/card pattern — only content and labels match this domain.)
 
 ## CORE ARCHITECTURE DECISION (do not revisit without asking)
@@ -45,7 +39,7 @@ Single-page feed, like Unstop.com — NOT landing-page-then-login-
 then-dashboard. Homepage IS the feed. (`/` route = `StudentHomeScreen`,
 old separate `landing_page.dart` was deleted.)
 - Login is ONLY a button, top-right. Never a redirect gate on page load.
-- Sidebar: icon-based nav (Home/Practice/Training/Login), always visible.
+- Sidebar: icon-based nav, always visible.
 - Content in horizontal-scroll card rows.
 - Login triggers ONLY contextually — confirmed rule for this project:
   - Browsing/previewing topics and rows: always public, no login.
@@ -54,42 +48,79 @@ old separate `landing_page.dart` was deleted.)
     Groq API cost control; anonymous/unlimited generation was
     explicitly rejected as abuse-prone).
   - Opening Training Modules content: login required (institute-scoped).
-  - Saving progress, enrolling, paid course playback: login required.
+  - Saving progress, enrolling, paid content playback: login required.
+
+## AUTH — PRIMARY PATH IS GOOGLE SIGN-IN
+`lib/services/google_auth_service.dart` is the single "Sign in with
+Google" entry point for all three roles (super_admin / admin /
+student) — the backend resolves the role from the Google account's
+email. WhatsApp OTP delivery proved unreliable; `/whatsapp-login`
+still exists but is not the primary path. Firebase Auth
+(`lib/firebase_options.dart`) backs the popup flow.
 
 ## WHAT'S BUILT SO FAR
 - [x] Firebase project deployed (altrobytelab.web.app)
-- [x] Auth: Student + Super Admin roles only (Admin/Manager login
-      removed from visible UI, routes still exist unlinked)
-- [x] Training Modules — backend (5 tables + API), 6 screens wired
-      to real data (module > topic > subtopic > content item)
+- [x] Auth: Google Sign-In (all roles) + Firebase Auth; student and
+      super-admin surfaces are the visible ones. Admin/Manager routes
+      exist but are reached via `/admin-access` and `/super-access`.
 - [x] Public feed homepage (single page, no separate landing page)
       with sidebar nav, horizontal-scroll rows, contextual login gates
-- [x] Practice Tests + Coming Soon content corrected to deeptech/
-      embedded/IoT domain (was wrongly Maths/Reasoning/GK — fixed)
-- [x] Dev Tools — MQTT Tester (mqtt_client, MqttBrowserClient over WSS,
-      pre-filled with the altrobyte/home/... topic pattern from the
-      real ESP32 workshop demo), HTTP Tester (method/headers/body/
-      response viewer using the existing `http` package), WebSocket
-      Tester (web_socket_channel). All three are real, working,
-      public — no login anywhere in the flow. Reachable from a
-      "Dev Tools" row on the homepage feed
-      (`lib/screens/tools/*_tester_screen.dart`).
-- [ ] Course catalog browsing (public preview) — NOT YET BUILT,
-      needs a real `courses` table + admin create/edit screen before
-      any UI is added (do not build the UI with fake/hardcoded course
-      data — same mistake as the old Training Modules build)
+- [x] Practice Tests + Coming Soon content in the deeptech/embedded/
+      IoT domain (was wrongly Maths/Reasoning/GK — fixed)
+- [x] Training Modules — 5 tables + API, module > topic > subtopic >
+      content item, progress tracking, paid enrollment + admin
+      enrollment export (`module_purchase_section.dart`)
+- [x] Dev Tools hub (`/student/dev-tools`) — MQTT Tester (MqttBrowserClient
+      over WSS, pre-filled with the real ESP32 workshop topic pattern),
+      HTTP Tester, WebSocket Tester, BLE Tester. All public, no login.
+- [x] Experiments — admin authoring (`experiment_edit_screen`) +
+      student browse/detail/attempt, with a code viewer
+- [x] Test Series — admin + student surfaces (`/student/test-series`)
+- [x] AI Mock Interview (`/student/mock-interview`) — role selection,
+      per-question answer scoring, finish + history
+- [x] Job Board (`/jobs`) — public listing with category/domain/
+      location/experience filters, detail page, apply flow, admin
+      application review + CSV export
+- [x] Events (`/events`) — public listing/detail, registration,
+      admin CRUD + attendee list/export
+- [x] Live Sessions (`/live-sessions`) — public listing/detail, paid
+      registration with coupon validation, payment verification,
+      receipt, admin CRUD + attendee list/export
+- [x] Pricing / subscription plans (`/pricing`, `/plans`) with an
+      admin editor (`/super/pricing`)
+- [x] Payments — Cashfree Checkout via their JS SDK
+      (`lib/services/cashfree_checkout.dart` + `web/index.html`; a raw
+      redirect to their hosted page is rejected, the SDK is the only
+      reliable path). UPI QR fallback asset in `assets/images/`.
+- [x] Company/marketing pages — CMS-backed via
+      `company/pages/:slug` and `company/items`: `/about`, `/founder`,
+      `/about-app`, `/contact`, `/terms`, `/refunds`, `/placements`,
+      `/institutes`, `/clients`, `/services`, `/products`, `/blog`
+- [x] Partner/institute onboarding enquiries (`/partner`) + admin
+      inbox (`/super/enquiries`)
+- [x] Platform Users (`/platform-users`) — admin roster of
+      `student_users` with per-user activity drill-down
+- [x] Student Activity summary screen (`/student/activity`)
+- [x] Image upload widget + Firebase Storage rules (`storage.rules`)
+- [x] Branded landing per institute slug (catch-all `/:slug` route)
+- [ ] Course catalog browsing (public preview) — still NOT BUILT as a
+      separate `courses` table. Training Modules + Live Sessions
+      currently cover paid content. Do not build catalog UI with
+      fake/hardcoded course data.
 
 ## WHAT MUST STAY GATED (login required)
 - Actually generating/starting an AI Practice Test (quota tracking)
 - Training Modules — opening content + progress saving
-- Paid course lesson video/content playback
-- Enrollment/payment flow
+- AI Mock Interview sessions
+- Job applications, event/live-session registration
+- Paid content playback, enrollment/payment flow
 
 ## WHAT MUST STAY PUBLIC (no login, ever)
 - Entire homepage feed — browsing all rows/cards
 - Practice Tests row — seeing the topic cards (not generating one)
-- Dev Tools (MQTT/HTTP/WebSocket testers), once built
-- Course catalog browsing/preview, once built
+- Dev Tools (MQTT/HTTP/WebSocket/BLE testers)
+- Job/Event/Live-Session listings and detail pages (not registering)
+- All company/marketing pages, pricing page, partner enquiry form
 
 ## TENANT ISOLATION — KNOWN GAP (not yet fixed)
 This backend (Railway + Neon Postgres) is SHARED with a different
@@ -104,10 +135,14 @@ any deeper tenant-isolation refactor.
 
 ## TECH STACK (do not introduce new stack without asking)
 - Backend: FastAPI (Python) — D:/Projects/altrocoach-backend (shared)
-- Frontend: Flutter, web build — D:/flutterprrojects/altrobytelab
+- Frontend: Flutter web — D:/flutterprrojects/altrobytelab
+  (~39k lines Dart, `provider` + `go_router`, l10n en/hi)
 - DB: PostgreSQL (Neon)
-- Hosting: Firebase (altrobytelab.web.app)
-- AI: Groq (Llama) for quiz generation
+- Hosting: Firebase (altrobytelab.web.app), Firebase Auth + Storage
+- Payments: Cashfree
+- AI: Groq (Llama) for quiz generation and mock interviews
+- API base URL is `--dart-define=API_BASE_URL` overridable
+  (`lib/constants/api_constants.dart`)
 
 ## BEFORE STARTING ANY NEW TASK
 1. Re-read this file fully, especially the CONTENT DOMAIN section.
