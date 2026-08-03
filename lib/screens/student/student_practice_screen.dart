@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/api_constants.dart';
 
-const _purple = Color(0xFF7C4DFF);
+const _accent = AppColors.accent;
 
 /// Self-practice: student generates an AI test and attempts it inline.
 /// Questions are not saved to the institute — pure practice mode.
@@ -147,7 +147,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
-          const Icon(Icons.hourglass_empty_rounded, color: Color(0xFFF57C00)),
+          const Icon(Icons.hourglass_empty_rounded, color: AppColors.warning),
           const SizedBox(width: 10),
           Text('Limit Reached',
               style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -159,7 +159,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
               child: const Text('OK')),
           if (!_isPremium)
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _purple),
+              style: FilledButton.styleFrom(backgroundColor: _accent),
               onPressed: () {
                 Navigator.pop(ctx);
                 Navigator.pop(context, 'upgrade'); // home handles upgrade sheet
@@ -184,7 +184,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: _purple,
+        backgroundColor: _accent,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text('AI Practice Test',
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -232,7 +232,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                 label: Text(s),
                 selected: active,
                 onSelected: (_) => setState(() => _subject = s),
-                selectedColor: _purple,
+                selectedColor: _accent,
                 labelStyle: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -266,7 +266,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                   label: Text(d),
                   selected: active,
                   onSelected: (_) => setState(() => _difficulty = d),
-                  selectedColor: _purple,
+                  selectedColor: _accent,
                   labelStyle: GoogleFonts.inter(
                       fontSize: 12, fontWeight: FontWeight.w600,
                       color: active ? Colors.white : AppColors.textSecondary),
@@ -291,7 +291,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                         label: Text('$c'),
                         selected: active,
                         onSelected: (_) => setState(() => _count = c),
-                        selectedColor: _purple,
+                        selectedColor: _accent,
                         labelStyle: GoogleFonts.inter(
                             fontSize: 12, fontWeight: FontWeight.w600,
                             color: active ? Colors.white : AppColors.textSecondary),
@@ -315,7 +315,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                         label: Text(lang),
                         selected: active,
                         onSelected: (_) => setState(() => _language = lang),
-                        selectedColor: _purple,
+                        selectedColor: _accent,
                         labelStyle: GoogleFonts.inter(
                             fontSize: 12, fontWeight: FontWeight.w600,
                             color: active ? Colors.white : AppColors.textSecondary),
@@ -332,7 +332,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
             width: double.infinity,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: _purple,
+                backgroundColor: _accent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -361,7 +361,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(
             width: 56, height: 56,
-            child: CircularProgressIndicator(strokeWidth: 3, color: _purple)),
+            child: CircularProgressIndicator(strokeWidth: 3, color: _accent)),
         const SizedBox(height: 24),
         Text('AI is creating your test...',
             style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -394,7 +394,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                   value: (_qIndex + 1) / _questions.length,
                   minHeight: 6,
                   backgroundColor: Colors.grey.shade200,
-                  valueColor: const AlwaysStoppedAnimation(_purple),
+                  valueColor: const AlwaysStoppedAnimation(_accent),
                 ),
               ),
             ),
@@ -423,8 +423,8 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                 bg = AppColors.error.withValues(alpha: 0.08);
               }
             } else if (isSelected) {
-              border = _purple;
-              bg = _purple.withValues(alpha: 0.06);
+              border = _accent;
+              bg = _accent.withValues(alpha: 0.06);
             }
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -453,7 +453,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                             ? AppColors.success
                             : answered && isSelected
                                 ? AppColors.error
-                                : _purple.withValues(alpha: 0.1),
+                                : _accent.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: answered && isCorrect
@@ -463,7 +463,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
                               : Text(key,
                                   style: GoogleFonts.poppins(
                                       fontSize: 13, fontWeight: FontWeight.w600,
-                                      color: _purple)),
+                                      color: _accent)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -482,23 +482,23 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
+                color: AppColors.success.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFA5D6A7)),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.35)),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.lightbulb_rounded, size: 16, color: Color(0xFF2E7D32)),
+                  const Icon(Icons.lightbulb_rounded, size: 16, color: AppColors.success),
                   const SizedBox(width: 6),
                   Text('Explanation',
                       style: GoogleFonts.poppins(
                           fontSize: 12, fontWeight: FontWeight.w700,
-                          color: const Color(0xFF2E7D32))),
+                          color: AppColors.success)),
                 ]),
                 const SizedBox(height: 6),
                 Text(q['explanation'].toString(),
                     style: GoogleFonts.inter(
-                        fontSize: 13, height: 1.4, color: const Color(0xFF1B5E20))),
+                        fontSize: 13, height: 1.4, color: AppColors.textPrimary)),
               ]),
             ),
           ],
@@ -509,7 +509,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
               width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: _purple,
+                  backgroundColor: _accent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -551,14 +551,14 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
             width: 110, height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: (good ? AppColors.success : const Color(0xFFF57C00))
+              color: (good ? AppColors.success : AppColors.warning)
                   .withValues(alpha: 0.12),
             ),
             child: Center(
               child: Text('$pct%',
                   style: GoogleFonts.poppins(
                       fontSize: 30, fontWeight: FontWeight.bold,
-                      color: good ? AppColors.success : const Color(0xFFF57C00))),
+                      color: good ? AppColors.success : AppColors.warning)),
             ),
           ),
           const SizedBox(height: 16),
@@ -611,7 +611,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
             Expanded(
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: _purple,
+                  backgroundColor: _accent,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),

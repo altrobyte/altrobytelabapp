@@ -7,6 +7,9 @@ class ApiConstants {
   );
   static const botkoUrl = 'https://botko-api-production-8da7.up.railway.app';
 
+  // uploads
+  static String uploadImage() => '$baseUrl/uploads/image';
+
   // institutes
   static String registerInstitute() => '$baseUrl/institutes/register';
   static String brand(String slug) => '$baseUrl/institute/brand/$slug';
@@ -147,6 +150,129 @@ class ApiConstants {
       '$baseUrl/training-modules/subtopics/$subtopicId';
   static String trainingModuleContent(int subtopicId) =>
       '$baseUrl/training-modules/subtopics/$subtopicId/content';
+
+  // Training module purchase (student)
+  static String moduleRegister(int moduleId) => '$baseUrl/training-modules/$moduleId/register';
+  static String moduleValidateCoupon(int moduleId) => '$baseUrl/training-modules/$moduleId/validate-coupon';
+  static String moduleVerifyPayment(int moduleId) => '$baseUrl/training-modules/$moduleId/verify-payment';
+  static String moduleMyEnrollment(int moduleId) => '$baseUrl/training-modules/$moduleId/my-enrollment';
+  static String moduleReceipt(int moduleId) => '$baseUrl/training-modules/$moduleId/receipt';
+  static String moduleEnrollmentAction(int moduleId, int purchaseId) =>
+      '$baseUrl/training-modules/$moduleId/enrollments/$purchaseId';
+
+  // experiments (Experimental Training Platform)
+  static String experimentsAdmin(int instituteId) =>
+      '$baseUrl/institutes/$instituteId/experiments';
+  static String experimentsStudent(int instituteId) =>
+      '$baseUrl/institutes/$instituteId/student/experiments';
+  static String experiment(int id) => '$baseUrl/experiments/$id';
+  static String experimentStudent(int id) => '$baseUrl/student/experiments/$id';
+  static String experimentAttempt(int id) =>
+      '$baseUrl/student/experiments/$id/attempt';
+  static String experimentAttempts(int id) =>
+      '$baseUrl/student/experiments/$id/attempts';
+
+  // company profile (public marketing site)
+  static String companyPage(String slug) => '$baseUrl/company/pages/$slug';
+  static String companyItems({String? category}) => category == null
+      ? '$baseUrl/company/items'
+      : '$baseUrl/company/items?category=$category';
+  static String companyStats() => '$baseUrl/company/stats';
+  static String companySocialLinks() => '$baseUrl/company/social-links';
+  static String companyAdminItems({String? category}) => category == null
+      ? '$baseUrl/company/admin/items'
+      : '$baseUrl/company/admin/items?category=$category';
+  static String companyAdminItem(int id) => '$baseUrl/company/admin/items/$id';
+  static String companyAdminStats() => '$baseUrl/company/admin/stats';
+  static String companyAdminStat(int id) => '$baseUrl/company/admin/stats/$id';
+  static String companyAdminSocialLinks() => '$baseUrl/company/admin/social-links';
+
+  // test series
+  static String testSeriesAdmin(int instituteId) =>
+      '$baseUrl/institutes/$instituteId/test-series';
+  static String testSeriesStudent(int instituteId) =>
+      '$baseUrl/institutes/$instituteId/student/test-series';
+  static String testSeries(int id) => '$baseUrl/test-series/$id';
+  static String assignTestSeries(int testId) => '$baseUrl/tests/$testId/series';
+
+  // job updates
+  static String jobs({String? category, String? domain, String? location, String? experienceLevel}) {
+    final params = <String, String>{};
+    if (category != null) params['category'] = category;
+    if (domain != null && domain.isNotEmpty) params['domain'] = domain;
+    if (location != null && location.isNotEmpty) params['location'] = location;
+    if (experienceLevel != null && experienceLevel.isNotEmpty) params['experience_level'] = experienceLevel;
+    final query = params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&');
+    return query.isEmpty ? '$baseUrl/jobs' : '$baseUrl/jobs?$query';
+  }
+  static String jobsAdmin({String? category}) => category == null
+      ? '$baseUrl/jobs/admin'
+      : '$baseUrl/jobs/admin?category=$category';
+  static String jobAdminItem(int id) => '$baseUrl/jobs/admin/$id';
+  static String job(int id) => '$baseUrl/jobs/$id';
+  static String jobApply(int id) => '$baseUrl/jobs/$id/apply';
+  static String jobMyApplication(int id) => '$baseUrl/jobs/$id/my-application';
+  static String jobApplications(int id) => '$baseUrl/jobs/admin/$id/applications';
+  static String jobApplicationStatus(int applicationId) => '$baseUrl/jobs/admin/applications/$applicationId';
+  static String jobApplicationsExport(int id) => '$baseUrl/jobs/admin/$id/applications/export';
+
+  // events
+  static String events() => '$baseUrl/events';
+  static String event(int id) => '$baseUrl/events/$id';
+  static String eventRegister(int id) => '$baseUrl/events/$id/register';
+  static String eventMyRegistration(int id) => '$baseUrl/events/$id/my-registration';
+  static String eventsAdmin() => '$baseUrl/events/admin/list';
+  static String eventAdminCreate() => '$baseUrl/events/admin';
+  static String eventAdminItem(int id) => '$baseUrl/events/admin/$id';
+  static String eventAttendees(int id) => '$baseUrl/events/admin/$id/attendees';
+  static String eventAttendeesExport(int id) => '$baseUrl/events/admin/$id/attendees/export';
+
+  // live sessions / workshops
+  static String liveSessions({bool featured = false}) =>
+      featured ? '$baseUrl/live-sessions?featured=true' : '$baseUrl/live-sessions';
+  static String liveSession(int id) => '$baseUrl/live-sessions/$id';
+  static String liveSessionRegister(int id) => '$baseUrl/live-sessions/$id/register';
+  static String liveSessionValidateCoupon(int id) => '$baseUrl/live-sessions/$id/validate-coupon';
+  static String liveSessionMyRegistration(int id) => '$baseUrl/live-sessions/$id/my-registration';
+  static String liveSessionVerifyPayment(int id) => '$baseUrl/live-sessions/$id/verify-payment';
+  static String liveSessionReceipt(int id) => '$baseUrl/live-sessions/$id/receipt';
+  static String liveSessionsAdmin() => '$baseUrl/live-sessions/admin/list';
+  static String liveSessionAdminCreate() => '$baseUrl/live-sessions/admin';
+  static String liveSessionAdminItem(int id) => '$baseUrl/live-sessions/admin/$id';
+  static String liveSessionAttendees(int id) => '$baseUrl/live-sessions/admin/$id/attendees';
+  static String liveSessionAttendeesExport(int id) => '$baseUrl/live-sessions/admin/$id/attendees/export';
+  static String liveSessionAttendee(int sessionId, int registrationId) =>
+      '$baseUrl/live-sessions/admin/$sessionId/attendees/$registrationId';
+  static String allTrainingModulesLite() => '$baseUrl/training-modules/admin/all-lite';
+
+  // training module enrollments (admin)
+  static String moduleEnrollments(int moduleId) => '$baseUrl/training-modules/$moduleId/enrollments';
+  static String moduleEnrollmentsExport(int moduleId) => '$baseUrl/training-modules/$moduleId/enrollments/export';
+
+  // platform users (student_users) — admin roster + activity drill-down
+  static String platformUsers() => '$baseUrl/student/admin/list';
+  static String platformUserActivity(int id) => '$baseUrl/student/admin/$id/activity';
+
+  // institute onboarding enquiries
+  static String enquiries() => '$baseUrl/enquiries';
+  static String enquiriesAdmin() => '$baseUrl/enquiries/admin';
+  static String enquiryAdminItem(int id) => '$baseUrl/enquiries/admin/$id';
+
+  // AI mock interview
+  static String mockInterviewRoles() => '$baseUrl/mock-interview/roles';
+  static String mockInterviewStart() => '$baseUrl/mock-interview/start';
+  static String mockInterviewAnswer(int sessionId) => '$baseUrl/mock-interview/$sessionId/answer';
+  static String mockInterviewFinish(int sessionId) => '$baseUrl/mock-interview/$sessionId/finish';
+  static String mockInterviewHistory() => '$baseUrl/mock-interview/history';
+  static String mockInterviewSession(int sessionId) => '$baseUrl/mock-interview/$sessionId';
+
+  // subscription plans (pricing page)
+  static String subscriptionPlans() => '$baseUrl/subscription-plans';
+  static String subscriptionPlansAdmin() => '$baseUrl/subscription-plans/admin';
+  static String subscriptionPlanAdmin(String tierKey) => '$baseUrl/subscription-plans/admin/$tierKey';
+
+  // student activity summary
+  static String studentActivitySummary() => '$baseUrl/student/activity-summary';
   static String trainingModuleContentItem(int contentId) =>
       '$baseUrl/training-modules/content/$contentId';
   static String moduleProgress(int moduleId) =>

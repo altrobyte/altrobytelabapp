@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,7 +13,9 @@ import '../../models/training_module_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/training_module_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/google_auth_service.dart';
 import '../../widgets/upgrade_sheet.dart';
+import '../tools/ble_tester_screen.dart';
 import '../tools/http_tester_screen.dart';
 import '../tools/mqtt_tester_screen.dart';
 import '../tools/websocket_tester_screen.dart';
@@ -24,14 +26,14 @@ import 'student_profile_screen.dart';
 import 'student_training_screen.dart';
 
 const _practiceSubjects = [
-  ('Embedded C', Icons.memory_rounded, Color(0xFF7C4DFF)),
-  ('Electronics Fundamentals', Icons.bolt_rounded, Color(0xFF1565C0)),
-  ('ESP32 / Microcontrollers', Icons.developer_board_rounded, Color(0xFF00BFA5)),
-  ('IoT Protocols', Icons.wifi_rounded, Color(0xFFFF6B35)),
-  ('Circuit Design & PCB', Icons.electrical_services_rounded, Color(0xFFE53935)),
-  ('Sensors', Icons.sensors_rounded, Color(0xFF43A047)),
-  ('AI/ML for Embedded', Icons.psychology_rounded, Color(0xFF6D4C41)),
-  ('FreeRTOS / RTOS', Icons.schedule_rounded, Color(0xFF00838F)),
+  ('Embedded C', Icons.memory_rounded, AppColors.primary),
+  ('Electronics Fundamentals', Icons.bolt_rounded, AppColors.accent),
+  ('ESP32 / Microcontrollers', Icons.developer_board_rounded, AppColors.primary),
+  ('IoT Protocols', Icons.wifi_rounded, AppColors.accent),
+  ('Circuit Design & PCB', Icons.electrical_services_rounded, AppColors.primary),
+  ('Sensors', Icons.sensors_rounded, AppColors.accent),
+  ('AI/ML for Embedded', Icons.psychology_rounded, AppColors.primary),
+  ('FreeRTOS / RTOS', Icons.schedule_rounded, AppColors.accent),
 ];
 
 class StudentHomeScreen extends StatefulWidget {
@@ -52,38 +54,90 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   List<Map<String, dynamic>> _results = [];
   Map<String, dynamic>? _subscription;
   bool _loading = true;
-  String? _error;
+  String? _feedError;
+
+  List<dynamic> _featuredSessions = [];
 
   @override
   void initState() {
     super.initState();
     _loadFeed();
+    _loadFeaturedSessions();
+  }
+
+  Future<void> _loadFeaturedSessions() async {
+    try {
+      final sessions = await ApiService.getLiveSessions(featured: true);
+      if (!mounted) return;
+      setState(() => _featuredSessions = sessions);
+    } catch (_) {
+      // Non-critical — home feed must not break if this fails.
+    }
   }
 
   bool get _isLoggedIn => _token != null;
 
   int _logoTaps = 0;
-  // TEMPORARY pre-launch shortcut: 5 taps = admin, 10 taps = super admin,
-  // both skip login entirely via the debug auto-login endpoints. Remove
-  // this and restore the normal /login and /super/login flows before
-  // real launch.
-  Future<void> _onLogoTap() async {
+  Timer? _logoTapTimer;
+  // TEMPORARY pre-launch shortcut: 5 taps = admin, 10 taps (without pausing)
+  // = super admin, both skip login entirely via the debug auto-login
+  // endpoints. Waits briefly after the last tap so reaching 10 doesn't
+  // fire the 5-tap admin navigation first. Remove this and restore the
+  // normal /login and /super/login flows before real launch.
+  void _onLogoTap() {
     _logoTaps++;
-    if (_logoTaps == 5) {
-      final auth = context.read<AuthProvider>();
-      try {
-        final data = await ApiService.debugAutoLoginAdmin();
-        await auth.setFromResponse(data);
-        if (mounted) context.go('/dashboard');
-      } catch (_) {}
-    } else if (_logoTaps >= 10) {
+    _logoTapTimer?.cancel();
+    _logoTapTimer = Timer(const Duration(milliseconds: 2000), () {
+      final taps = _logoTaps;
       _logoTaps = 0;
-      final auth = context.read<AuthProvider>();
-      try {
-        final data = await ApiService.debugAutoLoginSuperAdmin();
-        await auth.setFromResponse(data);
-        if (mounted) context.go('/super/dashboard');
-      } catch (_) {}
+      if (taps >= 10) {
+        _debugGoSuperAdmin();
+      } else if (taps >= 5) {
+        _debugGoAdmin();
+      }
+    });
+  }
+
+  Future<void> _debugGoAdmin() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final data = await ApiService.debugAutoLoginAdmin();
+      await auth.setFromResponse(data);
+      if (mounted) context.go('/dashboard');
+    } catch (_) {}
+  }
+
+  Future<void> _debugGoSuperAdmin() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      final data = await ApiService.debugAutoLoginSuperAdmin();
+      await auth.setFromResponse(data);
+      if (mounted) context.go('/super/dashboard');
+    } catch (_) {}
+  }
+
+  /// Working login path (WhatsApp OTP delivery is unreliable) — one Google
+  /// button resolves to super_admin / admin / student based on the
+  /// account's email.
+  Future<void> _signInWithGoogle() async {
+    try {
+      final result = await GoogleAuthService.signIn();
+      if (!mounted) return;
+      switch (result.role) {
+        case 'super_admin':
+          await context.read<AuthProvider>().setFromResponse(result.data);
+          if (mounted) context.go('/super/dashboard');
+          break;
+        case 'admin':
+          await context.read<AuthProvider>().setFromResponse(result.data);
+          if (mounted) context.go('/dashboard');
+          break;
+        default:
+          _loadFeed();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -101,36 +155,50 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       _instituteName = prefs.getString('student_institute_name') ?? '';
     });
 
+    // This only feeds the institute tests/notices/results section — it must
+    // never block the rest of the home page (Practice/Training/Dev Tools
+    // etc. don't depend on it at all). A transient hiccup here used to blank
+    // out the entire home screen behind a "check internet" wall.
+    setState(() { _loading = false; _feedError = null; });
     try {
-      final res = await http.get(
+      final res = await ApiService.safeGet(
         Uri.parse(ApiConstants.studentFeed()),
         headers: token != null ? {'Authorization': 'Bearer $token'} : {},
       );
       final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final instituteId = body['institute_id'] as int?;
+      if (!mounted) return;
       setState(() {
         _tests = List<Map<String, dynamic>>.from(body['tests'] ?? []);
         _notices = List<Map<String, dynamic>>.from(body['notices'] ?? []);
         _results = List<Map<String, dynamic>>.from(body['recent_results'] ?? []);
         _waNumber = body['wa_ai_number'] as String?;
         _subscription = body['subscription'] as Map<String, dynamic>?;
-        _loading = false;
       });
 
-      final instituteId = prefs.getInt('student_institute_id');
-      if (instituteId != null && instituteId != 0 && mounted) {
-        context.read<TrainingModuleProvider>().ensureModulesAsStudent(instituteId);
+      if (instituteId != null) {
+        await prefs.setInt('student_institute_id', instituteId);
+        if (mounted) {
+          context.read<TrainingModuleProvider>().ensureModulesAsStudent(instituteId);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = AppLocalizations.of(context)!.studentPortalErrorLoad;
-          _loading = false;
+          _feedError = AppLocalizations.of(context)!.studentPortalErrorLoad;
         });
       }
     }
   }
 
   Future<void> _openPractice({String? subject}) async {
+    // Plain nav taps (no subject) land on the unified Practice & Test Series
+    // tab; a topic card tap (subject set) skips straight to AI-generate
+    // with that subject preselected.
+    if (subject == null) {
+      context.push('/student/test-series');
+      return;
+    }
     // TEMPORARY: login gate disabled while WhatsApp OTP delivery is broken.
     // Re-enable this check once OTP is confirmed working.
     final result = await Navigator.push<String>(
@@ -254,7 +322,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Premium activated! Unlimited quizzes unlocked.'),
-                backgroundColor: Color(0xFF00897B),
+                backgroundColor: AppColors.success,
                 duration: Duration(seconds: 4),
               ),
             );
@@ -286,21 +354,37 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+    // Signed-out tap goes straight to the working Google sign-in (same as the
+    // header's "Sign in" button) — not '/join', which is a WhatsApp-OTP-only
+    // flow that's known unreliable pre-launch.
+    final profileOrLogin = _isLoggedIn
+        ? () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => StudentProfileScreen(waNumber: _waNumber)))
+        : _signInWithGoogle;
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Row(children: [
-        _SideRail(
-          isLoggedIn: _isLoggedIn,
-          onHome: () {},
-          onPractice: () => _openPractice(),
-          onTraining: _openTrainingScreen,
-          onProfileOrLogin: _isLoggedIn
-              ? () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => StudentProfileScreen(waNumber: _waNumber)))
-              : () => context.push('/join'),
-        ),
-        Expanded(child: _buildBody(context)),
-      ]),
+      body: isMobile
+          ? _buildBody(context)
+          : Row(children: [
+              _SideRail(
+                isLoggedIn: _isLoggedIn,
+                onHome: () {},
+                onPractice: () => _openPractice(),
+                onTraining: _openTrainingScreen,
+                onProfileOrLogin: profileOrLogin,
+              ),
+              Expanded(child: _buildBody(context)),
+            ]),
+      bottomNavigationBar: isMobile
+          ? _StudentBottomNav(
+              isLoggedIn: _isLoggedIn,
+              onPractice: () => _openPractice(),
+              onTraining: _openTrainingScreen,
+              onActivity: () => context.push('/student/activity'),
+              onProfileOrLogin: profileOrLogin,
+            )
+          : null,
       floatingActionButton: _isLoggedIn
           ? Column(
               mainAxisSize: MainAxisSize.min,
@@ -322,7 +406,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   FloatingActionButton.extended(
                     heroTag: 'aichat',
                     onPressed: _openAiChat,
-                    backgroundColor: const Color(0xFF00BFA5),
+                    backgroundColor: AppColors.primary,
                     icon: const Icon(Icons.chat_rounded, color: Colors.white),
                     label: Text(AppLocalizations.of(context)!.studentPortalChatAI,
                         style: GoogleFonts.poppins(
@@ -338,35 +422,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Widget _buildBody(BuildContext context) {
     return _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.wifi_off_rounded,
-                          size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 12),
-                      Text(_error!,
-                          style: GoogleFonts.inter(
-                              color: AppColors.textSecondary)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _loading = true;
-                              _error = null;
-                            });
-                            _loadFeed();
-                          },
-                          child: Text(AppLocalizations.of(context)!.studentPortalRetry)),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() => _loading = true);
-                    await _loadFeed();
-                  },
+          : RefreshIndicator(
+                  onRefresh: () => _loadFeed(),
                   child: CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
@@ -384,21 +441,69 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               builder: (_) => StudentProfileScreen(waNumber: _waNumber))),
                           onLogin: () => context.push('/join'),
                           onLogoTap: _onLogoTap,
+                          onGoogleSignIn: _signInWithGoogle,
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: _PrimaryActionRow(
+                          onPractice: () => _openPractice(),
+                          onTraining: _openTrainingScreen,
+                          onExperiments: () => context.push('/student/experiments'),
+                          onJobs: () => context.push('/jobs'),
+                          onMore: () => _showMoreActionsSheet(
+                            context,
+                            onMockInterview: () => context.push('/student/mock-interview'),
+                            onSessions: () => context.push('/live-sessions'),
+                            onEvents: () => context.push('/events'),
+                            onTestSeries: () => context.push('/student/test-series'),
+                            onDevTools: () => context.push('/student/dev-tools'),
+                            onPricing: () => context.push('/pricing'),
+                            onActivity: () => context.push('/student/activity'),
+                          ),
                         ),
                       ),
                       SliverPadding(
                         padding: const EdgeInsets.only(top: 16, bottom: 16),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            if (_subscription != null)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: _QuizLimitBanner(
-                                  subscription: _subscription!,
-                                  onUpgrade: _showUpgradeSheet,
-                                ),
-                              ),
-                            if (_subscription != null) const SizedBox(height: 20),
+                            // ── Hero moment: continue an in-progress module, else the
+                            // featured live session — never both at once. ──
+                            Consumer<TrainingModuleProvider>(
+                              builder: (context, provider, _) {
+                                TrainingModule? continueModule;
+                                double continuePct = 0;
+                                for (final m in provider.modules) {
+                                  if (m.topicCount == 0) continue;
+                                  final total = m.totalContentItems;
+                                  if (total == 0) continue;
+                                  final completed = provider.getProgress(m.id)?.completedCount ?? 0;
+                                  final pct = completed / total;
+                                  if (pct > 0 && pct < 1) {
+                                    continueModule = m;
+                                    continuePct = pct;
+                                    break;
+                                  }
+                                }
+                                if (continueModule != null) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: _ContinueLearningCard(
+                                      module: continueModule,
+                                      pct: continuePct,
+                                      onTap: () => _openModule(continueModule!),
+                                    ),
+                                  );
+                                }
+                                if (_featuredSessions.isNotEmpty) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: _FeaturedCarousel(sessions: _featuredSessions),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            const SizedBox(height: 20),
 
                             if (_waNumber != null && _waNumber!.isNotEmpty) ...[
                               Padding(
@@ -433,55 +538,55 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             ),
                             const SizedBox(height: 28),
 
-                            // ── Training Modules (Unstop-style row, real data) ──
+                            // ── Continue Training: only modules that actually have
+                            // content — an empty coaching gets no section at all,
+                            // not a "0 modules" placeholder. ──
                             Consumer<TrainingModuleProvider>(
                               builder: (context, provider, _) {
-                                if (!provider.modulesLoaded && !provider.isLoading) {
-                                  return const SizedBox.shrink();
+                                if (provider.isLoading && provider.modules.isEmpty) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    child: SizedBox(height: 150, child: Center(child: CircularProgressIndicator())),
+                                  );
                                 }
+                                final withContent = provider.modules.where((m) => m.topicCount > 0).toList();
+                                if (withContent.isEmpty) return const SizedBox.shrink();
+                                double pctOf(TrainingModule m) {
+                                  final total = m.totalContentItems;
+                                  if (total == 0) return 0;
+                                  return (provider.getProgress(m.id)?.completedCount ?? 0) / total;
+                                }
+                                withContent.sort((a, b) {
+                                  bool inProgress(TrainingModule m) { final p = pctOf(m); return p > 0 && p < 1; }
+                                  final ai = inProgress(a), bi = inProgress(b);
+                                  if (ai != bi) return ai ? -1 : 1;
+                                  return 0;
+                                });
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _RowSectionHeader(
-                                      title: 'Training Modules',
-                                      subtitle: 'Notes, videos & tests from your coaching',
+                                      title: 'Continue Training',
+                                      subtitle: 'Notes, videos & tests from your courses',
                                       onViewAll: _openTrainingScreen,
                                     ),
                                     const SizedBox(height: 12),
-                                    if (provider.isLoading && provider.modules.isEmpty)
-                                      const SizedBox(
-                                          height: 150,
-                                          child: Center(child: CircularProgressIndicator()))
-                                    else if (provider.modules.isEmpty)
-                                      const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 16),
-                                        child: _EmptyRowHint(
-                                          icon: Icons.school_rounded,
-                                          text: 'Your coaching hasn\'t published any modules yet.',
-                                        ),
-                                      )
-                                    else
-                                      SizedBox(
-                                        height: 150,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                                          itemCount: provider.modules.length,
-                                          separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                          itemBuilder: (context, i) {
-                                            final m = provider.modules[i];
-                                            final progress = provider.getProgress(m.id);
-                                            final total = m.totalContentItems;
-                                            final pct = total == 0
-                                                ? 0.0
-                                                : (progress?.completedCount ?? 0) / total;
-                                            return _ModuleCard(
-                                              module: m, progress: pct,
-                                              onTap: () => _openModule(m),
-                                            );
-                                          },
-                                        ),
+                                    SizedBox(
+                                      height: 150,
+                                      child: ListView.separated(
+                                        scrollDirection: Axis.horizontal,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        itemCount: withContent.length,
+                                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                        itemBuilder: (context, i) {
+                                          final m = withContent[i];
+                                          return _ModuleCard(
+                                            module: m, progress: pctOf(m),
+                                            onTap: () => _openModule(m),
+                                          );
+                                        },
                                       ),
+                                    ),
                                     const SizedBox(height: 28),
                                   ],
                                 );
@@ -502,51 +607,39 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 children: [
                                   _TopicCard(
                                     label: 'MQTT Tester', icon: Icons.developer_board_rounded,
-                                    color: const Color(0xFF7C4DFF),
+                                    color: AppColors.primary,
                                     onTap: () => Navigator.push(context,
                                         MaterialPageRoute(builder: (_) => const MqttTesterScreen())),
                                   ),
                                   const SizedBox(width: 12),
                                   _TopicCard(
                                     label: 'HTTP Tester', icon: Icons.http_rounded,
-                                    color: const Color(0xFF1565C0),
+                                    color: AppColors.accent,
                                     onTap: () => Navigator.push(context,
                                         MaterialPageRoute(builder: (_) => const HttpTesterScreen())),
                                   ),
                                   const SizedBox(width: 12),
                                   _TopicCard(
                                     label: 'WebSocket Tester', icon: Icons.cable_rounded,
-                                    color: const Color(0xFF00BFA5),
+                                    color: AppColors.primary,
                                     onTap: () => Navigator.push(context,
                                         MaterialPageRoute(builder: (_) => const WebSocketTesterScreen())),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _TopicCard(
+                                    label: 'BLE Tester', icon: Icons.bluetooth_rounded,
+                                    color: AppColors.accent,
+                                    onTap: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const BleTesterScreen())),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 28),
 
-                            // ── Coming Soon (Unstop-style row) ──
-                            const _RowSectionHeader(
-                              title: "What's Coming",
-                              subtitle: 'More ways to build, compete and get hired',
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 128,
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                children: const [
-                                  _ComingSoonMiniCard(icon: Icons.emoji_events_rounded, label: 'IoT & Embedded Hackathons'),
-                                  SizedBox(width: 12),
-                                  _ComingSoonMiniCard(icon: Icons.work_rounded, label: 'Embedded/IoT Internships'),
-                                  SizedBox(width: 12),
-                                  _ComingSoonMiniCard(icon: Icons.business_center_rounded, label: 'Product Engineer Job Board'),
-                                  SizedBox(width: 12),
-                                  _ComingSoonMiniCard(icon: Icons.groups_rounded, label: 'Mentorship with Industry Engineers'),
-                                ],
-                              ),
-                            ),
+                            // ── Roadmap: one muted teaser, rest collapsed — never
+                            // let "Coming Soon" outnumber working features. ──
+                            const _RoadmapSection(),
                             const SizedBox(height: 28),
 
                             // ── Institute feed: tests / results / notices ──
@@ -588,15 +681,18 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                   ],
 
                                   if (_tests.isEmpty && _notices.isEmpty && _results.isEmpty)
-                                    _EmptyFeedCard(
-                                      onStartPractice: () => _openPractice(),
-                                      isLoggedIn: _isLoggedIn,
-                                    ),
+                                    _feedError != null
+                                        ? _FeedErrorCard(message: _feedError!, onRetry: _loadFeed)
+                                        : _EmptyFeedCard(
+                                            onStartPractice: () => _openPractice(),
+                                            isLoggedIn: _isLoggedIn,
+                                          ),
                                 ],
                               ),
                             ),
 
-                            const SizedBox(height: 80),
+                            const _HomeFooter(),
+                            const SizedBox(height: 24),
                           ]),
                         ),
                       ),
@@ -616,6 +712,7 @@ class _HomeHeader extends StatelessWidget {
   final VoidCallback onProfile;
   final VoidCallback onLogin;
   final VoidCallback onLogoTap;
+  final VoidCallback onGoogleSignIn;
 
   const _HomeHeader({
     required this.isLoggedIn,
@@ -627,6 +724,7 @@ class _HomeHeader extends StatelessWidget {
     required this.onProfile,
     required this.onLogin,
     required this.onLogoTap,
+    required this.onGoogleSignIn,
   });
 
   @override
@@ -635,7 +733,7 @@ class _HomeHeader extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0D1B5E), Color(0xFF060F38)],
+          colors: [AppColors.primary, AppColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -650,13 +748,9 @@ class _HomeHeader extends StatelessWidget {
               Row(children: [
                 GestureDetector(
                   onTap: onLogoTap,
-                  child: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AppColors.accent, Color(0xFFFF8A50)]),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(11),
+                    child: Image.asset('assets/images/logo.png', width: 40, height: 40, fit: BoxFit.cover),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -687,30 +781,33 @@ class _HomeHeader extends StatelessWidget {
                     tooltip: 'Profile',
                     onPressed: onProfile,
                   ),
-                ],
-                // TEMPORARY: login button hidden while WhatsApp OTP is broken.
+                ] else
+                  OutlinedButton.icon(
+                    onPressed: onGoogleSignIn,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white38),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                    label: Text('Sign in', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                  ),
               ]),
               const SizedBox(height: 18),
               if (isLoggedIn)
                 Row(children: [
                   Expanded(
                     child: _StatPill(
-                      icon: Icons.quiz_rounded, color: const Color(0xFF7C4DFF),
+                      icon: Icons.quiz_rounded, color: Colors.white,
                       value: '$testsTaken', label: 'Tests taken',
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _StatPill(
-                      icon: Icons.trending_up_rounded, color: const Color(0xFF00BFA5),
+                      icon: Icons.trending_up_rounded, color: Colors.white,
                       value: testsTaken > 0 ? '$avgScore%' : '—', label: 'Avg score',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _StatPill(
-                      icon: Icons.local_fire_department_rounded, color: AppColors.accent,
-                      value: testsTaken > 0 ? 'Active' : 'New', label: 'Status',
                     ),
                   ),
                 ])
@@ -746,7 +843,7 @@ class _SideRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 68,
-      color: const Color(0xFF0D1B5E),
+      color: AppColors.primary,
       child: SafeArea(
         child: Column(
           children: [
@@ -754,6 +851,42 @@ class _SideRail extends StatelessWidget {
             _RailItem(icon: Icons.home_rounded, label: 'Home', active: true, onTap: onHome),
             _RailItem(icon: Icons.bolt_rounded, label: 'Practice', onTap: onPractice),
             _RailItem(icon: Icons.school_rounded, label: 'Training', onTap: onTraining),
+            _RailItem(
+                icon: Icons.quiz_rounded,
+                label: 'Test Series',
+                onTap: () => context.push('/student/test-series')),
+            _RailItem(
+                icon: Icons.science_rounded,
+                label: 'Experiments',
+                onTap: () => context.push('/student/experiments')),
+            _RailItem(
+                icon: Icons.developer_board_rounded,
+                label: 'Dev Tools',
+                onTap: () => context.push('/student/dev-tools')),
+            _RailItem(
+                icon: Icons.record_voice_over_rounded,
+                label: 'Interview',
+                onTap: () => context.push('/student/mock-interview')),
+            _RailItem(
+                icon: Icons.video_camera_front_rounded,
+                label: 'Sessions',
+                onTap: () => context.push('/live-sessions')),
+            _RailItem(
+                icon: Icons.work_rounded,
+                label: 'Jobs',
+                onTap: () => context.push('/jobs')),
+            _RailItem(
+                icon: Icons.event_rounded,
+                label: 'Events',
+                onTap: () => context.push('/events')),
+            _RailItem(
+                icon: Icons.sell_rounded,
+                label: 'Pricing',
+                onTap: () => context.push('/pricing')),
+            _RailItem(
+                icon: Icons.insights_rounded,
+                label: 'Activity',
+                onTap: () => context.push('/student/activity')),
             const Spacer(),
             // TEMPORARY: login/profile rail item hidden while WhatsApp OTP is broken.
             if (isLoggedIn)
@@ -828,6 +961,35 @@ class _StatPill extends StatelessWidget {
   }
 }
 
+/// Shown only for the tests/notices/results section when that one fetch
+/// fails — the rest of the home page (Practice/Training/Dev Tools etc.)
+/// keeps working regardless, since none of it depends on this call.
+class _FeedErrorCard extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _FeedErrorCard({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+      ),
+      child: Column(children: [
+        Icon(Icons.wifi_off_rounded, size: 36, color: Colors.grey[400]),
+        const SizedBox(height: 12),
+        Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: AppColors.textSecondary)),
+        const SizedBox(height: 14),
+        OutlinedButton(onPressed: onRetry, child: Text(AppLocalizations.of(context)!.studentPortalRetry)),
+      ]),
+    );
+  }
+}
+
 class _EmptyFeedCard extends StatelessWidget {
   final VoidCallback onStartPractice;
   final bool isLoggedIn;
@@ -848,36 +1010,549 @@ class _EmptyFeedCard extends StatelessWidget {
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(
-              color: const Color(0xFF7C4DFF).withValues(alpha: 0.1),
+              color: AppColors.accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF7C4DFF), size: 30),
+            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.accent, size: 30),
           ),
           const SizedBox(height: 16),
-          Text(isLoggedIn ? 'No tests from your coaching yet' : 'Ready when you are',
+          Text('Nothing here yet',
               style: GoogleFonts.poppins(
                   fontSize: 15.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           const SizedBox(height: 6),
           Text(
-              isLoggedIn
-                  ? 'Meanwhile, generate your own AI practice test on any topic.'
-                  : 'Pick a topic above to generate an AI practice test.',
+              'Meanwhile, check out the Test Series and Course Quizzes tab.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 18),
           FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF7C4DFF),
+              backgroundColor: AppColors.accent,
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
             ),
             onPressed: onStartPractice,
-            icon: const Icon(Icons.bolt_rounded, size: 18),
-            label: Text('Start AI Practice Test',
+            icon: const Icon(Icons.quiz_rounded, size: 18),
+            label: Text('Explore Test Series',
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Primary action row — capped at the 4 daily-use features (Practice,
+/// Training, Experiments, Jobs) plus a "More" tile for everything else
+/// (Mock Interview, Sessions, Events, Test Series, Pricing, Activity).
+/// Keeping this to 4+1 instead of a wall of 8 icons is what makes the
+/// "what do I do first" decision fast on a small screen.
+class _PrimaryActionRow extends StatelessWidget {
+  final VoidCallback onPractice;
+  final VoidCallback onTraining;
+  final VoidCallback onExperiments;
+  final VoidCallback onJobs;
+  final VoidCallback onMore;
+
+  const _PrimaryActionRow({
+    required this.onPractice,
+    required this.onTraining,
+    required this.onExperiments,
+    required this.onJobs,
+    required this.onMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(String, IconData, Color, VoidCallback)>[
+      ('Practice', Icons.bolt_rounded, AppColors.accent, onPractice),
+      ('Training', Icons.school_rounded, AppColors.primary, onTraining),
+      ('Experiments', Icons.science_rounded, AppColors.accent, onExperiments),
+      ('Jobs', Icons.work_rounded, AppColors.primary, onJobs),
+    ];
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ...items.map((item) => _QuickAccessTile(label: item.$1, icon: item.$2, color: item.$3, onTap: item.$4)),
+          _QuickAccessTile(label: 'More', icon: Icons.grid_view_rounded, color: AppColors.textSecondary, onTap: onMore),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sheet holding the less-frequent destinations bumped out of the primary
+/// action row — still one tap away, just not competing for above-the-fold
+/// space on a 375px screen.
+void _showMoreActionsSheet(
+  BuildContext context, {
+  required VoidCallback onMockInterview,
+  required VoidCallback onSessions,
+  required VoidCallback onEvents,
+  required VoidCallback onTestSeries,
+  required VoidCallback onDevTools,
+  required VoidCallback onPricing,
+  required VoidCallback onActivity,
+}) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.85),
+        child: SingleChildScrollView(
+        child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('More', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          _MoreSheetTile(icon: Icons.record_voice_over_rounded, label: 'Mock Interview',
+              onTap: () { Navigator.pop(ctx); onMockInterview(); }),
+          _MoreSheetTile(icon: Icons.video_camera_front_rounded, label: 'Live Sessions / Workshops',
+              onTap: () { Navigator.pop(ctx); onSessions(); }),
+          _MoreSheetTile(icon: Icons.event_rounded, label: 'Events',
+              onTap: () { Navigator.pop(ctx); onEvents(); }),
+          _MoreSheetTile(icon: Icons.quiz_rounded, label: 'Test Series',
+              onTap: () { Navigator.pop(ctx); onTestSeries(); }),
+          _MoreSheetTile(icon: Icons.developer_board_rounded, label: 'Dev Tools',
+              onTap: () { Navigator.pop(ctx); onDevTools(); }),
+          _MoreSheetTile(icon: Icons.sell_rounded, label: 'Pricing',
+              onTap: () { Navigator.pop(ctx); onPricing(); }),
+          _MoreSheetTile(icon: Icons.insights_rounded, label: 'My Activity',
+              onTap: () { Navigator.pop(ctx); onActivity(); }),
+        ]),
+        ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _MoreSheetTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _MoreSheetTile({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        width: 38, height: 38,
+        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(11)),
+        child: Icon(icon, color: AppColors.primary, size: 19),
+      ),
+      title: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
+      onTap: onTap,
+    );
+  }
+}
+
+/// Persistent bottom nav for mobile — capped at 5 items per the mobile
+/// layout rules (Home, Practice, Training, Activity, Profile). Desktop/tablet
+/// still uses the full [_SideRail] instead.
+class _StudentBottomNav extends StatelessWidget {
+  final bool isLoggedIn;
+  final VoidCallback onPractice;
+  final VoidCallback onTraining;
+  final VoidCallback onActivity;
+  final VoidCallback onProfileOrLogin;
+
+  const _StudentBottomNav({
+    required this.isLoggedIn,
+    required this.onPractice,
+    required this.onTraining,
+    required this.onActivity,
+    required this.onProfileOrLogin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: AppColors.accent,
+      unselectedItemColor: AppColors.textSecondary,
+      currentIndex: 0,
+      selectedLabelStyle: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: GoogleFonts.inter(fontSize: 10.5),
+      onTap: (i) {
+        switch (i) {
+          case 1: onPractice(); break;
+          case 2: onTraining(); break;
+          case 3: onActivity(); break;
+          case 4: onProfileOrLogin(); break;
+        }
+      },
+      items: [
+        const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+        const BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Practice'),
+        const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Training'),
+        const BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'Activity'),
+        BottomNavigationBarItem(
+          icon: Icon(isLoggedIn ? Icons.account_circle_rounded : Icons.login_rounded),
+          label: isLoggedIn ? 'Profile' : 'Join',
+        ),
+      ],
+    );
+  }
+}
+
+/// The "what should I do right now" hero — resumes an in-progress module.
+class _ContinueLearningCard extends StatelessWidget {
+  final TrainingModule module;
+  final double pct;
+  final VoidCallback onTap;
+  const _ContinueLearningCard({required this.module, required this.pct, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryDark],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(children: [
+          Container(
+            width: 52, height: 52,
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('CONTINUE LEARNING',
+                  style: GoogleFonts.inter(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+              const SizedBox(height: 4),
+              Text(module.title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: pct, minHeight: 6,
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('${(pct * 100).round()}% complete', style: GoogleFonts.inter(color: Colors.white70, fontSize: 11.5)),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white60, size: 16),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Roadmap / "Coming Soon" — capped at one muted teaser above the fold,
+/// the rest tucked behind a collapsed "what's next" disclosure so they
+/// never outnumber the app's actual working features.
+class _RoadmapSection extends StatelessWidget {
+  const _RoadmapSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(children: [
+          Icon(Icons.rocket_launch_rounded, size: 13, color: Colors.grey.shade400),
+          const SizedBox(width: 6),
+          Text("What's next", style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+        ]),
+      ),
+      const SizedBox(height: 10),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: _ComingSoonTeaser(icon: Icons.emoji_events_rounded, label: 'IoT & Embedded Hackathons'),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            iconColor: Colors.grey.shade400,
+            collapsedIconColor: Colors.grey.shade400,
+            title: Text('More on the roadmap',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            children: const [
+              _RoadmapListItem(icon: Icons.work_rounded, label: 'Embedded/IoT Internships'),
+              _RoadmapListItem(icon: Icons.business_center_rounded, label: 'Product Engineer Job Board'),
+              _RoadmapListItem(icon: Icons.groups_rounded, label: 'Mentorship with Industry Engineers'),
+            ],
+          ),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _ComingSoonTeaser extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _ComingSoonTeaser({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(children: [
+        Icon(icon, size: 18, color: Colors.grey.shade400),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(20)),
+          child: Text('SOON',
+              style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey.shade600, letterSpacing: 0.4)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _RoadmapListItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _RoadmapListItem({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Icon(icon, size: 16, color: Colors.grey.shade400),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey.shade500))),
+      ]),
+    );
+  }
+}
+
+class _QuickAccessTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _QuickAccessTile({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 68,
+        child: Column(children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 6),
+          Text(label, textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Unstop-style "Featured" carousel — poster cards with arrow navigation,
+/// spotlighting the admin's featured Live Sessions / Workshops at the top
+/// of the home feed.
+class _FeaturedCarousel extends StatefulWidget {
+  final List<dynamic> sessions;
+  const _FeaturedCarousel({required this.sessions});
+
+  @override
+  State<_FeaturedCarousel> createState() => _FeaturedCarouselState();
+}
+
+class _FeaturedCarouselState extends State<_FeaturedCarousel> {
+  final _scrollCtrl = ScrollController();
+  static const _cardWidth = 210.0;
+  static const _cardGap = 14.0;
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _scrollBy(double delta) {
+    if (!_scrollCtrl.hasClients) return;
+    final max = _scrollCtrl.position.maxScrollExtent;
+    final target = (_scrollCtrl.offset + delta).clamp(0.0, max);
+    _scrollCtrl.animateTo(target, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Container(width: 4, height: 20, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Text('Featured', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17)),
+      ]),
+      const SizedBox(height: 14),
+      SizedBox(
+        height: 390,
+        child: ClipRect(
+          child: Stack(alignment: Alignment.center, children: [
+          ListView.separated(
+            controller: _scrollCtrl,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: widget.sessions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: _cardGap),
+            itemBuilder: (context, i) => SizedBox(
+              width: _cardWidth,
+              child: _FeaturedPosterCard(session: widget.sessions[i] as Map<String, dynamic>),
+            ),
+          ),
+          if (widget.sessions.length > 1) ...[
+            Positioned(
+              left: 0,
+              child: _CarouselArrow(icon: Icons.chevron_left_rounded, onTap: () => _scrollBy(-(_cardWidth + _cardGap) * 2)),
+            ),
+            Positioned(
+              right: 0,
+              child: _CarouselArrow(icon: Icons.chevron_right_rounded, onTap: () => _scrollBy((_cardWidth + _cardGap) * 2)),
+            ),
+          ],
+          ]),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _CarouselArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CarouselArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 3,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Icon(icon, color: AppColors.textPrimary, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedPosterCard extends StatelessWidget {
+  final Map<String, dynamic> session;
+  const _FeaturedPosterCard({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    DateTime? date;
+    try {
+      date = session['session_date'] != null ? DateTime.parse(session['session_date']) : null;
+    } catch (_) {}
+    final isPast = date != null && date.isBefore(DateTime.now());
+    final hasRecording = (session['recording_url'] ?? '').toString().isNotEmpty;
+    final tagLabel = isPast ? (hasRecording ? 'Watch Recording' : 'Session Ended') : 'Register Now';
+    final tagColor = isPast && !hasRecording ? AppColors.textSecondary : AppColors.primary;
+    final banner = (session['banner_url'] ?? '').toString();
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.push('/live-sessions/${session['id']}'),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AspectRatio(
+            aspectRatio: 3 / 4,
+            child: banner.isNotEmpty
+                ? Image.network(banner, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const _PosterFallback())
+                : const _PosterFallback(),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+              border: Border.all(color: tagColor), borderRadius: BorderRadius.circular(20)),
+          child: Text(tagLabel,
+              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: tagColor)),
+        ),
+        const SizedBox(height: 8),
+        Text(session['title'] ?? '',
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: AppColors.textPrimary)),
+      ]),
+    );
+  }
+}
+
+class _PosterFallback extends StatelessWidget {
+  const _PosterFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(child: Icon(Icons.video_camera_front_rounded, color: Colors.white, size: 40)),
     );
   }
 }
@@ -894,14 +1569,14 @@ class _AiChatBanner extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF00897B), Color(0xFF00BFA5)],
+            colors: [AppColors.primary, AppColors.primaryLight],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: const Color(0xFF00BFA5).withValues(alpha: 0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4)),
           ],
@@ -1154,132 +1829,6 @@ class _ResultCard extends StatelessWidget {
   }
 }
 
-class _QuizLimitBanner extends StatelessWidget {
-  final Map<String, dynamic> subscription;
-  final VoidCallback onUpgrade;
-  const _QuizLimitBanner({required this.subscription, required this.onUpgrade});
-
-  @override
-  Widget build(BuildContext context) {
-    final isPremium = subscription['is_premium'] == true;
-    final remaining = subscription['remaining_today'] ?? 0;
-    final dailyLimit = subscription['daily_limit'] ?? 3;
-    final genRemaining = subscription['generations_remaining'] ?? 0;
-    final genLimit = subscription['monthly_generation_limit'] ?? 5;
-    final genUsed = subscription['generations_used_this_month'] ?? 0;
-
-    if (isPremium) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.workspace_premium_rounded, color: AppColors.accent, size: 18),
-              const SizedBox(width: 8),
-              Text('Premium Active',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accent)),
-            ]),
-            const SizedBox(height: 6),
-            Row(children: [
-              const SizedBox(width: 26),
-              Text('Tests this month: $genUsed / $genLimit  •  Quizzes: unlimited',
-                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.accent.withValues(alpha: 0.8))),
-            ]),
-          ],
-        ),
-      );
-    }
-
-    final color = remaining > 0 ? AppColors.primary : AppColors.error;
-    final genColor = genRemaining > 0 ? const Color(0xFF6366F1) : AppColors.error;
-    return Column(
-      children: [
-        // Daily quiz attempts banner
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Row(children: [
-            Icon(remaining > 0 ? Icons.quiz_rounded : Icons.lock_clock_rounded,
-                color: color, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    remaining > 0
-                        ? '$remaining of $dailyLimit free quizzes remaining today'
-                        : 'Daily quiz limit reached',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color),
-                  ),
-                  if (remaining <= 0)
-                    Text('Upgrade to Premium for more access',
-                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onPressed: onUpgrade,
-              child: Text(remaining > 0 ? 'Upgrade' : 'Get Premium',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.accent)),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 6),
-        // Monthly generation quota banner
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: genColor.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: genColor.withValues(alpha: 0.25)),
-          ),
-          child: Row(children: [
-            Icon(Icons.auto_awesome_rounded, color: genColor, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                genRemaining > 0
-                    ? 'AI Tests: $genRemaining remaining this month ($genUsed/$genLimit used)'
-                    : 'Monthly AI test limit reached ($genLimit/month)',
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: genColor),
-              ),
-            ),
-            if (genRemaining <= 0)
-              TextButton(
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                onPressed: onUpgrade,
-                child: Text('₹99/mo',
-                    style: GoogleFonts.inter(
-                        fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.accent)),
-              ),
-          ]),
-        ),
-      ],
-    );
-  }
-}
-
 class _NoticeCard extends StatelessWidget {
   final Map<String, dynamic> notice;
   const _NoticeCard({required this.notice});
@@ -1299,6 +1848,7 @@ class _NoticeCard extends StatelessWidget {
     final type = notice['type'] ?? 'notice';
     final linkUrl = notice['link_url'] as String?;
     final isVideo = type == 'video';
+    final isPlacement = notice['category'] == 'placement';
     final youtubeId = _extractYoutubeId(linkUrl);
 
     return Card(
@@ -1350,12 +1900,30 @@ class _NoticeCard extends StatelessWidget {
                   ),
                   child: Icon(
                     isVideo ? Icons.play_circle_filled_rounded : Icons.campaign_rounded,
-                    color: isVideo ? const Color(0xFFE53935) : const Color(0xFFF57C00),
+                    color: isVideo ? AppColors.error : AppColors.warning,
                     size: 20,
                   ),
                 ),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (isPlacement) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      margin: const EdgeInsets.only(bottom: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.work_rounded, size: 11, color: AppColors.primary),
+                        const SizedBox(width: 3),
+                        Text('PLACEMENT',
+                            style: GoogleFonts.inter(
+                                fontSize: 9.5, fontWeight: FontWeight.w700,
+                                color: AppColors.primary, letterSpacing: 0.3)),
+                      ]),
+                    ),
+                  ],
                   Text(notice['title'] ?? '',
                       style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600, fontSize: 13,
@@ -1529,63 +2097,119 @@ class _ModuleCard extends StatelessWidget {
   }
 }
 
-class _ComingSoonMiniCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _ComingSoonMiniCard({required this.icon, required this.label});
+/// Bottom-of-page site footer — brand, quick links, social icons, copyright.
+/// The home feed previously just stopped after the last content section with
+/// no closing element at all.
+class _HomeFooter extends StatefulWidget {
+  const _HomeFooter();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 136,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38, height: 38,
-            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
-            child: Icon(icon, color: Colors.grey.shade600, size: 19),
-          ),
-          const Spacer(),
-          Text(label,
-              maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          const SizedBox(height: 3),
-          Text('Coming Soon',
-              style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.accent)),
-        ],
-      ),
-    );
-  }
+  State<_HomeFooter> createState() => _HomeFooterState();
 }
 
-class _EmptyRowHint extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _EmptyRowHint({required this.icon, required this.text});
+class _HomeFooterState extends State<_HomeFooter> {
+  Map<String, dynamic> _links = {};
+
+  @override
+  void initState() {
+    super.initState();
+    ApiService.getCompanySocialLinks().then((links) {
+      if (mounted) setState(() => _links = links);
+    }).catchError((_) {});
+  }
+
+  IconData _iconFor(String platform) {
+    switch (platform) {
+      case 'instagram': return Icons.camera_alt_rounded;
+      case 'youtube': return Icons.play_circle_fill_rounded;
+      case 'linkedin': return Icons.business_center_rounded;
+      case 'twitter': return Icons.alternate_email_rounded;
+      case 'facebook': return Icons.facebook_rounded;
+      default: return Icons.link_rounded;
+    }
+  }
+
+  Future<void> _openLink(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final activeSocials = _links.entries.where((e) => (e.value as String? ?? '').isNotEmpty).toList();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6FA),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(children: [
-        Icon(icon, color: Colors.grey.shade400, size: 22),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(text, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
+      ),
+      child: Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: Image.asset('assets/images/logo.png', width: 32, height: 32, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 8),
+          Text('AltrobyteLab', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 6),
+        Text('Learn. Build. Compete in Deeptech.',
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.5)),
+        const SizedBox(height: 20),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 18, runSpacing: 8,
+          children: [
+            _FooterLink('About Us', () => context.push('/about')),
+            _FooterLink('Company', () => context.push('/company')),
+            _FooterLink('Partner With Us', () => context.push('/partner')),
+            _FooterLink('Pricing', () => context.push('/pricing')),
+            _FooterLink('Contact Us', () => context.push('/contact')),
+            _FooterLink('Terms & Conditions', () => context.push('/terms')),
+            _FooterLink('Refunds & Cancellations', () => context.push('/refunds')),
+          ],
+        ),
+        if (activeSocials.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            children: activeSocials.map((e) => IconButton(
+              onPressed: () => _openLink(e.value as String),
+              icon: Icon(_iconFor(e.key), color: Colors.white, size: 18),
+              style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.1)),
+            )).toList(),
+          ),
+        ],
+        const SizedBox(height: 20),
+        Container(height: 1, color: Colors.white12),
+        const SizedBox(height: 14),
+        Text('© ${DateTime.now().year} AltrobyteLab. All rights reserved.',
+            style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.5)),
+        const SizedBox(height: 4),
+        Text('AltrobyteLab is operated by Altrobyte Automation Private Limited.',
+            style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.5)),
       ]),
     );
   }
 }
+
+class _FooterLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _FooterLink(this.label, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Text(label, style: GoogleFonts.inter(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w500)),
+    );
+  }
+}
+

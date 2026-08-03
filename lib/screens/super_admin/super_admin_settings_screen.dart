@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api_constants.dart';
+import '../../constants/app_colors.dart';
 
 class SuperAdminSettingsScreen extends StatefulWidget {
   const SuperAdminSettingsScreen({super.key});
@@ -138,7 +139,7 @@ class _SuperAdminSettingsScreenState extends State<SuperAdminSettingsScreen> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Setting updated'), backgroundColor: Color(0xFF00897B)));
+            const SnackBar(content: Text('Setting updated'), backgroundColor: AppColors.success));
         await _load();
       }
     } catch (e) {
@@ -153,7 +154,7 @@ class _SuperAdminSettingsScreenState extends State<SuperAdminSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: AppColors.primary,
         title: Text('Platform Settings',
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -277,10 +278,10 @@ class _SettingTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 18, color: const Color(0xFF1565C0)),
+          child: Icon(icon, size: 18, color: AppColors.primary),
         ),
         title: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
         subtitle: Text(setting['description'] ?? '',
@@ -292,7 +293,7 @@ class _SettingTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -301,7 +302,7 @@ class _SettingTile extends StatelessWidget {
                       : setting['value'],
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                      fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF1565C0))),
+                      fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
             ),
           ),
           const SizedBox(width: 4),

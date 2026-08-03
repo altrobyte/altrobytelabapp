@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/google_auth_service.dart';
 import '../../widgets/custom_button_widget.dart';
 import '../../utils/validators.dart';
 
@@ -59,7 +60,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('OTP sent to your WhatsApp!'),
-          backgroundColor: Color(0xFF25D366),
+          backgroundColor: AppColors.whatsapp,
         ));
       }
     } catch (_) {
@@ -120,7 +121,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           icon: Icons.shield_rounded,
           onPressed: _login,
           loading: auth.isLoading,
-          colors: const [Color(0xFFFF6B35), Color(0xFFFF8C42)],
+          colors: const [AppColors.accent, AppColors.accentLight],
         ),
       ]),
     );
@@ -129,7 +130,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
   Widget _buildOtpForm() {
     if (_otpStep == 0) {
       return Column(children: [
-        const Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 36),
+        const Icon(Icons.chat_rounded, color: AppColors.whatsapp, size: 36),
         const SizedBox(height: 12),
         Text('WhatsApp OTP Login',
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
@@ -141,7 +142,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
           width: double.infinity,
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF25D366),
+              backgroundColor: AppColors.whatsapp,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -156,7 +157,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
       ]);
     }
     return Column(children: [
-      const Icon(Icons.mark_chat_read_rounded, color: Color(0xFF25D366), size: 36),
+      const Icon(Icons.mark_chat_read_rounded, color: AppColors.whatsapp, size: 36),
       const SizedBox(height: 12),
       Text('Enter OTP', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
       const SizedBox(height: 6),
@@ -186,7 +187,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         width: double.infinity,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF6B35),
+            backgroundColor: AppColors.accent,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -216,7 +217,7 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
     focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFFF6B35))),
+        borderSide: const BorderSide(color: AppColors.accent)),
     errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Colors.red)),
@@ -243,14 +244,14 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   height: 72,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFF6B35), Color(0xFFFF8C42)],
+                      colors: [AppColors.accent, AppColors.accentLight],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(36),
                     boxShadow: [
                       BoxShadow(
-                          color: const Color(0xFFFF6B35).withValues(alpha: 0.4),
+                          color: AppColors.accent.withValues(alpha: 0.4),
                           blurRadius: 20,
                           offset: const Offset(0, 8)),
                     ],
@@ -280,6 +281,37 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      try {
+                        final result = await GoogleAuthService.signIn();
+                        if (result.role == 'super_admin') {
+                          // ignore: use_build_context_synchronously
+                          await context.read<AuthProvider>().setFromResponse(result.data);
+                          if (context.mounted) context.go('/super/dashboard');
+                        } else if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              content: Text('That Google account is not a super admin.')));
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                    label: Text('Sign in with Google', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () => setState(() {
                     _otpMode = !_otpMode;
@@ -289,12 +321,12 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   icon: Icon(
                     _otpMode ? Icons.lock_rounded : Icons.chat_rounded,
                     size: 15,
-                    color: _otpMode ? Colors.white38 : const Color(0xFF25D366),
+                    color: _otpMode ? Colors.white38 : AppColors.whatsapp,
                   ),
                   label: Text(
                     _otpMode ? 'Login with password instead' : 'Login with WhatsApp OTP',
                     style: GoogleFonts.inter(
-                        color: _otpMode ? Colors.white38 : const Color(0xFF25D366),
+                        color: _otpMode ? Colors.white38 : AppColors.whatsapp,
                         fontSize: 13),
                   ),
                 ),

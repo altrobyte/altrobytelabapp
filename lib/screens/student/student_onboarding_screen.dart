@@ -86,7 +86,7 @@ class _StudentOnboardingScreenState extends State<StudentOnboardingScreen> {
               Container(
                 width: 76, height: 76,
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF7C4DFF), Color(0xFF00BFA5)]),
+                  gradient: LinearGradient(colors: [AppColors.primary, AppColors.success]),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.celebration_rounded, color: Colors.white, size: 40),
@@ -132,7 +132,7 @@ class _StudentOnboardingScreenState extends State<StudentOnboardingScreen> {
               // Join community group
               _PerkCard(
                 icon: Icons.groups_rounded,
-                iconColor: const Color(0xFF25D366),
+                iconColor: AppColors.whatsapp,
                 title: 'Join our Community Group',
                 subtitle: _groupUrl.isEmpty
                     ? 'Coming soon'
@@ -145,7 +145,7 @@ class _StudentOnboardingScreenState extends State<StudentOnboardingScreen> {
               // Follow social
               _PerkCard(
                 icon: Icons.favorite_rounded,
-                iconColor: const Color(0xFFE53935),
+                iconColor: AppColors.error,
                 title: 'Follow Us',
                 subtitle: 'Study tips, motivation & exam updates',
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [

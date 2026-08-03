@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
@@ -76,7 +78,7 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF7C4DFF),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -239,14 +241,15 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
                             fontSize: 13,
                             height: 1.5,
                           ),
-                          cursorColor: const Color(0xFF7C4DFF),
+                          cursorColor: AppColors.accentLight,
                         ),
                       ),
                     ),
                   ],
                 ),
 
-                // Tab 2: Preview
+                // Tab 2: Preview — real browser rendering via iframe, so
+                // any pasted external HTML/CSS renders exactly as intended.
                 Container(
                   color: Colors.white,
                   child: _htmlCtl.text.isEmpty
@@ -263,10 +266,7 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
                             ],
                           ),
                         )
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
-                          child: _HtmlPreview(html: _htmlCtl.text),
-                        ),
+                      : _HtmlPreview(html: _htmlCtl.text),
                 ),
               ],
             ),
@@ -297,7 +297,7 @@ class _ToolbarBtn extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Text(label,
                 style: GoogleFonts.firaCode(
-                    color: const Color(0xFF7C4DFF),
+                    color: AppColors.accentLight,
                     fontSize: 11,
                     fontWeight: FontWeight.w600)),
           ),
@@ -307,129 +307,63 @@ class _ToolbarBtn extends StatelessWidget {
   }
 }
 
-/// Simple HTML-to-Widget preview. Uses basic parsing to render common
-/// HTML tags without needing a WebView or heavy package dependency.
-class _HtmlPreview extends StatelessWidget {
+/// Renders HTML exactly as a browser would, via a sandboxed iframe
+/// (srcdoc) — handles full external HTML documents (doctype, head,
+/// style blocks, scripts, nested/malformed markup) correctly, unlike a
+/// hand-rolled tag parser which only understands a few flat tags.
+class _HtmlPreview extends StatefulWidget {
   final String html;
   const _HtmlPreview({required this.html});
 
   @override
-  Widget build(BuildContext context) {
-    // Split HTML into simple renderable chunks by line-based parsing
-    final widgets = <Widget>[];
-    // Strip tags and render as styled text blocks
-    final clean = html
-        .replaceAll(RegExp(r'<br\s*/?>'), '\n')
-        .replaceAll('</p>', '\n\n')
-        .replaceAll('</div>', '\n')
-        .replaceAll('</li>', '\n');
+  State<_HtmlPreview> createState() => _HtmlPreviewState();
+}
 
-    // Parse heading/paragraph blocks
-    final tagPattern = RegExp(r'<(\w+)[^>]*>(.*?)</\1>', dotAll: true);
-    final matches = tagPattern.allMatches(clean);
+class _HtmlPreviewState extends State<_HtmlPreview> {
+  late final String _viewId;
+  late final html.IFrameElement _iframe;
 
-    if (matches.isEmpty) {
-      // Fallback: strip all tags and show as text
-      final stripped = clean.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-      return SelectableText(stripped,
-          style: GoogleFonts.inter(fontSize: 14, height: 1.6));
-    }
-
-    for (final match in matches) {
-      final tag = match.group(1)?.toLowerCase() ?? '';
-      final content =
-          (match.group(2) ?? '').replaceAll(RegExp(r'<[^>]*>'), '').trim();
-      if (content.isEmpty) continue;
-
-      switch (tag) {
-        case 'h1':
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(bottom: 12, top: 8),
-            child: Text(content,
-                style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-          ));
-          break;
-        case 'h2':
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(bottom: 10, top: 8),
-            child: Text(content,
-                style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary)),
-          ));
-          break;
-        case 'h3':
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(bottom: 8, top: 6),
-            child: Text(content,
-                style: GoogleFonts.poppins(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary)),
-          ));
-          break;
-        case 'pre':
-        case 'code':
-          widgets.add(Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            width: double.infinity,
-            child: SelectableText(content,
-                style: GoogleFonts.firaCode(
-                    color: const Color(0xFFD4D4D4),
-                    fontSize: 13,
-                    height: 1.5)),
-          ));
-          break;
-        case 'strong':
-        case 'b':
-          widgets.add(Text(content,
-              style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary)));
-          break;
-        case 'li':
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('•  ',
-                    style: GoogleFonts.inter(
-                        fontSize: 14, color: AppColors.primary)),
-                Expanded(
-                  child: Text(content,
-                      style: GoogleFonts.inter(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: AppColors.textPrimary)),
-                ),
-              ],
-            ),
-          ));
-          break;
-        default:
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: SelectableText(content,
-                style: GoogleFonts.inter(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: AppColors.textPrimary)),
-          ));
-      }
-    }
-
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+  @override
+  void initState() {
+    super.initState();
+    _viewId = 'notes-html-preview-${identityHashCode(this)}';
+    _iframe = html.IFrameElement()
+      ..style.border = 'none'
+      ..style.width = '100%'
+      ..style.height = '100%'
+      // No allow-top-navigation: pasted content must not hijack the app's router.
+      ..setAttribute('sandbox', 'allow-scripts allow-popups allow-forms')
+      ..srcdoc = _wrap(widget.html);
+    ui_web.platformViewRegistry
+        .registerViewFactory(_viewId, (int viewId) => _iframe);
   }
+
+  @override
+  void didUpdateWidget(covariant _HtmlPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.html != widget.html) {
+      _iframe.srcdoc = _wrap(widget.html);
+    }
+  }
+
+  String _wrap(String content) {
+    // If it's already a full document (external paste), render it as-is.
+    if (content.toLowerCase().contains('<html')) return content;
+    return '''
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body { font-family: Inter, -apple-system, sans-serif; padding: 20px;
+         color: #1a1a2e; line-height: 1.6; }
+  img { max-width: 100%; }
+  pre { background:#1e1e1e; color:#d4d4d4; padding:14px; border-radius:8px;
+        overflow:auto; font-family: 'Fira Code', monospace; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+</style>
+</head><body>$content</body></html>''';
+  }
+
+  @override
+  Widget build(BuildContext context) => HtmlElementView(viewType: _viewId);
 }

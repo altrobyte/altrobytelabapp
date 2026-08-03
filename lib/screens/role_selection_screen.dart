@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -67,6 +68,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     }
   }
 
+  // A slow-but-connected phone (full signal bars, poor real throughput) can
+  // blow past the request timeout, surfacing as a raw "TimeoutException
+  // after 0:00:20...: Future not completed" — meaningless to a student.
+  String _friendlyError(Object e) {
+    if (e is TimeoutException) {
+      return 'Your network seems slow right now. Please check your connection and try again.';
+    }
+    return e.toString();
+  }
+
   void _onLogoTap() {
     _logoTaps++;
     if (_logoTaps >= 7) {
@@ -90,7 +101,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
           'phone': _phoneCtrl.text.trim(),
           'name': _nameCtrl.text.trim(),
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode >= 400) throw data['detail'] ?? 'Failed';
       setState(() => _step = 1);
@@ -103,7 +114,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString()), backgroundColor: AppColors.error));
+          content: Text(_friendlyError(e)), backgroundColor: AppColors.error));
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -124,7 +135,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
           'email': _emailCtrl.text.trim(),
           'address': _addressCtrl.text.trim(),
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 422 && !_isRegisterTab) {
         // Number not registered yet — nudge to Register tab, keep phone filled.
@@ -136,7 +147,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         });
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Ye number registered nahi hai. Register kar lo — naam bhi daal do.'),
-          backgroundColor: Color(0xFFF57C00),
+          backgroundColor: AppColors.warning,
         ));
         return;
       }
@@ -158,7 +169,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString()), backgroundColor: AppColors.error));
+          content: Text(_friendlyError(e)), backgroundColor: AppColors.error));
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -181,15 +192,15 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                   child: Container(
                     width: 80, height: 80,
                     decoration: BoxDecoration(
-                      color: AppColors.accent,
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: [
                         BoxShadow(color: AppColors.accent.withValues(alpha: 0.35),
                             blurRadius: 20, offset: const Offset(0, 6))
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(Icons.bolt_rounded, color: Colors.white, size: 42),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
                     ),
                   ),
                 ),
@@ -265,10 +276,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                color: AppColors.whatsapp.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 20),
+              child: const Icon(Icons.chat_rounded, color: AppColors.whatsapp, size: 20),
             ),
             const SizedBox(width: 10),
             Text(_isRegisterTab ? 'Create your account' : 'Login with WhatsApp',

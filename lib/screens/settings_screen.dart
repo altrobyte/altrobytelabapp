@@ -294,7 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildBrandingCard() {
     final slug = _slugCtrl.text.trim();
     final previewUrl = slug.isNotEmpty
-        ? 'https://coachingclub-bba5c.web.app/$slug'
+        ? 'https://lab.altrobyte.com/$slug'
         : null;
 
     return _SectionCard(

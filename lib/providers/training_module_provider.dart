@@ -117,13 +117,19 @@ class TrainingModuleProvider extends ChangeNotifier {
       {required String title,
       String description = '',
       String iconName = 'school',
-      String color = '#7C4DFF'}) async {
+      String color = '#7C4DFF',
+      double price = 0,
+      double taxPercent = 0,
+      double? originalPrice}) async {
     try {
       final data = await ApiService.createTrainingModule(instituteId, {
         'title': title,
         'description': description,
         'icon_name': iconName,
         'color': color,
+        'price': price,
+        'tax_percent': taxPercent,
+        if (originalPrice != null) 'original_price': originalPrice,
       });
       final newModule = TrainingModule.fromJson(data);
       modules.insert(0, newModule);
@@ -142,7 +148,11 @@ class TrainingModuleProvider extends ChangeNotifier {
       String? description,
       String? iconName,
       String? color,
-      bool? isPublished}) async {
+      bool? isPublished,
+      double? price,
+      double? taxPercent,
+      double? originalPrice,
+      bool clearOriginalPrice = false}) async {
     try {
       final body = <String, dynamic>{};
       if (title != null) body['title'] = title;
@@ -150,6 +160,13 @@ class TrainingModuleProvider extends ChangeNotifier {
       if (iconName != null) body['icon_name'] = iconName;
       if (color != null) body['color'] = color;
       if (isPublished != null) body['is_published'] = isPublished;
+      if (price != null) body['price'] = price;
+      if (taxPercent != null) body['tax_percent'] = taxPercent;
+      if (clearOriginalPrice) {
+        body['clear_original_price'] = true;
+      } else if (originalPrice != null) {
+        body['original_price'] = originalPrice;
+      }
 
       await ApiService.updateTrainingModule(moduleId, body);
 
@@ -161,6 +178,10 @@ class TrainingModuleProvider extends ChangeNotifier {
           iconName: iconName,
           color: color,
           isPublished: isPublished,
+          price: price,
+          taxPercent: taxPercent,
+          originalPrice: originalPrice,
+          clearOriginalPrice: clearOriginalPrice,
         );
       }
       if (currentModule?.id == moduleId) {
@@ -170,6 +191,10 @@ class TrainingModuleProvider extends ChangeNotifier {
           iconName: iconName,
           color: color,
           isPublished: isPublished,
+          price: price,
+          taxPercent: taxPercent,
+          originalPrice: originalPrice,
+          clearOriginalPrice: clearOriginalPrice,
         );
       }
       notifyListeners();

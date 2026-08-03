@@ -1,10 +1,17 @@
+import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../constants/api_constants.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/training_module_provider.dart';
+import '../../services/api_service.dart';
 import 'module_detail_screen.dart';
 
 class TrainingModulesScreen extends StatefulWidget {
@@ -63,11 +70,15 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
     }
   }
 
-  void _showCreateDialog() {
-    final titleCtl = TextEditingController();
-    final descCtl = TextEditingController();
-    String selectedIcon = 'school';
-    String selectedColor = '#7C4DFF';
+  void _showCreateDialog({TrainingModule? existing}) {
+    final titleCtl = TextEditingController(text: existing?.title ?? '');
+    final descCtl = TextEditingController(text: existing?.description ?? '');
+    final priceCtl = TextEditingController(text: '${existing?.price ?? 0}');
+    final taxCtl = TextEditingController(text: '${existing?.taxPercent ?? 0}');
+    final originalPriceCtl = TextEditingController(text: '${existing?.originalPrice ?? ''}');
+    bool isPaid = (existing?.price ?? 0) > 0;
+    String selectedIcon = existing?.iconName ?? 'school';
+    String selectedColor = existing?.color ?? '#7C4DFF';
 
     final colors = [
       '#7C4DFF',
@@ -112,7 +123,7 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                     color: _parseColor(selectedColor), size: 22),
               ),
               const SizedBox(width: 12),
-              Text('Create Training Module',
+              Text(existing == null ? 'Create Training Module' : 'Edit Training Module',
                   style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600, fontSize: 18)),
             ],
@@ -223,6 +234,58 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                     );
                   }).toList(),
                 ),
+                const SizedBox(height: 18),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Paid course'),
+                  subtitle: const Text('Off = free access. On = students pay before content unlocks.', style: TextStyle(fontSize: 12)),
+                  value: isPaid,
+                  onChanged: (v) => setDialogState(() => isPaid = v),
+                  activeColor: _parseColor(selectedColor),
+                ),
+                if (isPaid) ...[
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: priceCtl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Price (₹)',
+                          prefixText: '₹ ',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: taxCtl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Tax %',
+                          suffixText: '%',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text('Leave tax at 0 if not applicable.',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: originalPriceCtl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Original price (optional)',
+                      prefixText: '₹ ',
+                      helperText: 'Shown crossed-out next to the real price. Leave blank to hide.',
+                      helperMaxLines: 2,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -244,24 +307,44 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                   return;
                 }
                 final title = titleCtl.text.trim();
+                final price = isPaid ? (double.tryParse(priceCtl.text.trim()) ?? 0) : 0.0;
+                final tax = isPaid ? (double.tryParse(taxCtl.text.trim()) ?? 0) : 0.0;
+                final originalPriceText = originalPriceCtl.text.trim();
+                final originalPrice = isPaid && originalPriceText.isNotEmpty ? double.tryParse(originalPriceText) : null;
+                final clearOriginalPrice = !isPaid || originalPriceText.isEmpty;
                 final provider = context.read<TrainingModuleProvider>();
                 Navigator.pop(ctx);
-                final ok = await provider.createModule(
-                  _instituteId!,
-                  title: title,
-                  description: descCtl.text.trim(),
-                  iconName: selectedIcon,
-                  color: selectedColor,
-                );
+                final ok = existing == null
+                    ? await provider.createModule(
+                        _instituteId!,
+                        title: title,
+                        description: descCtl.text.trim(),
+                        iconName: selectedIcon,
+                        color: selectedColor,
+                        price: price,
+                        taxPercent: tax,
+                        originalPrice: originalPrice,
+                      )
+                    : await provider.updateModule(
+                        existing.id,
+                        title: title,
+                        description: descCtl.text.trim(),
+                        iconName: selectedIcon,
+                        color: selectedColor,
+                        price: price,
+                        taxPercent: tax,
+                        originalPrice: originalPrice,
+                        clearOriginalPrice: clearOriginalPrice,
+                      );
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(ok
-                      ? 'Module "$title" created'
-                      : provider.error ?? 'Failed to create module'),
+                      ? 'Module "$title" ${existing == null ? 'created' : 'updated'}'
+                      : provider.error ?? 'Failed to save module'),
                   backgroundColor: ok ? AppColors.success : AppColors.error,
                 ));
               },
-              child: Text('Create',
+              child: Text(existing == null ? 'Create' : 'Save',
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
             ),
           ],
@@ -331,6 +414,116 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
     ));
   }
 
+  Future<void> _showEnrollments(TrainingModule module) async {
+    List<Map<String, dynamic>> enrollments = [];
+    String? error;
+    try {
+      enrollments = List<Map<String, dynamic>>.from(
+          (await ApiService.getModuleEnrollments(module.id)).map((e) => Map<String, dynamic>.from(e as Map)));
+    } catch (e) {
+      error = e.toString();
+    }
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          expand: false,
+          builder: (ctx, scrollCtrl) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                  child: Text('Enrollments — ${module.title} (${enrollments.length})',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+                ),
+                TextButton.icon(
+                  onPressed: () => _exportEnrollmentsCsv(module.id),
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Export CSV'),
+                ),
+              ]),
+              const Divider(),
+              Expanded(
+                child: error != null
+                    ? Center(child: Text(error, style: GoogleFonts.inter(color: AppColors.error)))
+                    : enrollments.isEmpty
+                        ? Center(child: Text('No enrollments yet', style: GoogleFonts.inter(color: AppColors.textSecondary)))
+                        : ListView.separated(
+                            controller: scrollCtrl,
+                            itemCount: enrollments.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) => _EnrollmentCard(
+                              enrollment: enrollments[i],
+                              onMarkPaid: enrollments[i]['status'] == 'paid' ? null : () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: ctx,
+                                  builder: (dCtx) => AlertDialog(
+                                    title: const Text('Mark as paid?'),
+                                    content: Text(
+                                        'Only do this after you\'ve actually collected payment from ${enrollments[i]['name'] ?? 'this person'} directly (UPI/cash).'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Cancel')),
+                                      FilledButton(
+                                          onPressed: () => Navigator.pop(dCtx, true),
+                                          style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                                          child: const Text('Mark Paid')),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed != true) return;
+                                final updated = await ApiService.markModuleEnrollmentPaid(module.id, enrollments[i]['id'] as int);
+                                setSheetState(() => enrollments[i] = updated);
+                              },
+                              onDelete: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: ctx,
+                                  builder: (dCtx) => AlertDialog(
+                                    title: const Text('Remove this enrollment?'),
+                                    content: Text(
+                                        'This deletes ${enrollments[i]['name'] ?? 'this entry'} permanently — use this for stuck/test enrollments, not real students.'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('Cancel')),
+                                      FilledButton(
+                                          onPressed: () => Navigator.pop(dCtx, true),
+                                          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                                          child: const Text('Delete')),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed != true) return;
+                                await ApiService.deleteModuleEnrollment(module.id, enrollments[i]['id'] as int);
+                                setSheetState(() => enrollments.removeAt(i));
+                              },
+                            ),
+                          ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportEnrollmentsCsv(int moduleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+      Uri.parse(ApiConstants.moduleEnrollmentsExport(moduleId)),
+      headers: {if (token != null) 'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode != 200) return;
+    final blob = html.Blob([utf8.encode(res.body)], 'text/csv');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'module_${moduleId}_enrollments.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  }
+
   void _openModuleDetail(TrainingModule module) async {
     await Navigator.push(
       context,
@@ -367,7 +560,7 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                         height: 48,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF7C4DFF), Color(0xFF9C27B0)],
+                            colors: [AppColors.primary, AppColors.primaryLight],
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -483,6 +676,8 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                     onTap: () => _openModuleDetail(modules[index]),
                     onDelete: () => _deleteModule(modules[index]),
                     onTogglePublish: () => _togglePublish(modules[index]),
+                    onEdit: () => _showCreateDialog(existing: modules[index]),
+                    onEnrollments: () => _showEnrollments(modules[index]),
                   ),
                   childCount: modules.length,
                 ),
@@ -503,6 +698,8 @@ class _ModuleCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final VoidCallback onTogglePublish;
+  final VoidCallback onEdit;
+  final VoidCallback onEnrollments;
 
   const _ModuleCard({
     required this.module,
@@ -511,6 +708,8 @@ class _ModuleCard extends StatelessWidget {
     required this.onTap,
     required this.onDelete,
     required this.onTogglePublish,
+    required this.onEdit,
+    required this.onEnrollments,
   });
 
   @override
@@ -570,6 +769,26 @@ class _ModuleCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // Price badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: module.price > 0
+                            ? AppColors.accent.withValues(alpha: 0.1)
+                            : AppColors.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        module.price > 0 ? '₹${module.price.toStringAsFixed(0)}' : 'FREE',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: module.price > 0 ? AppColors.accent : AppColors.success,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     // Publish badge
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -607,6 +826,18 @@ class _ModuleCard extends StatelessWidget {
                         '${module.totalContentItems} Items', color),
                     const Spacer(),
                     // Actions
+                    IconButton(
+                      icon: const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.textSecondary),
+                      tooltip: 'Enrollments',
+                      onPressed: onEnrollments,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textSecondary),
+                      tooltip: 'Edit',
+                      onPressed: onEdit,
+                      visualDensity: VisualDensity.compact,
+                    ),
                     IconButton(
                       icon: Icon(
                         module.isPublished
@@ -654,6 +885,114 @@ class _StatChip extends StatelessWidget {
             style: GoogleFonts.inter(
                 fontSize: 12, color: AppColors.textSecondary)),
       ],
+    );
+  }
+}
+
+class _EnrollmentCard extends StatelessWidget {
+  final Map<String, dynamic> enrollment;
+  final VoidCallback? onMarkPaid;
+  final VoidCallback? onDelete;
+  const _EnrollmentCard({required this.enrollment, this.onMarkPaid, this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final e = enrollment;
+    final status = (e['status'] ?? '').toString();
+    final statusColor = switch (status) {
+      'paid' => AppColors.success,
+      'pending' => AppColors.warning,
+      _ => AppColors.textSecondary,
+    };
+    final totalAmount = (e['total_amount'] as num?) ?? 0;
+    String? createdAt;
+    try {
+      final raw = e['created_at'];
+      if (raw != null) createdAt = DateFormat('d MMM yyyy, h:mm a').format(DateTime.parse(raw.toString()));
+    } catch (_) {}
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Text((e['name'] ?? '').toString(),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14.5)),
+          ),
+          if (status.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+              child: Text(status.toUpperCase(),
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor, letterSpacing: 0.3)),
+            ),
+          if (onMarkPaid != null)
+            IconButton(
+              icon: const Icon(Icons.check_circle_outline_rounded, size: 19, color: AppColors.success),
+              tooltip: 'Mark as paid (manual UPI/cash)',
+              onPressed: onMarkPaid,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.only(left: 8),
+            ),
+          if (onDelete != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, size: 19, color: AppColors.error),
+              tooltip: 'Delete enrollment',
+              onPressed: onDelete,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.only(left: 8),
+            ),
+        ]),
+        const SizedBox(height: 10),
+        if ((e['phone'] ?? '').toString().isNotEmpty)
+          _EnrollmentRow(icon: Icons.phone_rounded, label: (e['phone']).toString()),
+        if ((e['email'] ?? '').toString().isNotEmpty)
+          _EnrollmentRow(icon: Icons.email_rounded, label: (e['email']).toString()),
+        if (totalAmount > 0)
+          _EnrollmentRow(icon: Icons.payments_rounded, label: '₹$totalAmount paid'),
+        if ((e['receipt_number'] ?? '').toString().isNotEmpty)
+          _EnrollmentRow(icon: Icons.receipt_long_rounded, label: 'Receipt ${e['receipt_number']}'),
+        if ((e['payment_proof_url'] ?? '').toString().isNotEmpty)
+          InkWell(
+            onTap: () => html.window.open((e['payment_proof_url'] as String), '_blank'),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(children: [
+                const Icon(Icons.image_rounded, size: 14, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text('View payment screenshot',
+                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
+              ]),
+            ),
+          ),
+        if (createdAt != null)
+          _EnrollmentRow(icon: Icons.event_available_rounded, label: 'Enrolled $createdAt'),
+      ]),
+    );
+  }
+}
+
+class _EnrollmentRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _EnrollmentRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textPrimary))),
+      ]),
     );
   }
 }

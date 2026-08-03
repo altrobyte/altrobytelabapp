@@ -9,7 +9,7 @@ import '../../constants/app_colors.dart';
 import '../../constants/api_constants.dart';
 import '../../providers/brand_provider.dart';
 
-const _teal = Color(0xFF00BFA5);
+const _teal = AppColors.success;
 
 class StudentLoginScreen extends StatefulWidget {
   const StudentLoginScreen({super.key});

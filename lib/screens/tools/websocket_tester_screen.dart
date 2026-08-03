@@ -8,7 +8,8 @@ import '../../constants/app_colors.dart';
 /// incoming messages live. Useful for testing any device/service that
 /// exposes a plain WebSocket endpoint (ws:// or wss://).
 class WebSocketTesterScreen extends StatefulWidget {
-  const WebSocketTesterScreen({super.key});
+  final String? initialUrl;
+  const WebSocketTesterScreen({super.key, this.initialUrl});
 
   @override
   State<WebSocketTesterScreen> createState() => _WebSocketTesterScreenState();
@@ -23,7 +24,7 @@ class _WsLogLine {
 }
 
 class _WebSocketTesterScreenState extends State<WebSocketTesterScreen> {
-  final _urlCtrl = TextEditingController(text: 'wss://echo.websocket.org');
+  late final _urlCtrl = TextEditingController(text: widget.initialUrl ?? 'wss://echo.websocket.org');
   final _messageCtrl = TextEditingController(text: 'Hello from Altrobyte Lab');
 
   WebSocketChannel? _channel;
@@ -98,7 +99,7 @@ class _WebSocketTesterScreenState extends State<WebSocketTesterScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1B5E),
+        backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Row(children: [
           const Icon(Icons.cable_rounded, color: Colors.white, size: 20),
@@ -151,7 +152,7 @@ class _WebSocketTesterScreenState extends State<WebSocketTesterScreen> {
                     width: double.infinity,
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: _connected ? AppColors.error : const Color(0xFF7C4DFF),
+                        backgroundColor: _connected ? AppColors.error : AppColors.accent,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -206,7 +207,7 @@ class _WebSocketTesterScreenState extends State<WebSocketTesterScreen> {
               constraints: const BoxConstraints(minHeight: 160),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0D1B5E),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _log.isEmpty
@@ -221,10 +222,10 @@ class _WebSocketTesterScreenState extends State<WebSocketTesterScreen> {
                           style: GoogleFonts.robotoMono(
                               fontSize: 11.5,
                               color: l.isError
-                                  ? const Color(0xFFFF5252)
+                                  ? AppColors.error
                                   : l.isOutgoing
                                       ? AppColors.accent
-                                      : const Color(0xFF00E5A0)),
+                                      : AppColors.success),
                         ),
                       )).toList(),
                     ),

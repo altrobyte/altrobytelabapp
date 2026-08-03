@@ -9,18 +9,28 @@ import '../../constants/app_colors.dart';
 /// the topic pattern used in Altrobyte's own ESP32 IoT workshop demo
 /// so it's useful the moment it loads.
 class MqttTesterScreen extends StatefulWidget {
-  const MqttTesterScreen({super.key});
+  final String? initialHost;
+  final String? initialTopic;
+  const MqttTesterScreen({super.key, this.initialHost, this.initialTopic});
 
   @override
   State<MqttTesterScreen> createState() => _MqttTesterScreenState();
 }
 
 class _MqttTesterScreenState extends State<MqttTesterScreen> {
-  final _hostCtrl = TextEditingController(text: 'wss://broker.hivemq.com/mqtt');
+  late final _hostCtrl =
+      TextEditingController(text: widget.initialHost ?? 'wss://broker.hivemq.com/mqtt');
   final _portCtrl = TextEditingController(text: '8884');
-  final _subTopicCtrl = TextEditingController(text: 'altrobyte/home/adc/data');
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  late final _subTopicCtrl =
+      TextEditingController(text: widget.initialTopic ?? 'altrobyte/home/adc/data');
   final _pubTopicCtrl = TextEditingController(text: 'altrobyte/home/led/control');
   final _payloadCtrl = TextEditingController(text: 'ON');
+
+  MqttQos _subQos = MqttQos.atMostOnce;
+  MqttQos _pubQos = MqttQos.atLeastOnce;
+  bool _retain = false;
 
   MqttBrowserClient? _client;
   bool _connecting = false;
@@ -56,7 +66,13 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
     client.onDisconnected = () { _addLog('Disconnected', isError: true); };
     client.onConnected = () { _addLog('Connected to $host:$port'); };
     client.onSubscribed = (topic) { _addLog('Subscribed to "$topic"'); };
-    client.connectionMessage = MqttConnectMessage().withClientIdentifier(clientId).startClean();
+    var connMsg = MqttConnectMessage().withClientIdentifier(clientId).startClean();
+    final username = _usernameCtrl.text.trim();
+    final password = _passwordCtrl.text;
+    if (username.isNotEmpty) {
+      connMsg = connMsg.authenticateAs(username, password);
+    }
+    client.connectionMessage = connMsg;
 
     try {
       await client.connect();
@@ -84,7 +100,7 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
   void _subscribe() {
     final topic = _subTopicCtrl.text.trim();
     if (topic.isEmpty || !_connected) return;
-    _client!.subscribe(topic, MqttQos.atMostOnce);
+    _client!.subscribe(topic, _subQos);
   }
 
   void _publish() {
@@ -92,8 +108,8 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
     final payload = _payloadCtrl.text;
     if (topic.isEmpty || !_connected) return;
     final builder = MqttClientPayloadBuilder()..addString(payload);
-    _client!.publishMessage(topic, MqttQos.atLeastOnce, builder.payload!);
-    _addLog('$topic  ←  $payload', isOutgoing: true);
+    _client!.publishMessage(topic, _pubQos, builder.payload!, retain: _retain);
+    _addLog('$topic  ←  $payload  (QoS ${_pubQos.index}${_retain ? ', retained' : ''})', isOutgoing: true);
   }
 
   @override
@@ -101,6 +117,8 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
     _client?.disconnect();
     _hostCtrl.dispose();
     _portCtrl.dispose();
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
     _subTopicCtrl.dispose();
     _pubTopicCtrl.dispose();
     _payloadCtrl.dispose();
@@ -112,7 +130,7 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1B5E),
+        backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Row(children: [
           const Icon(Icons.developer_board_rounded, color: Colors.white, size: 20),
@@ -189,12 +207,42 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
                       ),
                     ),
                   ]),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _usernameCtrl,
+                        enabled: !_connected,
+                        decoration: InputDecoration(
+                          labelText: 'Username (optional)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _passwordCtrl,
+                        enabled: !_connected,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text('Most industrial/production brokers require credentials — public test brokers (HiveMQ/Mosquitto) don\'t.',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: _connected ? AppColors.error : const Color(0xFF7C4DFF),
+                        backgroundColor: _connected ? AppColors.error : AppColors.accent,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -219,6 +267,9 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Subscribe', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text('Wildcards work too — e.g. "sensors/+/temperature" or "sensors/#"',
+                      style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
                   const SizedBox(height: 10),
                   Row(children: [
                     Expanded(
@@ -231,8 +282,19 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
+                    DropdownButton<MqttQos>(
+                      value: _subQos,
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: MqttQos.atMostOnce, child: Text('QoS 0')),
+                        DropdownMenuItem(value: MqttQos.atLeastOnce, child: Text('QoS 1')),
+                        DropdownMenuItem(value: MqttQos.exactlyOnce, child: Text('QoS 2')),
+                      ],
+                      onChanged: (v) => setState(() => _subQos = v ?? MqttQos.atMostOnce),
+                    ),
+                    const SizedBox(width: 10),
                     FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00BFA5)),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
                       onPressed: _connected ? _subscribe : null,
                       child: const Text('Subscribe'),
                     ),
@@ -269,11 +331,26 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
+                    DropdownButton<MqttQos>(
+                      value: _pubQos,
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: MqttQos.atMostOnce, child: Text('QoS 0')),
+                        DropdownMenuItem(value: MqttQos.atLeastOnce, child: Text('QoS 1')),
+                        DropdownMenuItem(value: MqttQos.exactlyOnce, child: Text('QoS 2')),
+                      ],
+                      onChanged: (v) => setState(() => _pubQos = v ?? MqttQos.atLeastOnce),
+                    ),
+                    const SizedBox(width: 10),
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
                       onPressed: _connected ? _publish : null,
                       child: const Text('Publish'),
                     ),
+                  ]),
+                  Row(children: [
+                    Checkbox(value: _retain, onChanged: (v) => setState(() => _retain = v ?? false)),
+                    Text('Retain', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
                   ]),
                 ]),
               ),
@@ -288,7 +365,7 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
               constraints: const BoxConstraints(minHeight: 160),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0D1B5E),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _log.isEmpty
@@ -303,10 +380,10 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
                           style: GoogleFonts.robotoMono(
                               fontSize: 11.5,
                               color: l.isError
-                                  ? const Color(0xFFFF5252)
+                                  ? AppColors.error
                                   : l.isOutgoing
                                       ? AppColors.accent
-                                      : const Color(0xFF00E5A0)),
+                                      : AppColors.success),
                         ),
                       )).toList(),
                     ),

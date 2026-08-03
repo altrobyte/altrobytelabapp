@@ -1,12 +1,14 @@
 // Training Module data models — hierarchical:
 // TrainingModule → ModuleTopic → ModuleSubtopic → ContentItem
 //
-// ContentItem types: notes (HTML), test (links to AltroTest), video (YouTube)
+// ContentItem types: notes (HTML), test (links to AltroTest), video
+// (YouTube), resource (downloadable file link — this is what makes a
+// module double as a "Course": notes + video + downloadable resources).
 
 class ContentItem {
   final int id;
   final int subtopicId;
-  final String type; // 'notes' | 'test' | 'video'
+  final String type; // 'notes' | 'test' | 'video' | 'resource'
   final String title;
   final int order;
 
@@ -15,6 +17,7 @@ class ContentItem {
   final int? testId; // for test — links to existing AltroTest
   final String? testTitle; // display name for linked test
   final String? youtubeUrl; // for video
+  final String? resourceUrl; // for resource — downloadable file link
 
   ContentItem({
     required this.id,
@@ -26,6 +29,7 @@ class ContentItem {
     this.testId,
     this.testTitle,
     this.youtubeUrl,
+    this.resourceUrl,
   });
 
   factory ContentItem.fromJson(Map<String, dynamic> j) => ContentItem(
@@ -38,6 +42,7 @@ class ContentItem {
         testId: j['test_id'],
         testTitle: j['test_title'],
         youtubeUrl: j['youtube_url'],
+        resourceUrl: j['resource_url'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -50,6 +55,7 @@ class ContentItem {
         if (testId != null) 'test_id': testId,
         if (testTitle != null) 'test_title': testTitle,
         if (youtubeUrl != null) 'youtube_url': youtubeUrl,
+        if (resourceUrl != null) 'resource_url': resourceUrl,
       };
 
   ContentItem copyWith({
@@ -62,6 +68,7 @@ class ContentItem {
     int? testId,
     String? testTitle,
     String? youtubeUrl,
+    String? resourceUrl,
   }) =>
       ContentItem(
         id: id ?? this.id,
@@ -73,6 +80,7 @@ class ContentItem {
         testId: testId ?? this.testId,
         testTitle: testTitle ?? this.testTitle,
         youtubeUrl: youtubeUrl ?? this.youtubeUrl,
+        resourceUrl: resourceUrl ?? this.resourceUrl,
       );
 }
 
@@ -166,6 +174,21 @@ class ModuleTopic {
       subtopics.fold(0, (sum, s) => sum + s.contentItems.length);
 }
 
+/// The workshop this course is bundled with, if any — reverse of
+/// LiveSession's linked_module_id, used to cross-link the two pages.
+class LinkedSessionInfo {
+  final int id;
+  final String title;
+  final DateTime? sessionDate;
+  LinkedSessionInfo({required this.id, required this.title, this.sessionDate});
+
+  factory LinkedSessionInfo.fromJson(Map<String, dynamic> j) => LinkedSessionInfo(
+        id: j['id'] ?? 0,
+        title: j['title'] ?? '',
+        sessionDate: j['session_date'] != null ? DateTime.tryParse(j['session_date']) : null,
+      );
+}
+
 class TrainingModule {
   final int id;
   final int instituteId;
@@ -174,8 +197,16 @@ class TrainingModule {
   final String iconName; // Material icon name
   final String color; // Hex color string
   final bool isPublished;
+  final double price;
+  final double taxPercent;
+  final double? originalPrice;
+  final bool locked;
+  final bool loginRequired;
+  final LinkedSessionInfo? linkedSession;
   final DateTime? createdAt;
   final List<ModuleTopic> topics;
+  final int? topicCountFromApi;
+  final int? totalContentItemsFromApi;
 
   TrainingModule({
     required this.id,
@@ -185,8 +216,16 @@ class TrainingModule {
     this.iconName = 'school',
     this.color = '#7C4DFF',
     this.isPublished = false,
+    this.price = 0,
+    this.taxPercent = 0,
+    this.originalPrice,
+    this.locked = false,
+    this.loginRequired = false,
+    this.linkedSession,
     this.createdAt,
     this.topics = const [],
+    this.topicCountFromApi,
+    this.totalContentItemsFromApi,
   });
 
   factory TrainingModule.fromJson(Map<String, dynamic> j) => TrainingModule(
@@ -197,6 +236,14 @@ class TrainingModule {
         iconName: j['icon_name'] ?? 'school',
         color: j['color'] ?? '#7C4DFF',
         isPublished: j['is_published'] ?? false,
+        price: (j['price'] as num?)?.toDouble() ?? 0,
+        taxPercent: (j['tax_percent'] as num?)?.toDouble() ?? 0,
+        originalPrice: (j['original_price'] as num?)?.toDouble(),
+        locked: j['locked'] ?? false,
+        loginRequired: j['login_required'] ?? false,
+        linkedSession: j['linked_session'] != null
+            ? LinkedSessionInfo.fromJson(Map<String, dynamic>.from(j['linked_session']))
+            : null,
         createdAt:
             j['created_at'] != null ? DateTime.tryParse(j['created_at']) : null,
         topics: (j['topics'] as List?)
@@ -204,6 +251,8 @@ class TrainingModule {
                     (t) => ModuleTopic.fromJson(Map<String, dynamic>.from(t)))
                 .toList() ??
             [],
+        topicCountFromApi: j['topic_count'] as int?,
+        totalContentItemsFromApi: j['total_content_items'] as int?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -214,20 +263,27 @@ class TrainingModule {
         'icon_name': iconName,
         'color': color,
         'is_published': isPublished,
+        'price': price,
+        'tax_percent': taxPercent,
         if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
         'topics': topics.map((t) => t.toJson()).toList(),
       };
 
-  /// Total topics
-  int get topicCount => topics.length;
+  /// Total topics. Prefers the backend-computed count (present on both the
+  /// list and detail endpoints) since the list view never populates
+  /// `topics` itself — falling back to topics.length would always read 0
+  /// there, which is exactly the "0 topics" / "X/0 completed" bug this
+  /// was built to fix.
+  int get topicCount => topicCountFromApi ?? topics.length;
 
   /// Total subtopics across all topics
   int get subtopicCount =>
       topics.fold(0, (sum, t) => sum + t.subtopics.length);
 
-  /// Total content items across entire module
+  /// Total content items across entire module — see topicCount above for
+  /// why the API-provided count takes priority.
   int get totalContentItems =>
-      topics.fold(0, (sum, t) => sum + t.totalContentItems);
+      totalContentItemsFromApi ?? topics.fold(0, (sum, t) => sum + t.totalContentItems);
 
   TrainingModule copyWith({
     int? id,
@@ -237,6 +293,10 @@ class TrainingModule {
     String? iconName,
     String? color,
     bool? isPublished,
+    double? price,
+    double? taxPercent,
+    double? originalPrice,
+    bool clearOriginalPrice = false,
     DateTime? createdAt,
     List<ModuleTopic>? topics,
   }) =>
@@ -248,8 +308,15 @@ class TrainingModule {
         iconName: iconName ?? this.iconName,
         color: color ?? this.color,
         isPublished: isPublished ?? this.isPublished,
+        price: price ?? this.price,
+        taxPercent: taxPercent ?? this.taxPercent,
+        originalPrice: clearOriginalPrice ? null : (originalPrice ?? this.originalPrice),
+        loginRequired: loginRequired,
+        linkedSession: linkedSession,
         createdAt: createdAt ?? this.createdAt,
         topics: topics ?? List.from(this.topics),
+        topicCountFromApi: topicCountFromApi,
+        totalContentItemsFromApi: totalContentItemsFromApi,
       );
 }
 

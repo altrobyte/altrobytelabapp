@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../constants/api_constants.dart';
+import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 
@@ -70,7 +71,7 @@ class _SuperAdminDashboardScreenState
               height: 32,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [Color(0xFFFF6B35), Color(0xFFFF8C42)]),
+                    colors: [AppColors.accent, AppColors.accentLight]),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.shield_rounded,
@@ -87,14 +88,14 @@ class _SuperAdminDashboardScreenState
               padding:
                   const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF6B35).withValues(alpha: 0.15),
+                color: AppColors.accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: const Color(0xFFFF6B35).withValues(alpha: 0.3)),
+                    color: AppColors.accent.withValues(alpha: 0.3)),
               ),
               child: Text('PLATFORM',
                   style: GoogleFonts.inter(
-                      color: const Color(0xFFFF6B35),
+                      color: AppColors.accent,
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8)),
@@ -104,15 +105,45 @@ class _SuperAdminDashboardScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.tune_rounded,
-                color: Color(0xFFFFB300), size: 20),
+                color: AppColors.accentLight, size: 20),
             onPressed: () => context.push('/super/settings'),
             tooltip: 'Platform Settings',
           ),
           IconButton(
             icon: const Icon(Icons.monetization_on_rounded,
-                color: Color(0xFF00BFA5), size: 20),
+                color: AppColors.success, size: 20),
             onPressed: () => context.push('/super/commissions'),
             tooltip: 'Commission Tracker',
+          ),
+          IconButton(
+            icon: const Icon(Icons.work_rounded,
+                color: AppColors.accent, size: 20),
+            onPressed: () => context.push('/super/job-updates'),
+            tooltip: 'Job Updates',
+          ),
+          IconButton(
+            icon: const Icon(Icons.event_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => context.push('/super/events'),
+            tooltip: 'Events',
+          ),
+          IconButton(
+            icon: const Icon(Icons.video_camera_front_rounded,
+                color: AppColors.accent, size: 20),
+            onPressed: () => context.push('/super/live-sessions'),
+            tooltip: 'Live Sessions / Workshops',
+          ),
+          IconButton(
+            icon: const Icon(Icons.mail_outline_rounded,
+                color: AppColors.primary, size: 20),
+            onPressed: () => context.push('/super/enquiries'),
+            tooltip: 'Institution Enquiries',
+          ),
+          IconButton(
+            icon: const Icon(Icons.sell_rounded,
+                color: AppColors.success, size: 20),
+            onPressed: () => context.push('/super/pricing'),
+            tooltip: 'Subscription Plans',
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded,
@@ -140,7 +171,7 @@ class _SuperAdminDashboardScreenState
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF6B35)))
+              child: CircularProgressIndicator(color: AppColors.accent))
           : _error != null
               ? Center(
                   child: Column(
@@ -154,7 +185,7 @@ class _SuperAdminDashboardScreenState
                       const SizedBox(height: 16),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6B35)),
+                            backgroundColor: AppColors.accent),
                         onPressed: _load,
                         child: const Text('Retry'),
                       ),
@@ -162,7 +193,7 @@ class _SuperAdminDashboardScreenState
                   ),
                 )
               : RefreshIndicator(
-                  color: const Color(0xFFFF6B35),
+                  color: AppColors.accent,
                   backgroundColor: const Color(0xFF1A1A2E),
                   onRefresh: _load,
                   child: SingleChildScrollView(
@@ -223,7 +254,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFFFF6B35), size: 18),
+        Icon(icon, color: AppColors.accent, size: 18),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,12 +272,12 @@ class _SectionHeader extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 7, vertical: 1),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withValues(alpha: 0.15),
+                      color: AppColors.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(badge!,
                         style: GoogleFonts.inter(
-                            color: const Color(0xFFFF6B35),
+                            color: AppColors.accent,
                             fontSize: 11,
                             fontWeight: FontWeight.w600)),
                   ),
@@ -271,17 +302,17 @@ class _StatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _StatItem('Active Institutes', '${stats['active_institutes'] ?? 0}',
-          Icons.business_rounded, const Color(0xFF00BFA5)),
+          Icons.business_rounded, AppColors.success),
       _StatItem('Total Students', '${stats['total_students'] ?? 0}',
-          Icons.people_rounded, const Color(0xFF7C4DFF)),
+          Icons.people_rounded, AppColors.primary),
       _StatItem('Total Tests', '${stats['total_tests'] ?? 0}',
-          Icons.quiz_rounded, const Color(0xFFFF6B35)),
+          Icons.quiz_rounded, AppColors.accent),
       _StatItem('Test Attempts', '${stats['total_attempts'] ?? 0}',
-          Icons.check_circle_rounded, const Color(0xFF26C6DA)),
+          Icons.check_circle_rounded, AppColors.success),
       _StatItem('Student Logins', '${stats['active_student_accounts'] ?? 0}',
-          Icons.person_rounded, const Color(0xFF5E35B1)),
+          Icons.person_rounded, AppColors.primary),
       _StatItem('Active Managers', '${stats['active_managers'] ?? 0}',
-          Icons.manage_accounts_rounded, const Color(0xFFFF8C42)),
+          Icons.manage_accounts_rounded, AppColors.accentLight),
     ];
 
     return GridView.builder(
@@ -366,9 +397,9 @@ class _RevenueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _RevItem('MRR', '₹${revenue['mrr'] ?? 0}', const Color(0xFF00BFA5), Icons.trending_up_rounded),
-      _RevItem('This Month', '₹${revenue['monthly_revenue'] ?? 0}', const Color(0xFF7C4DFF), Icons.calendar_month_rounded),
-      _RevItem('Total', '₹${revenue['total_revenue'] ?? 0}', const Color(0xFFFF8C42), Icons.account_balance_wallet_rounded),
+      _RevItem('MRR', '₹${revenue['mrr'] ?? 0}', AppColors.success, Icons.trending_up_rounded),
+      _RevItem('This Month', '₹${revenue['monthly_revenue'] ?? 0}', AppColors.primary, Icons.calendar_month_rounded),
+      _RevItem('Total', '₹${revenue['total_revenue'] ?? 0}', AppColors.accentLight, Icons.account_balance_wallet_rounded),
       _RevItem('Overdue', '${revenue['overdue_institutes'] ?? 0}', Colors.red, Icons.warning_rounded),
     ];
     return Row(
@@ -424,7 +455,7 @@ class _InstituteCard extends StatelessWidget {
     final diff = expDate.difference(DateTime.now()).inDays;
     if (diff < 0) return Colors.red;
     if (diff <= 7) return Colors.orange;
-    return const Color(0xFF00BFA5);
+    return AppColors.success;
   }
 
   String get _expiryLabel {
@@ -444,10 +475,10 @@ class _InstituteCard extends StatelessWidget {
     final isActive = inst['is_active'] == true;
     final plan = (inst['plan'] ?? 'starter') as String;
     final planColor = plan == 'enterprise'
-        ? const Color(0xFFFFD700)
+        ? AppColors.accentLight
         : plan == 'pro'
-            ? const Color(0xFF7C4DFF)
-            : const Color(0xFF00BFA5);
+            ? AppColors.primary
+            : AppColors.success;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -486,9 +517,9 @@ class _InstituteCard extends StatelessWidget {
                       ]),
                       const SizedBox(height: 4),
                       Row(children: [
-                        _MiniStat(Icons.people_rounded, '${inst['student_count'] ?? 0}', const Color(0xFF7C4DFF)),
+                        _MiniStat(Icons.people_rounded, '${inst['student_count'] ?? 0}', AppColors.primary),
                         const SizedBox(width: 10),
-                        _MiniStat(Icons.quiz_rounded, '${inst['test_count'] ?? 0}', const Color(0xFFFF6B35)),
+                        _MiniStat(Icons.quiz_rounded, '${inst['test_count'] ?? 0}', AppColors.accent),
                         const SizedBox(width: 10),
                         _MiniStat(Icons.calendar_today_rounded, _expiryLabel, _statusColor),
                       ]),
@@ -499,13 +530,13 @@ class _InstituteCard extends StatelessWidget {
                   icon: const Icon(Icons.more_vert_rounded, color: Colors.white38, size: 20),
                   color: const Color(0xFF1A1A2E),
                   itemBuilder: (_) => [
-                    _menuItem('payment', Icons.payments_rounded, 'Record Payment', const Color(0xFF00BFA5)),
-                    _menuItem('plan', Icons.upgrade_rounded, 'Change Plan', const Color(0xFF7C4DFF)),
-                    _menuItem('audits', Icons.history_rounded, 'View Audits', const Color(0xFF00BFA5)),
+                    _menuItem('payment', Icons.payments_rounded, 'Record Payment', AppColors.success),
+                    _menuItem('plan', Icons.upgrade_rounded, 'Change Plan', AppColors.primary),
+                    _menuItem('audits', Icons.history_rounded, 'View Audits', AppColors.success),
                     if (isActive)
                       _menuItem('suspend', Icons.block_rounded, 'Suspend', Colors.orange)
                     else
-                      _menuItem('activate', Icons.check_circle_rounded, 'Activate', const Color(0xFF00BFA5)),
+                      _menuItem('activate', Icons.check_circle_rounded, 'Activate', AppColors.success),
                     _menuItem('delete', Icons.delete_forever_rounded, 'Delete Institute', Colors.red),
                   ],
                   onSelected: (v) => _handleAction(context, v),
@@ -674,13 +705,13 @@ class _InstituteCard extends StatelessWidget {
                     : 'Unlimited · ₹4999/mo',
                 style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
-              activeColor: const Color(0xFFFF6B35),
+              activeColor: AppColors.accent,
             )).toList(),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B35)),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
               onPressed: () async {
                 await ApiService.changePlan(id, selected, token);
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -719,7 +750,7 @@ class _InstituteCard extends StatelessWidget {
                   prefixText: '₹ ',
                   prefixStyle: TextStyle(color: Colors.white),
                   enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFFF6B35))),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.accent)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -763,7 +794,7 @@ class _InstituteCard extends StatelessWidget {
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00BFA5)),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.success),
               onPressed: () async {
                 final amt = int.tryParse(amountCtrl.text.trim()) ?? 0;
                 await ApiService.recordPayment(id, token,

@@ -85,6 +85,8 @@ class _BroadcastScreenState extends State<BroadcastScreen>
   // ── Post to Feed ────────────────────────────────────────────────────────────
 
   String _postType = 'notice'; // 'notice' | 'video'
+  String _postCategory = 'general'; // 'general' | 'placement'
+  String _postSegment = 'all'; // 'all' | 'subscribers'
   final _postTitleCtrl = TextEditingController();
   final _postContentCtrl = TextEditingController();
   final _postLinkCtrl = TextEditingController();
@@ -110,6 +112,8 @@ class _BroadcastScreenState extends State<BroadcastScreen>
         content: _postContentCtrl.text.trim(),
         type: _postType,
         linkUrl: _postLinkCtrl.text.trim(),
+        category: _postCategory,
+        segment: _postSegment,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -119,7 +123,11 @@ class _BroadcastScreenState extends State<BroadcastScreen>
       _postTitleCtrl.clear();
       _postContentCtrl.clear();
       _postLinkCtrl.clear();
-      setState(() => _postType = 'notice');
+      setState(() {
+        _postType = 'notice';
+        _postCategory = 'general';
+        _postSegment = 'all';
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,10 +193,35 @@ class _BroadcastScreenState extends State<BroadcastScreen>
                 const SizedBox(height: 12),
                 Row(children: [
                   _typeChip('Announcement', 'notice', Icons.campaign_rounded,
-                      const Color(0xFFF57C00)),
+                      AppColors.warning),
                   const SizedBox(width: 10),
                   _typeChip('Video', 'video', Icons.play_circle_filled_rounded,
-                      const Color(0xFFE53935)),
+                      AppColors.error),
+                ]),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Category + audience segment
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Category', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  _categoryChip('General', 'general', Icons.campaign_rounded),
+                  const SizedBox(width: 10),
+                  _categoryChip('Placement Update', 'placement', Icons.work_rounded),
+                ]),
+                const SizedBox(height: 18),
+                Text('Audience', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  _segmentChip('Everyone', 'all', Icons.public_rounded),
+                  const SizedBox(width: 10),
+                  _segmentChip('Subscribers only', 'subscribers', Icons.workspace_premium_rounded),
                 ]),
               ]),
             ),
@@ -366,6 +399,56 @@ class _BroadcastScreenState extends State<BroadcastScreen>
     final active = _postType == value;
     return GestureDetector(
       onTap: () => setState(() => _postType = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? color : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: active ? color : color.withValues(alpha: 0.3)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 16, color: active ? Colors.white : color),
+          const SizedBox(width: 6),
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : color)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _categoryChip(String label, String value, IconData icon) {
+    const color = AppColors.primary;
+    final active = _postCategory == value;
+    return GestureDetector(
+      onTap: () => setState(() => _postCategory = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? color : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: active ? color : color.withValues(alpha: 0.3)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 16, color: active ? Colors.white : color),
+          const SizedBox(width: 6),
+          Text(label,
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : color)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _segmentChip(String label, String value, IconData icon) {
+    const color = AppColors.success;
+    final active = _postSegment == value;
+    return GestureDetector(
+      onTap: () => setState(() => _postSegment = value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

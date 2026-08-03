@@ -35,8 +35,8 @@ class _BottomNav extends StatelessWidget {
   const _BottomNav({required this.shell});
 
   // Maps each bottom-nav slot to its branch index in the StatefulShellRoute.
-  // (dashboard=0, students=1, test-generator=3, attendance=5, settings=9)
-  static const _branchIndices = [0, 1, 3, 5, 9];
+  // (dashboard=0, students=1, test-generator=4, attendance=12, settings=16)
+  static const _branchIndices = [0, 1, 4, 12, 16];
 
   @override
   Widget build(BuildContext context) {

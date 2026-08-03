@@ -61,7 +61,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7C4DFF),
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(32),
                   ),
                   child: const Center(
@@ -122,7 +122,7 @@ class _ManagerLoginScreenState extends State<ManagerLoginScreen> {
                             icon: Icons.login_rounded,
                             onPressed: _login,
                             loading: auth.isLoading,
-                            colors: const [Color(0xFF5E35B1), Color(0xFF7C4DFF)],
+                            colors: const [AppColors.primary, AppColors.primaryLight],
                           ),
                         ],
                       ),

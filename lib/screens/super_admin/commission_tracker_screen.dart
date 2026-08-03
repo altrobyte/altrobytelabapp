@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/api_constants.dart';
 
-const _teal = Color(0xFF00BFA5);
-const _purple = Color(0xFF7C4DFF);
+const _earnedColor = AppColors.success;
+const _brandColor = AppColors.primary;
 
 class CommissionTrackerScreen extends StatefulWidget {
   const CommissionTrackerScreen({super.key});
@@ -123,7 +123,7 @@ class _CommissionTrackerScreenState extends State<CommissionTrackerScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _teal))
+          ? const Center(child: CircularProgressIndicator(color: _earnedColor))
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
@@ -131,7 +131,7 @@ class _CommissionTrackerScreenState extends State<CommissionTrackerScreen> {
                 children: [
                   // ── Summary Cards ──
                   Row(children: [
-                    _summaryCard('Total Earned', '₹$totalEarned', _teal),
+                    _summaryCard('Total Earned', '₹$totalEarned', _earnedColor),
                     const SizedBox(width: 10),
                     _summaryCard('Collected', '₹$totalPaid', AppColors.success),
                   ]),
@@ -139,14 +139,14 @@ class _CommissionTrackerScreenState extends State<CommissionTrackerScreen> {
                   Row(children: [
                     _summaryCard('Pending', '₹$totalPending', AppColors.error),
                     const SizedBox(width: 10),
-                    _summaryCard('Institutes', '$instCount', _purple),
+                    _summaryCard('Institutes', '$instCount', _brandColor),
                   ]),
                   const SizedBox(height: 20),
 
                   // ── Actions ──
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: _purple,
+                      backgroundColor: _brandColor,
                       minimumSize: const Size(double.infinity, 46),
                     ),
                     onPressed: _calculating ? null : _calculate,
@@ -248,10 +248,10 @@ class _CommissionTrackerScreenState extends State<CommissionTrackerScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? _purple : Colors.white,
+          color: active ? _brandColor : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: active ? _purple : Colors.grey.shade300),
+              color: active ? _brandColor : Colors.grey.shade300),
         ),
         child: Text(label,
             style: GoogleFonts.inter(
@@ -321,14 +321,14 @@ class _CommissionTrackerScreenState extends State<CommissionTrackerScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: _teal.withValues(alpha: 0.1),
+                        color: _earnedColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text('Mark Paid',
                           style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: _teal)),
+                              color: _earnedColor)),
                     ),
                   )
                 else

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../services/google_auth_service.dart';
 import '../widgets/custom_button_widget.dart';
 import '../utils/validators.dart';
 
@@ -388,8 +389,8 @@ class _LoginTab extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF25D366),
-                  side: const BorderSide(color: Color(0xFF25D366)),
+                  foregroundColor: AppColors.whatsapp,
+                  side: const BorderSide(color: AppColors.whatsapp),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -397,6 +398,42 @@ class _LoginTab extends StatelessWidget {
                 onPressed: () => context.go('/whatsapp-login'),
                 icon: const Icon(Icons.chat_rounded, size: 18),
                 label: Text('Login with WhatsApp OTP',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () async {
+                  try {
+                    final result = await GoogleAuthService.signIn();
+                    if (result.role == 'admin' || result.role == 'super_admin') {
+                      // ignore: use_build_context_synchronously
+                      await context.read<AuthProvider>().setFromResponse(result.data);
+                      if (context.mounted) {
+                        context.go(result.role == 'super_admin' ? '/super/dashboard' : '/dashboard');
+                      }
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('That Google account is registered as a student, not an admin.')));
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
+                  }
+                },
+                icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                label: Text('Sign in with Google',
                     style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600, fontSize: 13)),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../services/api_service.dart';
 
 /// Holds the per-institute PWA branding loaded from a slug URL
@@ -17,11 +18,11 @@ class BrandProvider extends ChangeNotifier {
   int? get instituteId => _brand?['id'] as int?;
 
   Color get color {
-    final hex = (_brand?['brand_color'] ?? 'E94560').toString().replaceAll('#', '');
+    final hex = (_brand?['brand_color'] ?? 'D4500A').toString().replaceAll('#', '');
     try {
       return Color(int.parse('FF$hex', radix: 16));
     } catch (_) {
-      return const Color(0xFFE94560);
+      return AppColors.accent;
     }
   }
 

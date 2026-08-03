@@ -1267,7 +1267,7 @@ class _ActionBar extends StatelessWidget {
   }
 
   void _showSendDialog(BuildContext context, AltroTest test) {
-    final testLink = 'https://coachingclub-bba5c.web.app/test/${test.id}';
+    final testLink = 'https://lab.altrobyte.com/test/${test.id}';
     final message = '*${test.title}*\n\n'
         'Subject: ${test.subject}\n'
         'Questions: ${test.questions.length}\n'
@@ -1301,7 +1301,7 @@ class _ActionBar extends StatelessWidget {
               child: const Text('Cancel')),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366)),
+                backgroundColor: AppColors.whatsapp),
             onPressed: () async {
               Navigator.pop(context);
               final encoded = Uri.encodeComponent(message);
@@ -1370,6 +1370,82 @@ class _MyTestsTabState extends State<_MyTestsTab> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(isPublished ? 'Test unpublished' : 'Test published! Students can now see it.'),
           backgroundColor: isPublished ? Colors.orange : AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _assignSeries(Map<String, dynamic> test) async {
+    final auth = context.read<AuthProvider>();
+    if (auth.instituteId == null) return;
+    List<dynamic> series;
+    try {
+      series = await ApiService.getTestSeriesAdmin(auth.instituteId!);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      return;
+    }
+    if (!mounted) return;
+    final newTitleCtrl = TextEditingController();
+    const noSeries = Object(); // sentinel distinguishing "explicitly picked no-series" from "dismissed"
+    final result = await showModalBottomSheet<Object?>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Assign "${test['title']}" to a series',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+          const SizedBox(height: 12),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.remove_circle_outline_rounded),
+            title: const Text('No series (standalone)'),
+            onTap: () => Navigator.pop(ctx, noSeries),
+          ),
+          ...series.map((s) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.quiz_rounded),
+                title: Text(s['title'] ?? ''),
+                subtitle: Text('${s['test_count'] ?? 0} tests'),
+                onTap: () => Navigator.pop(ctx, s['id'] as int),
+              )),
+          const Divider(),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: newTitleCtrl,
+                decoration: const InputDecoration(hintText: 'New series name', isDense: true),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () async {
+                if (newTitleCtrl.text.trim().isEmpty) return;
+                final created = await ApiService.createTestSeries(
+                    auth.instituteId!, {'title': newTitleCtrl.text.trim()});
+                // Auto-publish: admin explicitly created it here to assign a
+                // test to it right now, so it should be visible to students.
+                await ApiService.updateTestSeries(created['id'] as int, {'is_published': true});
+                if (ctx.mounted) Navigator.pop(ctx, created['id'] as int);
+              },
+              child: const Text('Create'),
+            ),
+          ]),
+        ]),
+      ),
+    );
+    if (result == null) return; // sheet dismissed without a choice
+    final seriesId = result == noSeries ? null : result as int;
+    try {
+      await ApiService.assignTestToSeries(test['id'], seriesId);
+      _load(force: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(seriesId == null ? 'Removed from series' : 'Assigned to series'),
+          backgroundColor: AppColors.success,
         ));
       }
     } catch (e) {
@@ -1639,6 +1715,16 @@ class _MyTestsTabState extends State<_MyTestsTab> {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                     tooltip: 'View',
+                  ),
+                  const SizedBox(width: 4),
+                  // Assign to series
+                  IconButton(
+                    icon: Icon(Icons.playlist_add_rounded, size: 18,
+                        color: t['series_id'] != null ? AppColors.primary : Colors.grey),
+                    onPressed: () => _assignSeries(t),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                    tooltip: 'Assign to series',
                   ),
                   const SizedBox(width: 4),
                   // Delete

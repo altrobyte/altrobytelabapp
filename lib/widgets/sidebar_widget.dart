@@ -77,7 +77,7 @@ class _Header extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: auth.isManager
-                  ? const Color(0xFF7C4DFF)
+                  ? AppColors.primary
                   : AppColors.accent,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -107,10 +107,17 @@ class _Nav extends StatelessWidget {
     final allItems = [
       _NavItem(Icons.dashboard_rounded, l10n.navDashboard, '/dashboard'),
       _NavItem(Icons.people_rounded, l10n.navStudents, '/students'),
+      _NavItem(Icons.groups_rounded, 'Users', '/platform-users'),
       _NavItem(Icons.class_rounded, l10n.navBatches, '/batches'),
       _NavItem(Icons.auto_awesome_rounded, l10n.navTestGenerator, '/test-generator',
           highlight: true),
       _NavItem(Icons.school_rounded, l10n.navTrainingModules, '/training-modules'),
+      _NavItem(Icons.science_rounded, 'Experiments', '/experiments'),
+      _NavItem(Icons.video_camera_front_rounded, 'Live Sessions', '/live-sessions-admin'),
+      _NavItem(Icons.event_rounded, 'Events', '/events-admin'),
+      _NavItem(Icons.work_rounded, 'Job Updates', '/jobs-admin'),
+      _NavItem(Icons.mail_outline_rounded, 'Enquiries', '/enquiries-admin'),
+      _NavItem(Icons.sell_rounded, 'Pricing', '/pricing-admin'),
       _NavItem(Icons.check_circle_rounded, l10n.navAttendance, '/attendance'),
       _NavItem(Icons.account_balance_wallet_rounded, l10n.navFeeManagement, '/fees'),
       _NavItem(Icons.bar_chart_rounded, l10n.navAnalytics, '/analytics'),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/training_module_provider.dart';
+import '../../services/api_service.dart';
 import 'notes_editor_screen.dart';
 
 /// Admin screen — hierarchical editor for a single training module.
@@ -262,7 +264,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                     icon: Icons.article_rounded,
                     label: 'Notes',
                     subtitle: 'HTML notes page',
-                    color: const Color(0xFF7C4DFF),
+                    color: AppColors.primary,
                     onTap: () {
                       Navigator.pop(ctx);
                       _addNotesContent(topicId, subtopic);
@@ -273,9 +275,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 Expanded(
                   child: _ContentTypeCard(
                     icon: Icons.quiz_rounded,
-                    label: 'Test Series',
-                    subtitle: 'Link a test',
-                    color: const Color(0xFFFF6B35),
+                    label: 'AI Test',
+                    subtitle: 'Auto-generate from notes',
+                    color: AppColors.accent,
                     onTap: () {
                       Navigator.pop(ctx);
                       _addTestContent(topicId, subtopic);
@@ -292,6 +294,49 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                     onTap: () {
                       Navigator.pop(ctx);
                       _addVideoContent(topicId, subtopic);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _ContentTypeCard(
+                    icon: Icons.attach_file_rounded,
+                    label: 'Resource',
+                    subtitle: 'Downloadable file link',
+                    color: AppColors.primary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addResourceContent(topicId, subtopic);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ContentTypeCard(
+                    icon: Icons.code_rounded,
+                    label: 'Code',
+                    subtitle: 'Paste a code snippet',
+                    color: const Color(0xFF7C4DFF),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addCodeContent(topicId, subtopic);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ContentTypeCard(
+                    icon: FontAwesomeIcons.github,
+                    label: 'GitHub Project',
+                    subtitle: 'Link a repo',
+                    color: Colors.black87,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addGithubContent(topicId, subtopic);
                     },
                   ),
                 ),
@@ -338,74 +383,127 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     }
   }
 
+  /// Combines the HTML notes already added in this subtopic into plain-text
+  /// context for AI test generation — no manual test ID needed, the admin
+  /// never has to know or remember one.
+  String _notesContextFor(ModuleSubtopic subtopic) {
+    final notesText = subtopic.contentItems
+        .where((c) => c.type == 'notes' && (c.htmlContent ?? '').isNotEmpty)
+        .map((c) => c.htmlContent!.replaceAll(RegExp(r'<[^>]*>'), ' '))
+        .join('\n\n');
+    // Keep prompt size sane
+    return notesText.length > 4000 ? notesText.substring(0, 4000) : notesText;
+  }
+
   void _addTestContent(int topicId, ModuleSubtopic subtopic) {
-    final titleCtl = TextEditingController();
-    final testIdCtl = TextEditingController();
+    final titleCtl = TextEditingController(text: subtopic.title);
+    final countCtl = TextEditingController(text: '10');
+    final notesContext = _notesContextFor(subtopic);
+    bool generating = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text('Link Test Series',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtl,
-              decoration: InputDecoration(
-                labelText: 'Display Title',
-                hintText: 'e.g., Arrays Practice Test',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text('Generate Test from Notes',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                notesContext.isEmpty
+                    ? 'No notes found in this section yet — add a Notes item first '
+                      'so the AI has content to base questions on, or the test will '
+                      'be generated from the section title alone.'
+                    : 'AI will generate questions based on the notes already added '
+                      'in "${subtopic.title}".',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    color: notesContext.isEmpty ? Colors.orange.shade800 : AppColors.textSecondary),
               ),
-              style: GoogleFonts.inter(fontSize: 14),
+              const SizedBox(height: 14),
+              TextField(
+                controller: titleCtl,
+                decoration: InputDecoration(
+                  labelText: 'Test Title',
+                  hintText: 'e.g., Arrays Practice Test',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: countCtl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Number of Questions',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  prefixIcon: const Icon(Icons.format_list_numbered_rounded),
+                ),
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: generating ? null : () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textSecondary)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: testIdCtl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Test ID',
-                hintText: 'Enter the test ID to link',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                prefixIcon: const Icon(Icons.link_rounded),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              style: GoogleFonts.inter(fontSize: 14),
+              onPressed: generating
+                  ? null
+                  : () async {
+                      if (titleCtl.text.trim().isEmpty) return;
+                      setDialogState(() => generating = true);
+                      try {
+                        final test = await ApiService.generateTest({
+                          'institute_id': widget.module.instituteId,
+                          'title': titleCtl.text.trim(),
+                          'subject': widget.module.title,
+                          'topic': subtopic.title,
+                          'difficulty': 'Medium',
+                          'exam_type': 'General',
+                          'language': 'English',
+                          'count': int.tryParse(countCtl.text) ?? 10,
+                          'duration_mins': 20,
+                          'custom_instructions': notesContext.isEmpty
+                              ? ''
+                              : 'Base the questions on this study material:\n$notesContext',
+                        });
+                        final item = ContentItem(
+                          id: 0,
+                          subtopicId: subtopic.id,
+                          type: 'test',
+                          title: titleCtl.text.trim(),
+                          testId: test['id'] as int,
+                          testTitle: titleCtl.text.trim(),
+                          order: subtopic.contentItems.length,
+                        );
+                        await _createContent(subtopic, item);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (e) {
+                        setDialogState(() => generating = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+                        }
+                      }
+                    },
+              child: generating
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text('Generate & Add', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B35),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              if (titleCtl.text.trim().isEmpty) return;
-              final item = ContentItem(
-                id: 0,
-                subtopicId: subtopic.id,
-                type: 'test',
-                title: titleCtl.text.trim(),
-                testId: int.tryParse(testIdCtl.text) ?? 0,
-                testTitle: titleCtl.text.trim(),
-                order: subtopic.contentItems.length,
-              );
-              _createContent(subtopic, item);
-              Navigator.pop(ctx);
-            },
-            child: Text('Link',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ],
       ),
     );
   }
@@ -470,6 +568,227 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 type: 'video',
                 title: titleCtl.text.trim(),
                 youtubeUrl: urlCtl.text.trim(),
+                order: subtopic.contentItems.length,
+              );
+              _createContent(subtopic, item);
+              Navigator.pop(ctx);
+            },
+            child: Text('Add',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addCodeContent(int topicId, ModuleSubtopic subtopic) {
+    final titleCtl = TextEditingController();
+    final codeCtl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('Add Code Snippet',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtl,
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'e.g., ESP32 BLE Server Example',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: codeCtl,
+                maxLines: 14,
+                minLines: 8,
+                decoration: InputDecoration(
+                  labelText: 'Code',
+                  hintText: 'Paste the full code here...',
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                style: GoogleFonts.robotoMono(fontSize: 12.5),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C4DFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (titleCtl.text.trim().isEmpty || codeCtl.text.trim().isEmpty) {
+                return;
+              }
+              final item = ContentItem(
+                id: 0,
+                subtopicId: subtopic.id,
+                type: 'code',
+                title: titleCtl.text.trim(),
+                htmlContent: codeCtl.text,
+                order: subtopic.contentItems.length,
+              );
+              _createContent(subtopic, item);
+              Navigator.pop(ctx);
+            },
+            child: Text('Add',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addGithubContent(int topicId, ModuleSubtopic subtopic) {
+    final titleCtl = TextEditingController();
+    final urlCtl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('Add GitHub Project',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtl,
+              decoration: InputDecoration(
+                labelText: 'Project Title',
+                hintText: 'e.g., ESP32 BLE Demo Project',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlCtl,
+              decoration: InputDecoration(
+                labelText: 'GitHub Repo URL',
+                hintText: 'https://github.com/user/repo',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: FaIcon(FontAwesomeIcons.github, size: 18),
+                ),
+              ),
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black87,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (titleCtl.text.trim().isEmpty || urlCtl.text.trim().isEmpty) {
+                return;
+              }
+              final item = ContentItem(
+                id: 0,
+                subtopicId: subtopic.id,
+                type: 'github',
+                title: titleCtl.text.trim(),
+                resourceUrl: urlCtl.text.trim(),
+                order: subtopic.contentItems.length,
+              );
+              _createContent(subtopic, item);
+              Navigator.pop(ctx);
+            },
+            child: Text('Add',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addResourceContent(int topicId, ModuleSubtopic subtopic) {
+    final titleCtl = TextEditingController();
+    final urlCtl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text('Add Downloadable Resource',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtl,
+              decoration: InputDecoration(
+                labelText: 'Resource Title',
+                hintText: 'e.g., Lecture Slides (PDF)',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlCtl,
+              decoration: InputDecoration(
+                labelText: 'File URL',
+                hintText: 'https://...',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon:
+                    const Icon(Icons.attach_file_rounded, color: AppColors.primary),
+              ),
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (titleCtl.text.trim().isEmpty || urlCtl.text.trim().isEmpty) {
+                return;
+              }
+              final item = ContentItem(
+                id: 0,
+                subtopicId: subtopic.id,
+                type: 'resource',
+                title: titleCtl.text.trim(),
+                resourceUrl: urlCtl.text.trim(),
                 order: subtopic.contentItems.length,
               );
               _createContent(subtopic, item);
@@ -827,6 +1146,12 @@ class _SubtopicTile extends StatelessWidget {
         return Icons.quiz_rounded;
       case 'video':
         return Icons.play_circle_fill_rounded;
+      case 'resource':
+        return Icons.attach_file_rounded;
+      case 'code':
+        return Icons.code_rounded;
+      case 'github':
+        return FontAwesomeIcons.github;
       default:
         return Icons.description_rounded;
     }
@@ -835,11 +1160,17 @@ class _SubtopicTile extends StatelessWidget {
   Color _contentColor(String type) {
     switch (type) {
       case 'notes':
-        return const Color(0xFF7C4DFF);
+        return AppColors.primary;
       case 'test':
-        return const Color(0xFFFF6B35);
+        return AppColors.accent;
       case 'video':
         return Colors.red;
+      case 'resource':
+        return AppColors.primary;
+      case 'code':
+        return const Color(0xFF7C4DFF);
+      case 'github':
+        return Colors.black87;
       default:
         return Colors.grey;
     }

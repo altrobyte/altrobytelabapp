@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 import '../mock/mock_data.dart';
@@ -32,6 +35,20 @@ class ApiService {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
+  /// Uploads an image (picked as raw bytes, works on web) and returns the
+  /// hosted URL to store in any banner_url-style field.
+  static Future<String> uploadImage(Uint8List bytes, String filename, String contentType) async {
+    final token = await _token();
+    final uri = Uri.parse(ApiConstants.uploadImage());
+    final request = http.MultipartRequest('POST', uri)
+      ..headers.addAll({if (token != null) 'Authorization': 'Bearer $token'})
+      ..files.add(http.MultipartFile.fromBytes('file', bytes,
+          filename: filename, contentType: MediaType.parse(contentType)));
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
+    final res = await http.Response.fromStream(streamed);
+    return _parse(res)['url'] as String;
+  }
+
   static Map<String, dynamic> _parse(http.Response res) {
     try {
       final body = jsonDecode(res.body);
@@ -47,34 +64,40 @@ class ApiService {
   }
 
   static Future<http.Response> safeGet(Uri uri,
-      {Map<String, String>? headers}) async {
-    try {
-      return await http
-          .get(uri, headers: headers)
-          .timeout(const Duration(seconds: 15));
-    } on SocketException {
-      throw ApiException('No internet connection. Check your network.');
-    } on HttpException {
-      throw ApiException('Server unreachable. Try again later.');
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Connection failed. Please try again.');
-    }
+      {Map<String, String>? headers}) {
+    return _withNetworkRetry(
+        () => http.get(uri, headers: headers).timeout(const Duration(seconds: 15)));
   }
 
   static Future<http.Response> safePost(Uri uri,
-      {Map<String, String>? headers, Object? body}) async {
-    try {
-      return await http
-          .post(uri, headers: headers, body: body)
-          .timeout(const Duration(seconds: 20));
-    } on SocketException {
-      throw ApiException('No internet connection. Check your network.');
-    } on HttpException {
-      throw ApiException('Server unreachable. Try again later.');
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Connection failed. Please try again.');
+      {Map<String, String>? headers, Object? body}) {
+    return _withNetworkRetry(() =>
+        http.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 20)));
+  }
+
+  /// Many students are on a real mobile connection that shows full signal
+  /// bars but very low actual throughput (congested 4G, poor indoor
+  /// coverage) — full bars don't mean fast. That's slow enough to blow past
+  /// our timeouts on a single attempt, which used to surface immediately as
+  /// a scary, unrecoverable "Connection failed". One transparent retry
+  /// gives a slow-but-working connection a second chance before we give up.
+  static Future<http.Response> _withNetworkRetry(
+      Future<http.Response> Function() attempt) async {
+    for (var i = 0; ; i++) {
+      try {
+        return await attempt();
+      } on SocketException {
+        throw ApiException('No internet connection. Check your network.');
+      } on TimeoutException {
+        if (i < 1) continue;
+        throw ApiException(
+            'Your network seems slow right now. Please check your connection and try again.');
+      } on HttpException {
+        throw ApiException('Server unreachable. Try again later.');
+      } catch (e) {
+        if (e is ApiException) rethrow;
+        throw ApiException('Connection failed. Please try again.');
+      }
     }
   }
 
@@ -871,12 +894,16 @@ class ApiService {
   static Future<Map<String, dynamic>> postNotice(int instituteId, String title,
       {String content = '',
       String type = 'notice',
-      String linkUrl = ''}) async {
+      String linkUrl = '',
+      String category = 'general',
+      String segment = 'all'}) async {
     final token = await _token();
     final params = <String, String>{
       'title': title,
       'content': content,
-      'type': type
+      'type': type,
+      'category': category,
+      'segment': segment,
     };
     if (linkUrl.isNotEmpty) params['link_url'] = linkUrl;
     final url = Uri.parse(ApiConstants.notices(instituteId))
@@ -1187,5 +1214,837 @@ class ApiService {
       Uri.parse(ApiConstants.markContentComplete(contentId)),
       headers: _headers(token),
     );
+  }
+
+  // ── Experiments (Experimental Training Platform) ──────────────────────────
+
+  static Future<List<dynamic>> getExperimentsAdmin(int instituteId) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.experimentsAdmin(instituteId)),
+      headers: _headers(token),
+    );
+    return _parse(res)['experiments'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getExperimentsStudent(int instituteId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.experimentsStudent(instituteId)),
+      headers: _headers(token),
+    );
+    return _parse(res)['experiments'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getExperimentStudent(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.experimentStudent(id)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> createExperiment(
+      int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.experimentsAdmin(instituteId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateExperiment(
+      int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.experiment(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteExperiment(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.experiment(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> submitExperimentAttempt(
+      int id, Map<String, dynamic> resultData, {String notes = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.experimentAttempt(id)),
+      headers: _headers(token),
+      body: jsonEncode({'result_data': resultData, 'notes': notes}),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getMyExperimentAttempts(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.experimentAttempts(id)),
+      headers: _headers(token),
+    );
+    return _parse(res)['attempts'] as List? ?? [];
+  }
+
+  // ── Company Profile (public marketing site) ──────────────────────────────
+
+  static Future<Map<String, dynamic>> getCompanyPage(String slug) async {
+    final res = await safeGet(Uri.parse(ApiConstants.companyPage(slug)));
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getCompanyItems({String? category}) async {
+    final res = await safeGet(Uri.parse(ApiConstants.companyItems(category: category)));
+    return _parse(res)['items'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getCompanyStats() async {
+    final res = await safeGet(Uri.parse(ApiConstants.companyStats()));
+    return _parse(res)['stats'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getCompanySocialLinks() async {
+    final res = await safeGet(Uri.parse(ApiConstants.companySocialLinks()));
+    return _parse(res)['links'] as Map<String, dynamic>? ?? {};
+  }
+
+  static Future<Map<String, dynamic>> updateCompanyPage(
+      String slug, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.companyPage(slug)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getCompanyItemsAdmin({String? category}) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.companyAdminItems(category: category)),
+      headers: _headers(token),
+    );
+    return _parse(res)['items'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createCompanyItem(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.companyAdminItems()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateCompanyItem(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.companyAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteCompanyItem(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.companyAdminItem(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> createCompanyStat(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.companyAdminStats()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateCompanyStat(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.companyAdminStat(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteCompanyStat(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.companyAdminStat(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateCompanySocialLinks(Map<String, String> links) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.companyAdminSocialLinks()),
+      headers: _headers(token),
+      body: jsonEncode({'links': links}),
+    );
+    return _parse(res);
+  }
+
+  // ── Test Series ───────────────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getTestSeriesAdmin(int instituteId) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.testSeriesAdmin(instituteId)),
+      headers: _headers(token),
+    );
+    return _parse(res)['series'] as List? ?? [];
+  }
+
+  /// Returns {"series": [...], "module_tests": [...]} — series are curated
+  /// admin groupings; module_tests are quizzes authored inside Training
+  /// Modules, grouped by their parent module.
+  static Future<Map<String, dynamic>> getTestSeriesStudent(int instituteId) async {
+    final res = await safeGet(Uri.parse(ApiConstants.testSeriesStudent(instituteId)));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> createTestSeries(
+      int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.testSeriesAdmin(instituteId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateTestSeries(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.testSeries(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteTestSeries(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.testSeries(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> assignTestToSeries(
+      int testId, int? seriesId, {int seriesOrder = 0}) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.assignTestSeries(testId)),
+      headers: _headers(token),
+      body: jsonEncode({'series_id': seriesId, 'series_order': seriesOrder}),
+    );
+    return _parse(res);
+  }
+
+  // ── Job Updates ──────────────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getJobs({
+    String? category, String? domain, String? location, String? experienceLevel,
+  }) async {
+    final res = await safeGet(Uri.parse(ApiConstants.jobs(
+      category: category, domain: domain, location: location, experienceLevel: experienceLevel,
+    )));
+    return _parse(res)['listings'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getJobsAdmin({String? category}) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.jobsAdmin(category: category)),
+      headers: _headers(token),
+    );
+    return _parse(res)['listings'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createJob(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.jobsAdmin()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateJob(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.jobAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteJob(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.jobAdminItem(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getJob(int id) async {
+    final res = await safeGet(Uri.parse(ApiConstants.job(id)));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> applyToJob(int id, {
+    required String name, String phone = '', String email = '',
+    String resumeUrl = '', String coverNote = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.jobApply(id)),
+      headers: _headers(token),
+      body: jsonEncode({
+        'name': name, 'phone': phone, 'email': email,
+        'resume_url': resumeUrl, 'cover_note': coverNote,
+      }),
+    );
+    return _parse(res);
+  }
+
+  static Future<bool> hasAppliedToJob(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.jobMyApplication(id)),
+      headers: _headers(token),
+    );
+    return (_parse(res)['applied'] as bool?) ?? false;
+  }
+
+  static Future<List<dynamic>> getJobApplications(int id) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.jobApplications(id)),
+      headers: _headers(token),
+    );
+    return _parse(res)['applications'] as List? ?? [];
+  }
+
+  static Future<void> updateJobApplicationStatus(int applicationId, String status) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.jobApplicationStatus(applicationId)),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+    _parse(res);
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getEvents() async {
+    final res = await safeGet(Uri.parse(ApiConstants.events()));
+    return _parse(res)['events'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getEvent(int id) async {
+    final res = await safeGet(Uri.parse(ApiConstants.event(id)));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> registerForEvent(
+      int id, {required String name, String phone = '', String email = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.eventRegister(id)),
+      headers: _headers(token),
+      body: jsonEncode({'name': name, 'phone': phone, 'email': email}),
+    );
+    return _parse(res);
+  }
+
+  static Future<bool> isRegisteredForEvent(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.eventMyRegistration(id)),
+      headers: _headers(token),
+    );
+    return (_parse(res)['registered'] as bool?) ?? false;
+  }
+
+  static Future<List<dynamic>> getEventsAdmin() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.eventsAdmin()),
+      headers: _headers(token),
+    );
+    return _parse(res)['events'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createEvent(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.eventAdminCreate()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateEvent(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.eventAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteEvent(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.eventAdminItem(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<List<dynamic>> getEventAttendees(int id) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.eventAttendees(id)),
+      headers: _headers(token),
+    );
+    return _parse(res)['attendees'] as List? ?? [];
+  }
+
+  // ── Live Sessions / Workshops ────────────────────────────────────────────
+
+  static Future<List<dynamic>> getLiveSessions({bool featured = false}) async {
+    final res = await safeGet(Uri.parse(ApiConstants.liveSessions(featured: featured)));
+    return _parse(res)['sessions'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getLiveSession(int id) async {
+    final res = await safeGet(Uri.parse(ApiConstants.liveSession(id)));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> registerForLiveSession(int id, {
+    required String name, required String phone, required String email,
+    required String college, required String branch, required String address, required String city,
+    String couponCode = '',
+    bool forceNew = false,
+    String returnUrl = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.liveSessionRegister(id)),
+      headers: _headers(token),
+      body: jsonEncode({
+        'name': name, 'phone': phone, 'email': email,
+        'college': college, 'branch': branch, 'address': address, 'city': city,
+        'coupon_code': couponCode,
+        'force_new': forceNew,
+        'return_url': returnUrl,
+      }),
+    );
+    return _parse(res);
+  }
+
+  /// Read-only preview — does not consume a coupon use.
+  static Future<Map<String, dynamic>> validateLiveSessionCoupon(int id, String couponCode) async {
+    final res = await safePost(
+      Uri.parse(ApiConstants.liveSessionValidateCoupon(id)),
+      headers: _headers(null),
+      body: jsonEncode({'coupon_code': couponCode}),
+    );
+    return _parse(res);
+  }
+
+  static Future<bool> isRegisteredForLiveSession(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.liveSessionMyRegistration(id)),
+      headers: _headers(token),
+    );
+    return (_parse(res)['registered'] as bool?) ?? false;
+  }
+
+  static Future<Map<String, dynamic>> getLiveSessionMyRegistration(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.liveSessionMyRegistration(id)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> verifyLiveSessionPayment(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.liveSessionVerifyPayment(id)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getLiveSessionReceipt(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.liveSessionReceipt(id)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getLiveSessionsAdmin() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.liveSessionsAdmin()),
+      headers: _headers(token),
+    );
+    return _parse(res)['sessions'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createLiveSession(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.liveSessionAdminCreate()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateLiveSession(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.liveSessionAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteLiveSession(int id) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.liveSessionAdminItem(id)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> markLiveSessionAttendeePaid(int sessionId, int registrationId) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.liveSessionAttendee(sessionId, registrationId)}/mark-paid'),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getAllTrainingModulesLite() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.allTrainingModulesLite()),
+      headers: _headers(token),
+    );
+    return _parse(res)['modules'] as List? ?? [];
+  }
+
+  static Future<void> deleteLiveSessionAttendee(int sessionId, int registrationId) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.liveSessionAttendee(sessionId, registrationId)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<List<dynamic>> getLiveSessionAttendees(int id) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.liveSessionAttendees(id)),
+      headers: _headers(token),
+    );
+    return _parse(res)['attendees'] as List? ?? [];
+  }
+
+  // ── Training module purchase (student) ──────────────────────────────────
+
+  static Future<Map<String, dynamic>> registerForModule(int moduleId, {
+    required String name, required String phone, required String email,
+    String couponCode = '',
+    bool forceNew = false,
+    String returnUrl = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.moduleRegister(moduleId)),
+      headers: _headers(token),
+      body: jsonEncode({
+        'name': name, 'phone': phone, 'email': email,
+        'coupon_code': couponCode,
+        'force_new': forceNew,
+        'return_url': returnUrl,
+      }),
+    );
+    return _parse(res);
+  }
+
+  /// Read-only preview — does not consume a coupon use.
+  static Future<Map<String, dynamic>> validateModuleCoupon(int moduleId, String couponCode) async {
+    final res = await safePost(
+      Uri.parse(ApiConstants.moduleValidateCoupon(moduleId)),
+      headers: _headers(null),
+      body: jsonEncode({'coupon_code': couponCode}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> verifyModulePayment(int moduleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safePost(
+      Uri.parse(ApiConstants.moduleVerifyPayment(moduleId)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getModuleMyEnrollment(int moduleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.moduleMyEnrollment(moduleId)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getModuleReceipt(int moduleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+      Uri.parse(ApiConstants.moduleReceipt(moduleId)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> markModuleEnrollmentPaid(int moduleId, int purchaseId) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.moduleEnrollmentAction(moduleId, purchaseId)}/mark-paid'),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteModuleEnrollment(int moduleId, int purchaseId) async {
+    final token = await _token();
+    final res = await http.delete(
+      Uri.parse(ApiConstants.moduleEnrollmentAction(moduleId, purchaseId)),
+      headers: _headers(token),
+    );
+    _parse(res);
+  }
+
+  static Future<List<dynamic>> getModuleEnrollments(int moduleId) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.moduleEnrollments(moduleId)),
+      headers: _headers(token),
+    );
+    return _parse(res)['enrollments'] as List? ?? [];
+  }
+
+  // ── Platform Users (student_users) — admin roster + activity drill-down ──
+
+  static Future<List<dynamic>> getPlatformUsers() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.platformUsers()),
+      headers: _headers(token),
+    );
+    return _parse(res)['students'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getPlatformUserActivity(int id) async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.platformUserActivity(id)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  // ── Institute Onboarding Enquiries ──────────────────────────────────────
+
+  static Future<Map<String, dynamic>> submitEnquiry(Map<String, dynamic> body) async {
+    final res = await safePost(
+      Uri.parse(ApiConstants.enquiries()),
+      headers: _headers(),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getEnquiriesAdmin() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.enquiriesAdmin()),
+      headers: _headers(token),
+    );
+    return _parse(res)['enquiries'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> updateEnquiryStatus(int id, String status) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.enquiryAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+    return _parse(res);
+  }
+
+  // ── AI Mock Interview ────────────────────────────────────────────────────
+
+  static Future<String?> _studentToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('student_token');
+  }
+
+  static Future<List<dynamic>> getMockInterviewRoles() async {
+    final res = await safeGet(Uri.parse(ApiConstants.mockInterviewRoles()));
+    return _parse(res)['roles'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> startMockInterview(String role, {int questionCount = 5}) async {
+    final token = await _studentToken();
+    final res = await safePost(
+      Uri.parse(ApiConstants.mockInterviewStart()),
+      headers: _headers(token),
+      body: jsonEncode({'role': role, 'question_count': questionCount}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> submitMockInterviewAnswer(
+      int sessionId, int questionId, String answer) async {
+    final token = await _studentToken();
+    final res = await safePost(
+      Uri.parse(ApiConstants.mockInterviewAnswer(sessionId)),
+      headers: _headers(token),
+      body: jsonEncode({'question_id': questionId, 'answer': answer}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> finishMockInterview(int sessionId) async {
+    final token = await _studentToken();
+    final res = await safePost(
+      Uri.parse(ApiConstants.mockInterviewFinish(sessionId)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getMockInterviewHistory() async {
+    final token = await _studentToken();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.mockInterviewHistory()),
+      headers: _headers(token),
+    );
+    return _parse(res)['sessions'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getMockInterviewSession(int sessionId) async {
+    final token = await _studentToken();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.mockInterviewSession(sessionId)),
+      headers: _headers(token),
+    );
+    return _parse(res);
+  }
+
+  // ── Subscription Plans (pricing page) ───────────────────────────────────
+
+  static Future<List<dynamic>> getSubscriptionPlans() async {
+    final res = await safeGet(Uri.parse(ApiConstants.subscriptionPlans()));
+    return _parse(res)['plans'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getSubscriptionPlansAdmin() async {
+    final token = await _token();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.subscriptionPlansAdmin()),
+      headers: _headers(token),
+    );
+    return _parse(res)['plans'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> updateSubscriptionPlan(
+      String tierKey, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.subscriptionPlanAdmin(tierKey)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  // ── Student Activity Summary ────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getStudentActivitySummary() async {
+    final token = await _studentToken();
+    final res = await safeGet(
+      Uri.parse(ApiConstants.studentActivitySummary()),
+      headers: _headers(token),
+    );
+    return _parse(res);
   }
 }

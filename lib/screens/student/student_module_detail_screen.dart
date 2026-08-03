@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/training_module_provider.dart';
+import '../training_modules/module_purchase_section.dart';
+import 'code_viewer_screen.dart';
 import 'student_notes_viewer_screen.dart';
 
 /// Student module detail — expandable tree of Topics → Subtopics → Content
@@ -91,6 +94,40 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
       case 'video':
         if (item.youtubeUrl != null && item.youtubeUrl!.isNotEmpty) {
           final uri = Uri.parse(item.youtubeUrl!);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+          provider.markComplete(widget.module.id, item.id);
+        }
+        break;
+
+      case 'resource':
+        if (item.resourceUrl != null && item.resourceUrl!.isNotEmpty) {
+          final uri = Uri.parse(item.resourceUrl!);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+          provider.markComplete(widget.module.id, item.id);
+        }
+        break;
+
+      case 'code':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CodeViewerScreen(
+              title: item.title,
+              code: item.htmlContent ?? '',
+              moduleColor: widget.module.color,
+            ),
+          ),
+        );
+        provider.markComplete(widget.module.id, item.id);
+        break;
+
+      case 'github':
+        if (item.resourceUrl != null && item.resourceUrl!.isNotEmpty) {
+          final uri = Uri.parse(item.resourceUrl!);
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           }
@@ -211,8 +248,55 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
               child: Center(child: CircularProgressIndicator()),
             ),
 
+          // Cross-link back to the workshop this course is bundled with
+          if (!loading && module.linkedSession != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Card(
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => context.push('/live-sessions/${module.linkedSession!.id}'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                          child: Icon(Icons.event_available_rounded, color: color, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('Bundled with a workshop', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13)),
+                            const SizedBox(height: 2),
+                            Text('"${module.linkedSession!.title}" — tap to view',
+                                style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+                          ]),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Colors.grey[400]),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Paywall — course is locked until payment is confirmed
+          if (!loading && module.locked)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: ModulePurchaseSection(
+                module: module,
+                onUnlocked: () =>
+                    context.read<TrainingModuleProvider>().loadModuleDetailAsStudent(widget.module.id),
+              ),
+            ),
+
           // Content tree
-          if (!loading)
+          if (!loading && !module.locked)
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -448,6 +532,12 @@ class _ContentTile extends StatelessWidget {
         return Icons.quiz_rounded;
       case 'video':
         return Icons.play_circle_fill_rounded;
+      case 'resource':
+        return Icons.attach_file_rounded;
+      case 'code':
+        return Icons.code_rounded;
+      case 'github':
+        return FontAwesomeIcons.github;
       default:
         return Icons.description_rounded;
     }
@@ -456,11 +546,17 @@ class _ContentTile extends StatelessWidget {
   Color get _typeColor {
     switch (item.type) {
       case 'notes':
-        return const Color(0xFF7C4DFF);
+        return AppColors.primary;
       case 'test':
-        return const Color(0xFFFF6B35);
+        return AppColors.accent;
       case 'video':
         return Colors.red;
+      case 'resource':
+        return AppColors.primary;
+      case 'code':
+        return const Color(0xFF7C4DFF);
+      case 'github':
+        return Colors.black87;
       default:
         return Colors.grey;
     }
@@ -474,6 +570,12 @@ class _ContentTile extends StatelessWidget {
         return 'Test';
       case 'video':
         return 'Video';
+      case 'resource':
+        return 'Resource';
+      case 'code':
+        return 'Code';
+      case 'github':
+        return 'GitHub Project';
       default:
         return 'Content';
     }

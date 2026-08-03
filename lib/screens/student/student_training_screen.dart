@@ -123,7 +123,7 @@ class _StudentTrainingScreenState extends State<StudentTrainingScreen> {
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary)),
                       const SizedBox(height: 4),
-                      Text('Your coaching will add modules here soon.',
+                      Text('New modules will be added here soon.',
                           style: GoogleFonts.inter(
                               fontSize: 13, color: AppColors.textSecondary)),
                     ],
@@ -131,77 +131,99 @@ class _StudentTrainingScreenState extends State<StudentTrainingScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: _loadModules,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: modules.length + 1, // +1 for header
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        // Header
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Container(
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF7C4DFF), Color(0xFF9C27B0)],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossAxisCount = constraints.maxWidth >= 1100
+                          ? 3
+                          : constraints.maxWidth >= 700
+                              ? 2
+                              : 1;
+                      return CustomScrollView(
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [AppColors.primary, AppColors.primaryLight],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(Icons.school_rounded,
+                                          color: Colors.white, size: 26),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Your Learning Path',
+                                              style: GoogleFonts.poppins(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold)),
+                                          Text(
+                                              '${modules.length} modules available',
+                                              style: GoogleFonts.inter(
+                                                  color: Colors.white70,
+                                                  fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF7C4DFF)
-                                      .withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Icon(Icons.school_rounded,
-                                      color: Colors.white, size: 26),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Your Learning Path',
-                                          style: GoogleFonts.poppins(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold)),
-                                      Text(
-                                          '${modules.length} modules available',
-                                          style: GoogleFonts.inter(
-                                              color: Colors.white70,
-                                              fontSize: 13)),
-                                    ],
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
-                        );
-                      }
-
-                      final module = modules[index - 1];
-                      return _ModuleCard(
-                        module: module,
-                        progress: _getProgress(provider, module),
-                        completedCount:
-                            provider.getProgress(module.id)?.completedCount ??
-                                0,
-                        color: _parseColor(module.color),
-                        icon: _parseIcon(module.iconName),
-                        onTap: () => _openModule(module),
+                          SliverPadding(
+                            padding: const EdgeInsets.all(16),
+                            sliver: SliverGrid(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                mainAxisExtent: 210,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final module = modules[index];
+                                  return _ModuleCard(
+                                    module: module,
+                                    progress: _getProgress(provider, module),
+                                    completedCount: provider
+                                            .getProgress(module.id)
+                                            ?.completedCount ??
+                                        0,
+                                    color: _parseColor(module.color),
+                                    icon: _parseIcon(module.iconName),
+                                    onTap: () => _openModule(module),
+                                  );
+                                },
+                                childCount: modules.length,
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -230,111 +252,134 @@ class _ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = (progress * 100).toInt();
+    final isFree = module.price <= 0;
+    final hasStarted = completedCount > 0;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 1,
+      shadowColor: color.withValues(alpha: 0.15),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        elevation: 1,
-        shadowColor: color.withValues(alpha: 0.15),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border(left: BorderSide(color: color, width: 4)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: color, size: 24),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border(left: BorderSide(color: color, width: 4)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(11),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(module.title,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary)),
-                          if (module.description.isNotEmpty)
-                            Text(module.description,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                        ],
-                      ),
+                    child: Icon(icon, color: color, size: 21),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(module.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                  ),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: progress >= 1.0
+                          ? AppColors.success.withValues(alpha: 0.12)
+                          : color.withValues(alpha: 0.08),
                     ),
-                    // Progress percentage
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: progress >= 1.0
-                            ? AppColors.success.withValues(alpha: 0.12)
-                            : color.withValues(alpha: 0.08),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$pct%',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: progress >= 1.0 ? AppColors.success : color,
-                          ),
+                    child: Center(
+                      child: Text(
+                        '$pct%',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: progress >= 1.0 ? AppColors.success : color,
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Price badge
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isFree
+                        ? AppColors.success.withValues(alpha: 0.12)
+                        : AppColors.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: isFree
+                      ? Text('FREE',
+                          style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.success))
+                      : Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (module.originalPrice != null && module.originalPrice! > module.price) ...[
+                            Text('₹${module.originalPrice!.toStringAsFixed(0)}',
+                                style: GoogleFonts.inter(
+                                    fontSize: 10.5, color: AppColors.textSecondary, decoration: TextDecoration.lineThrough)),
+                            const SizedBox(width: 4),
+                          ],
+                          Text('₹${module.price.toStringAsFixed(0)}',
+                              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.accent)),
+                        ]),
                 ),
-                const SizedBox(height: 14),
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: color.withValues(alpha: 0.1),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progress >= 1.0 ? AppColors.success : color,
-                    ),
-                    minHeight: 6,
+                const Spacer(),
+                Text('${module.topicCount} topics',
+                    style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+              ]),
+              const SizedBox(height: 10),
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: color.withValues(alpha: 0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    progress >= 1.0 ? AppColors.success : color,
+                  ),
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '$completedCount / ${module.totalContentItems} completed',
+                style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 36,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: color,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                  ),
+                  onPressed: onTap,
+                  child: Text(
+                    progress >= 1.0 ? 'Review' : hasStarted ? 'Continue' : (isFree ? 'Start' : 'Unlock'),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '$completedCount / ${module.totalContentItems} completed',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${module.topicCount} topics',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

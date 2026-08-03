@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +13,7 @@ import 'providers/institute_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/test_provider.dart';
 import 'providers/training_module_provider.dart';
+import 'screens/debug_access_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_layout.dart';
 import 'screens/dashboard_screen.dart';
@@ -27,8 +33,31 @@ import 'screens/student/student_login_screen.dart';
 import 'screens/student/student_home_screen.dart';
 import 'screens/student/student_onboarding_screen.dart';
 import 'screens/student/student_training_screen.dart';
+import 'screens/tools/dev_tools_hub_screen.dart';
 import 'screens/manager/manager_login_screen.dart';
 import 'screens/training_modules/training_modules_screen.dart';
+import 'screens/experiments/experiments_screen.dart';
+import 'screens/experiments/student_experiments_screen.dart';
+import 'screens/student/student_test_series_screen.dart';
+import 'screens/student/student_activity_screen.dart';
+import 'screens/jobs/job_updates_screen.dart';
+import 'screens/jobs/job_detail_screen.dart';
+import 'screens/jobs/job_updates_admin_screen.dart';
+import 'screens/events/events_screen.dart';
+import 'screens/events/event_detail_screen.dart';
+import 'screens/events/events_admin_screen.dart';
+import 'screens/live_sessions/live_sessions_screen.dart';
+import 'screens/live_sessions/live_session_detail_screen.dart';
+import 'screens/live_sessions/live_sessions_admin_screen.dart';
+import 'screens/students/platform_users_screen.dart';
+import 'screens/enquiries/partner_enquiry_screen.dart';
+import 'screens/enquiries/enquiries_admin_screen.dart';
+import 'screens/mock_interview/mock_interview_screen.dart';
+import 'screens/pricing/pricing_screen.dart';
+import 'screens/pricing/pricing_admin_screen.dart';
+import 'screens/company/company_profile_screen.dart';
+import 'screens/company/company_page_view_screen.dart';
+import 'screens/company/company_items_screen.dart';
 import 'screens/super_admin/super_admin_login_screen.dart';
 import 'screens/super_admin/super_admin_dashboard_screen.dart';
 import 'screens/super_admin/commission_tracker_screen.dart';
@@ -39,20 +68,40 @@ import 'screens/auth/whatsapp_login_screen.dart';
 import 'screens/plan_upgrade_screen.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..tryAutoLogin()),
-        ChangeNotifierProvider(create: (_) => BrandProvider()),
-        ChangeNotifierProvider(create: (_) => InstituteProvider()),
-        ChangeNotifierProvider(create: (_) => TestProvider()),
-        ChangeNotifierProvider(create: (_) => TrainingModuleProvider()),
-        ChangeNotifierProvider(create: (_) => LanguageProvider()),
-      ],
-      child: const AltrobyteLabApp(),
-    ),
-  );
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Without this, Flutter web defaults to hash-based URLs (/#/live-sessions/1),
+  // so a shared link built as a clean path (/live-sessions/1) — which is what
+  // every share/registration/receipt link in this app generates — loads with
+  // an empty route fragment and silently falls back to home. This is why
+  // shared workshop/course links were landing on the home page instead of
+  // the intended page.
+  usePathUrlStrategy();
+  runZonedGuarded(() async {
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    } catch (e, st) {
+      // Google Sign-In just won't be available if this fails — the rest of
+      // the app (WhatsApp/password login, all other features) must not be
+      // blocked by a Firebase bootstrap error.
+      debugPrint('Firebase.initializeApp failed: $e\n$st');
+    }
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()..tryAutoLogin()),
+          ChangeNotifierProvider(create: (_) => BrandProvider()),
+          ChangeNotifierProvider(create: (_) => InstituteProvider()),
+          ChangeNotifierProvider(create: (_) => TestProvider()),
+          ChangeNotifierProvider(create: (_) => TrainingModuleProvider()),
+          ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ],
+        child: const AltrobyteLabApp(),
+      ),
+    );
+  }, (error, stack) {
+    debugPrint('Uncaught zone error: $error\n$stack');
+  });
 }
 
 class AltrobyteLabApp extends StatefulWidget {
@@ -87,8 +136,10 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Only the educator/manager shell routes are login-protected.
         const protected = [
           '/dashboard', '/students', '/batches', '/test-generator',
-          '/training-modules', '/attendance', '/fees', '/analytics',
+          '/training-modules', '/experiments', '/attendance', '/fees', '/analytics',
           '/broadcast', '/settings',
+          '/live-sessions-admin', '/events-admin', '/jobs-admin', '/enquiries-admin', '/pricing-admin',
+          '/platform-users',
         ];
         final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
 
@@ -119,6 +170,90 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           path: '/join',
           builder: (_, __) => const RoleSelectionScreen(),
         ),
+        // Company Profile — public marketing site, no login.
+        GoRoute(path: '/company', builder: (_, __) => const CompanyProfileScreen()),
+        GoRoute(
+          path: '/about',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'about', fallbackTitle: 'About AltrobyteLab'),
+        ),
+        GoRoute(
+          path: '/founder',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'founder', fallbackTitle: 'Founder & Team'),
+        ),
+        GoRoute(
+          path: '/about-app',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'app', fallbackTitle: 'About the App'),
+        ),
+        GoRoute(
+          path: '/contact',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'contact', fallbackTitle: 'Contact Us'),
+        ),
+        GoRoute(
+          path: '/terms',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'terms', fallbackTitle: 'Terms & Conditions'),
+        ),
+        GoRoute(
+          path: '/refunds',
+          builder: (_, __) => const CompanyPageViewScreen(slug: 'refunds', fallbackTitle: 'Refunds & Cancellations'),
+        ),
+        GoRoute(
+          path: '/placements',
+          builder: (_, __) => const CompanyItemsScreen(category: 'placed', title: 'Placed Profiles', icon: Icons.emoji_events_rounded),
+        ),
+        GoRoute(
+          path: '/institutes',
+          builder: (_, __) => const CompanyItemsScreen(category: 'institute', title: 'Affiliated Institutes', icon: Icons.school_rounded),
+        ),
+        GoRoute(
+          path: '/clients',
+          builder: (_, __) => const CompanyItemsScreen(category: 'client', title: 'Clients', icon: Icons.handshake_rounded),
+        ),
+        GoRoute(
+          path: '/services',
+          builder: (_, __) => const CompanyItemsScreen(category: 'service', title: 'Services', icon: Icons.design_services_rounded),
+        ),
+        GoRoute(
+          path: '/products',
+          builder: (_, __) => const CompanyItemsScreen(category: 'product', title: 'Products', icon: Icons.widgets_rounded),
+        ),
+        GoRoute(
+          path: '/blog',
+          builder: (_, __) => const CompanyItemsScreen(category: 'blog', title: 'Blog', icon: Icons.article_rounded),
+        ),
+        // Job Updates — public, no login.
+        GoRoute(path: '/jobs', builder: (_, __) => const JobUpdatesScreen()),
+        GoRoute(
+          path: '/jobs/:id',
+          builder: (context, state) => JobDetailScreen(
+              jobId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0),
+        ),
+        // Events — public, no login.
+        GoRoute(path: '/events', builder: (_, __) => const EventsScreen()),
+        GoRoute(
+          path: '/events/:id',
+          builder: (context, state) => EventDetailScreen(
+              eventId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0),
+        ),
+        // Live Sessions / Workshops — public, no login.
+        GoRoute(path: '/live-sessions', builder: (_, __) => const LiveSessionsScreen()),
+        GoRoute(
+          path: '/live-sessions/:id',
+          builder: (context, state) => LiveSessionDetailScreen(
+              sessionId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0),
+        ),
+        // Partner enquiry — public, no login.
+        GoRoute(path: '/partner', builder: (_, __) => const PartnerEnquiryScreen()),
+        // Pricing — public, no login.
+        GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
+        // TEMPORARY direct-link pre-launch shortcuts — remove before launch.
+        GoRoute(
+          path: '/admin-access',
+          builder: (_, __) => const DebugAccessScreen(superAdmin: false),
+        ),
+        GoRoute(
+          path: '/super-access',
+          builder: (_, __) => const DebugAccessScreen(superAdmin: true),
+        ),
         // Student routes (self-guarded)
         GoRoute(
           path: '/student/login',
@@ -129,12 +264,32 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (_, __) => const StudentHomeScreen(),
         ),
         GoRoute(
+          path: '/student/experiments',
+          builder: (_, __) => const StudentExperimentsScreen(),
+        ),
+        GoRoute(
+          path: '/student/test-series',
+          builder: (_, __) => const StudentTestSeriesScreen(),
+        ),
+        GoRoute(
+          path: '/student/mock-interview',
+          builder: (_, __) => const MockInterviewScreen(),
+        ),
+        GoRoute(
+          path: '/student/activity',
+          builder: (_, __) => const StudentActivityScreen(),
+        ),
+        GoRoute(
           path: '/student/onboarding',
           builder: (_, __) => const StudentOnboardingScreen(),
         ),
         GoRoute(
           path: '/student/training',
           builder: (_, __) => const StudentTrainingScreen(),
+        ),
+        GoRoute(
+          path: '/student/dev-tools',
+          builder: (_, __) => const DevToolsHubScreen(),
         ),
         // Manager login
         GoRoute(
@@ -157,6 +312,26 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(
           path: '/super/settings',
           builder: (_, __) => const SuperAdminSettingsScreen(),
+        ),
+        GoRoute(
+          path: '/super/job-updates',
+          builder: (_, __) => const JobUpdatesAdminScreen(),
+        ),
+        GoRoute(
+          path: '/super/events',
+          builder: (_, __) => const EventsAdminScreen(),
+        ),
+        GoRoute(
+          path: '/super/live-sessions',
+          builder: (_, __) => const LiveSessionsAdminScreen(),
+        ),
+        GoRoute(
+          path: '/super/enquiries',
+          builder: (_, __) => const EnquiriesAdminScreen(),
+        ),
+        GoRoute(
+          path: '/super/pricing',
+          builder: (_, __) => const PricingAdminScreen(),
         ),
         GoRoute(
           path: '/super/audits/:instituteId',
@@ -223,6 +398,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
+                path: '/platform-users',
+                builder: (_, __) => const PlatformUsersScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
                 path: '/batches',
                 builder: (_, __) => const BatchesScreen(),
               ),
@@ -237,6 +418,42 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/training-modules',
                 builder: (_, __) => const TrainingModulesScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/experiments',
+                builder: (_, __) => const ExperimentsScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/live-sessions-admin',
+                builder: (_, __) => const LiveSessionsAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/events-admin',
+                builder: (_, __) => const EventsAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/jobs-admin',
+                builder: (_, __) => const JobUpdatesAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/enquiries-admin',
+                builder: (_, __) => const EnquiriesAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/pricing-admin',
+                builder: (_, __) => const PricingAdminScreen(),
               ),
             ]),
             StatefulShellBranch(routes: [

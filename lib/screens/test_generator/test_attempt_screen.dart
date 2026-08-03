@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../constants/api_constants.dart';
+import '../../constants/app_colors.dart';
 import '../../models/test_model.dart';
 import '../../services/api_service.dart';
 import '../../widgets/upgrade_sheet.dart';
@@ -16,10 +17,10 @@ enum QState { notVisited, visitedNotAnswered, answered, markedForReview, answere
 Color _qColor(QState s) {
   switch (s) {
     case QState.notVisited: return const Color(0xFF9E9E9E);
-    case QState.visitedNotAnswered: return const Color(0xFFE53935);
-    case QState.answered: return const Color(0xFF2E7D32);
-    case QState.markedForReview: return const Color(0xFF7B1FA2);
-    case QState.answeredAndMarked: return const Color(0xFF7B1FA2);
+    case QState.visitedNotAnswered: return AppColors.error;
+    case QState.answered: return AppColors.success;
+    case QState.markedForReview: return AppColors.accent;
+    case QState.answeredAndMarked: return AppColors.accent;
   }
 }
 
@@ -108,6 +109,20 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
           _submitTest();
         }
       });
+    });
+  }
+
+  void _retake() {
+    _timer?.cancel();
+    setState(() {
+      _result = null;
+      _answers.clear();
+      _qStates.clear();
+      _qStates.addAll({for (int i = 0; i < _test!.questions.length; i++) i: QState.notVisited});
+      _currentQ = 0;
+      _secondsTaken = 0;
+      _secondsLeft = _test!.durationMins * 60;
+      _started = false;
     });
   }
 
@@ -240,7 +255,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Premium activated! Unlimited quizzes unlocked.'),
-                backgroundColor: Color(0xFF00897B),
+                backgroundColor: AppColors.success,
                 duration: Duration(seconds: 4),
               ),
             );
@@ -256,7 +271,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        icon: const Icon(Icons.lock_clock_rounded, color: Color(0xFFE94560), size: 40),
+        icon: const Icon(Icons.lock_clock_rounded, color: AppColors.warning, size: 40),
         title: Text('Daily Limit Reached', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         content: Text(
           'You have used all 3 free quizzes for today. Upgrade to Premium (₹49/month) for unlimited access.',
@@ -281,16 +296,16 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('Submit Test?', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          _SummaryRow('Answered', _answeredCount, const Color(0xFF2E7D32)),
-          _SummaryRow('Not Answered', _notAnsweredCount, const Color(0xFFE53935)),
-          _SummaryRow('Marked for Review', _markedCount, const Color(0xFF7B1FA2)),
+          _SummaryRow('Answered', _answeredCount, AppColors.success),
+          _SummaryRow('Not Answered', _notAnsweredCount, AppColors.error),
+          _SummaryRow('Marked for Review', _markedCount, AppColors.accent),
           _SummaryRow('Not Visited', _notVisitedCount, const Color(0xFF9E9E9E)),
           const SizedBox(height: 20),
           Row(children: [
             Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))),
             const SizedBox(width: 12),
             Expanded(child: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
               onPressed: () { Navigator.pop(context); _submitTest(); },
               child: const Text('Submit Test'),
             )),
@@ -306,7 +321,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       return Scaffold(
         backgroundColor: Colors.white,
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const CircularProgressIndicator(color: Color(0xFF1565C0)),
+          const CircularProgressIndicator(color: AppColors.primary),
           const SizedBox(height: 16),
           Text('Loading test...', style: GoogleFonts.inter(color: Colors.grey)),
         ])),
@@ -317,7 +332,8 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     }
     if (_result != null) {
       return _ResultScreen(result: _result!, test: _test!, answers: _answers,
-          timeTaken: '${_secondsTaken ~/ 60}m ${_secondsTaken % 60}s');
+          timeTaken: '${_secondsTaken ~/ 60}m ${_secondsTaken % 60}s',
+          onRetake: _retake);
     }
     if (!_started && _quizBlocked) return _buildLimitReachedScreen();
     if (!_started) return _InstructionsScreen(test: _test!, onStart: _startTest);
@@ -327,11 +343,11 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.background,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: Container(
-          color: const Color(0xFF1565C0),
+          color: AppColors.primary,
           padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, left: 16, right: 16, bottom: 8),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -382,11 +398,11 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       body: Column(children: [
         // Question number strip
         Container(
-          color: const Color(0xFF1565C0).withValues(alpha: 0.08),
+          color: AppColors.primary.withValues(alpha: 0.08),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(children: [
             Text('Question ${_currentQ + 1} of $total',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF1565C0), fontSize: 13)),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: AppColors.primary, fontSize: 13)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -421,10 +437,10 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           decoration: BoxDecoration(
-                            color: selected ? const Color(0xFF1565C0) : Colors.white,
+                            color: selected ? AppColors.primary : Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: selected ? const Color(0xFF1565C0) : Colors.grey.shade300,
+                              color: selected ? AppColors.primary : Colors.grey.shade300,
                               width: selected ? 2 : 1,
                             ),
                           ),
@@ -433,11 +449,11 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                               width: 28, height: 28,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: selected ? Colors.white : const Color(0xFF1565C0).withValues(alpha: 0.1),
+                                color: selected ? Colors.white : AppColors.primary.withValues(alpha: 0.1),
                               ),
                               child: Center(child: Text(e.key, style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: selected ? const Color(0xFF1565C0) : const Color(0xFF1565C0),
+                                  color: selected ? AppColors.primary : AppColors.primary,
                                   fontSize: 13))),
                             ),
                             const SizedBox(width: 12),
@@ -461,8 +477,8 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
             Row(children: [
               Expanded(child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF7B1FA2),
-                    side: const BorderSide(color: Color(0xFF7B1FA2)),
+                    foregroundColor: AppColors.accent,
+                    side: const BorderSide(color: AppColors.accent),
                     padding: const EdgeInsets.symmetric(vertical: 10)),
                 onPressed: _markForReview,
                 child: Text('Mark for Review & Next', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
@@ -493,7 +509,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
               if (_currentQ < total - 1)
                 FilledButton(
                   style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16)),
                   onPressed: _saveAndNext,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -525,7 +541,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: AppColors.primary,
         title: Text('Daily Limit Reached', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -535,7 +551,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.lock_clock_rounded, color: Color(0xFFE94560), size: 56),
+              const Icon(Icons.lock_clock_rounded, color: AppColors.warning, size: 56),
               const SizedBox(height: 16),
               Text('Aaj ke 3 free quizzes khatam!',
                   textAlign: TextAlign.center,
@@ -549,7 +565,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                 width: double.infinity,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B35),
+                      backgroundColor: AppColors.accent,
                       padding: const EdgeInsets.symmetric(vertical: 14)),
                   onPressed: _showUpgradeSheet,
                   child: Text('Upgrade to Premium - ₹49/month',
@@ -591,7 +607,7 @@ class _InstructionsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: AppColors.primary,
         title: Text('General Instructions', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         automaticallyImplyLeading: false,
       ),
@@ -599,14 +615,14 @@ class _InstructionsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Card(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(children: [
                 Row(children: [
-                  const Icon(Icons.quiz_rounded, color: Color(0xFF1565C0), size: 20),
+                  const Icon(Icons.quiz_rounded, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(test.title, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFF1565C0)))),
+                  Expanded(child: Text(test.title, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary))),
                 ]),
                 const SizedBox(height: 8),
                 Row(children: [
@@ -635,13 +651,13 @@ class _InstructionsScreen extends StatelessWidget {
           Text('Question Palette Legend:', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 8),
           const _LegendRow(Color(0xFF9E9E9E), 'Not Visited', 'You have not visited this question yet.'),
-          const _LegendRow(Color(0xFFE53935), 'Not Answered', 'Visited but no answer selected.'),
-          const _LegendRow(Color(0xFF2E7D32), 'Answered', 'Answer saved.'),
-          const _LegendRow(Color(0xFF7B1FA2), 'Marked for Review', 'Marked for review. Will be evaluated if answered.'),
+          const _LegendRow(AppColors.error, 'Not Answered', 'Visited but no answer selected.'),
+          const _LegendRow(AppColors.success, 'Answered', 'Answer saved.'),
+          const _LegendRow(AppColors.accent, 'Marked for Review', 'Marked for review. Will be evaluated if answered.'),
           const SizedBox(height: 24),
           Row(children: [
             Expanded(child: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0), padding: const EdgeInsets.symmetric(vertical: 14)),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: onStart,
               child: Text('I am ready to begin', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
             )),
@@ -669,8 +685,8 @@ class _Instruction extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
           width: 22, height: 22,
-          decoration: BoxDecoration(color: const Color(0xFF1565C0).withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: Center(child: Text(num, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1565C0)))),
+          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: Center(child: Text(num, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary))),
         ),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: GoogleFonts.inter(fontSize: 13, height: 1.4, color: Colors.black87))),
@@ -686,9 +702,9 @@ class _InfoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-    Icon(icon, size: 14, color: const Color(0xFF1565C0)),
+    Icon(icon, size: 14, color: AppColors.primary),
     const SizedBox(width: 4),
-    Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1565C0), fontWeight: FontWeight.w500)),
+    Text(label, style: GoogleFonts.inter(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500)),
   ]);
 }
 
@@ -732,7 +748,7 @@ class _QuestionPalette extends StatelessWidget {
     return Drawer(
       child: Column(children: [
         Container(
-          color: const Color(0xFF1565C0),
+          color: AppColors.primary,
           padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 12, 16, 12),
           child: Column(children: [
             Row(children: [
@@ -742,9 +758,9 @@ class _QuestionPalette extends StatelessWidget {
             ]),
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              _PaletteStat(answered, const Color(0xFF2E7D32), 'Answered'),
-              _PaletteStat(notAnswered, const Color(0xFFE53935), 'Not Ans.'),
-              _PaletteStat(markedCount, const Color(0xFF7B1FA2), 'Marked'),
+              _PaletteStat(answered, AppColors.success, 'Answered'),
+              _PaletteStat(notAnswered, AppColors.error, 'Not Ans.'),
+              _PaletteStat(markedCount, AppColors.accent, 'Marked'),
               _PaletteStat(notVisited, const Color(0xFF9E9E9E), 'Not Visited'),
             ]),
           ]),
@@ -832,8 +848,10 @@ class _ResultScreen extends StatefulWidget {
   final AltroTest test;
   final Map<int, String> answers;
   final String timeTaken;
+  final VoidCallback onRetake;
 
-  const _ResultScreen({required this.result, required this.test, required this.answers, required this.timeTaken});
+  const _ResultScreen({required this.result, required this.test, required this.answers,
+      required this.timeTaken, required this.onRetake});
 
   @override
   State<_ResultScreen> createState() => _ResultScreenState();
@@ -880,13 +898,13 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     final pct = widget.result.percentage;
-    final color = pct >= 70 ? const Color(0xFF2E7D32) : pct >= 40 ? Colors.orange.shade700 : const Color(0xFFE53935);
+    final color = pct >= 70 ? AppColors.success : pct >= 40 ? AppColors.warning : AppColors.error;
     final grade = pct >= 80 ? 'Excellent! 🎉' : pct >= 60 ? 'Good Job! 👍' : pct >= 40 ? 'Keep Practicing 📚' : 'Needs Improvement 💪';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: AppColors.primary,
         title: Text('Result', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         automaticallyImplyLeading: false,
         bottom: TabBar(
@@ -922,11 +940,25 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                   Text(widget.test.title, style: GoogleFonts.inter(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 16),
                   Row(children: [
-                    _ScoreStat('Correct', '${widget.result.score}', const Color(0xFF2E7D32)),
-                    _ScoreStat('Wrong', '${widget.result.total - widget.result.score}', const Color(0xFFE53935)),
-                    _ScoreStat('Time', widget.timeTaken, const Color(0xFF1565C0)),
+                    _ScoreStat('Correct', '${widget.result.score}', AppColors.success),
+                    _ScoreStat('Wrong', '${widget.result.total - widget.result.score}', AppColors.error),
+                    _ScoreStat('Time', widget.timeTaken, AppColors.primary),
                     _ScoreStat('Accuracy', '${pct.toStringAsFixed(0)}%', color),
                   ]),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onRetake,
+                      icon: const Icon(Icons.replay_rounded, size: 18),
+                      label: Text('Retake Test', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                  ),
                 ]),
               ),
             ),
@@ -960,7 +992,7 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
               )),
               const SizedBox(width: 12),
               Expanded(child: FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.home_rounded, size: 16),
                 label: const Text('Home'),
@@ -977,7 +1009,7 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
             final q = widget.test.questions[i];
             final studentAns = widget.answers[i];
             final isCorrect = studentAns == q.correct;
-            final borderColor = studentAns == null ? Colors.grey.shade300 : isCorrect ? const Color(0xFF2E7D32) : const Color(0xFFE53935);
+            final borderColor = studentAns == null ? Colors.grey.shade300 : isCorrect ? AppColors.success : AppColors.error;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
@@ -1010,20 +1042,20 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                       margin: const EdgeInsets.only(bottom: 3),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                       decoration: BoxDecoration(
-                        color: isCorrectOpt ? const Color(0xFF2E7D32).withValues(alpha: 0.1) : isStudentChoice && !isCorrectOpt ? const Color(0xFFE53935).withValues(alpha: 0.08) : Colors.transparent,
+                        color: isCorrectOpt ? AppColors.success.withValues(alpha: 0.1) : isStudentChoice && !isCorrectOpt ? AppColors.error.withValues(alpha: 0.08) : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(children: [
                         Text(e.key, style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isCorrectOpt ? const Color(0xFF2E7D32) : isStudentChoice ? const Color(0xFFE53935) : Colors.grey,
+                            color: isCorrectOpt ? AppColors.success : isStudentChoice ? AppColors.error : Colors.grey,
                             fontSize: 12)),
                         const SizedBox(width: 8),
                         Expanded(child: Text(e.value, style: TextStyle(
                             fontSize: 12,
                             color: isCorrectOpt || isStudentChoice ? Colors.black87 : Colors.grey.shade600))),
-                        if (isCorrectOpt) const Icon(Icons.check_circle, size: 14, color: Color(0xFF2E7D32)),
-                        if (isStudentChoice && !isCorrectOpt) const Icon(Icons.cancel, size: 14, color: Color(0xFFE53935)),
+                        if (isCorrectOpt) const Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                        if (isStudentChoice && !isCorrectOpt) const Icon(Icons.cancel, size: 14, color: AppColors.error),
                       ]),
                     );
                   }),
@@ -1031,7 +1063,7 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFF1565C0).withValues(alpha: 0.06), borderRadius: BorderRadius.circular(6)),
+                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(6)),
                       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         const Text('💡 ', style: TextStyle(fontSize: 12)),
                         Expanded(child: Text(q.explanation, style: GoogleFonts.inter(fontSize: 11, color: Colors.black87, height: 1.4))),

@@ -40,7 +40,7 @@ class _WhatsappLoginScreenState extends State<WhatsappLoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('OTP sent to your WhatsApp!'),
-          backgroundColor: Color(0xFF25D366),
+          backgroundColor: AppColors.whatsapp,
         ));
       }
     } catch (e) {
@@ -112,11 +112,11 @@ class _WhatsappLoginScreenState extends State<WhatsappLoginScreen> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: const Color(0xFF25D366).withValues(alpha: 0.12),
+              color: AppColors.whatsapp.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.chat_rounded,
-                color: Color(0xFF25D366), size: 26),
+                color: AppColors.whatsapp, size: 26),
           ),
           const SizedBox(width: 14),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -168,7 +168,7 @@ class _WhatsappLoginScreenState extends State<WhatsappLoginScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
+                  backgroundColor: AppColors.whatsapp,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -210,11 +210,11 @@ class _WhatsappLoginScreenState extends State<WhatsappLoginScreen> {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-            color: const Color(0xFF25D366).withValues(alpha: 0.12),
+            color: AppColors.whatsapp.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(14),
           ),
           child: const Icon(Icons.mark_chat_read_rounded,
-              color: Color(0xFF25D366), size: 26),
+              color: AppColors.whatsapp, size: 26),
         ),
         const SizedBox(height: 16),
         Text('Enter OTP',
@@ -232,7 +232,7 @@ class _WhatsappLoginScreenState extends State<WhatsappLoginScreen> {
               TextSpan(
                   text: '+91 $_phone',
                   style: const TextStyle(
-                      color: Color(0xFF25D366),
+                      color: AppColors.whatsapp,
                       fontWeight: FontWeight.w600)),
             ],
           ),

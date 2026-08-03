@@ -14,7 +14,7 @@ import '../../providers/language_provider.dart';
 import '../../services/api_service.dart';
 import '../../widgets/link_coaching_sheet.dart';
 
-const _teal = Color(0xFF00BFA5);
+const _brand = AppColors.primary;
 
 class StudentProfileScreen extends StatefulWidget {
   final String? waNumber;
@@ -41,6 +41,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   bool _loading = true;
   bool _loadingFees = false;
   bool _loadingResults = false;
+
+  // Accounts created via Google sign-in (no WhatsApp number) get a random
+  // server-side placeholder phone (`g` + 12 hex chars) to satisfy the DB's
+  // NOT NULL/unique constraint — never a real number, so never show it as one.
+  static final _placeholderPhoneRe = RegExp(r'^g[0-9a-f]{12}$');
+  bool get _hasRealPhone => _phone.isNotEmpty && !_placeholderPhoneRe.hasMatch(_phone);
 
   @override
   void initState() {
@@ -132,6 +138,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     ]) {
       await prefs.remove(k);
     }
+    if (!mounted) return;
+    // Unwind back past this (imperatively-pushed) Profile screen first —
+    // go('/') alone can leave a stale StudentHomeScreen mounted underneath
+    // with its old in-memory logged-in state, since it was never actually
+    // popped/rebuilt by go_router in that case.
+    Navigator.of(context).popUntil((route) => route.isFirst);
     if (mounted) context.go('/');
   }
 
@@ -173,8 +185,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   void _shareApp() {
     final link = _instituteCode.isNotEmpty
-        ? 'https://coachingclub-bba5c.web.app/${_instituteCode.toLowerCase()}'
-        : 'https://coachingclub-bba5c.web.app';
+        ? 'https://lab.altrobyte.com/${_instituteCode.toLowerCase()}'
+        : 'https://lab.altrobyte.com';
     Share.share('$_institute\nJoin us on AltrobyteLab: $link');
   }
 
@@ -198,7 +210,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _teal),
+            style: FilledButton.styleFrom(backgroundColor: _brand),
             onPressed: () async {
               final newName = ctrl.text.trim();
               if (newName.isEmpty) return;
@@ -208,7 +220,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               if (!mounted) return;
               setState(() => _name = newName);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Name updated!'), backgroundColor: _teal),
+                const SnackBar(content: Text('Name updated!'), backgroundColor: AppColors.success),
               );
             },
             child: const Text('Save'),
@@ -243,7 +255,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(children: [
-                    const Icon(Icons.receipt_long_rounded, color: _teal, size: 22),
+                    const Icon(Icons.receipt_long_rounded, color: _brand, size: 22),
                     const SizedBox(width: 8),
                     Text('My Fees', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
                     const Spacer(),
@@ -252,7 +264,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 ),
                 Expanded(
                   child: _loadingFees
-                      ? const Center(child: CircularProgressIndicator(color: _teal))
+                      ? const Center(child: CircularProgressIndicator(color: _brand))
                       : _fees.isEmpty
                           ? Center(child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -329,7 +341,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(children: [
-                    const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFA000), size: 22),
+                    const Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 22),
                     const SizedBox(width: 8),
                     Text('My Test Results', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
                     const Spacer(),
@@ -338,7 +350,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 ),
                 Expanded(
                   child: _loadingResults
-                      ? const Center(child: CircularProgressIndicator(color: _teal))
+                      ? const Center(child: CircularProgressIndicator(color: _brand))
                       : _results.isEmpty
                           ? Center(child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -391,18 +403,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       builder: (_) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.event_available_rounded, size: 48, color: _teal),
+          const Icon(Icons.event_available_rounded, size: 48, color: _brand),
           const SizedBox(height: 12),
           Text('Attendance', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: _teal.withValues(alpha: 0.08),
+              color: _brand.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _AttendStat('Rate', '${_stats?['attendance_rate'] ?? 0}%', _teal),
+              _AttendStat('Rate', '${_stats?['attendance_rate'] ?? 0}%', _brand),
               Container(width: 1, height: 40, color: Colors.grey.shade300),
               _AttendStat('Present', '${_stats?['total_present'] ?? '-'}', Colors.green),
               Container(width: 1, height: 40, color: Colors.grey.shade300),
@@ -445,7 +457,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           const SizedBox(height: 16),
           if (_instituteCode.isNotEmpty)
             _InfoRow(Icons.vpn_key_rounded, 'Institute Code', _instituteCode),
-          _InfoRow(Icons.phone_rounded, 'Your Phone', _phone.isNotEmpty ? '+91 $_phone' : '-'),
+          if (_hasRealPhone)
+            _InfoRow(Icons.phone_rounded, 'Your Phone', '+91 $_phone'),
           if (_email.isNotEmpty)
             _InfoRow(Icons.email_rounded, 'Email', _email),
           const SizedBox(height: 16),
@@ -461,7 +474,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       onLinked: () {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Coaching linked successfully!'), backgroundColor: _teal));
+            content: Text('Coaching linked successfully!'), backgroundColor: AppColors.success));
         setState(() => _isStandalone = false);
         _load();
       },
@@ -474,9 +487,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final lang = context.watch<LanguageProvider>();
     final initials = _name.trim().isNotEmpty ? _name.trim()[0].toUpperCase() : 'S';
 
+    final testsTakenNum = (_stats?['total_tests_taken'] as num?)?.toInt() ?? 0;
+    final attendanceNum = (_stats?['attendance_rate'] as num?)?.toInt() ?? 0;
+    final hasActivity = testsTakenNum > 0 || attendanceNum > 0;
     final avg = (_stats?['avg_test_score'] ?? 0).toString();
-    final attend = (_stats?['attendance_rate'] ?? 0).toString();
-    final tests = (_stats?['total_tests_taken'] ?? 0).toString();
+    final attend = attendanceNum.toString();
+    final tests = testsTakenNum.toString();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -496,7 +512,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _teal))
+          ? const Center(child: CircularProgressIndicator(color: _brand))
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -522,19 +538,19 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     Container(
                       width: 76, height: 76,
                       decoration: BoxDecoration(
-                        color: _teal.withValues(alpha: 0.2),
+                        color: _brand.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
-                        border: Border.all(color: _teal.withValues(alpha: 0.5), width: 2),
+                        border: Border.all(color: _brand.withValues(alpha: 0.5), width: 2),
                       ),
                       child: Center(child: Text(initials,
                           style: GoogleFonts.poppins(
-                              color: _teal, fontSize: 32, fontWeight: FontWeight.bold))),
+                              color: _brand, fontSize: 32, fontWeight: FontWeight.bold))),
                     ),
                     const SizedBox(height: 14),
                     Text(_name,
                         style: GoogleFonts.poppins(
                             fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                    if (_phone.isNotEmpty)
+                    if (_hasRealPhone)
                       Text('+91 $_phone',
                           style: GoogleFonts.inter(color: Colors.white60, fontSize: 13)),
                     if (_institute.isNotEmpty) ...[
@@ -542,12 +558,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                         decoration: BoxDecoration(
-                          color: _teal.withValues(alpha: 0.2),
+                          color: _brand.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(_institute,
                             style: GoogleFonts.inter(
-                                fontSize: 12, color: _teal, fontWeight: FontWeight.w600)),
+                                fontSize: 12, color: _brand, fontWeight: FontWeight.w600)),
                       ),
                     ],
                     if (_batchName.isNotEmpty) ...[
@@ -560,13 +576,40 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 const SizedBox(height: 16),
 
                 // ── Stats ──
-                Row(children: [
-                  _stat('Avg Score', '$avg%', AppColors.accent),
-                  const SizedBox(width: 10),
-                  _stat('Attendance', '$attend%', AppColors.success),
-                  const SizedBox(width: 10),
-                  _stat('Tests', tests, AppColors.primary),
-                ]),
+                if (hasActivity)
+                  Row(children: [
+                    _stat('Avg Score', '$avg%', AppColors.accent),
+                    const SizedBox(width: 10),
+                    _stat('Attendance', '$attend%', AppColors.success),
+                    const SizedBox(width: 10),
+                    _stat('Tests', tests, AppColors.primary),
+                  ])
+                else
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                    ),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text('Take your first test to see your stats here',
+                            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text('Practice', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                  ),
                 const SizedBox(height: 20),
 
                 // ── Quick Actions ──
@@ -583,11 +626,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           'Connect your account to an institute', AppColors.primary, _showLinkCoaching),
                       _divider(),
                     ],
-                    _actionTile(Icons.receipt_long_rounded, 'My Fees', 'View fee status & history', const Color(0xFF7C4DFF), _showFees),
+                    _actionTile(Icons.insights_rounded, 'My Activity', 'Interviews, tests, experiments, events & courses', AppColors.primary,
+                        () => context.push('/student/activity')),
                     _divider(),
-                    _actionTile(Icons.emoji_events_rounded, 'My Test Results', 'View scores & performance', const Color(0xFFFFA000), _showResults),
+                    _actionTile(Icons.receipt_long_rounded, 'My Fees', 'View fee status & history', AppColors.accent, _showFees),
                     _divider(),
-                    _actionTile(Icons.event_available_rounded, 'My Attendance', 'View attendance summary', _teal, _showAttendance),
+                    _actionTile(Icons.emoji_events_rounded, 'My Test Results', 'View scores & performance', AppColors.accent, _showResults),
+                    _divider(),
+                    _actionTile(Icons.event_available_rounded, 'My Attendance', 'View attendance summary', _brand, _showAttendance),
                     _divider(),
                     _actionTile(Icons.school_rounded, 'About Institute', 'Institute details & info', AppColors.primary, _showAboutInstitute),
                   ]),
@@ -626,11 +672,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _divider(),
                     // Notifications
                     _settingsTile(Icons.notifications_rounded, 'Notifications', 'Push notification preferences',
-                        const Color(0xFFFF5722), () => _launch('app-settings:')),
+                        AppColors.primary, () => _launch('app-settings:')),
                     _divider(),
                     // Share
                     _settingsTile(Icons.share_rounded, 'Share App', 'Invite friends to join',
-                        const Color(0xFF2196F3), _shareApp),
+                        AppColors.accent, _shareApp),
                   ]),
                 ),
                 const SizedBox(height: 20),
@@ -646,7 +692,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   child: Column(children: [
                     if ((widget.waNumber ?? '').isNotEmpty)
                       _settingsTile(Icons.smart_toy_rounded, 'Chat with AI Tutor', 'Get instant help on WhatsApp',
-                          _teal,
+                          _brand,
                           () => _launch(
                               'https://wa.me/${widget.waNumber!.replaceAll(RegExp(r'\D'), '')}')),
                     if ((widget.waNumber ?? '').isNotEmpty) _divider(),

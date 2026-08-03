@@ -24,6 +24,14 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
   final _bodyCtrl = TextEditingController();
   final List<_HeaderRow> _headers = [_HeaderRow()];
 
+  String _authType = 'None';
+  final _bearerTokenCtrl = TextEditingController();
+  final _basicUserCtrl = TextEditingController();
+  final _basicPassCtrl = TextEditingController();
+  final _apiKeyNameCtrl = TextEditingController(text: 'X-API-Key');
+  final _apiKeyValueCtrl = TextEditingController();
+  static const _authTypes = ['None', 'Bearer Token', 'Basic Auth', 'API Key'];
+
   bool _sending = false;
   int? _statusCode;
   String? _responseBody;
@@ -54,6 +62,23 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
     for (final h in _headers) {
       final k = h.key.text.trim();
       if (k.isNotEmpty) headers[k] = h.value.text;
+    }
+    switch (_authType) {
+      case 'Bearer Token':
+        if (_bearerTokenCtrl.text.trim().isNotEmpty) {
+          headers['Authorization'] = 'Bearer ${_bearerTokenCtrl.text.trim()}';
+        }
+        break;
+      case 'Basic Auth':
+        if (_basicUserCtrl.text.isNotEmpty) {
+          final encoded = base64Encode(utf8.encode('${_basicUserCtrl.text}:${_basicPassCtrl.text}'));
+          headers['Authorization'] = 'Basic $encoded';
+        }
+        break;
+      case 'API Key':
+        final keyName = _apiKeyNameCtrl.text.trim();
+        if (keyName.isNotEmpty) headers[keyName] = _apiKeyValueCtrl.text;
+        break;
     }
 
     final sw = Stopwatch()..start();
@@ -101,7 +126,7 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
 
   Color _statusColor(int code) {
     if (code < 300) return AppColors.success;
-    if (code < 400) return const Color(0xFF1565C0);
+    if (code < 400) return AppColors.warning;
     return AppColors.error;
   }
 
@@ -110,7 +135,72 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
     _urlCtrl.dispose();
     _bodyCtrl.dispose();
     for (final h in _headers) { h.key.dispose(); h.value.dispose(); }
+    _bearerTokenCtrl.dispose();
+    _basicUserCtrl.dispose();
+    _basicPassCtrl.dispose();
+    _apiKeyNameCtrl.dispose();
+    _apiKeyValueCtrl.dispose();
     super.dispose();
+  }
+
+  Widget _buildAuthFields() {
+    switch (_authType) {
+      case 'Bearer Token':
+        return TextField(
+          controller: _bearerTokenCtrl,
+          decoration: InputDecoration(
+            labelText: 'Token', isDense: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      case 'Basic Auth':
+        return Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _basicUserCtrl,
+              decoration: InputDecoration(
+                labelText: 'Username', isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _basicPassCtrl,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Password', isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ]);
+      case 'API Key':
+        return Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _apiKeyNameCtrl,
+              decoration: InputDecoration(
+                labelText: 'Header name', isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _apiKeyValueCtrl,
+              decoration: InputDecoration(
+                labelText: 'Value', isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ]);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
@@ -118,7 +208,7 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1B5E),
+        backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         title: Row(children: [
           const Icon(Icons.http_rounded, color: Colors.white, size: 20),
@@ -157,7 +247,7 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
                     ),
                     const SizedBox(width: 10),
                     FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF7C4DFF)),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
                       onPressed: _sending ? null : _send,
                       icon: _sending
                           ? const SizedBox(width: 16, height: 16,
@@ -166,6 +256,23 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
                       label: const Text('Send'),
                     ),
                   ]),
+                  const SizedBox(height: 16),
+                  Text('Auth', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _authType,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: _authTypes.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                    onChanged: (v) => setState(() => _authType = v ?? 'None'),
+                  ),
+                  if (_authType != 'None') ...[
+                    const SizedBox(height: 8),
+                    _buildAuthFields(),
+                  ],
                   const SizedBox(height: 16),
                   Text('Headers', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
                   const SizedBox(height: 8),
@@ -273,12 +380,12 @@ class _HttpTesterScreenState extends State<HttpTesterScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0D1B5E),
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: SelectableText(
                   _responseBody ?? '',
-                  style: GoogleFonts.robotoMono(fontSize: 12, color: const Color(0xFF00E5A0)),
+                  style: GoogleFonts.robotoMono(fontSize: 12, color: AppColors.success),
                 ),
               ),
             ],
