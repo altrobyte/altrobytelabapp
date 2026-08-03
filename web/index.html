@@ -18,7 +18,15 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="AI-Powered Coaching Management Platform">
+  <meta name="description" content="Learn embedded systems, IoT & deeptech with AI-powered practice tests, courses and live workshops.">
+  <meta name="theme-color" content="#1A3C5E">
+
+  <!-- Open Graph / WhatsApp, Facebook, LinkedIn link previews -->
+  <meta property="og:title" content="AltrobyteLab">
+  <meta property="og:description" content="Learn embedded systems, IoT & deeptech with AI-powered practice tests, courses and live workshops.">
+  <meta property="og:image" content="https://lab.altrobyte.com/icons/Icon-512.png">
+  <meta property="og:url" content="https://lab.altrobyte.com/">
+  <meta property="og:type" content="website">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,8 +39,121 @@
 
   <title>AltrobyteLab</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    #splash {
+      position: fixed; inset: 0;
+      background: linear-gradient(160deg, #1A3C5E 0%, #0F2540 100%);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; z-index: 9999;
+      transition: opacity 0.35s ease;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    #splash .logo-wrap {
+      position: relative; width: 88px; height: 88px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #splash .logo-wrap::before {
+      content: ''; position: absolute; inset: -10px;
+      border-radius: 24px; background: rgba(212,80,10,0.25);
+      animation: splash-pulse 1.6s ease-in-out infinite;
+    }
+    #splash img { width: 80px; height: 80px; border-radius: 18px; position: relative; }
+    @keyframes splash-pulse {
+      0%, 100% { transform: scale(0.92); opacity: 0.5; }
+      50% { transform: scale(1.12); opacity: 0.15; }
+    }
+    #splash .msg {
+      margin-top: 28px; color: rgba(255,255,255,0.85);
+      font-size: 14.5px; font-weight: 500; letter-spacing: 0.2px;
+      min-height: 20px; text-align: center; padding: 0 24px;
+      transition: opacity 0.4s ease;
+    }
+    #splash .dots { margin-top: 16px; display: flex; gap: 6px; }
+    #splash .dots span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #D4500A; opacity: 0.35;
+      animation: splash-dot 1.2s ease-in-out infinite;
+    }
+    #splash .dots span:nth-child(2) { animation-delay: 0.15s; }
+    #splash .dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes splash-dot {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.15); }
+    }
+  </style>
 </head>
 <body>
+  <div id="splash">
+    <div class="logo-wrap"><img src="icons/Icon-192.png" alt="AltrobyteLab"></div>
+    <div class="msg" id="splash-msg">Warming up your workshop...</div>
+    <div class="dots"><span></span><span></span><span></span></div>
+  </div>
+  <script>
+    // A bare spinner on a plain white/navy screen reads as "broken" on a
+    // slow connection — rotating short, upbeat lines make the same wait
+    // feel intentional instead of stuck. Purely cosmetic; load time itself
+    // is unaffected by this part.
+    var _splashMessages = [
+      'Warming up your workshop...',
+      'Good things are worth a short wait...',
+      'Getting your seat ready...',
+      'Almost there — loading the good stuff...',
+      'Preparing something worth building...'
+    ];
+    var _splashIdx = 0;
+    var _splashMsgEl = document.getElementById('splash-msg');
+    var _splashTimer = setInterval(function () {
+      if (!_splashMsgEl) { clearInterval(_splashTimer); return; }
+      _splashIdx = (_splashIdx + 1) % _splashMessages.length;
+      _splashMsgEl.style.opacity = 0;
+      setTimeout(function () {
+        if (_splashMsgEl) {
+          _splashMsgEl.textContent = _splashMessages[_splashIdx];
+          _splashMsgEl.style.opacity = 1;
+        }
+      }, 400);
+    }, 2200);
+
+    // Remove the splash the moment Flutter renders its first frame — plus a
+    // hard safety-net timeout so a missed/renamed event can never again
+    // leave this stuck on screen forever (this exact bug just happened).
+    function removeSplash() {
+      clearInterval(_splashTimer);
+      var el = document.getElementById('splash');
+      if (el) el.remove();
+    }
+    window.addEventListener('flutter-first-frame', removeSplash);
+    setTimeout(removeSplash, 6000);
+  </script>
+  <!-- deferred: this is only needed once a user actually opens the payment
+       page, not during initial boot — without defer, Flutter's own boot
+       script below had to wait for this third-party domain to respond first. -->
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
+  <script>
+    // Cashfree's Orders API payment_session_id only works through their JS
+    // Checkout SDK (cashfree.checkout()) — a raw redirect to
+    // payments.cashfree.com/order/#session_xxx skips the SDK handshake and
+    // Cashfree's hosted page rejects it as "client session is invalid",
+    // even for a session that was just created. This wraps that SDK call
+    // so Dart can invoke it with a plain function call.
+    window.altrobyteCashfreeCheckout = function (sessionId, mode) {
+      try {
+        var cashfree = new Cashfree({ mode: mode || 'production' });
+        // '_self' only actually keeps the browser on the same tab when the
+        // checkout() call happens synchronously inside a user click — ours
+        // fires after an awaited network call (creating the order first),
+        // by which point the browser no longer treats it as a direct user
+        // gesture, so it was silently falling back to opening a new tab.
+        // '_modal' renders the checkout as an overlay on THIS page instead,
+        // sidestepping that entirely — no new tab, ever.
+        cashfree.checkout({ paymentSessionId: sessionId, redirectTarget: '_modal' }).then(function () {
+          window.dispatchEvent(new CustomEvent('altrobyte-cashfree-done'));
+        });
+      } catch (e) {
+        alert('Payment could not start: ' + (e && e.message ? e.message : e));
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

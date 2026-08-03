@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Public read for everything (banners, posters — shown to all students).
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+    // Only signed-in admins may upload — this app only wires
+    // Firebase Auth into the admin/super-admin login flows.
+    match /banners/{fileName} {
+      allow write: if request.auth != null
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

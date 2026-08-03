@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 metal_detector/
+
+# Firebase deploy cache
+.firebase/
