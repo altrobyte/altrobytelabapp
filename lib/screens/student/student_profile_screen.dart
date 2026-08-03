@@ -102,22 +102,28 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     if (mounted) setState(() => _loadingFees = false);
   }
 
+  /// Results come from /student/activity-summary, not the institute feed.
+  /// Students who signed up with Google have no institute `students` row —
+  /// their `student_id` is NULL, which the app stores as 0 — so gating this
+  /// on a positive student_id meant they never even asked for their results
+  /// and always saw the empty state. activity-summary is keyed on the
+  /// student_user and falls back to phone, so it covers both kinds of account.
   Future<void> _loadResults() async {
-    if (_studentId == null || _studentId! <= 0) return;
     setState(() => _loadingResults = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('student_token');
-      if (token != null) {
-        final res = await http.get(
-          Uri.parse(ApiConstants.studentFeed()),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-        if (res.statusCode == 200) {
-          final body = jsonDecode(res.body) as Map<String, dynamic>;
-          _results = body['recent_results'] as List? ?? [];
-        }
-      }
+      final summary = await ApiService.getStudentActivitySummary();
+      final recent = (summary['test_series'] as Map?)?['recent'] as List? ?? [];
+      _results = recent.map((r) {
+        final m = Map<String, dynamic>.from(r as Map);
+        final total = (m['total'] as num?)?.toDouble() ?? 0;
+        final score = (m['score'] as num?)?.toDouble() ?? 0;
+        return {
+          'title': m['title'],
+          'score': m['score'] ?? 0,
+          'total': m['total'] ?? 0,
+          'pct': total > 0 ? score / total * 100 : 0,
+        };
+      }).toList();
     } catch (_) {}
     if (mounted) setState(() => _loadingResults = false);
   }
