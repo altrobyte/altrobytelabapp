@@ -29,17 +29,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   String _phone = '';
   String _institute = '';
   String _batchName = '';
-  String _email = '';
   String _instituteCode = '';
   int? _studentId;
   // ignore: unused_field
   int? _instituteId;
   bool _isStandalone = false;
   Map<String, dynamic>? _stats;
-  List<dynamic> _fees = [];
   List<dynamic> _results = [];
   bool _loading = true;
-  bool _loadingFees = false;
   bool _loadingResults = false;
 
   // Accounts created via Google sign-in (no WhatsApp number) get a random
@@ -74,7 +71,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           final data = jsonDecode(res.body) as Map<String, dynamic>;
           _name = (data['name'] ?? _name).toString();
           _phone = (data['phone'] ?? _phone).toString();
-          _email = (data['email'] ?? '').toString();
           _batchName = (data['batch_name'] ?? '').toString();
           _institute = (data['institute_name'] ?? _institute).toString();
           _instituteCode = (data['institute_code'] ?? '').toString();
@@ -91,15 +87,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
 
     if (mounted) setState(() => _loading = false);
-  }
-
-  Future<void> _loadFees() async {
-    if (_studentId == null || _studentId! <= 0) return;
-    setState(() => _loadingFees = true);
-    try {
-      _fees = await ApiService.getStudentFees(_studentId!);
-    } catch (_) {}
-    if (mounted) setState(() => _loadingFees = false);
   }
 
   /// Results come from /student/activity-summary, not the institute feed.
@@ -248,93 +235,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  void _showFees() {
-    _loadFees();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          // Listen for fee loading state changes
-          if (_loadingFees) {
-            _loadFees().then((_) {
-              if (ctx.mounted) setModalState(() {});
-            });
-          }
-          return DraggableScrollableSheet(
-            initialChildSize: 0.6,
-            maxChildSize: 0.9,
-            minChildSize: 0.3,
-            expand: false,
-            builder: (_, scrollCtrl) => Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(children: [
-                    const Icon(Icons.receipt_long_rounded, color: _brand, size: 22),
-                    const SizedBox(width: 8),
-                    Text('My Fees', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
-                  ]),
-                ),
-                Expanded(
-                  child: _loadingFees
-                      ? const Center(child: CircularProgressIndicator(color: _brand))
-                      : _fees.isEmpty
-                          ? Center(child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_circle_rounded, size: 48, color: Colors.green.shade300),
-                                const SizedBox(height: 8),
-                                Text('No pending fees!', style: GoogleFonts.inter(color: AppColors.textSecondary)),
-                              ],
-                            ))
-                          : ListView.builder(
-                              controller: scrollCtrl,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _fees.length,
-                              itemBuilder: (_, i) {
-                                final fee = _fees[i] as Map<String, dynamic>;
-                                final status = (fee['status'] ?? 'pending').toString();
-                                final isPaid = status == 'paid';
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: isPaid
-                                          ? Colors.green.withValues(alpha: 0.1)
-                                          : Colors.orange.withValues(alpha: 0.1),
-                                      child: Icon(
-                                        isPaid ? Icons.check_circle : Icons.pending_rounded,
-                                        color: isPaid ? Colors.green : Colors.orange,
-                                      ),
-                                    ),
-                                    title: Text('₹${fee['amount'] ?? 0}',
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                                    subtitle: Text(
-                                      'Due: ${fee['due_date'] ?? '-'} • ${status.toUpperCase()}',
-                                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-                                    ),
-                                    trailing: isPaid
-                                        ? const Text('✅', style: TextStyle(fontSize: 18))
-                                        : const Text('⏳', style: TextStyle(fontSize: 18)),
-                                  ),
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   void _showResults() {
     _loadResults();
     showModalBottomSheet(
@@ -409,78 +309,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showAttendance() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.event_available_rounded, size: 48, color: _brand),
-          const SizedBox(height: 12),
-          Text('Attendance', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: _brand.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _AttendStat('Rate', '${_stats?['attendance_rate'] ?? 0}%', _brand),
-              Container(width: 1, height: 40, color: Colors.grey.shade300),
-              _AttendStat('Present', '${_stats?['total_present'] ?? '-'}', Colors.green),
-              Container(width: 1, height: 40, color: Colors.grey.shade300),
-              _AttendStat('Absent', '${_stats?['total_absent'] ?? '-'}', AppColors.error),
-            ]),
-          ),
-          const SizedBox(height: 16),
-          Text('Use QR Check-in to mark your daily attendance',
-              style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 20),
-        ]),
-      ),
-    );
-  }
-
-  void _showAboutInstitute() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.school_rounded, color: AppColors.primary, size: 26),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_institute, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-              if (_batchName.isNotEmpty)
-                Text('Batch: $_batchName', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-            ])),
-          ]),
-          const SizedBox(height: 16),
-          if (_instituteCode.isNotEmpty)
-            _InfoRow(Icons.vpn_key_rounded, 'Institute Code', _instituteCode),
-          if (_hasRealPhone)
-            _InfoRow(Icons.phone_rounded, 'Your Phone', '+91 $_phone'),
-          if (_email.isNotEmpty)
-            _InfoRow(Icons.email_rounded, 'Email', _email),
-          const SizedBox(height: 16),
-        ]),
       ),
     );
   }
@@ -644,16 +472,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           'Connect your account to an institute', AppColors.primary, _showLinkCoaching),
                       _divider(),
                     ],
-                    _actionTile(Icons.insights_rounded, 'My Activity', 'Interviews, tests, experiments, events & courses', AppColors.primary,
-                        () => context.push('/student/activity')),
-                    _divider(),
-                    _actionTile(Icons.receipt_long_rounded, 'My Fees', 'View fee status & history', AppColors.accent, _showFees),
-                    _divider(),
+                    // Test Results only. Fees, Attendance and About Institute
+                    // are institute-admin concepts inherited from AltroCoach
+                    // and mean nothing to a Lab student; My Activity is
+                    // already reachable from the side rail.
                     _actionTile(Icons.emoji_events_rounded, 'My Test Results', 'View scores & performance', AppColors.accent, _showResults),
-                    _divider(),
-                    _actionTile(Icons.event_available_rounded, 'My Attendance', 'View attendance summary', _brand, _showAttendance),
-                    _divider(),
-                    _actionTile(Icons.school_rounded, 'About Institute', 'Institute details & info', AppColors.primary, _showAboutInstitute),
                   ]),
                 ),
                 const SizedBox(height: 20),
@@ -846,32 +669,4 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 }
 
-class _AttendStat extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  const _AttendStat(this.label, this.value, this.color);
 
-  @override
-  Widget build(BuildContext context) => Column(children: [
-    Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-    Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
-  ]);
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label, value;
-  const _InfoRow(this.icon, this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(children: [
-      Icon(icon, size: 18, color: AppColors.textSecondary),
-      const SizedBox(width: 10),
-      Text(label, style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
-      const Spacer(),
-      Text(value, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
-    ]),
-  );
-}
