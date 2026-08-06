@@ -5,11 +5,10 @@ import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
 /// Unified Practice & Test Series tab — a "Generate custom practice test"
-/// CTA up top, plus a listing of curated Test Series and quizzes authored
-/// inside Training Modules ("Course Quizzes"). Previously two separate
-/// screens; merged per product decision so students have one place to find
-/// every quiz, whether AI-generated on demand, admin-curated, or embedded
-/// in a course.
+/// CTA up top, every individual quiz (whether authored inside a course or
+/// published standalone) in one flat grid, and curated multi-test Test
+/// Series below. Quizzes used to be split into separate "Course Quizzes" /
+/// "General Tests" labeled groups — same content, so merged into one list.
 class StudentTestSeriesScreen extends StatefulWidget {
   const StudentTestSeriesScreen({super.key});
 
@@ -20,6 +19,7 @@ class StudentTestSeriesScreen extends StatefulWidget {
 class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
   List<dynamic> _series = [];
   List<dynamic> _moduleTests = [];
+  List<dynamic> _standaloneTests = [];
   bool _loading = true;
   String? _error;
 
@@ -41,6 +41,7 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
       setState(() {
         _series = data['series'] as List? ?? [];
         _moduleTests = data['module_tests'] as List? ?? [];
+        _standaloneTests = data['standalone_tests'] as List? ?? [];
         _loading = false;
       });
     } catch (e) {
@@ -57,8 +58,29 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
     }
   }
 
+  /// Flattens module quizzes + standalone tests into one list — same
+  /// underlying data, just no longer split into separate labeled groups.
+  List<Map<String, dynamic>> get _allQuizzes {
+    final result = <Map<String, dynamic>>[];
+    for (final m in _moduleTests) {
+      final tests = (m['tests'] as List?) ?? [];
+      for (final t in tests) {
+        result.add({
+          ...Map<String, dynamic>.from(t),
+          'source': m['module_title'],
+          'color': m['module_color'],
+        });
+      }
+    }
+    for (final t in _standaloneTests) {
+      result.add({...Map<String, dynamic>.from(t), 'source': null, 'color': null});
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final quizzes = _allQuizzes;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -79,42 +101,59 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      const _PracticeCta(),
-                      const SizedBox(height: 24),
-                      if (_moduleTests.isNotEmpty) ...[
-                        _SectionLabel('Course Quizzes'),
-                        const SizedBox(height: 10),
-                        ..._moduleTests.map((m) => _ModuleTestsCard(
-                              moduleTitle: m['module_title'] ?? '',
-                              color: _parseColor(m['module_color']),
-                              tests: (m['tests'] as List?) ?? [],
-                            )),
-                        const SizedBox(height: 14),
-                      ],
-                      if (_series.isNotEmpty) ...[
-                        _SectionLabel('Test Series'),
-                        const SizedBox(height: 10),
-                        ..._series.map((s) => _SeriesCard(
-                              series: s,
-                              color: _parseColor(s['color']),
-                            )),
-                      ],
-                      if (_series.isEmpty && _moduleTests.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Center(
-                            child: Column(children: [
-                              Icon(Icons.quiz_outlined, size: 40, color: Colors.grey[300]),
-                              const SizedBox(height: 10),
-                              Text('No test series or course quizzes published yet',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(color: AppColors.textSecondary)),
-                            ]),
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        sliver: SliverToBoxAdapter(child: const _PracticeCta()),
+                      ),
+                      if (quizzes.isNotEmpty)
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              mainAxisExtent: 210,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, i) => _QuizTile(quiz: quizzes[i], color: _parseColor(quizzes[i]['color'])),
+                              childCount: quizzes.length,
+                            ),
                           ),
                         ),
+                      if (_series.isNotEmpty) ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                          sliver: SliverToBoxAdapter(child: _SectionLabel('Test Series')),
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, i) => _SeriesCard(series: _series[i], color: _parseColor(_series[i]['color'])),
+                              childCount: _series.length,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (_series.isEmpty && quizzes.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 40),
+                            child: Center(
+                              child: Column(children: [
+                                Icon(Icons.quiz_outlined, size: 40, color: Colors.grey[300]),
+                                const SizedBox(height: 10),
+                                Text('No test series or quizzes published yet',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(color: AppColors.textSecondary)),
+                              ]),
+                            ),
+                          ),
+                        ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
                     ],
                   ),
                 ),
@@ -123,8 +162,8 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
 }
 
 /// Beta gate: custom AI-generated practice tests are intentionally disabled
-/// on this tab for now — students see only admin Test Series and Course
-/// Quizzes here until this graduates out of beta.
+/// on this tab for now — students see only admin Test Series and quizzes
+/// here until this graduates out of beta.
 class _PracticeCta extends StatelessWidget {
   const _PracticeCta();
 
@@ -179,67 +218,81 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _ModuleTestsCard extends StatefulWidget {
-  final String moduleTitle;
+/// A single quiz card — a colored cover header (icon on a gradient,
+/// matching the poster-style look used for Live Sessions) with the title
+/// and details below, rather than a flat icon-and-text row. Course/general
+/// origin shown as a small subtitle tag rather than a separate labeled
+/// section, so every quiz sits in one unified, browsable grid.
+class _QuizTile extends StatelessWidget {
+  final Map<String, dynamic> quiz;
   final Color color;
-  final List<dynamic> tests;
-  const _ModuleTestsCard({required this.moduleTitle, required this.color, required this.tests});
-
-  @override
-  State<_ModuleTestsCard> createState() => _ModuleTestsCardState();
-}
-
-class _ModuleTestsCardState extends State<_ModuleTestsCard> {
-  bool _expanded = false;
+  const _QuizTile({required this.quiz, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    final source = quiz['source'] as String?;
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       clipBehavior: Clip.antiAlias,
-      child: Column(children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.school_rounded, color: widget.color, size: 22),
+      child: InkWell(
+        onTap: () => context.push('/test/${quiz['id']}'),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            height: 118,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, Color.lerp(color, Colors.black, 0.25)!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(widget.moduleTitle, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.5)),
-                  const SizedBox(height: 4),
-                  Text('${widget.tests.length} quiz${widget.tests.length == 1 ? '' : 'zes'}',
-                      style: GoogleFonts.inter(fontSize: 11.5, color: widget.color, fontWeight: FontWeight.w600)),
-                ]),
+            ),
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned(
+                right: -18, top: -18,
+                child: Icon(Icons.fact_check_rounded, size: 90, color: Colors.white.withValues(alpha: 0.14)),
               ),
-              AnimatedRotation(
-                turns: _expanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: Icon(Icons.expand_more_rounded, color: Colors.grey[400]),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.fact_check_rounded, color: Colors.white, size: 22),
+                    const SizedBox(height: 8),
+                    Text(quiz['title'] ?? '',
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  ],
+                ),
               ),
             ]),
           ),
-        ),
-        if (_expanded) ...[
-          const Divider(height: 1),
-          ...widget.tests.map((t) => ListTile(
-                dense: true,
-                leading: Icon(Icons.description_outlined, color: widget.color, size: 20),
-                title: Text(t['title'] ?? '', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
-                subtitle: Text('${t['subject'] ?? ''} · ${t['duration_mins'] ?? 0} min',
-                    style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                onTap: () => context.push('/test/${t['id']}'),
-              )),
-          const SizedBox(height: 8),
-        ],
-      ]),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              if (source != null) ...[
+                Text(source,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(fontSize: 10.5, color: color, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+              ],
+              Row(children: [
+                Icon(Icons.timer_outlined, size: 12, color: AppColors.textSecondary),
+                const SizedBox(width: 3),
+                Text('${quiz['duration_mins'] ?? 0} min',
+                    style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+                const Spacer(),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Colors.grey),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

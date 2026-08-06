@@ -7,6 +7,7 @@ import '../../models/training_module_model.dart';
 import '../../services/api_service.dart';
 import '../../services/cashfree_checkout.dart';
 import '../../services/google_auth_service.dart';
+import '../../widgets/fomo_countdown.dart';
 import '../../widgets/registration_success_card.dart';
 
 enum _PurchaseState { none, pending, paid }
@@ -28,7 +29,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _couponCtrl = TextEditingController();
+  final _couponCtrl = TextEditingController(text: 'DEV100');
 
   bool _loading = true;
   _PurchaseState _state = _PurchaseState.none;
@@ -43,6 +44,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
   String? _couponError;
   String? _appliedCouponCode;
   double? _appliedDiscountPercent;
+  double? _appliedDiscountAmount;
 
   Timer? _pollTimer;
   String? _enrolledName;
@@ -159,6 +161,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
       setState(() {
         _appliedCouponCode = code;
         _appliedDiscountPercent = (result['discount_percent'] as num?)?.toDouble() ?? 0;
+        _appliedDiscountAmount = (result['discount_amount'] as num?)?.toDouble() ?? 0;
         _couponChecking = false;
       });
     } catch (e) {
@@ -167,6 +170,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
         _couponChecking = false;
         _appliedCouponCode = null;
         _appliedDiscountPercent = null;
+        _appliedDiscountAmount = null;
         _couponError = e is ApiException ? e.message : 'Invalid or expired coupon code';
       });
     }
@@ -176,6 +180,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
     setState(() {
       _appliedCouponCode = null;
       _appliedDiscountPercent = null;
+      _appliedDiscountAmount = null;
       _couponError = null;
       _couponCtrl.clear();
     });
@@ -444,8 +449,13 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
 
   Widget _buildForm(double price, double tax) {
     final originalPrice = widget.module.originalPrice;
-    final taxAmount = price > 0 ? (price * tax / 100) : 0;
-    final total = price + taxAmount;
+    final discountAmount = _appliedDiscountAmount ?? 0;
+    final discountPercent = _appliedDiscountPercent ?? 0;
+    final priceAfterCoupon = price > 0
+        ? (discountAmount > 0 ? (price - discountAmount).clamp(0, price) : price * (1 - discountPercent / 100))
+        : price;
+    final taxAmount = priceAfterCoupon > 0 ? (priceAfterCoupon * tax / 100) : 0;
+    final total = priceAfterCoupon + taxAmount;
 
     return Form(
       key: _formKey,
@@ -472,6 +482,14 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
             Text('₹${price.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
           ]),
         ]),
+        if (_appliedCouponCode != null) ...[
+          const SizedBox(height: 6),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Coupon ($_appliedCouponCode)', style: GoogleFonts.inter(fontSize: 13, color: AppColors.success)),
+            Text('- ₹${(price - priceAfterCoupon).toStringAsFixed(0)}',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+          ]),
+        ],
         if (tax > 0) ...[
           const SizedBox(height: 6),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -479,7 +497,53 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
             Text('₹${taxAmount.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
           ]),
         ],
-        const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1)),
+        const SizedBox(height: 10),
+        if (_appliedCouponCode == null) ...[
+          const FomoCountdown(),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _couponCtrl,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Coupon code', isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _couponChecking ? null : _applyCoupon,
+                child: _couponChecking
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Apply'),
+              ),
+            ),
+          ]),
+          if (_couponError != null) ...[
+            const SizedBox(height: 6),
+            Text(_couponError!, style: GoogleFonts.inter(fontSize: 12, color: AppColors.error)),
+          ] else ...[
+            const SizedBox(height: 6),
+            Text('Tap Apply for ₹100 off — limited to the first 10 developers',
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+          ],
+        ] else
+          Row(children: [
+            const Icon(Icons.local_offer_rounded, size: 16, color: AppColors.success),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text("'$_appliedCouponCode' applied",
+                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.success)),
+            ),
+            TextButton(onPressed: _removeCoupon, child: const Text('Remove')),
+          ]),
+        const SizedBox(height: 10),
+        const Divider(height: 1),
+        const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('Total', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700)),
           Text('₹${total.toStringAsFixed(0)}',

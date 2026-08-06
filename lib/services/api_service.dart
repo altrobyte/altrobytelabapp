@@ -698,12 +698,18 @@ class ApiService {
     return _parse(res);
   }
 
-  static Future<Map<String, dynamic>> createStudentSubscriptionLink() async {
+  /// [plan] is a `subscription_plans.tier_key` for a paid tier — '999'
+  /// (Plus) or '9999' (Elite). The backend stores the same value in
+  /// `student_subscriptions.plan`, so display and billing never drift.
+  static Future<Map<String, dynamic>> createStudentSubscriptionLink({
+    required String plan,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
     final res = await http.post(
       Uri.parse(ApiConstants.studentSubscribe()),
       headers: _headers(token),
+      body: jsonEncode({'plan': plan}),
     );
     return _parse(res);
   }
@@ -2078,5 +2084,127 @@ class ApiService {
       headers: _headers(token),
     );
     return _parse(res);
+  }
+
+  // ── Challenges ────────────────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getChallenges() async {
+    final token = await _studentToken();
+    final res = await safeGet(Uri.parse(ApiConstants.challenges()), headers: _headers(token));
+    return _parse(res)['challenges'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getChallenge(int id) async {
+    final token = await _studentToken();
+    final res = await safeGet(Uri.parse(ApiConstants.challenge(id)), headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> submitChallenge(int id, {
+    required String name, String submissionText = '', String submissionUrl = '',
+  }) async {
+    final token = await _studentToken();
+    final res = await safePost(
+      Uri.parse(ApiConstants.challengeSubmit(id)),
+      headers: _headers(token),
+      body: jsonEncode({'name': name, 'submission_text': submissionText, 'submission_url': submissionUrl}),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getMyChallengeSubmissions() async {
+    final token = await _studentToken();
+    final res = await safeGet(Uri.parse(ApiConstants.myChallengeSubmissions()), headers: _headers(token));
+    return _parse(res)['submissions'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getChallengesAdmin() async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.challengesAdmin()), headers: _headers(token));
+    return _parse(res)['challenges'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createChallenge(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(
+      Uri.parse(ApiConstants.challengeAdminCreate()),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateChallenge(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.challengeAdminItem(id)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> deleteChallenge(int id) async {
+    final token = await _token();
+    final res = await http.delete(Uri.parse(ApiConstants.challengeAdminItem(id)), headers: _headers(token));
+    _parse(res);
+  }
+
+  static Future<List<dynamic>> getChallengeSubmissionsAdmin(int challengeId) async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.challengeAdminSubmissions(challengeId)), headers: _headers(token));
+    return _parse(res)['submissions'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> reviewChallengeSubmission(int submissionId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.challengeAdminReviewSubmission(submissionId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  // ── Home strip + activity feed ──────────────────────────────────────────
+
+  static Future<List<dynamic>> getHomeStrip() async {
+    final res = await safeGet(Uri.parse(ApiConstants.homeStrip()));
+    return _parse(res)['items'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getHomeStripAdmin() async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.homeStripAdmin()), headers: _headers(token));
+    return _parse(res)['items'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>> createHomeStripItem(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await safePost(Uri.parse(ApiConstants.homeStripAdmin()), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateHomeStripItem(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(Uri.parse(ApiConstants.homeStripAdminItem(id)), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<void> deleteHomeStripItem(int id) async {
+    final token = await _token();
+    final res = await http.delete(Uri.parse(ApiConstants.homeStripAdminItem(id)), headers: _headers(token));
+    _parse(res);
+  }
+
+  static Future<List<dynamic>> getActivityFeed({int limit = 15}) async {
+    final res = await safeGet(Uri.parse(ApiConstants.activityFeed(limit: limit)));
+    return _parse(res)['activity'] as List? ?? [];
+  }
+
+  static Future<List<dynamic>> getActivityFeedAdmin({int limit = 30}) async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.activityFeedAdmin(limit: limit)), headers: _headers(token));
+    return _parse(res)['activity'] as List? ?? [];
   }
 }

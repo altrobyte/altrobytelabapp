@@ -165,6 +165,7 @@ class _PlatformUsersScreenState extends State<PlatformUsersScreen> {
           DataColumn(label: Text('Plan')),
           DataColumn(label: Text('Joined')),
           DataColumn(label: Text('Courses')),
+          DataColumn(label: Text('Enrolled')),
           DataColumn(label: Text('Interviews')),
           DataColumn(label: Text('Experiments')),
           DataColumn(label: Text('Events')),
@@ -188,6 +189,7 @@ class _PlatformUsersScreenState extends State<PlatformUsersScreen> {
             )),
             DataCell(Text(_fmtDate(u['created_at']), style: GoogleFonts.inter(fontSize: 11.5))),
             DataCell(Text('${u['courses_started'] ?? 0}')),
+            DataCell(Text('${u['courses_enrolled'] ?? 0}')),
             DataCell(Text('${u['mock_interviews'] ?? 0}')),
             DataCell(Text('${u['experiments'] ?? 0}')),
             DataCell(Text('${u['events_registered'] ?? 0}')),
@@ -235,6 +237,7 @@ class _UserCard extends StatelessWidget {
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 6, children: [
               _statChip(Icons.school_rounded, '${user['courses_started'] ?? 0} courses'),
+              _statChip(Icons.workspace_premium_rounded, '${user['courses_enrolled'] ?? 0} enrolled'),
               _statChip(Icons.record_voice_over_rounded, '${user['mock_interviews'] ?? 0} interviews'),
               _statChip(Icons.science_rounded, '${user['experiments'] ?? 0} experiments'),
               _statChip(Icons.event_rounded, '${user['events_registered'] ?? 0} events'),
@@ -289,12 +292,19 @@ class _ActivityDetail extends StatelessWidget {
                 final total = (c['total_items'] ?? 0) as int;
                 final done = (c['completed_items'] ?? 0) as int;
                 final pct = total > 0 ? (done / total * 100).round() : 0;
+                final enrollmentStatus = c['enrollment_status'] as String?;
                 return ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   title: Text(c['title'] ?? ''),
                   subtitle: LinearProgressIndicator(value: total > 0 ? done / total : 0, minHeight: 6, borderRadius: BorderRadius.circular(3)),
-                  trailing: Text('$pct%', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  trailing: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('$pct%', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    if (enrollmentStatus != null)
+                      Text(enrollmentStatus == 'paid' ? 'Enrolled' : 'Pending payment',
+                          style: GoogleFonts.inter(fontSize: 10,
+                              color: enrollmentStatus == 'paid' ? AppColors.success : AppColors.warning)),
+                  ]),
                 );
               }).toList()),
         _section('Mock Interviews', Icons.record_voice_over_rounded, interviews.isEmpty

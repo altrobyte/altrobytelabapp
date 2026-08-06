@@ -58,6 +58,10 @@ import 'screens/pricing/pricing_admin_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_page_view_screen.dart';
 import 'screens/company/company_items_screen.dart';
+import 'screens/challenges/student_challenges_screen.dart';
+import 'screens/challenges/challenges_admin_screen.dart';
+import 'screens/home_strip/home_strip_admin_screen.dart';
+import 'screens/home_strip/activity_feed_admin_screen.dart';
 import 'screens/super_admin/super_admin_login_screen.dart';
 import 'screens/super_admin/super_admin_dashboard_screen.dart';
 import 'screens/super_admin/commission_tracker_screen.dart';
@@ -139,7 +143,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/training-modules', '/experiments', '/attendance', '/fees', '/analytics',
           '/broadcast', '/settings',
           '/live-sessions-admin', '/events-admin', '/jobs-admin', '/enquiries-admin', '/pricing-admin',
-          '/platform-users',
+          '/platform-users', '/challenges-admin', '/home-strip-admin', '/activity-feed-admin',
         ];
         final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
 
@@ -291,6 +295,10 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           path: '/student/dev-tools',
           builder: (_, __) => const DevToolsHubScreen(),
         ),
+        GoRoute(
+          path: '/student/challenges',
+          builder: (_, __) => const StudentChallengesScreen(),
+        ),
         // Manager login
         GoRoute(
           path: '/manager/login',
@@ -430,6 +438,24 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/live-sessions-admin',
                 builder: (_, __) => const LiveSessionsAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/challenges-admin',
+                builder: (_, __) => const ChallengesAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/home-strip-admin',
+                builder: (_, __) => const HomeStripAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/activity-feed-admin',
+                builder: (_, __) => const ActivityFeedAdminScreen(),
               ),
             ]),
             StatefulShellBranch(routes: [

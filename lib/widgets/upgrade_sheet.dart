@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
+import '../services/cashfree_checkout.dart';
 
 class StatRow extends StatelessWidget {
   final IconData icon;
@@ -48,6 +49,9 @@ class StatRow extends StatelessWidget {
 /// [lastResult] (optional) shows the score from the most recent attempt.
 /// [onPaymentOpened] is called once the Cashfree payment page has been
 /// launched, so the caller can start polling for activation.
+///
+/// Sells the Plus tier only — one decision at the moment someone is blocked.
+/// Elite and the full comparison live on `/pricing`, one tap away.
 class UpgradeSheet extends StatefulWidget {
   final Map<String, dynamic>? lastResult;
   final VoidCallback onPaymentOpened;
@@ -55,7 +59,7 @@ class UpgradeSheet extends StatefulWidget {
   const UpgradeSheet({
     required this.lastResult,
     required this.onPaymentOpened,
-    this.premiumPrice = 99,
+    this.premiumPrice = 999,
     super.key,
   });
 
@@ -69,25 +73,29 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
   Future<void> _upgradeNow() async {
     setState(() => _paying = true);
     try {
-      final res = await ApiService.createStudentSubscriptionLink();
-      if (res['already_premium'] == true) {
+      final res = await ApiService.createStudentSubscriptionLink(plan: '999');
+      if (res['already_active'] == true) {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You already have Premium active!')),
+            const SnackBar(content: Text('Your plan is already active!')),
           );
         }
         return;
       }
-      final url = (res['link_url'] ?? '').toString();
-      if (url.isNotEmpty) {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          widget.onPaymentOpened();
-          if (mounted) Navigator.pop(context);
-          return;
-        }
+      // payment_session_id + the JS Checkout SDK is the only path that works
+      // — Cashfree's Orders API returns no navigable link_url, and a raw
+      // redirect to their hosted page is rejected as "client session is
+      // invalid" (same as live-session registration).
+      final sessionId = (res['payment_session_id'] ?? '').toString();
+      if (sessionId.isNotEmpty) {
+        CashfreeCheckout.open(
+          paymentSessionId: sessionId,
+          mode: (res['cashfree_mode'] ?? 'production').toString(),
+        );
+        widget.onPaymentOpened();
+        if (mounted) Navigator.pop(context);
+        return;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +142,7 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Aaj ke 3 free quizzes khatam!',
+          Text("You've used today's free quizzes",
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                   fontSize: 18,
@@ -150,13 +158,13 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
           const StatRow(
             icon: Icons.leaderboard_rounded,
             label: 'Class Rank',
-            value: '#?? (unlock karein)',
+            value: '#?? — unlock with Plus',
             locked: true,
           ),
           const StatRow(
             icon: Icons.psychology_alt_rounded,
             label: 'Weak Topic',
-            value: '?? (unlock karein)',
+            value: '?? — unlock with Plus',
             locked: true,
           ),
           const SizedBox(height: 16),
@@ -182,7 +190,7 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
                           color: Colors.white.withValues(alpha: 0.9))),
                 ),
                 const Spacer(),
-                Text('Unlimited\neverything',
+                Text('Unlimited\nquiz attempts',
                     textAlign: TextAlign.right,
                     style: GoogleFonts.inter(
                         fontSize: 13,
@@ -208,17 +216,26 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
                       height: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : Text('Upgrade Now',
+                  : Text('Upgrade to Plus',
                       style: GoogleFonts.poppins(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white)),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/pricing');
+            },
+            child: Text('Compare all plans',
+                style: GoogleFonts.inter(
+                    color: AppColors.accent, fontWeight: FontWeight.w600)),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Kal Aana',
+            child: Text('Maybe later',
                 style: GoogleFonts.inter(color: AppColors.textSecondary)),
           ),
         ],

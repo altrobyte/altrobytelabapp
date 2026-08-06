@@ -128,11 +128,11 @@ class _GenerateTabState extends State<_GenerateTab> {
   final _topicCtrl = TextEditingController();
   final _customInstructionsCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
-  String _subject = 'Mathematics';
+  String _subject = 'Embedded Systems';
   String _difficulty = 'Medium';
-  String _examType = 'SSC GD Constable';
+  String _examType = 'Workshop Assessment';
 
-  String _language = 'Hindi';
+  String _language = 'English';
   int _count = 20;
   int? _batchId;
   List<Batch> _batches = [];
@@ -175,7 +175,7 @@ class _GenerateTabState extends State<_GenerateTab> {
         _subjects = subjects;
         _examPatterns = patterns;
         if (subjects.isNotEmpty && !subjects.any((s) => s['value'] == _subject)) {
-          _subject = subjects.first['value'] ?? 'Mathematics';
+          _subject = subjects.first['value'] ?? 'Embedded Systems';
         }
         if (patterns.isNotEmpty && !patterns.any((p) => p['value'] == _examType)) {
           _examType = patterns.first['value'] ?? 'General/Custom';
@@ -392,12 +392,12 @@ class _ConfigPanel extends StatelessWidget {
                   decoration: InputDecoration(labelText: AppLocalizations.of(context)!.testGenSubject),
                   items: (subjects.isEmpty
                       ? [
-                          {'label': 'Mathematics', 'value': 'Mathematics', 'icon': '🔢'},
-                          {'label': 'General Knowledge', 'value': 'General Knowledge', 'icon': '🌍'},
-                          {'label': 'Reasoning', 'value': 'Reasoning', 'icon': '🧠'},
-                          {'label': 'English', 'value': 'English', 'icon': '📝'},
-                          {'label': 'Science', 'value': 'Science', 'icon': '🔬'},
-                          {'label': 'Hindi', 'value': 'Hindi', 'icon': '🇮🇳'},
+                          {'label': 'Embedded Systems', 'value': 'Embedded Systems', 'icon': '🔧'},
+                          {'label': 'IoT', 'value': 'IoT', 'icon': '📡'},
+                          {'label': 'Bluetooth & BLE', 'value': 'Bluetooth & BLE', 'icon': '📶'},
+                          {'label': 'Circuit Design', 'value': 'Circuit Design', 'icon': '🔌'},
+                          {'label': 'Embedded C/C++', 'value': 'Embedded C/C++', 'icon': '💻'},
+                          {'label': 'Electronics', 'value': 'Electronics', 'icon': '🔬'},
                           {'label': 'Mixed', 'value': 'Mixed', 'icon': '📚'},
                         ]
                       : subjects)

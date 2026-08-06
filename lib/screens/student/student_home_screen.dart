@@ -68,18 +68,57 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   Future<void> _loadFeaturedSessions() async {
     try {
       final sessions = await ApiService.getLiveSessions(featured: true);
+      // One summary card for practice content, not one per quiz — the
+      // Featured row is a teaser, not the full catalog. It links through
+      // to the actual Test Series page for everything else.
+      List<dynamic> practiceItems = [];
+      try {
+        final testData = await ApiService.getTestSeriesForStudent();
+        final series = (testData['series'] as List?) ?? [];
+        final moduleGroups = (testData['module_tests'] as List?) ?? [];
+        final standalone = (testData['standalone_tests'] as List?) ?? [];
+        var quizCount = standalone.length;
+        for (final m in moduleGroups) {
+          quizCount += ((m['tests'] as List?) ?? []).length;
+        }
+        final courseCount = moduleGroups.length;
+
+        // Prefer a real curated series (has its own admin-written
+        // description); otherwise synthesize a summary from the quizzes.
+        final firstSeries = series.isNotEmpty ? Map<String, dynamic>.from(series.first) : null;
+        if (firstSeries != null) {
+          practiceItems.add({
+            ...firstSeries,
+            '_kind': 'series',
+            'description': (firstSeries['description'] as String?)?.trim().isNotEmpty == true
+                ? firstSeries['description']
+                : 'A curated set of tests to check what you\'ve learned.',
+          });
+        } else if (quizCount > 0) {
+          practiceItems.add({
+            'id': null,
+            'title': 'Practice & Test Series',
+            'description': courseCount > 0
+                ? '$quizCount quiz${quizCount == 1 ? '' : 'zes'} across $courseCount course${courseCount == 1 ? '' : 's'} — test what you\'ve learned.'
+                : '$quizCount quiz${quizCount == 1 ? '' : 'zes'} ready to practice.',
+            'color': '#7C4DFF',
+            '_kind': 'quiz_summary',
+          });
+        }
+      } catch (_) {
+        // Test Series failing must not block Live Sessions from showing.
+      }
       if (!mounted) return;
-      setState(() => _featuredSessions = _sortFeatured(sessions));
+      setState(() => _featuredSessions = _mergeFeatured(sessions, practiceItems));
     } catch (_) {
       // Non-critical — home feed must not break if this fails.
     }
   }
 
-  /// The API returns featured sessions in its own order, which left ended
-  /// ones sitting in front of the session you can still register for.
-  /// Upcoming first (soonest first), then past ones newest-first, so the
-  /// most relevant card is always the one the carousel opens on.
-  static List<dynamic> _sortFeatured(List<dynamic> sessions) {
+  /// Priority order: active/upcoming sessions first (soonest first), then
+  /// published test series/quizzes, then past sessions (newest first) — so
+  /// the most relevant, actionable card is always what the carousel opens on.
+  static List<dynamic> _mergeFeatured(List<dynamic> sessions, List<dynamic> practiceItems) {
     DateTime? dateOf(dynamic s) {
       try {
         final raw = (s as Map)['session_date'];
@@ -90,18 +129,34 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     }
 
     final now = DateTime.now();
-    final sorted = List<dynamic>.from(sessions);
-    sorted.sort((a, b) {
-      final da = dateOf(a);
-      final db = dateOf(b);
-      // Undated sessions can't be ranked — park them at the end.
-      if (da == null || db == null) return da == null ? (db == null ? 0 : 1) : -1;
-      final aPast = da.isBefore(now);
-      final bPast = db.isBefore(now);
-      if (aPast != bPast) return aPast ? 1 : -1;
-      return aPast ? db.compareTo(da) : da.compareTo(db);
-    });
-    return sorted;
+    final sessionItems = sessions
+        .map((s) => {...Map<String, dynamic>.from(s as Map), '_type': 'session'})
+        .toList();
+    final seriesItems = practiceItems
+        .map((s) => {...Map<String, dynamic>.from(s), '_type': 'test_series'})
+        .toList();
+
+    final upcoming = sessionItems.where((s) {
+      final d = dateOf(s);
+      return d == null || !d.isBefore(now);
+    }).toList()
+      ..sort((a, b) {
+        final da = dateOf(a);
+        final db = dateOf(b);
+        if (da == null || db == null) return da == null ? (db == null ? 0 : 1) : -1;
+        return da.compareTo(db);
+      });
+    final past = sessionItems.where((s) {
+      final d = dateOf(s);
+      return d != null && d.isBefore(now);
+    }).toList()
+      ..sort((a, b) {
+        final da = dateOf(a)!;
+        final db = dateOf(b)!;
+        return db.compareTo(da);
+      });
+
+    return [...upcoming, ...seriesItems, ...past];
   }
 
   bool get _isLoggedIn => _token != null;
@@ -323,7 +378,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       builder: (_) => UpgradeSheet(
         lastResult: lastResult,
         onPaymentOpened: _startSubscriptionVerification,
-        premiumPrice: (_subscription?['premium_price'] as num?)?.toInt() ?? 99,
+        premiumPrice: (_subscription?['plan_999_price'] as num?)?.toInt() ?? 999,
       ),
     );
   }
@@ -393,18 +448,29 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         : _signInWithGoogle;
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: isMobile
-          ? _buildBody(context)
-          : Row(children: [
-              _SideRail(
-                isLoggedIn: _isLoggedIn,
-                onHome: () {},
-                onPractice: () => _openPractice(),
-                onTraining: _openTrainingScreen,
-                onProfileOrLogin: profileOrLogin,
-              ),
-              Expanded(child: _buildBody(context)),
-            ]),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: isMobile
+                ? _buildBody(context)
+                : Row(children: [
+                    _SideRail(
+                      isLoggedIn: _isLoggedIn,
+                      onHome: () {},
+                      onPractice: () => _openPractice(),
+                      onTraining: _openTrainingScreen,
+                      onProfileOrLogin: profileOrLogin,
+                    ),
+                    Expanded(child: _buildBody(context)),
+                  ]),
+          ),
+          // Bottom-LEFT, not right: the right edge is the FAB stack's lane
+          // (Check In + Chat AI), and at bottom:170 this used to land on top
+          // of the Featured carousel's next-arrow and "View All". On desktop
+          // it clears the 68px side rail.
+          Positioned(left: isMobile ? 16 : 84, bottom: 16, child: const _ActivityFeedTicker()),
+        ],
+      ),
       bottomNavigationBar: isMobile
           ? _StudentBottomNav(
               isLoggedIn: _isLoggedIn,
@@ -449,6 +515,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   }
 
   Widget _buildBody(BuildContext context) {
+    // On desktop the side rail already lists Practice/Training/Experiments/
+    // Jobs (and everything the "More" sheet holds), so the action row is a
+    // pure duplicate that costs ~110px of above-the-fold space and pushed
+    // Featured below the fold. Mobile has no rail, so it keeps the row.
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
     return _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -473,26 +544,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           onGoogleSignIn: _signInWithGoogle,
                         ),
                       ),
-                      SliverToBoxAdapter(
-                        child: _PrimaryActionRow(
-                          onPractice: () => _openPractice(),
-                          onTraining: _openTrainingScreen,
-                          onExperiments: () => context.push('/student/experiments'),
-                          onJobs: () => context.push('/jobs'),
-                          onMore: () => _showMoreActionsSheet(
-                            context,
-                            onMockInterview: () => context.push('/student/mock-interview'),
-                            onSessions: () => context.push('/live-sessions'),
-                            onEvents: () => context.push('/events'),
-                            onTestSeries: () => context.push('/student/test-series'),
-                            onDevTools: () => context.push('/student/dev-tools'),
-                            onPricing: () => context.push('/pricing'),
-                            onActivity: () => context.push('/student/activity'),
+                      if (isMobile)
+                        SliverToBoxAdapter(
+                          child: _PrimaryActionRow(
+                            onPractice: () => _openPractice(),
+                            onTraining: _openTrainingScreen,
+                            onExperiments: () => context.push('/student/experiments'),
+                            onJobs: () => context.push('/jobs'),
+                            onMore: () => _showMoreActionsSheet(
+                              context,
+                              onMockInterview: () => context.push('/student/mock-interview'),
+                              onSessions: () => context.push('/live-sessions'),
+                              onEvents: () => context.push('/events'),
+                              onTestSeries: () => context.push('/student/test-series'),
+                              onDevTools: () => context.push('/student/dev-tools'),
+                              onPricing: () => context.push('/pricing'),
+                              onActivity: () => context.push('/student/activity'),
+                            ),
                           ),
                         ),
-                      ),
                       SliverPadding(
-                        padding: const EdgeInsets.only(top: 16, bottom: 16),
+                        padding: EdgeInsets.only(top: isMobile ? 16 : 12, bottom: 16),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             // ── Hero moment: continue an in-progress module, else the
@@ -770,7 +842,7 @@ class _HomeHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -800,6 +872,7 @@ class _HomeHeader extends StatelessWidget {
                           style: GoogleFonts.poppins(
                               color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
+                const _WhatsAppButton(),
                 if (isLoggedIn) ...[
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
@@ -823,26 +896,8 @@ class _HomeHeader extends StatelessWidget {
                     label: Text('Sign in', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
                   ),
               ]),
-              const SizedBox(height: 18),
-              if (isLoggedIn)
-                Row(children: [
-                  Expanded(
-                    child: _StatPill(
-                      icon: Icons.quiz_rounded, color: Colors.white,
-                      value: '$testsTaken', label: 'Tests taken',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _StatPill(
-                      icon: Icons.trending_up_rounded, color: Colors.white,
-                      value: testsTaken > 0 ? '$avgScore%' : '—', label: 'Avg score',
-                    ),
-                  ),
-                ])
-              else
-                Text('Learn. Build. Compete in Deeptech.',
-                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 13.5)),
+              const SizedBox(height: 12),
+              const _HomeStrip(),
             ],
           ),
         ),
@@ -881,6 +936,14 @@ class _SideRail extends StatelessWidget {
             _RailItem(icon: Icons.bolt_rounded, label: 'Practice', onTap: onPractice),
             _RailItem(icon: Icons.school_rounded, label: 'Training', onTap: onTraining),
             _RailItem(
+                icon: Icons.video_camera_front_rounded,
+                label: 'Sessions',
+                onTap: () => context.push('/live-sessions')),
+            _RailItem(
+                icon: Icons.emoji_events_rounded,
+                label: 'Challenges',
+                onTap: () => context.push('/student/challenges')),
+            _RailItem(
                 icon: Icons.quiz_rounded,
                 label: 'Test Series',
                 onTap: () => context.push('/student/test-series')),
@@ -896,10 +959,6 @@ class _SideRail extends StatelessWidget {
                 icon: Icons.record_voice_over_rounded,
                 label: 'Interview',
                 onTap: () => context.push('/student/mock-interview')),
-            _RailItem(
-                icon: Icons.video_camera_front_rounded,
-                label: 'Sessions',
-                onTap: () => context.push('/live-sessions')),
             _RailItem(
                 icon: Icons.work_rounded,
                 label: 'Jobs',
@@ -960,31 +1019,251 @@ class _RailItem extends StatelessWidget {
   }
 }
 
-class _StatPill extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String value;
-  final String label;
-  const _StatPill({required this.icon, required this.color, required this.value, required this.label});
+/// Direct WhatsApp contact in the header — sits between the greeting and
+/// the profile icon so it's reachable without hunting through menus.
+class _WhatsAppButton extends StatelessWidget {
+  const _WhatsAppButton();
+
+  static const _color = Color(0xFF25D366);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+    final isNarrow = MediaQuery.sizeOf(context).width < 420;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: OutlinedButton.icon(
+        onPressed: () async {
+          final uri = Uri.parse('https://wa.me/917222977927');
+          if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _color,
+          side: const BorderSide(color: _color),
+          padding: EdgeInsets.symmetric(horizontal: isNarrow ? 8 : 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        icon: const Icon(Icons.chat_rounded, size: 16, color: _color),
+        label: isNarrow
+            ? const SizedBox.shrink()
+            : Text('Message Us', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _color)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 8),
-          Text(value,
-              style: GoogleFonts.poppins(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-          Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.5)),
-        ],
+    );
+  }
+}
+
+/// Social/group-join links + short admin updates, admin-editable via
+/// /home-strip. Replaces the old fixed "Tests taken / Avg score" row —
+/// falls back to the old tagline if admin hasn't configured anything yet,
+/// so the header never looks broken or empty.
+class _HomeStrip extends StatefulWidget {
+  const _HomeStrip();
+
+  @override
+  State<_HomeStrip> createState() => _HomeStripState();
+}
+
+class _HomeStripState extends State<_HomeStrip> {
+  List<dynamic> _items = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final items = await ApiService.getHomeStrip();
+      if (!mounted) return;
+      setState(() { _items = items; _loading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openLink(String url) async {
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const SizedBox(height: 20);
+    if (_items.isEmpty) {
+      return Text('Learn. Build. Compete in Deeptech.',
+          style: GoogleFonts.inter(color: Colors.white70, fontSize: 13.5));
+    }
+    return _RotatingStripSlot(items: _items, onOpenLink: _openLink);
+  }
+}
+
+IconData _homeStripIconFor(String? key) => switch (key) {
+      'whatsapp' => Icons.chat_rounded,
+      'instagram' => Icons.camera_alt_rounded,
+      'linkedin' => Icons.work_rounded,
+      'youtube' => Icons.play_circle_fill_rounded,
+      'telegram' => Icons.send_rounded,
+      'discord' => Icons.forum_rounded,
+      _ => Icons.link_rounded,
+    };
+
+/// Links and updates used to stack as two separate rows, pushing the
+/// header taller than it needed to be. Now they share one slot and take
+/// turns — one item visible at a time, rotating every few seconds.
+class _RotatingStripSlot extends StatefulWidget {
+  final List<dynamic> items;
+  final ValueChanged<String> onOpenLink;
+  const _RotatingStripSlot({required this.items, required this.onOpenLink});
+
+  @override
+  State<_RotatingStripSlot> createState() => _RotatingStripSlotState();
+}
+
+class _RotatingStripSlotState extends State<_RotatingStripSlot> {
+  int _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.items.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted) return;
+        setState(() => _index = (_index + 1) % widget.items.length);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.items[_index];
+    final isLink = item['item_type'] == 'link';
+    final content = Container(
+      key: ValueKey(_index),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(isLink ? _homeStripIconFor(item['icon']) : Icons.campaign_rounded, color: Colors.white, size: 15),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(item['label'] ?? '',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      child: isLink
+          ? InkWell(
+              key: ValueKey('link-$_index'),
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => widget.onOpenLink(item['url'] ?? ''),
+              child: content,
+            )
+          : content,
+    );
+  }
+}
+
+/// Small social-proof widget floating bottom-right ("X enrolled in Y") —
+/// cycles through recent real activity. Public and name-masked; the same
+/// feed is available unmasked to admin via /activity-feed/admin.
+class _ActivityFeedTicker extends StatefulWidget {
+  const _ActivityFeedTicker();
+
+  @override
+  State<_ActivityFeedTicker> createState() => _ActivityFeedTickerState();
+}
+
+class _ActivityFeedTickerState extends State<_ActivityFeedTicker> {
+  List<dynamic> _items = [];
+  int _index = 0;
+  Timer? _timer;
+  bool _dismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final items = await ApiService.getActivityFeed(limit: 10);
+      if (!mounted || items.isEmpty) return;
+      setState(() => _items = items);
+      _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (!mounted) return;
+        setState(() => _index = (_index + 1) % _items.length);
+      });
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_items.isEmpty || _dismissed) return const SizedBox.shrink();
+    final item = _items[_index];
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      transitionBuilder: (child, anim) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(anim),
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      child: Material(
+        key: ValueKey(_index),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        elevation: 4,
+        shadowColor: Colors.black.withValues(alpha: 0.2),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 260),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 26, height: 26,
+              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.bolt_rounded, color: AppColors.success, size: 15),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: RichText(
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                text: TextSpan(
+                  style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textPrimary),
+                  children: [
+                    TextSpan(text: '${item['student_name']} ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    TextSpan(text: '${item['action']} '),
+                    TextSpan(text: item['target'], style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _dismissed = true),
+              child: const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Icon(Icons.close_rounded, size: 14, color: Colors.grey),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }
@@ -1461,6 +1740,11 @@ class _FeaturedCarouselState extends State<_FeaturedCarousel> {
         Container(width: 4, height: 20, color: AppColors.primary),
         const SizedBox(width: 10),
         Text('Featured', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17)),
+        const Spacer(),
+        TextButton(
+          onPressed: () => context.push('/live-sessions'),
+          child: Text('View All', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12.5)),
+        ),
       ]),
       const SizedBox(height: 14),
       SizedBox(
@@ -1473,10 +1757,15 @@ class _FeaturedCarouselState extends State<_FeaturedCarousel> {
             physics: const BouncingScrollPhysics(),
             itemCount: widget.sessions.length,
             separatorBuilder: (_, __) => const SizedBox(width: _cardGap),
-            itemBuilder: (context, i) => SizedBox(
-              width: _cardWidth,
-              child: _FeaturedPosterCard(session: widget.sessions[i] as Map<String, dynamic>),
-            ),
+            itemBuilder: (context, i) {
+              final item = widget.sessions[i] as Map<String, dynamic>;
+              return SizedBox(
+                width: _cardWidth,
+                child: item['_type'] == 'test_series'
+                    ? _FeaturedSeriesPosterCard(series: item)
+                    : _FeaturedPosterCard(session: item),
+              );
+            },
           ),
           if (widget.sessions.length > 1) ...[
             Positioned(
@@ -1531,7 +1820,16 @@ class _FeaturedPosterCard extends StatelessWidget {
     final isPast = date != null && date.isBefore(DateTime.now());
     final hasRecording = (session['recording_url'] ?? '').toString().isNotEmpty;
     final tagLabel = isPast ? (hasRecording ? 'Watch Recording' : 'Session Ended') : 'Register Now';
-    final tagColor = isPast && !hasRecording ? AppColors.textSecondary : AppColors.primary;
+    final tagIcon = isPast
+        ? (hasRecording ? Icons.play_circle_fill_rounded : Icons.event_busy_rounded)
+        : Icons.arrow_forward_rounded;
+    final ended = isPast && !hasRecording;
+    final tagColor = ended
+        ? Colors.grey.shade200
+        : hasRecording && isPast
+            ? AppColors.primary
+            : AppColors.accent;
+    final tagTextColor = ended ? AppColors.textSecondary : Colors.white;
     final banner = (session['banner_url'] ?? '').toString();
 
     return InkWell(
@@ -1545,25 +1843,154 @@ class _FeaturedPosterCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           child: AspectRatio(
             aspectRatio: 3 / 4,
+            // contain, not cover — these are text-heavy promo posters, so
+            // cropping to fill the box was cutting off real content.
             child: banner.isNotEmpty
-                ? Image.network(banner, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const _PosterFallback())
+                ? Container(
+                    color: Colors.grey.shade100,
+                    child: Image.network(banner, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const _PosterFallback()),
+                  )
                 : const _PosterFallback(),
           ),
         ),
         const SizedBox(height: 10),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-              border: Border.all(color: tagColor), borderRadius: BorderRadius.circular(20)),
-          child: Text(tagLabel,
-              style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w600, color: tagColor)),
+            color: tagColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: ended
+                ? null
+                : [BoxShadow(color: tagColor.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(tagIcon, size: 13, color: tagTextColor),
+            const SizedBox(width: 5),
+            Text(tagLabel,
+                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: tagTextColor)),
+          ]),
         ),
         const SizedBox(height: 8),
         Text(session['title'] ?? '',
             maxLines: 2, overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5, color: AppColors.textPrimary)),
       ]),
+    );
+  }
+}
+
+/// One summary "poster" for practice content — not one per quiz, since the
+/// Featured row is a teaser. The cover has no banner image, so it's a
+/// colored gradient with an icon, title, and description filling the
+/// space (an admin-written description for a real curated series, or an
+/// auto-summary of quiz/course counts otherwise) instead of sitting empty.
+/// Below: a Start button to jump straight into practicing, plus a "View
+/// All" link to the full Test Series page.
+class _FeaturedSeriesPosterCard extends StatelessWidget {
+  final Map<String, dynamic> series;
+  const _FeaturedSeriesPosterCard({required this.series});
+
+  Color _parseColor(String? hex) {
+    try {
+      return Color(int.parse((hex ?? '').replaceFirst('#', '0xFF')));
+    } catch (_) {
+      return AppColors.primary;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(series['color'] as String?);
+    final description = (series['description'] as String?) ?? '';
+
+    // No standalone page exists per-series yet — both Start and View All
+    // land on the Test Series tab, which is the actual practice surface.
+    void openStart() => context.push('/student/test-series');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: openStart,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: AspectRatio(
+              aspectRatio: 3 / 4,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, Color.lerp(color, Colors.black, 0.3)!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Positioned(
+                    right: -30, bottom: -30,
+                    child: Icon(Icons.fact_check_rounded, size: 190, color: Colors.white.withValues(alpha: 0.14)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.fact_check_rounded, color: Colors.white, size: 28),
+                        const SizedBox(height: 10),
+                        Text(series['title'] ?? '',
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                        if (description.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(description,
+                              maxLines: 4, overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.85), fontSize: 11.5, height: 1.4)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: openStart,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
+                ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.play_arrow_rounded, size: 15, color: Colors.white),
+                  const SizedBox(width: 3),
+                  Text('Start',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                ]),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => context.push('/student/test-series'),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Text('View All',
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+            ),
+          ),
+        ]),
+      ],
     );
   }
 }

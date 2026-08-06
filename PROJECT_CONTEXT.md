@@ -87,7 +87,20 @@ still exists but is not the primary path. Firebase Auth
       registration with coupon validation, payment verification,
       receipt, admin CRUD + attendee list/export
 - [x] Pricing / subscription plans (`/pricing`, `/plans`) with an
-      admin editor (`/super/pricing`)
+      admin editor (`/super/pricing`). Self-serve purchase is wired:
+      `subscription_plans.tier_key` IS the billing plan id — '999' (Plus)
+      and '9999' (Elite) are chargeable, 'free' is the default, and
+      'institution'/'industry' route to the `/partner` enquiry form.
+      Flow: `POST /student/subscribe {plan}` → Cashfree JS SDK with the
+      returned `payment_session_id` → poll `POST /student/subscription/verify`.
+      Backend fixes this needed (in `student_subscriptions.py`): verify used
+      to look the order up in `transactions` by `student_id` (NULL for
+      Google-only Lab students) and by `purpose='student_premium'` (subscribe
+      writes `student_plan_999`), read two `get_limits()` keys that don't
+      exist, and set `plan='premium'` which `is_premium_active()` never
+      matches — so it could never activate anything. The pending order/tier is
+      now pinned to `student_subscriptions.pending_order_id/pending_plan`.
+      NOT YET DEPLOYED — the backend must ship before purchase works.
 - [x] Payments — Cashfree Checkout via their JS SDK
       (`lib/services/cashfree_checkout.dart` + `web/index.html`; a raw
       redirect to their hosted page is rejected, the SDK is the only
@@ -101,11 +114,15 @@ still exists but is not the primary path. Firebase Auth
 - [x] Platform Users (`/platform-users`) — admin roster of
       `student_users` with per-user activity drill-down
 - [x] Student Activity summary screen (`/student/activity`)
-- [x] AI practice attempts are recorded (`practice_attempts` table, new in
-      the backend) and shown in My Test Results, My Activity and the admin
-      Platform Users drill-down. Practice tests used to be scored purely in
-      client state and left no trace. NOT YET DEPLOYED/VERIFIED — the
-      backend change needs to ship before any of this works in production.
+- [x] AI practice attempts are recorded (`practice_attempts` table) and
+      shown in My Test Results, My Activity and the admin Platform Users
+      drill-down. Practice tests used to be scored purely in client state
+      and left no trace. Deployed and smoke-tested against production.
+- [x] Test Series resolves the institute from the student's token
+      (`GET /student/test-series`), falling back to the pinned Altrobyte Lab
+      institute. The old institute-scoped route stays for the public read.
+      Keep this scoped to ONE institute — an unscoped query would expose
+      AltroCoach tenants' tests (see the isolation gap below).
 - [x] Test in progress asks for confirmation before you leave it
 - [x] Image upload widget + Firebase Storage rules (`storage.rules`)
 - [x] Branded landing per institute slug (catch-all `/:slug` route)

@@ -136,6 +136,24 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
                           color: AppColors.primary,
                         ),
                       ),
+                      _buildSection(
+                        title: 'Workshops',
+                        icon: Icons.video_camera_front_rounded,
+                        color: AppColors.primary,
+                        emptyText: 'No workshops registered yet',
+                        items: List<Map<String, dynamic>>.from(
+                            (_data!['live_sessions'] as Map?)?['recent'] ?? const []),
+                        itemBuilder: (s) => _ActivityTile(
+                          title: s['title'] ?? '',
+                          subtitle: switch (s['status']) {
+                            'paid' => 'Registered — paid',
+                            'registered' => 'Registered — free',
+                            _ => 'Payment pending',
+                          },
+                          date: s['registered_at'],
+                          color: AppColors.primary,
+                        ),
+                      ),
                       _buildCoursesSection(),
                     ],
                   ),
@@ -149,9 +167,11 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
     final exp = _data!['experiments'];
     final ev = _data!['events'];
     final courses = _data!['courses'];
+    final sessions = (_data!['live_sessions'] as Map?) ?? const {};
     final stats = [
       ('Interviews', '${mi['completed']}', AppColors.accent),
       ('Tests Taken', '${ts['total_attempts']}', AppColors.primary),
+      ('Workshops', '${sessions['confirmed'] ?? 0}', AppColors.primary),
       ('Experiments', '${exp['count']}', AppColors.accent),
       ('Events', '${ev['count']}', AppColors.primary),
       ('Courses Done', '${courses['completed']}', AppColors.success),
@@ -225,6 +245,7 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
             final total = c['total_items'] as int;
             final completed = c['completed_items'] as int;
             final pct = total == 0 ? 0.0 : completed / total;
+            final enrollmentStatus = c['enrollment_status'] as String?;
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: Padding(
@@ -232,6 +253,19 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(child: Text(c['title'] ?? '', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13))),
+                    if (enrollmentStatus != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (enrollmentStatus == 'paid' ? AppColors.success : AppColors.warning).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(enrollmentStatus == 'paid' ? 'Enrolled' : 'Payment pending',
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700,
+                                color: enrollmentStatus == 'paid' ? AppColors.success : AppColors.warning)),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     Text('$completed/$total', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
                   ]),
                   const SizedBox(height: 6),

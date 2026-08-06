@@ -591,11 +591,14 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
             children: [
               const Icon(Icons.lock_clock_rounded, color: AppColors.warning, size: 56),
               const SizedBox(height: 16),
-              Text('Aaj ke 3 free quizzes khatam!',
+              Text("You've used today's free quizzes",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text('₹49/month mein unlimited quizzes paayein.',
+              // No price in this copy — the sheet reads the live price from
+              // the subscription API, so hardcoding one here only creates a
+              // second number to keep in sync (it was still advertising ₹49).
+              Text('Upgrade for unlimited quiz attempts.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 24),
@@ -606,7 +609,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                       backgroundColor: AppColors.accent,
                       padding: const EdgeInsets.symmetric(vertical: 14)),
                   onPressed: _showUpgradeSheet,
-                  child: Text('Upgrade to Premium - ₹49/month',
+                  child: Text('See upgrade options',
                       style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),

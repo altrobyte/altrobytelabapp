@@ -247,6 +247,17 @@ class ApiConstants {
       '$baseUrl/live-sessions/admin/$sessionId/attendees/$registrationId';
   static String allTrainingModulesLite() => '$baseUrl/training-modules/admin/all-lite';
 
+  // challenges
+  static String challenges() => '$baseUrl/challenges';
+  static String challenge(int id) => '$baseUrl/challenges/$id';
+  static String challengeSubmit(int id) => '$baseUrl/challenges/$id/submit';
+  static String myChallengeSubmissions() => '$baseUrl/challenges/student/my-submissions';
+  static String challengesAdmin() => '$baseUrl/challenges/admin/list';
+  static String challengeAdminCreate() => '$baseUrl/challenges/admin';
+  static String challengeAdminItem(int id) => '$baseUrl/challenges/admin/$id';
+  static String challengeAdminSubmissions(int id) => '$baseUrl/challenges/admin/$id/submissions';
+  static String challengeAdminReviewSubmission(int id) => '$baseUrl/challenges/admin/submissions/$id';
+
   // training module enrollments (admin)
   static String moduleEnrollments(int moduleId) => '$baseUrl/training-modules/$moduleId/enrollments';
   static String moduleEnrollmentsExport(int moduleId) => '$baseUrl/training-modules/$moduleId/enrollments/export';
@@ -275,6 +286,13 @@ class ApiConstants {
 
   // student activity summary
   static String studentActivitySummary() => '$baseUrl/student/activity-summary';
+
+  // home strip + activity feed
+  static String homeStrip() => '$baseUrl/home-strip';
+  static String homeStripAdmin() => '$baseUrl/home-strip/admin';
+  static String homeStripAdminItem(int id) => '$baseUrl/home-strip/admin/$id';
+  static String activityFeed({int limit = 15}) => '$baseUrl/activity-feed?limit=$limit';
+  static String activityFeedAdmin({int limit = 30}) => '$baseUrl/activity-feed/admin?limit=$limit';
   static String trainingModuleContentItem(int contentId) =>
       '$baseUrl/training-modules/content/$contentId';
   static String moduleProgress(int moduleId) =>
