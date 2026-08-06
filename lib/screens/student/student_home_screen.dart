@@ -19,7 +19,6 @@ import '../tools/ble_tester_screen.dart';
 import '../tools/http_tester_screen.dart';
 import '../tools/mqtt_tester_screen.dart';
 import '../tools/websocket_tester_screen.dart';
-import 'qr_scan_screen.dart';
 import 'student_module_detail_screen.dart';
 import 'student_practice_screen.dart';
 import 'student_profile_screen.dart';
@@ -464,11 +463,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     Expanded(child: _buildBody(context)),
                   ]),
           ),
-          // Bottom-LEFT, not right: the right edge is the FAB stack's lane
-          // (Check In + Chat AI), and at bottom:170 this used to land on top
-          // of the Featured carousel's next-arrow and "View All". On desktop
-          // it clears the 68px side rail.
-          Positioned(left: isMobile ? 16 : 84, bottom: 16, child: const _ActivityFeedTicker()),
+          // Bottom-right. Moving it left put it on top of the Featured
+          // cards' own action buttons, which is worse than what it was
+          // avoiding. bottom:88 sits above the Chat AI FAB when there is
+          // one, and low enough to clear the carousel's next-arrow.
+          const Positioned(right: 16, bottom: 88, child: _ActivityFeedTicker()),
         ],
       ),
       bottomNavigationBar: isMobile
@@ -480,35 +479,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               onProfileOrLogin: profileOrLogin,
             )
           : null,
-      floatingActionButton: _isLoggedIn
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'checkin',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const QrScanScreen()),
-                  ),
-                  backgroundColor: AppColors.accent,
-                  icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
-                  label: Text('Check In',
-                      style: GoogleFonts.poppins(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
-                ),
-                if (_waNumber != null && _waNumber!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  FloatingActionButton.extended(
-                    heroTag: 'aichat',
-                    onPressed: _openAiChat,
-                    backgroundColor: AppColors.primary,
-                    icon: const Icon(Icons.chat_rounded, color: Colors.white),
-                    label: Text(AppLocalizations.of(context)!.studentPortalChatAI,
-                        style: GoogleFonts.poppins(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ],
+      // No Check In FAB — QR check-in is an offline-workshop-only action, and
+      // as an extended FAB it was the loudest element on the whole page while
+      // being the least used. QrScanScreen still exists for wherever check-in
+      // belongs later.
+      floatingActionButton: _isLoggedIn && _waNumber != null && _waNumber!.isNotEmpty
+          ? FloatingActionButton.extended(
+              heroTag: 'aichat',
+              onPressed: _openAiChat,
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.chat_rounded, color: Colors.white),
+              label: Text(AppLocalizations.of(context)!.studentPortalChatAI,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
             )
           : null,
     );
