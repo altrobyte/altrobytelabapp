@@ -426,15 +426,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     }
   }
 
-  int get _testsTaken => _results.length;
-
-  int get _avgScore {
-    if (_results.isEmpty) return 0;
-    final total = _results.fold<double>(
-        0, (sum, r) => sum + ((r['pct'] ?? 0) as num).toDouble());
-    return (total / _results.length).round();
-  }
-
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.sizeOf(context).width < 700;
@@ -514,8 +505,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           isLoggedIn: _isLoggedIn,
                           name: _studentName,
                           institute: _instituteName,
-                          testsTaken: _testsTaken,
-                          avgScore: _avgScore,
+                          subscription: _subscription,
                           onRefresh: () {
                             setState(() => _loading = true);
                             _loadFeed();
@@ -790,8 +780,9 @@ class _HomeHeader extends StatelessWidget {
   final bool isLoggedIn;
   final String name;
   final String institute;
-  final int testsTaken;
-  final int avgScore;
+  /// `subscription` block from /student/feed — plan, is_premium and the
+  /// month's generation quota. Null until the feed lands, or when signed out.
+  final Map<String, dynamic>? subscription;
   final VoidCallback onRefresh;
   final VoidCallback onProfile;
   final VoidCallback onLogin;
@@ -802,8 +793,7 @@ class _HomeHeader extends StatelessWidget {
     required this.isLoggedIn,
     required this.name,
     required this.institute,
-    required this.testsTaken,
-    required this.avgScore,
+    required this.subscription,
     required this.onRefresh,
     required this.onProfile,
     required this.onLogin,
@@ -880,7 +870,16 @@ class _HomeHeader extends StatelessWidget {
                   ),
               ]),
               const SizedBox(height: 12),
-              const _HomeStrip(),
+              // The strip pill is left-aligned with room to spare, so the
+              // plan chip rides along in the same row — an upgrade path that
+              // is always on screen without costing the header any height.
+              Row(children: [
+                const Expanded(child: _HomeStrip()),
+                if (isLoggedIn && subscription != null) ...[
+                  const SizedBox(width: 12),
+                  _PlanChip(subscription: subscription!),
+                ],
+              ]),
             ],
           ),
         ),
@@ -1029,6 +1028,60 @@ class _WhatsAppButton extends StatelessWidget {
         label: isNarrow
             ? const SizedBox.shrink()
             : Text('Message Us', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _color)),
+      ),
+    );
+  }
+}
+
+/// The only always-visible plan/upgrade affordance on the feed. Free
+/// students see what they have left this month, which is the number that
+/// makes upgrading feel worth it; paid students just see their tier. Tapping
+/// either opens /pricing. Without this the sole upgrade path was hitting a
+/// limit and getting the block sheet, or spotting "Pricing" in the side rail.
+class _PlanChip extends StatelessWidget {
+  final Map<String, dynamic> subscription;
+  const _PlanChip({required this.subscription});
+
+  @override
+  Widget build(BuildContext context) {
+    final premium = subscription['is_premium'] == true;
+    final plan = (subscription['plan'] ?? 'free').toString();
+    final remaining = subscription['generations_remaining'];
+    final limit = subscription['monthly_generation_limit'];
+
+    final label = premium
+        ? (plan == '9999' ? 'Elite' : 'Plus')
+        : (remaining is int && limit is int
+            ? '$remaining/$limit tests left'
+            : 'Free plan');
+    final color = premium ? AppColors.success : AppColors.accent;
+
+    return InkWell(
+      onTap: () => context.push('/pricing'),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.55)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(premium ? Icons.verified_rounded : Icons.bolt_rounded,
+              size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(label,
+              style: GoogleFonts.inter(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+          if (!premium) ...[
+            const SizedBox(width: 6),
+            Container(width: 1, height: 11, color: Colors.white38),
+            const SizedBox(width: 6),
+            Text('Upgrade',
+                style: GoogleFonts.inter(
+                    color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+          ],
+        ]),
       ),
     );
   }
