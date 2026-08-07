@@ -10,6 +10,11 @@ Live URL: altrobytelab.web.app
 This is a standalone product. Do not reference, compare to, or pull
 patterns from any other Altrobyte project unless explicitly told to.
 
+## NAMING
+The student-facing AI-generated practice feature is called **Custom Test
+Series** everywhere in the UI. "AI Practice"/"Practice Tests" is the old
+name — don't reintroduce it. The combined tab is just "Test Series".
+
 ## CRITICAL — CONTENT DOMAIN (violated once already, do not repeat)
 
 Altrobyte Lab is 100% about: **Embedded Systems, IoT, Circuit Design,
@@ -22,7 +27,7 @@ If any instruction would default to Maths/Reasoning/GK/Current
 Affairs/English content — stop and re-read this file before
 generating any category, quiz topic, or practice test subject.
 
-### Correct "Practice Tests" categories (implemented):
+### Correct "Custom Test Series" categories (implemented):
 - Embedded C
 - Electronics Fundamentals
 - ESP32 / Microcontrollers
@@ -65,7 +70,7 @@ still exists but is not the primary path. Firebase Auth
       exist but are reached via `/admin-access` and `/super-access`.
 - [x] Public feed homepage (single page, no separate landing page)
       with sidebar nav, horizontal-scroll rows, contextual login gates
-- [x] Practice Tests + Coming Soon content in the deeptech/embedded/
+- [x] Custom Test Series + Coming Soon content in the deeptech/embedded/
       IoT domain (was wrongly Maths/Reasoning/GK — fixed)
 - [x] Training Modules — 5 tables + API, module > topic > subtopic >
       content item, progress tracking, paid enrollment + admin
@@ -104,23 +109,20 @@ still exists but is not the primary path. Firebase Auth
 - [x] Plan tiers: `free`, `999` (Plus), `9999` (Elite), plus sales-assisted
       `institution`/`industry`. Only FOUR things are actually enforced —
       don't advertise anything else without writing the gate first:
-      AI test generations/month (5 / 50 / 200, `tests.py`), quiz attempts/day
-      (free 3, paid unlimited, `tests.py`), paid Challenges (any paid tier,
-      `challenges.py`), and AI mock interviews/month (2 / 10 / unlimited,
+      Custom Test Series/month (5 / 50 / 200, `tests.py`), quiz attempts/day
+      (1 / 20 / 50, `tests.py`), paid Challenges (any paid tier,
+      `challenges.py`), and AI mock interviews/month (2 / 10 / 30,
       `mock_interview.py`). All limits + prices live in `global_settings`.
+      NO TIER IS UNCAPPED — never reintroduce an "unlimited" quota. An
+      uncapped plan is an open tap on the Groq bill, and one compromised
+      paid account could drain it with nothing to stop it.
+      Gate on the token's `student_users.id`, never on `student_id` (the
+      institute `students` row) — Google-only Lab students have no such row,
+      so a `student_id`-keyed gate silently applies to nobody.
       The pricing page's `price_label` is DERIVED from `global_settings` —
       editing it via `/super/pricing` is rejected, so what a student sees is
       always what they get charged.
 
-## BACKEND GOTCHA — `init_db()` IS ONE TRANSACTION
-A single failing statement in `init_db()` aborts the whole transaction
-(everything after it dies with "current transaction is aborted"),
-startup raises, the Railway healthcheck fails, and Railway keeps
-serving the PREVIOUS deployment. The push looks like it did nothing —
-no error surfaces anywhere in the app. This has already cost one
-silent no-op deploy. Put new schema changes and backfills in
-`_LATE_MIGRATIONS` in `database.py` instead: they run on their own
-autocommit connection, one statement at a time, each in a try/except.
 - [x] Payments — Cashfree Checkout via their JS SDK
       (`lib/services/cashfree_checkout.dart` + `web/index.html`; a raw
       redirect to their hosted page is rejected, the SDK is the only
@@ -151,6 +153,16 @@ autocommit connection, one statement at a time, each in a try/except.
       currently cover paid content. Do not build catalog UI with
       fake/hardcoded course data.
 
+## BACKEND GOTCHA — `init_db()` IS ONE TRANSACTION
+A single failing statement in `init_db()` aborts the whole transaction
+(everything after it dies with "current transaction is aborted"),
+startup raises, the Railway healthcheck fails, and Railway keeps
+serving the PREVIOUS deployment. The push looks like it did nothing —
+no error surfaces anywhere in the app. This has already cost one
+silent no-op deploy. Put new schema changes and backfills in
+`_LATE_MIGRATIONS` in `database.py` instead: they run on their own
+autocommit connection, one statement at a time, each in a try/except.
+
 ## WHAT MUST STAY GATED (login required)
 - Actually generating/starting an AI Practice Test (quota tracking)
 - Training Modules — opening content + progress saving
@@ -160,7 +172,7 @@ autocommit connection, one statement at a time, each in a try/except.
 
 ## WHAT MUST STAY PUBLIC (no login, ever)
 - Entire homepage feed — browsing all rows/cards
-- Practice Tests row — seeing the topic cards (not generating one)
+- Custom Test Series row — seeing the topic cards (not generating one)
 - Dev Tools (MQTT/HTTP/WebSocket/BLE testers)
 - Job/Event/Live-Session listings and detail pages (not registering)
 - All company/marketing pages, pricing page, partner enquiry form
