@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
@@ -65,8 +66,40 @@ class _MockInterviewScreenState extends State<MockInterviewScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _starting = false);
+      // 402 means the monthly interview allowance is used up — that is an
+      // upsell, not an error, so it gets a route to /pricing instead of a
+      // snackbar the student can only dismiss.
+      if (e is ApiException && e.statusCode == 402) {
+        _showQuotaReached(e.message);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  void _showQuotaReached(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.hourglass_top_rounded, color: AppColors.accent, size: 40),
+        title: Text('Interview limit reached',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Text(message,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 13.5, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/pricing');
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('See plans'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _submitAnswer() async {
