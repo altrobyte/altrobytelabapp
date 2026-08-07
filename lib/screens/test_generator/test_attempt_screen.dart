@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -208,13 +209,15 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       setState(() => _result = TestAttemptResult.fromJson(Map<String, dynamic>.from(data)));
     } catch (e) {
       setState(() => _submitted = false);
-      final msg = e.toString();
-      if (mounted) {
-        if (msg.contains('limit') || msg.contains('429') || msg.contains('Premium')) {
-          _showQuizLimitDialog(msg);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
-        }
+      if (!mounted) return;
+      // 429 is the daily quiz limit. Match on the status code, not on words
+      // in the message — the old check also fired on any unrelated error that
+      // happened to contain "limit".
+      if (e is ApiException && e.statusCode == 429) {
+        _showQuizLimitDialog(e.message);
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
       }
     }
   }
@@ -267,20 +270,38 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     });
   }
 
+  /// [message] comes from the server, which knows the student's actual plan
+  /// and limit. The old copy hardcoded "3 free quizzes" and "Premium
+  /// (₹49/month) for unlimited access" — by now all three were wrong, and it
+  /// offered no way to act on it.
   void _showQuizLimitDialog(String message) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.lock_clock_rounded, color: AppColors.warning, size: 40),
-        title: Text('Daily Limit Reached', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text(
-          'You have used all 3 free quizzes for today. Upgrade to Premium (₹49/month) for unlimited access.',
-          style: GoogleFonts.inter(fontSize: 14),
-        ),
+        title: Text('Daily limit reached',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(message, textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 13.5, height: 1.5)),
+          const SizedBox(height: 10),
+          // The submit failed but nothing was thrown away — _answers is still
+          // in memory and the screen stays open, so say so instead of leaving
+          // them wondering whether the attempt is gone.
+          Text('Your answers are still here — submit again once you have room.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                  fontSize: 12, height: 1.4, color: AppColors.textSecondary)),
+        ]),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/pricing');
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('See plans'),
           ),
         ],
       ),

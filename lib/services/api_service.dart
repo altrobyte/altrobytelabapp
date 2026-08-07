@@ -467,11 +467,17 @@ class ApiService {
     return data['tests'] as List;
   }
 
+  /// Sends the student token: the backend keys the daily quiz limit off the
+  /// token's `student_users.id`. Without it the limit silently does not apply
+  /// to anyone who signed up with Google, since they have no institute
+  /// `students` row for the body's `student_id` to point at.
   static Future<Map<String, dynamic>> submitAttempt(
       int testId, Map<String, dynamic> body) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
     final res = await http.post(
       Uri.parse(ApiConstants.testAttempt(testId)),
-      headers: _headers(),
+      headers: _headers(token),
       body: jsonEncode(body),
     );
     return _parse(res);

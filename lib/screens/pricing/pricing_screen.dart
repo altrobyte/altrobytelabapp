@@ -319,7 +319,7 @@ class _CurrentPlanBanner extends StatelessWidget {
               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             if (remaining is int && limit is int)
-              Text('$remaining of $limit AI test generations left this month',
+              Text('$remaining of $limit Custom Test Series left this month',
                   style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
           ]),
         ),

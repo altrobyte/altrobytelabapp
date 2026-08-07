@@ -452,7 +452,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text('Practice', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        child: Text('Custom Test', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600)),
                       ),
                     ]),
                   ),

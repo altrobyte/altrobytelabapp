@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
-/// Unified Practice & Test Series tab — a "Generate custom practice test"
+/// Unified Test Series tab — a "Generate a Custom Test Series"
 /// CTA up top, every individual quiz (whether authored inside a course or
 /// published standalone) in one flat grid, and curated multi-test Test
 /// Series below. Quizzes used to be split into separate "Course Quizzes" /
@@ -86,7 +86,7 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text('Practice & Test Series',
+        title: Text('Test Series',
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
       body: _loading
@@ -161,7 +161,7 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
   }
 }
 
-/// Beta gate: custom AI-generated practice tests are intentionally disabled
+/// Beta gate: Custom Test Series are intentionally disabled
 /// on this tab for now — students see only admin Test Series and quizzes
 /// here until this graduates out of beta.
 class _PracticeCta extends StatelessWidget {
@@ -186,7 +186,7 @@ class _PracticeCta extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Generate a Custom Practice Test',
+            Text('Generate a Custom Test Series',
                 style: GoogleFonts.poppins(color: Colors.grey.shade600, fontWeight: FontWeight.w700, fontSize: 15)),
             const SizedBox(height: 2),
             Text('Coming soon — pick a topic and AI builds it instantly',

@@ -93,10 +93,10 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
                         ),
                       ),
                       _buildSection(
-                        title: 'AI Practice Tests',
+                        title: 'Custom Test Series',
                         icon: Icons.auto_awesome_rounded,
                         color: AppColors.accent,
-                        emptyText: 'No practice tests taken yet',
+                        emptyText: 'No custom test series taken yet',
                         items: List<Map<String, dynamic>>.from(
                             (_data!['practice'] as Map?)?['recent'] ?? const []),
                         itemBuilder: (p) => _ActivityTile(

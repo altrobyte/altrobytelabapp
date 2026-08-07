@@ -96,7 +96,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         } else if (quizCount > 0) {
           practiceItems.add({
             'id': null,
-            'title': 'Practice & Test Series',
+            'title': 'Test Series',
             'description': courseCount > 0
                 ? '$quizCount quiz${quizCount == 1 ? '' : 'zes'} across $courseCount course${courseCount == 1 ? '' : 's'} — test what you\'ve learned.'
                 : '$quizCount quiz${quizCount == 1 ? '' : 'zes'} ready to practice.',
@@ -589,7 +589,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                             // ── Popular Topics to Practice (Unstop-style row) ──
                             _RowSectionHeader(
-                              title: 'Practice Tests',
+                              title: 'Custom Test Series',
                               subtitle: 'Pick a topic — AI builds the test instantly',
                               onViewAll: () => _openPractice(),
                             ),
@@ -730,8 +730,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     ..._tests.map((t) => _TestCard(
                                         test: t,
                                         studentToken: _token ?? '',
-                                        quizAllowed: _subscription?['is_premium'] == true ||
-                                            (_subscription?['remaining_today'] ?? 3) > 0,
+                                        // Paid tiers have a daily ceiling too now, so
+                                        // is_premium no longer implies "always allowed" —
+                                        // remaining_today is accurate for every tier.
+                                        quizAllowed: (_subscription?['remaining_today'] as num? ?? 1) > 0,
                                         onUpgrade: _showUpgradeSheet)),
                                     const SizedBox(height: 20),
                                   ],
@@ -915,7 +917,7 @@ class _SideRail extends StatelessWidget {
           children: [
             const SizedBox(height: 12),
             _RailItem(icon: Icons.home_rounded, label: 'Home', active: true, onTap: onHome),
-            _RailItem(icon: Icons.bolt_rounded, label: 'Practice', onTap: onPractice),
+            _RailItem(icon: Icons.bolt_rounded, label: 'Custom Test', onTap: onPractice),
             _RailItem(icon: Icons.school_rounded, label: 'Training', onTap: onTraining),
             _RailItem(
                 icon: Icons.video_camera_front_rounded,
@@ -1052,7 +1054,7 @@ class _PlanChip extends StatelessWidget {
     final label = premium
         ? (plan == '9999' ? 'Elite' : 'Plus')
         : (remaining is int && limit is int
-            ? '$remaining/$limit tests left'
+            ? '$remaining/$limit series left'
             : 'Free plan');
     final color = premium ? AppColors.success : AppColors.accent;
 
@@ -1409,7 +1411,7 @@ class _PrimaryActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <(String, IconData, Color, VoidCallback)>[
-      ('Practice', Icons.bolt_rounded, AppColors.accent, onPractice),
+      ('Custom Test', Icons.bolt_rounded, AppColors.accent, onPractice),
       ('Training', Icons.school_rounded, AppColors.primary, onTraining),
       ('Experiments', Icons.science_rounded, AppColors.accent, onExperiments),
       ('Jobs', Icons.work_rounded, AppColors.primary, onJobs),
@@ -1545,7 +1547,7 @@ class _StudentBottomNav extends StatelessWidget {
       },
       items: [
         const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-        const BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Practice'),
+        const BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Custom Test'),
         const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Training'),
         const BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'Activity'),
         BottomNavigationBarItem(

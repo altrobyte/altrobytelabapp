@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,7 +10,7 @@ import '../../services/api_service.dart';
 
 const _accent = AppColors.accent;
 
-/// Self-practice: student generates an AI test and attempts it inline.
+/// Custom Test Series: student generates an AI test and attempts it inline.
 /// The generated questions are not saved as institute `tests`, but the
 /// finished attempt is recorded in practice_attempts so the student and
 /// admins can see what was taken and scored.
@@ -160,15 +161,20 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('OK')),
-          if (!_isPremium)
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _accent),
-              onPressed: () {
-                Navigator.pop(ctx);
+          // Paid tiers have a monthly cap too, so they need a route out of
+          // this dialog as well — Plus can still move to Elite.
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _accent),
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (_isPremium) {
+                context.push('/pricing');
+              } else {
                 Navigator.pop(context, 'upgrade'); // home handles upgrade sheet
-              },
-              child: const Text('Upgrade'),
-            ),
+              }
+            },
+            child: Text(_isPremium ? 'See plans' : 'Upgrade'),
+          ),
         ],
       ),
     );
@@ -259,7 +265,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
       appBar: AppBar(
         backgroundColor: _accent,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Text('AI Practice Test',
+        title: Text('Custom Test Series',
             style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         actions: [
           if (_remaining >= 0)
@@ -412,7 +418,7 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
               ),
               onPressed: _generate,
               icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-              label: Text('Generate Test',
+              label: Text('Generate Test Series',
                   style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
@@ -420,8 +426,8 @@ class _StudentPracticeScreenState extends State<StudentPracticeScreen> {
           Center(
             child: Text(
               _isPremium
-                  ? 'Premium: $_limit AI tests every month'
-                  : 'Free plan: $_limit AI tests/month',
+                  ? 'Your plan: $_limit Custom Test Series every month'
+                  : 'Free plan: $_limit Custom Test Series/month',
               style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary),
             ),
           ),

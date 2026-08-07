@@ -190,7 +190,8 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
                           color: Colors.white.withValues(alpha: 0.9))),
                 ),
                 const Spacer(),
-                Text('Unlimited\nquiz attempts',
+                // No tier is uncapped, so this must not promise "unlimited".
+                Text('20 quiz attempts\nper day',
                     textAlign: TextAlign.right,
                     style: GoogleFonts.inter(
                         fontSize: 13,

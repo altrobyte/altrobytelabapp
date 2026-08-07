@@ -323,7 +323,7 @@ class _ActivityDetail extends StatelessWidget {
                 trailing: Text('${t['score'] ?? 0}/${t['total'] ?? 0}',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               )).toList()),
-        _section('AI Practice Tests', Icons.auto_awesome_rounded, practice.isEmpty
+        _section('Custom Test Series', Icons.auto_awesome_rounded, practice.isEmpty
             ? [_empty('None yet')]
             : practice.map((p) => ListTile(
                 dense: true, contentPadding: EdgeInsets.zero,
