@@ -100,7 +100,27 @@ still exists but is not the primary path. Firebase Auth
       exist, and set `plan='premium'` which `is_premium_active()` never
       matches — so it could never activate anything. The pending order/tier is
       now pinned to `student_subscriptions.pending_order_id/pending_plan`.
-      NOT YET DEPLOYED — the backend must ship before purchase works.
+      Deployed and verified against production.
+- [x] Plan tiers: `free`, `999` (Plus), `9999` (Elite), plus sales-assisted
+      `institution`/`industry`. Only FOUR things are actually enforced —
+      don't advertise anything else without writing the gate first:
+      AI test generations/month (5 / 50 / 200, `tests.py`), quiz attempts/day
+      (free 3, paid unlimited, `tests.py`), paid Challenges (any paid tier,
+      `challenges.py`), and AI mock interviews/month (2 / 10 / unlimited,
+      `mock_interview.py`). All limits + prices live in `global_settings`.
+      The pricing page's `price_label` is DERIVED from `global_settings` —
+      editing it via `/super/pricing` is rejected, so what a student sees is
+      always what they get charged.
+
+## BACKEND GOTCHA — `init_db()` IS ONE TRANSACTION
+A single failing statement in `init_db()` aborts the whole transaction
+(everything after it dies with "current transaction is aborted"),
+startup raises, the Railway healthcheck fails, and Railway keeps
+serving the PREVIOUS deployment. The push looks like it did nothing —
+no error surfaces anywhere in the app. This has already cost one
+silent no-op deploy. Put new schema changes and backfills in
+`_LATE_MIGRATIONS` in `database.py` instead: they run on their own
+autocommit connection, one statement at a time, each in a try/except.
 - [x] Payments — Cashfree Checkout via their JS SDK
       (`lib/services/cashfree_checkout.dart` + `web/index.html`; a raw
       redirect to their hosted page is rejected, the SDK is the only
