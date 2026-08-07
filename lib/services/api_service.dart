@@ -707,15 +707,20 @@ class ApiService {
   /// [plan] is a `subscription_plans.tier_key` for a paid tier — '999'
   /// (Plus) or '9999' (Elite). The backend stores the same value in
   /// `student_subscriptions.plan`, so display and billing never drift.
+  /// [phone] is sent only when the account has no real number of its own —
+  /// Google sign-in gives no phone, so those accounts carry a placeholder
+  /// that Cashfree rejects. The backend saves whatever is supplied, so the
+  /// student is asked once rather than on every purchase.
   static Future<Map<String, dynamic>> createStudentSubscriptionLink({
     required String plan,
+    String phone = '',
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
     final res = await http.post(
       Uri.parse(ApiConstants.studentSubscribe()),
       headers: _headers(token),
-      body: jsonEncode({'plan': plan}),
+      body: jsonEncode({'plan': plan, 'phone': phone}),
     );
     return _parse(res);
   }

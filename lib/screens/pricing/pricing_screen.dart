@@ -101,9 +101,20 @@ class _PricingScreenState extends State<PricingScreen> {
       if (mounted) setState(() {});
     }
 
+    // Ask before opening checkout, not after Cashfree rejects the order.
+    // Google accounts have no phone of their own — the server stores a
+    // placeholder — and Cashfree 400s on it, so the student would otherwise
+    // meet a raw payment-gateway error mid-purchase.
+    var phone = '';
+    if (_subscription?['has_phone'] != true) {
+      phone = await _askForPhone() ?? '';
+      if (phone.isEmpty) return;
+    }
+
     setState(() => _busyTier = tierKey);
     try {
-      final result = await ApiService.createStudentSubscriptionLink(plan: tierKey);
+      final result =
+          await ApiService.createStudentSubscriptionLink(plan: tierKey, phone: phone);
 
       // Backend short-circuits when the student already holds this tier (or
       // better) — nothing to pay for, just refresh what we show.
@@ -161,6 +172,58 @@ class _PricingScreenState extends State<PricingScreen> {
         // registers the order — keep polling.
       }
     });
+  }
+
+  /// Returns a 10-digit mobile, or null if the student backs out. The number
+  /// is saved server-side on the first purchase, so this is asked once.
+  Future<String?> _askForPhone() async {
+    final ctrl = TextEditingController();
+    String? error;
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => AlertDialog(
+          title: Text('Your mobile number',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('Needed for the payment receipt and order updates.',
+                style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              decoration: InputDecoration(
+                prefixText: '+91 ',
+                counterText: '',
+                hintText: '10-digit mobile',
+                errorText: error,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () {
+                final v = ctrl.text.replaceAll(RegExp(r'\D'), '');
+                // Indian mobile numbers are 10 digits starting 6-9 — the same
+                // rule the backend and Cashfree apply, checked here so the
+                // student is corrected before a payment is attempted.
+                if (v.length != 10 || !RegExp(r'^[6-9]').hasMatch(v)) {
+                  setSheetState(() => error = 'Enter a valid 10-digit mobile number');
+                  return;
+                }
+                Navigator.pop(ctx, v);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _promptSignIn() async {
