@@ -59,9 +59,26 @@ old separate `landing_page.dart` was deleted.)
 `lib/services/google_auth_service.dart` is the single "Sign in with
 Google" entry point for all three roles (super_admin / admin /
 student) — the backend resolves the role from the Google account's
-email. WhatsApp OTP delivery proved unreliable; `/whatsapp-login`
-still exists but is not the primary path. Firebase Auth
-(`lib/firebase_options.dart`) backs the popup flow.
+email. Firebase Auth (`lib/firebase_options.dart`) backs the popup flow.
+
+WhatsApp OTP login is FULLY BUILT on both sides and deliberately hidden,
+not broken or missing — don't rebuild it:
+- `POST /student/standalone/request-otp` + `/verify-otp` (registers a new
+  number with a name, or logs an existing one in)
+- `POST /auth/request-otp` + `/auth/verify-otp` for institute owners
+- `whatsapp_login_screen.dart` at `/whatsapp-login`
+- Sender: Botko (`automation.altrobyte.com/internal/send-otp`, needs
+  `INTERNAL_SEND_SECRET`), falling back to the Meta Graph API with the
+  `altron_auth_otp` template
+Turning it on is a UI change of well under 100 lines (un-hide the side
+rail's login item, add the option alongside Google). BLOCKED ON A
+DEDICATED WHATSAPP NUMBER being provisioned — decided 2026-08-07, keep
+Google as the only path until then.
+
+Enabling it also fixes a real gap: Google gives no phone number, so those
+accounts carry a placeholder and every Cashfree payment had to ask for a
+mobile at checkout. It is likewise the prerequisite for any lead
+management or WhatsApp marketing work.
 
 ## WHAT'S BUILT SO FAR
 - [x] Firebase project deployed (altrobytelab.web.app)
