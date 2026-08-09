@@ -9,14 +9,15 @@ import '../../services/api_service.dart';
 import '../../services/cashfree_checkout.dart';
 import '../../services/google_auth_service.dart';
 
-/// Public pricing page — Free / Plus (₹999) / Elite (₹9999) / Institution /
-/// Industry. All copy (price labels, features) comes from the DB, admin-
-/// editable without a code deploy.
+/// Public pricing page — Free / Plus (₹999) / Pro (₹4999) / Elite (₹9999) /
+/// Institution / Industry. All copy (price labels, features) comes from the
+/// DB, admin-editable without a code deploy.
 ///
-/// The paid tiers are self-serve: `tier_key` doubles as the billing plan id
-/// ('999' / '9999'), so the card the student sees is literally the plan the
-/// backend charges for. Institution/Industry stay sales-assisted and route
-/// to the partner enquiry form.
+/// The paid tiers are self-serve: `tier_key` doubles as the billing plan id,
+/// so the card the student sees is literally the plan the backend charges
+/// for. Institution/Industry stay sales-assisted and route to the partner
+/// enquiry form. Nothing here enumerates the tiers — they come from the API,
+/// so a new one needs no change in this file.
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
 
@@ -24,10 +25,13 @@ class PricingScreen extends StatefulWidget {
   State<PricingScreen> createState() => _PricingScreenState();
 }
 
-/// tier_keys the backend will actually take money for (`PAID_PLANS` in
-/// student_subscriptions.py). Anything else on the pricing page is either
-/// free or "talk to us".
-const _selfServeTiers = {'999', '9999'};
+/// Whether the backend will take money for this tier.
+///
+/// Derived from the payload rather than a hardcoded set: the server adds
+/// `price_inr` only for the tiers in `PAID_PLANS`. A literal list here had
+/// already gone stale once — Pro shipped showing "Talk to us" because '4999'
+/// was never added to it — and would go stale again on the next tier.
+bool _isSelfServe(Map plan) => plan['price_inr'] != null;
 
 class _PricingScreenState extends State<PricingScreen> {
   List<dynamic> _plans = [];
@@ -367,10 +371,10 @@ class _PricingScreenState extends State<PricingScreen> {
                       // One purchase at a time — the others stay tappable-
                       // looking but inert while Cashfree's overlay is open.
                       disabled: _busyTier != null && _busyTier != tier,
-                      onSubscribe: _selfServeTiers.contains(tier)
+                      onSubscribe: _isSelfServe(p)
                           ? () => _subscribe(tier, p['display_name'] as String? ?? 'Plan')
                           : null,
-                      onTalkToUs: _selfServeTiers.contains(tier) || tier == 'free'
+                      onTalkToUs: _isSelfServe(p) || tier == 'free'
                           ? null
                           : () => context.push('/partner'),
                     );
