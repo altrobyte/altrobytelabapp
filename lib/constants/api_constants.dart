@@ -103,6 +103,7 @@ class ApiConstants {
   static String standaloneRequestOtp() => '$baseUrl/student/standalone/request-otp';
   static String standaloneVerifyOtp() => '$baseUrl/student/standalone/verify-otp';
   static String onboardingConfig() => '$baseUrl/platform/onboarding-config';
+  static String platformFeatures() => '$baseUrl/platform/features';
 
   // student subscription
   static String studentSubscription() => '$baseUrl/student/subscription';

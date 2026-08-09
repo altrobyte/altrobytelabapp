@@ -52,6 +52,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   List<Map<String, dynamic>> _notices = [];
   List<Map<String, dynamic>> _results = [];
   Map<String, dynamic>? _subscription;
+  /// Custom Test Series generation is admin-only until it leaves beta. The
+  /// server is the authority (/platform/features); this only decides whether
+  /// to show an entry point for something the API would refuse anyway.
+  bool _customTestEnabled = false;
   bool _loading = true;
   String? _feedError;
 
@@ -62,6 +66,17 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     super.initState();
     _loadFeed();
     _loadFeaturedSessions();
+    _loadFeatures();
+  }
+
+  Future<void> _loadFeatures() async {
+    try {
+      final f = await ApiService.getPlatformFeatures();
+      if (!mounted) return;
+      setState(() => _customTestEnabled = f['custom_test_enabled'] == true);
+    } catch (_) {
+      // Default stays false — never advertise a feature we cannot confirm.
+    }
   }
 
   Future<void> _loadFeaturedSessions() async {
@@ -446,6 +461,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 : Row(children: [
                     _SideRail(
                       isLoggedIn: _isLoggedIn,
+                      showCustomTest: _customTestEnabled,
                       onHome: () {},
                       onPractice: () => _openPractice(),
                       onTraining: _openTrainingScreen,
@@ -464,7 +480,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       bottomNavigationBar: isMobile
           ? _StudentBottomNav(
               isLoggedIn: _isLoggedIn,
+              showCustomTest: _customTestEnabled,
               onPractice: () => _openPractice(),
+              onTestSeries: () => context.push('/student/test-series'),
               onTraining: _openTrainingScreen,
               onActivity: () => context.push('/student/activity'),
               onProfileOrLogin: profileOrLogin,
@@ -520,7 +538,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       if (isMobile)
                         SliverToBoxAdapter(
                           child: _PrimaryActionRow(
+                            showCustomTest: _customTestEnabled,
                             onPractice: () => _openPractice(),
+                            onTestSeries: () => context.push('/student/test-series'),
                             onTraining: _openTrainingScreen,
                             onExperiments: () => context.push('/student/experiments'),
                             onJobs: () => context.push('/jobs'),
@@ -587,30 +607,35 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               const SizedBox(height: 20),
                             ],
 
-                            // ── Popular Topics to Practice (Unstop-style row) ──
-                            _RowSectionHeader(
-                              title: 'Custom Test Series',
-                              subtitle: 'Pick a topic — AI builds the test instantly',
-                              onViewAll: () => _openPractice(),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 128,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _practiceSubjects.length,
-                                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                                itemBuilder: (context, i) {
-                                  final s = _practiceSubjects[i];
-                                  return _TopicCard(
-                                    label: s.$1, icon: s.$2, color: s.$3,
-                                    onTap: () => _openPractice(subject: s.$1),
-                                  );
-                                },
+                            // ── Custom Test Series (Unstop-style topic row) ──
+                            // Hidden entirely while the feature is admin-only:
+                            // showing topic cards that lead to a 403 is worse
+                            // than not showing the row at all.
+                            if (_customTestEnabled) ...[
+                              _RowSectionHeader(
+                                title: 'Custom Test Series',
+                                subtitle: 'Pick a topic — AI builds the test instantly',
+                                onViewAll: () => _openPractice(),
                               ),
-                            ),
-                            const SizedBox(height: 28),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 128,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _practiceSubjects.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                  itemBuilder: (context, i) {
+                                    final s = _practiceSubjects[i];
+                                    return _TopicCard(
+                                      label: s.$1, icon: s.$2, color: s.$3,
+                                      onTap: () => _openPractice(subject: s.$1),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+                            ],
 
                             // ── Continue Training: only modules that actually have
                             // content — an empty coaching gets no section at all,
@@ -894,6 +919,7 @@ class _HomeHeader extends StatelessWidget {
 /// auth state — browsing never requires login, only specific actions do.
 class _SideRail extends StatelessWidget {
   final bool isLoggedIn;
+  final bool showCustomTest;
   final VoidCallback onHome;
   final VoidCallback onPractice;
   final VoidCallback onTraining;
@@ -901,6 +927,7 @@ class _SideRail extends StatelessWidget {
 
   const _SideRail({
     required this.isLoggedIn,
+    required this.showCustomTest,
     required this.onHome,
     required this.onPractice,
     required this.onTraining,
@@ -917,7 +944,8 @@ class _SideRail extends StatelessWidget {
           children: [
             const SizedBox(height: 12),
             _RailItem(icon: Icons.home_rounded, label: 'Home', active: true, onTap: onHome),
-            _RailItem(icon: Icons.bolt_rounded, label: 'Custom Test', onTap: onPractice),
+            if (showCustomTest)
+              _RailItem(icon: Icons.bolt_rounded, label: 'Custom Test', onTap: onPractice),
             _RailItem(icon: Icons.school_rounded, label: 'Training', onTap: onTraining),
             _RailItem(
                 icon: Icons.video_camera_front_rounded,
@@ -1394,14 +1422,18 @@ class _EmptyFeedCard extends StatelessWidget {
 /// Keeping this to 4+1 instead of a wall of 8 icons is what makes the
 /// "what do I do first" decision fast on a small screen.
 class _PrimaryActionRow extends StatelessWidget {
+  final bool showCustomTest;
   final VoidCallback onPractice;
+  final VoidCallback onTestSeries;
   final VoidCallback onTraining;
   final VoidCallback onExperiments;
   final VoidCallback onJobs;
   final VoidCallback onMore;
 
   const _PrimaryActionRow({
+    required this.showCustomTest,
     required this.onPractice,
+    required this.onTestSeries,
     required this.onTraining,
     required this.onExperiments,
     required this.onJobs,
@@ -1411,7 +1443,11 @@ class _PrimaryActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <(String, IconData, Color, VoidCallback)>[
-      ('Custom Test', Icons.bolt_rounded, AppColors.accent, onPractice),
+      // Same slot, different destination while Custom Test is admin-only —
+      // Test Series is what a student should reach for instead.
+      showCustomTest
+          ? ('Custom Test', Icons.bolt_rounded, AppColors.accent, onPractice)
+          : ('Test Series', Icons.quiz_rounded, AppColors.accent, onTestSeries),
       ('Training', Icons.school_rounded, AppColors.primary, onTraining),
       ('Experiments', Icons.science_rounded, AppColors.accent, onExperiments),
       ('Jobs', Icons.work_rounded, AppColors.primary, onJobs),
@@ -1514,14 +1550,18 @@ class _MoreSheetTile extends StatelessWidget {
 /// still uses the full [_SideRail] instead.
 class _StudentBottomNav extends StatelessWidget {
   final bool isLoggedIn;
+  final bool showCustomTest;
   final VoidCallback onPractice;
+  final VoidCallback onTestSeries;
   final VoidCallback onTraining;
   final VoidCallback onActivity;
   final VoidCallback onProfileOrLogin;
 
   const _StudentBottomNav({
     required this.isLoggedIn,
+    required this.showCustomTest,
     required this.onPractice,
+    required this.onTestSeries,
     required this.onTraining,
     required this.onActivity,
     required this.onProfileOrLogin,
@@ -1539,7 +1579,10 @@ class _StudentBottomNav extends StatelessWidget {
       unselectedLabelStyle: GoogleFonts.inter(fontSize: 10.5),
       onTap: (i) {
         switch (i) {
-          case 1: onPractice(); break;
+          // Slot 1 is Custom Test only while that feature is live; otherwise
+          // it points at Test Series. Swapping rather than removing keeps the
+          // five fixed indices this switch depends on.
+          case 1: (showCustomTest ? onPractice : onTestSeries)(); break;
           case 2: onTraining(); break;
           case 3: onActivity(); break;
           case 4: onProfileOrLogin(); break;
@@ -1547,7 +1590,9 @@ class _StudentBottomNav extends StatelessWidget {
       },
       items: [
         const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-        const BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Custom Test'),
+        showCustomTest
+            ? const BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Custom Test')
+            : const BottomNavigationBarItem(icon: Icon(Icons.quiz_rounded), label: 'Test Series'),
         const BottomNavigationBarItem(icon: Icon(Icons.school_rounded), label: 'Training'),
         const BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'Activity'),
         BottomNavigationBarItem(

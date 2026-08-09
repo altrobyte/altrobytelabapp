@@ -711,6 +711,13 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  /// Public feature flags. Served to signed-out visitors too, so the UI and
+  /// the API always agree on what is available.
+  static Future<Map<String, dynamic>> getPlatformFeatures() async {
+    final res = await safeGet(Uri.parse(ApiConstants.platformFeatures()));
+    return _parse(res);
+  }
+
   /// Price for every paid tier at every duration, discount already applied.
   /// Public — the pricing page shows it before sign-in.
   static Future<Map<String, dynamic>> getSubscriptionQuotes() async {
