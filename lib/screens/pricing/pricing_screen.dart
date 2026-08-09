@@ -34,6 +34,19 @@ class _PricingScreenState extends State<PricingScreen> {
   Map<String, dynamic>? _subscription;
   bool _loading = true;
 
+  /// tier_key -> one quote per duration, priced by the server so the page can
+  /// never advertise a discount the checkout does not honour.
+  Map<String, List<dynamic>> _quotes = {};
+  List<int> _durations = const [1];
+  int _months = 1;
+
+  Map<String, dynamic>? _quoteFor(String tierKey) {
+    for (final q in _quotes[tierKey] ?? const []) {
+      if (q['months'] == _months) return Map<String, dynamic>.from(q);
+    }
+    return null;
+  }
+
   /// Which tier's button is mid-flight, so only that card shows a spinner.
   String? _busyTier;
   Timer? _pollTimer;
@@ -54,6 +67,16 @@ class _PricingScreenState extends State<PricingScreen> {
     try {
       _plans = await ApiService.getSubscriptionPlans();
     } catch (_) {}
+    try {
+      final q = await ApiService.getSubscriptionQuotes();
+      _durations = List<int>.from(q['durations'] ?? const [1]);
+      _quotes = (q['quotes'] as Map?)?.map(
+              (k, v) => MapEntry(k.toString(), List<dynamic>.from(v as List))) ??
+          {};
+    } catch (_) {
+      // Quotes are an enhancement — without them the cards still show the
+      // plan's own monthly price_label.
+    }
     await _loadSubscription();
     if (mounted) setState(() => _loading = false);
   }
@@ -113,8 +136,8 @@ class _PricingScreenState extends State<PricingScreen> {
 
     setState(() => _busyTier = tierKey);
     try {
-      final result =
-          await ApiService.createStudentSubscriptionLink(plan: tierKey, phone: phone);
+      final result = await ApiService.createStudentSubscriptionLink(
+          plan: tierKey, phone: phone, months: _months);
 
       // Backend short-circuits when the student already holds this tier (or
       // better) — nothing to pay for, just refresh what we show.
@@ -312,6 +335,24 @@ class _PricingScreenState extends State<PricingScreen> {
                   const SizedBox(height: 16),
                   _CurrentPlanBanner(subscription: _subscription!),
                 ],
+                if (_durations.length > 1) ...[
+                  const SizedBox(height: 20),
+                  _DurationSelector(
+                    durations: _durations,
+                    selected: _months,
+                    // Any tier's quote carries the same discount percentage,
+                    // so the badge is read off whichever is available.
+                    discountFor: (m) {
+                      for (final list in _quotes.values) {
+                        for (final q in list) {
+                          if (q['months'] == m) return (q['discount_pct'] ?? 0) as int;
+                        }
+                      }
+                      return 0;
+                    },
+                    onChanged: (m) => setState(() => _months = m),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 Wrap(
                   spacing: 20, runSpacing: 20, alignment: WrapAlignment.center,
@@ -319,6 +360,8 @@ class _PricingScreenState extends State<PricingScreen> {
                     final tier = p['tier_key'] as String? ?? '';
                     return _PlanCard(
                       plan: p,
+                      quote: _quoteFor(tier),
+                      months: _months,
                       isCurrent: tier.isNotEmpty && tier == _activePlan,
                       busy: _busyTier == tier,
                       // One purchase at a time — the others stay tappable-
@@ -357,9 +400,11 @@ class _CurrentPlanBanner extends StatelessWidget {
     final validTill = subscription['valid_till'] as String?;
     final remaining = subscription['generations_remaining'];
     final limit = subscription['monthly_generation_limit'];
-    final label = premium
-        ? (subscription['is_elite'] == true ? 'Elite' : 'Plus')
-        : 'Free';
+    // Read the tier straight off `plan` — deriving it from is_elite/is_premium
+    // silently mislabels every tier that is neither, which Pro now is.
+    const names = {'free': 'Free', '999': 'Plus', '4999': 'Pro', '9999': 'Elite'};
+    final label = premium ? (names[subscription['plan']] ?? 'Paid') : 'Free';
+    final workshopsLeft = subscription['workshops_remaining'];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -384,6 +429,9 @@ class _CurrentPlanBanner extends StatelessWidget {
             if (remaining is int && limit is int)
               Text('$remaining of $limit Custom Test Series left this month',
                   style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+            if (workshopsLeft is int && workshopsLeft > 0)
+              Text('$workshopsLeft live workshops included this month',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.success)),
           ]),
         ),
       ]),
@@ -391,8 +439,72 @@ class _CurrentPlanBanner extends StatelessWidget {
   }
 }
 
+/// Segmented 1 / 3 / 6-month picker. The saving is shown on the control
+/// itself — a discount nobody notices is a discount that does not sell.
+class _DurationSelector extends StatelessWidget {
+  final List<int> durations;
+  final int selected;
+  final int Function(int months) discountFor;
+  final ValueChanged<int> onChanged;
+
+  const _DurationSelector({
+    required this.durations,
+    required this.selected,
+    required this.discountFor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: durations.map((m) {
+        final active = m == selected;
+        final pct = discountFor(m);
+        return InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => onChanged(m),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: active ? AppColors.primary : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                  color: active ? AppColors.primary : Colors.grey.withValues(alpha: 0.3)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(m == 1 ? '1 month' : '$m months',
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: active ? Colors.white : AppColors.textPrimary)),
+              if (pct > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: AppColors.success, borderRadius: BorderRadius.circular(20)),
+                  child: Text('save $pct%',
+                      style: GoogleFonts.inter(
+                          fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ],
+            ]),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 class _PlanCard extends StatelessWidget {
   final Map<String, dynamic> plan;
+  /// Server-priced total for the selected duration; null for the free and
+  /// sales-assisted tiers, which fall back to the plan's own price_label.
+  final Map<String, dynamic>? quote;
+  final int months;
   final bool isCurrent;
   final bool busy;
   final bool disabled;
@@ -401,6 +513,8 @@ class _PlanCard extends StatelessWidget {
 
   const _PlanCard({
     required this.plan,
+    required this.quote,
+    required this.months,
     required this.isCurrent,
     required this.busy,
     required this.disabled,
@@ -446,10 +560,25 @@ class _PlanCard extends StatelessWidget {
             ),
         ]),
         const SizedBox(height: 12),
-        Text(plan['price_label'] ?? '',
+        Text(quote != null ? '₹${quote!['total']}' : (plan['price_label'] ?? ''),
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 26,
                 color: highlighted ? Colors.white : AppColors.textPrimary)),
-        if ((plan['billing_note'] ?? '').isNotEmpty)
+        if (quote != null && months > 1) ...[
+          Row(children: [
+            Text('₹${quote!['gross']}',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    decoration: TextDecoration.lineThrough,
+                    color: highlighted ? Colors.white54 : AppColors.textSecondary)),
+            const SizedBox(width: 6),
+            Text('save ₹${quote!['discount_amount']}',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.success)),
+          ]),
+          Text('for $months months — ₹${quote!['monthly_price']}/month',
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: highlighted ? Colors.white70 : AppColors.textSecondary)),
+        ] else if ((plan['billing_note'] ?? '').isNotEmpty)
           Text(plan['billing_note'],
               style: GoogleFonts.inter(fontSize: 12, color: highlighted ? Colors.white70 : AppColors.textSecondary)),
         const SizedBox(height: 18),
@@ -506,7 +635,10 @@ class _PlanCard extends StatelessWidget {
           ? const SizedBox(
               height: 18, width: 18,
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text(isCurrent ? 'Renew' : 'Get ${plan['display_name'] ?? 'this plan'}',
+          : Text(
+              isCurrent
+                  ? (months > 1 ? 'Renew — $months months' : 'Renew')
+                  : 'Get ${plan['display_name'] ?? 'this plan'}',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
     );
   }

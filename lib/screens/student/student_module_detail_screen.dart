@@ -67,7 +67,62 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
     }
   }
 
+  static const _tierNames = {'999': 'Plus', '4999': 'Pro', '9999': 'Elite'};
+
+  void _showLockedSheet(ContentItem item) {
+    final tier = _tierNames[item.upgradeRequired] ?? 'a paid';
+    final what = switch (item.type) {
+      'video' => 'Videos',
+      'resource' => 'Downloadable resources',
+      'github' => 'This GitHub project',
+      _ => 'This content',
+    };
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_rounded, size: 40, color: AppColors.accent),
+          const SizedBox(height: 14),
+          Text(item.title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Text('$what are included from the $tier plan onwards.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 13.5, height: 1.5,
+                  color: AppColors.textSecondary)),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/pricing');
+              },
+              child: Text('See plans',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   void _openContent(TrainingModuleProvider provider, ContentItem item) async {
+    // The server already stripped the URL and body, so there is nothing to
+    // open — offer the plan that would unlock it instead.
+    if (item.locked) {
+      _showLockedSheet(item);
+      return;
+    }
     switch (item.type) {
       case 'notes':
         await Navigator.push(
@@ -525,6 +580,7 @@ class _ContentTile extends StatelessWidget {
   });
 
   IconData get _icon {
+    if (item.locked) return Icons.lock_rounded;
     switch (item.type) {
       case 'notes':
         return Icons.article_rounded;
@@ -544,6 +600,7 @@ class _ContentTile extends StatelessWidget {
   }
 
   Color get _typeColor {
+    if (item.locked) return Colors.grey;
     switch (item.type) {
       case 'notes':
         return AppColors.primary;
@@ -563,6 +620,10 @@ class _ContentTile extends StatelessWidget {
   }
 
   String get _typeLabel {
+    if (item.locked) {
+      final tier = _StudentModuleDetailScreenState._tierNames[item.upgradeRequired];
+      return tier != null ? '$tier plan' : 'Locked';
+    }
     switch (item.type) {
       case 'notes':
         return 'Notes';

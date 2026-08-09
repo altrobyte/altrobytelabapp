@@ -19,6 +19,14 @@ class ContentItem {
   final String? youtubeUrl; // for video
   final String? resourceUrl; // for resource — downloadable file link
 
+  /// The student's plan does not cover this item. The server strips the URL
+  /// and body when it sets this, so a locked item genuinely has nothing to
+  /// show — the UI must offer an upgrade rather than try to render it.
+  final bool locked;
+
+  /// tier_key that would unlock it, for the upgrade prompt.
+  final String? upgradeRequired;
+
   ContentItem({
     required this.id,
     required this.subtopicId,
@@ -30,6 +38,8 @@ class ContentItem {
     this.testTitle,
     this.youtubeUrl,
     this.resourceUrl,
+    this.locked = false,
+    this.upgradeRequired,
   });
 
   factory ContentItem.fromJson(Map<String, dynamic> j) => ContentItem(
@@ -43,6 +53,8 @@ class ContentItem {
         testTitle: j['test_title'],
         youtubeUrl: j['youtube_url'],
         resourceUrl: j['resource_url'],
+        locked: j['locked'] == true,
+        upgradeRequired: j['upgrade_required'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -56,6 +68,8 @@ class ContentItem {
         if (testTitle != null) 'test_title': testTitle,
         if (youtubeUrl != null) 'youtube_url': youtubeUrl,
         if (resourceUrl != null) 'resource_url': resourceUrl,
+        if (locked) 'locked': true,
+        if (upgradeRequired != null) 'upgrade_required': upgradeRequired,
       };
 
   ContentItem copyWith({

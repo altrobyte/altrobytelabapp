@@ -711,16 +711,24 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  /// Price for every paid tier at every duration, discount already applied.
+  /// Public — the pricing page shows it before sign-in.
+  static Future<Map<String, dynamic>> getSubscriptionQuotes() async {
+    final res = await safeGet(Uri.parse(ApiConstants.studentSubscriptionQuotes()));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> createStudentSubscriptionLink({
     required String plan,
     String phone = '',
+    int months = 1,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
     final res = await http.post(
       Uri.parse(ApiConstants.studentSubscribe()),
       headers: _headers(token),
-      body: jsonEncode({'plan': plan, 'phone': phone}),
+      body: jsonEncode({'plan': plan, 'phone': phone, 'months': months}),
     );
     return _parse(res);
   }
