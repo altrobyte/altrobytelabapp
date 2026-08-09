@@ -123,52 +123,47 @@ management or WhatsApp marketing work.
       matches — so it could never activate anything. The pending order/tier is
       now pinned to `student_subscriptions.pending_order_id/pending_plan`.
       Deployed and verified against production.
-- [x] Plan tiers: `free`, `999` (Plus), `9999` (Elite), plus sales-assisted
-      `institution`/`industry`. Only FOUR things are actually enforced —
-      don't advertise anything else without writing the gate first:
-      Custom Test Series/month (5 / 50 / 200, `tests.py`), quiz attempts/day
-      (1 / 20 / 50, `tests.py`), paid Challenges (any paid tier,
-      `challenges.py`), and AI mock interviews/month (2 / 10 / 30,
-      `mock_interview.py`). All limits + prices live in `global_settings`.
-      NO TIER IS UNCAPPED — never reintroduce an "unlimited" quota. An
-      uncapped plan is an open tap on the Groq bill, and one compromised
-      paid account could drain it with nothing to stop it.
-      Gate on the token's `student_users.id`, never on `student_id` (the
-      institute `students` row) — Google-only Lab students have no such row,
-      so a `student_id`-keyed gate silently applies to nobody.
-      The pricing page's `price_label` is DERIVED from `global_settings` —
-      editing it via `/super/pricing` is rejected, so what a student sees is
-      always what they get charged.
+- [x] Plan tiers: `free`, `999` (Plus), `4999` (Pro), `9999` (Elite), plus
+      sales-assisted `institution`/`industry`. The paid tiers sell ACCESS
+      (workshops, videos, GitHub projects, Challenges) — not AI quota. Quota
+      is a fair-use ceiling, never the pitch.
+      | | Free | 999 Plus | 4999 Pro | 9999 Elite |
+      |---|---|---|---|---|
+      | Custom Test Series | 5/mo | 30/mo | 90/mo | 150/mo |
+      | Quiz attempts | 1/day | 5/day | 20/day | 50/day |
+      | Mock interviews | 1/mo | 3/mo | 5/mo | 15/mo |
+      | Live workshops | 0 | 0 | 4/mo | 30/mo |
+      | Learning modules | 1 | all | all | all |
+      | Videos + resources | — | — | yes | yes |
+      | GitHub projects | 0 | 3 | all | all |
+      | Paid Challenges | — | — | yes | yes |
+      Elite = everything unlocked; a multi-month programme is covered for as
+      long as the subscription runs, so there is NO per-session "included"
+      flag and no separate workshop purchase.
+      Buyable for 1/3/6 months, discounted 10%/15% on the total.
+      `GET /student/subscription/quotes` is the ONLY price source — never
+      re-derive a discount client-side.
+      All limits + prices live in `global_settings`; changing one needs no
+      deploy. `price_label` is DERIVED from `global_settings`, so editing it
+      via `/super/pricing` is rejected.
 
-- [x] Payments — Cashfree Checkout via their JS SDK
-      (`lib/services/cashfree_checkout.dart` + `web/index.html`; a raw
-      redirect to their hosted page is rejected, the SDK is the only
-      reliable path). UPI QR fallback asset in `assets/images/`.
-- [x] Company/marketing pages — CMS-backed via
-      `company/pages/:slug` and `company/items`: `/about`, `/founder`,
-      `/about-app`, `/contact`, `/terms`, `/refunds`, `/placements`,
-      `/institutes`, `/clients`, `/services`, `/products`, `/blog`
-- [x] Partner/institute onboarding enquiries (`/partner`) + admin
-      inbox (`/super/enquiries`)
-- [x] Platform Users (`/platform-users`) — admin roster of
-      `student_users` with per-user activity drill-down
-- [x] Student Activity summary screen (`/student/activity`)
-- [x] AI practice attempts are recorded (`practice_attempts` table) and
-      shown in My Test Results, My Activity and the admin Platform Users
-      drill-down. Practice tests used to be scored purely in client state
-      and left no trace. Deployed and smoke-tested against production.
-- [x] Test Series resolves the institute from the student's token
-      (`GET /student/test-series`), falling back to the pinned Altrobyte Lab
-      institute. The old institute-scoped route stays for the public read.
-      Keep this scoped to ONE institute — an unscoped query would expose
-      AltroCoach tenants' tests (see the isolation gap below).
-- [x] Test in progress asks for confirmation before you leave it
-- [x] Image upload widget + Firebase Storage rules (`storage.rules`)
-- [x] Branded landing per institute slug (catch-all `/:slug` route)
-- [ ] Course catalog browsing (public preview) — still NOT BUILT as a
-      separate `courses` table. Training Modules + Live Sessions
-      currently cover paid content. Do not build catalog UI with
-      fake/hardcoded course data.
+      Rules that the last round of bugs came from — do not break these:
+      - Tier order lives in ONE list (`PLAN_ORDER` in student_subscriptions.py)
+        and every per-tier limit resolves by name. Adding a tier must not need
+        a new branch in any caller.
+      - NO TIER IS UNCAPPED. An uncapped plan is an open tap on the Groq bill,
+        and one compromised paid account could drain it.
+      - Gate on the token's `student_users.id`, NEVER on `student_id` (the
+        institute `students` row) — Google-only Lab students have no such row,
+        so a `student_id`-keyed gate silently applies to nobody.
+      - Locked content is STRIPPED server-side (url + body set to null). A
+        locked item whose URL still ships is not locked.
+      - Free's one module and Plus's three GitHub projects are picked
+        deterministically by course order — same content free for everyone, no
+        per-student state.
+      - Cashfree 400s on a bad name/phone/email. `cashfree.py` coerces all
+        three centrally (`person_name`, `phone_number`, `email_or_none`);
+        Google accounts have NO phone, so checkout asks for one and saves it.
 
 ## BACKEND GOTCHA — `init_db()` IS ONE TRANSACTION
 A single failing statement in `init_db()` aborts the whole transaction
