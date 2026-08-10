@@ -165,6 +165,17 @@ management or WhatsApp marketing work.
         three centrally (`person_name`, `phone_number`, `email_or_none`);
         Google accounts have NO phone, so checkout asks for one and saves it.
 
+## TESTS — RUN THESE, THEY EXIST NOW
+- Backend: `pytest tests/ -q` — 156 fast tests, no DB needed. Covers tier
+  resolution, quotas, pricing/discount math and the Cashfree name/phone/email
+  coercion. `tests/conftest.py` is deliberately lazy: it does NOT import
+  `main` at module scope and does NOT run `init_db()` autouse, so pure unit
+  tests run without the full stack or a database. Keep it that way.
+- Frontend: `flutter test` — the pricing payload contract.
+- After ANY backend deploy: `python scripts/smoke.py` (exits non-zero on
+  failure). This is what catches a push Railway never deployed — which has
+  happened, silently, twice.
+
 ## BACKEND GOTCHA — `init_db()` IS ONE TRANSACTION
 A single failing statement in `init_db()` aborts the whole transaction
 (everything after it dies with "current transaction is aborted"),
