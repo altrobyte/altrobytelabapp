@@ -60,6 +60,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   String? _feedError;
 
   List<dynamic> _featuredSessions = [];
+  /// Published quizzes shown as a home row — real, tappable content that
+  /// does not depend on the Custom Test Series feature being live.
+  List<Map<String, dynamic>> _homeQuizzes = [];
 
   @override
   void initState() {
@@ -86,6 +89,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       // Featured row is a teaser, not the full catalog. It links through
       // to the actual Test Series page for everything else.
       List<dynamic> practiceItems = [];
+      List<Map<String, dynamic>> homeQuizzes = [];
       try {
         final testData = await ApiService.getTestSeriesForStudent();
         final series = (testData['series'] as List?) ?? [];
@@ -96,6 +100,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           quizCount += ((m['tests'] as List?) ?? []).length;
         }
         final courseCount = moduleGroups.length;
+
+        // Keep the actual quizzes for the home row. With Custom Test Series
+        // admin-only, this is the real practice content a visitor can use —
+        // without it the homepage lost a whole section and looked empty.
+        homeQuizzes = <Map<String, dynamic>>[
+          for (final t in standalone) Map<String, dynamic>.from(t as Map),
+          for (final m in moduleGroups)
+            for (final t in ((m['tests'] as List?) ?? []))
+              {...Map<String, dynamic>.from(t as Map), 'course': m['title']},
+        ];
 
         // Prefer a real curated series (has its own admin-written
         // description); otherwise synthesize a summary from the quizzes.
@@ -123,7 +137,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         // Test Series failing must not block Live Sessions from showing.
       }
       if (!mounted) return;
-      setState(() => _featuredSessions = _mergeFeatured(sessions, practiceItems));
+      setState(() {
+        _featuredSessions = _mergeFeatured(sessions, practiceItems);
+        _homeQuizzes = homeQuizzes;
+      });
     } catch (_) {
       // Non-critical — home feed must not break if this fails.
     }
@@ -258,13 +275,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     // etc. don't depend on it at all). A transient hiccup here used to blank
     // out the entire home screen behind a "check internet" wall.
     setState(() { _loading = false; _feedError = null; });
+    int? instituteId;
     try {
       final res = await ApiService.safeGet(
         Uri.parse(ApiConstants.studentFeed()),
         headers: token != null ? {'Authorization': 'Bearer $token'} : {},
       );
+      // The status was never checked: a 401 or 500 body decodes fine, leaving
+      // every list null and the page silently empty with no error at all —
+      // while a mere network blip raised and got reported as a hard failure.
+      // Exactly backwards.
+      if (res.statusCode >= 400) {
+        throw ApiException('Feed unavailable', statusCode: res.statusCode);
+      }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final instituteId = body['institute_id'] as int?;
+      instituteId = body['institute_id'] as int?;
       if (!mounted) return;
       setState(() {
         _tests = List<Map<String, dynamic>>.from(body['tests'] ?? []);
@@ -273,18 +298,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         _waNumber = body['wa_ai_number'] as String?;
         _subscription = body['subscription'] as Map<String, dynamic>?;
       });
-
-      if (instituteId != null) {
-        await prefs.setInt('student_institute_id', instituteId);
-        if (mounted) {
-          context.read<TrainingModuleProvider>().ensureModulesAsStudent(instituteId);
-        }
-      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _feedError = AppLocalizations.of(context)!.studentPortalErrorLoad;
         });
+      }
+    }
+
+    // Loading the training modules is a SEPARATE concern. It used to sit
+    // inside the try above, so a provider failure was reported to the student
+    // as "the feed could not load" even when the feed had loaded perfectly.
+    if (instituteId != null) {
+      try {
+        await prefs.setInt('student_institute_id', instituteId);
+        if (mounted) {
+          context.read<TrainingModuleProvider>().ensureModulesAsStudent(instituteId);
+        }
+      } catch (_) {
+        // The Training section handles its own empty state.
       }
     }
   }
@@ -611,6 +643,38 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             // Hidden entirely while the feature is admin-only:
                             // showing topic cards that lead to a 403 is worse
                             // than not showing the row at all.
+                            // Real published Test Series — the practice row a
+                            // visitor actually gets while Custom Test Series
+                            // is admin-only. Without this the homepage had a
+                            // hole where a whole section used to be.
+                            if (!_customTestEnabled && _homeQuizzes.isNotEmpty) ...[
+                              _RowSectionHeader(
+                                title: 'Test Series',
+                                subtitle: 'Published tests — start any one',
+                                onViewAll: () => context.push('/student/test-series'),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 128,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _homeQuizzes.length > 8 ? 8 : _homeQuizzes.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                  itemBuilder: (context, i) {
+                                    final q = _homeQuizzes[i];
+                                    return _TopicCard(
+                                      label: (q['title'] ?? 'Test').toString(),
+                                      icon: Icons.quiz_rounded,
+                                      color: AppColors.accent,
+                                      onTap: () => context.push('/student/test-series'),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+                            ],
+
                             if (_customTestEnabled) ...[
                               _RowSectionHeader(
                                 title: 'Custom Test Series',
@@ -781,7 +845,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     const SizedBox(height: 20),
                                   ],
 
-                                  if (_tests.isEmpty && _notices.isEmpty && _results.isEmpty)
+                                  // Only a signed-in student HAS an institute
+                                  // feed. Showing a visitor a full-width
+                                  // "could not load / nothing here" wall for a
+                                  // section that was never theirs is the worst
+                                  // possible first impression — they get the
+                                  // real content above instead.
+                                  if (_isLoggedIn &&
+                                      _tests.isEmpty &&
+                                      _notices.isEmpty &&
+                                      _results.isEmpty)
                                     _feedError != null
                                         ? _FeedErrorCard(message: _feedError!, onRetry: _loadFeed)
                                         : _EmptyFeedCard(
