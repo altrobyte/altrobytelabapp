@@ -165,6 +165,18 @@ management or WhatsApp marketing work.
         three centrally (`person_name`, `phone_number`, `email_or_none`);
         Google accounts have NO phone, so checkout asks for one and saves it.
 
+## AI (GROQ) — THE REAL PLATFORM CONSTRAINT
+Groq's limit is PER KEY, PER DAY, and the key is shared with AltroCoach's
+institutes. Whoever spends it first blocks everyone — an admin who generated
+nothing still gets refused. That is NOT a plan quota: telling the user to
+upgrade would take their money and change nothing (`tests.py` says so now).
+- Add capacity with a pool, no deploy needed: `GROQ_API_KEY_2` (or 3/4/5), or
+  commas inside `GROQ_API_KEY`. Generation fails over on a daily-limit 429.
+- Per-minute 429s deliberately do NOT rotate keys — they clear by themselves,
+  and rotating would burn the whole pool for nothing.
+- Student Custom Test Series generation is OFF (`student_custom_test_enabled`)
+  precisely because it spends this key. Turn it on only with headroom.
+
 ## TESTS — RUN THESE, THEY EXIST NOW
 - Backend: `pytest tests/ -q` — 156 fast tests, no DB needed. Covers tier
   resolution, quotas, pricing/discount math and the Cashfree name/phone/email

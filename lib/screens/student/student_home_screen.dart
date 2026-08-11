@@ -341,55 +341,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     if (result == 'upgrade') _showUpgradeSheet();
   }
 
-  void _promptLogin({required String title, required String message}) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.lock_rounded, color: AppColors.accent, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(title, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Text(message, style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textSecondary, height: 1.5)),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.push('/join');
-              },
-              child: Text('Continue with WhatsApp',
-                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Maybe later', style: GoogleFonts.inter(color: AppColors.textSecondary)),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-
   void _openTrainingScreen() {
     // TEMPORARY: login gate disabled while WhatsApp OTP delivery is broken.
     Navigator.push(

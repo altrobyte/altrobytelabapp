@@ -5,7 +5,6 @@ class ApiConstants {
     'API_BASE_URL',
     defaultValue: 'https://altrocoach-backend-production.up.railway.app',
   );
-  static const botkoUrl = 'https://botko-api-production-8da7.up.railway.app';
 
   // uploads
   static String uploadImage() => '$baseUrl/uploads/image';
