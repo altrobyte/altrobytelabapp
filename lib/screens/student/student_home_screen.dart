@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
+import '../../utils/formatters.dart';
 import '../../constants/api_constants.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/training_module_model.dart';
@@ -884,7 +885,7 @@ class _HomeHeader extends StatelessWidget {
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Hi, $name 👋',
+                            Text('Hi, ${Fmt.greetingName(name)} 👋',
                                 style: GoogleFonts.poppins(
                                     color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
                             if (institute.isNotEmpty)

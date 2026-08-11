@@ -25,4 +25,22 @@ class Fmt {
 
   static String displayDate(DateTime dt) =>
       DateFormat('EEEE, dd MMMM yyyy').format(dt);
+
+  /// The name to greet someone by, from whatever they saved as their display
+  /// name.
+  ///
+  /// Students often append a tagline — "Pawan Meena : Electroholic Engineer" —
+  /// which reads badly after "Hi,". The tagline is theirs and stays on the
+  /// profile; only the greeting is shortened. Hyphens and apostrophes are
+  /// never separators, so Anne-Marie and D'Souza survive intact.
+  static String greetingName(String? full, {String fallback = 'Student'}) {
+    var s = (full ?? '').trim();
+    for (final sep in [':', '|', ',', '(', '–', '—']) {
+      if (s.contains(sep)) {
+        final head = s.split(sep).first.trim();
+        if (head.length >= 2) s = head;
+      }
+    }
+    return s.isEmpty ? fallback : s;
+  }
 }
