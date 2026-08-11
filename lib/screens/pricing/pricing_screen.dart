@@ -42,6 +42,10 @@ class _PricingScreenState extends State<PricingScreen> {
   /// never advertise a discount the checkout does not honour.
   Map<String, List<dynamic>> _quotes = {};
   List<int> _durations = const [1];
+  /// Student Custom Test Series is switched off platform-wide while it spends
+  /// the shared Groq key. Its quota must not be shown as a benefit meanwhile.
+  bool _customTestEnabled = false;
+
   /// Server-configured, so changing the trial length needs no app release.
   int _trialDays = 7;
   int _months = 1;
@@ -82,6 +86,13 @@ class _PricingScreenState extends State<PricingScreen> {
     } catch (_) {
       // Quotes are an enhancement — without them the cards still show the
       // plan's own monthly price_label.
+    }
+    try {
+      final f = await ApiService.getPlatformFeatures();
+      _customTestEnabled = f['custom_test_enabled'] == true;
+    } catch (_) {
+      // Default false: better to omit a real quota than to promise a
+      // switched-off one.
     }
     await _loadSubscription();
     if (mounted) setState(() => _loading = false);
@@ -378,7 +389,10 @@ class _PricingScreenState extends State<PricingScreen> {
                     style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14), textAlign: TextAlign.center),
                 if (_subscription != null) ...[
                   const SizedBox(height: 16),
-                  _CurrentPlanBanner(subscription: _subscription!),
+                  _CurrentPlanBanner(
+                      subscription: _subscription!,
+                      plans: _plans,
+                      customTestEnabled: _customTestEnabled),
                 ],
                 if (_durations.length > 1) ...[
                   const SizedBox(height: 20),
@@ -443,19 +457,35 @@ class _PricingScreenState extends State<PricingScreen> {
 /// generation quota — the single most common reason someone opens this page.
 class _CurrentPlanBanner extends StatelessWidget {
   final Map<String, dynamic> subscription;
-  const _CurrentPlanBanner({required this.subscription});
+  /// The same list the cards are built from — the tier's display name belongs
+  /// to the server, and a map here went stale twice already (₹999 was renamed
+  /// Platform while this still called it Plus).
+  final List<dynamic> plans;
+  /// Quota for a switched-off feature is not a benefit, it is a false promise.
+  final bool customTestEnabled;
+  const _CurrentPlanBanner({
+    required this.subscription,
+    required this.plans,
+    required this.customTestEnabled,
+  });
+
+  String _planLabel(String tier) {
+    for (final p in plans) {
+      if (p['tier_key'] == tier) return p['display_name'] as String? ?? 'Paid';
+    }
+    return 'Paid';
+  }
 
   @override
   Widget build(BuildContext context) {
     final premium = subscription['is_premium'] == true;
+    final trial = subscription['is_trial'] == true;
     final validTill = subscription['valid_till'] as String?;
     final remaining = subscription['generations_remaining'];
     final limit = subscription['monthly_generation_limit'];
-    // Read the tier straight off `plan` — deriving it from is_elite/is_premium
-    // silently mislabels every tier that is neither, which Pro now is.
-    const names = {'free': 'Free', '999': 'Plus', '4999': 'Pro', '9999': 'Elite'};
-    final label = premium ? (names[subscription['plan']] ?? 'Paid') : 'Free';
+    final label = premium ? _planLabel(subscription['plan'] as String? ?? '') : 'Free';
     final workshopsLeft = subscription['workshops_remaining'];
+    final trialDaysLeft = subscription['trial_days_left'];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -472,12 +502,20 @@ class _CurrentPlanBanner extends StatelessWidget {
         Flexible(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             Text(
-              premium && validTill != null
-                  ? 'You are on $label — till ${_PricingScreenState._formatDate(validTill)}'
-                  : 'You are on the $label plan',
+              trial
+                  ? 'Free trial — full platform access'
+                  : premium && validTill != null
+                      ? 'You are on $label — till ${_PricingScreenState._formatDate(validTill)}'
+                      : 'You are on the $label plan',
               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
             ),
-            if (remaining is int && limit is int)
+            if (trial && trialDaysLeft is int && trialDaysLeft > 0)
+              Text(
+                  trialDaysLeft == 1
+                      ? 'Last day — subscribe to keep your access'
+                      : '$trialDaysLeft days left',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.success)),
+            if (customTestEnabled && remaining is int && limit is int)
               Text('$remaining of $limit Custom Test Series left this month',
                   style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
             if (workshopsLeft is int && workshopsLeft > 0)
