@@ -42,6 +42,8 @@ class _PricingScreenState extends State<PricingScreen> {
   /// never advertise a discount the checkout does not honour.
   Map<String, List<dynamic>> _quotes = {};
   List<int> _durations = const [1];
+  /// Server-configured, so changing the trial length needs no app release.
+  int _trialDays = 7;
   int _months = 1;
 
   Map<String, dynamic>? _quoteFor(String tierKey) {
@@ -94,6 +96,8 @@ class _PricingScreenState extends State<PricingScreen> {
     }
     try {
       _subscription = await ApiService.getStudentSubscription();
+      final d = _subscription?['trial_days'];
+      if (d is int && d > 0) _trialDays = d;
     } catch (_) {
       _subscription = null;
     }
@@ -118,6 +122,43 @@ class _PricingScreenState extends State<PricingScreen> {
       content: Text(msg),
       backgroundColor: error ? AppColors.error : AppColors.success,
     ));
+  }
+
+  bool get _canStartTrial {
+    final sub = _subscription;
+    // Only offer it to a signed-in student who has never taken one and is not
+    // already paying. The server enforces both; this just avoids showing a
+    // button that would come back 409.
+    return sub != null && sub['trial_used'] != true && sub['is_premium'] != true;
+  }
+
+  Future<void> _startTrial(String tierKey) async {
+    if (!await _isLoggedIn()) {
+      final signedIn = await _promptSignIn();
+      if (!signedIn) return;
+      await _loadSubscription();
+      if (mounted) setState(() {});
+    }
+    // Asked here for the same reason as at checkout: a Google account has no
+    // number, and this is what makes one-trial-per-person enforceable.
+    var phone = '';
+    if (_subscription?['has_phone'] != true) {
+      phone = await _askForPhone() ?? '';
+      if (phone.isEmpty) return;
+    }
+
+    setState(() => _busyTier = tierKey);
+    try {
+      final res = await ApiService.startFreeTrial(phone: phone);
+      await _loadSubscription();
+      if (!mounted) return;
+      setState(() => _busyTier = null);
+      _showSuccess('Your free trial', res['trial_end'] as String?);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busyTier = null);
+      _snack(e is ApiException ? e.message : 'Could not start the trial', error: true);
+    }
   }
 
   Future<void> _subscribe(String tierKey, String displayName) async {
@@ -374,6 +415,12 @@ class _PricingScreenState extends State<PricingScreen> {
                       onSubscribe: _isSelfServe(p)
                           ? () => _subscribe(tier, p['display_name'] as String? ?? 'Plan')
                           : null,
+                      // The trial grants exactly this tier, so it is offered
+                      // on this card rather than as a banner nobody reads.
+                      onStartTrial: _isSelfServe(p) && _canStartTrial
+                          ? () => _startTrial(tier)
+                          : null,
+                      trialDays: _trialDays,
                       onTalkToUs: _isSelfServe(p) || tier == 'free'
                           ? null
                           : () => context.push('/partner'),
@@ -514,6 +561,10 @@ class _PlanCard extends StatelessWidget {
   final bool disabled;
   final VoidCallback? onSubscribe;
   final VoidCallback? onTalkToUs;
+  /// Offered on the paid card to a student who has never trialled — the trial
+  /// grants exactly this tier, so it belongs on the card that describes it.
+  final VoidCallback? onStartTrial;
+  final int trialDays;
 
   const _PlanCard({
     required this.plan,
@@ -524,6 +575,8 @@ class _PlanCard extends StatelessWidget {
     required this.disabled,
     this.onSubscribe,
     this.onTalkToUs,
+    this.onStartTrial,
+    this.trialDays = 7,
   });
 
   @override
@@ -610,6 +663,22 @@ class _PlanCard extends StatelessWidget {
 
   Widget? _cta(BuildContext context) {
     final highlighted = plan['is_highlighted'] == true;
+    if (onStartTrial != null) {
+      return FilledButton(
+        onPressed: busy || disabled ? null : onStartTrial,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.success,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+        ),
+        child: busy
+            ? const SizedBox(
+                height: 18, width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Text('Start $trialDays-day free trial',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
+      );
+    }
     if (isCurrent && onSubscribe == null) {
       // Free tier the student is already on — nothing to sell.
       return null;

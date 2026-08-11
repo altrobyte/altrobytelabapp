@@ -711,6 +711,21 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  /// Starts the free platform trial. [phone] is required when the account has
+  /// no real number of its own — the trial is the one moment we can ask for
+  /// one before any money is involved, and it is what makes a trial limitable
+  /// to one per person rather than one per free Google account.
+  static Future<Map<String, dynamic>> startFreeTrial({String phone = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
+    final res = await http.post(
+      Uri.parse(ApiConstants.studentTrialStart()),
+      headers: _headers(token),
+      body: jsonEncode({'phone': phone}),
+    );
+    return _parse(res);
+  }
+
   /// Public feature flags. Served to signed-out visitors too, so the UI and
   /// the API always agree on what is available.
   static Future<Map<String, dynamic>> getPlatformFeatures() async {

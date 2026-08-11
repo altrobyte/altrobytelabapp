@@ -109,6 +109,7 @@ class ApiConstants {
   static String studentSubscribe() => '$baseUrl/student/subscribe';
   static String studentSubscriptionVerify() => '$baseUrl/student/subscription/verify';
   static String studentSubscriptionQuotes() => '$baseUrl/student/subscription/quotes';
+  static String studentTrialStart() => '$baseUrl/student/trial/start';
 
   // student self-practice generation
   static String studentGenerateTest() => '$baseUrl/student/tests/generate';
