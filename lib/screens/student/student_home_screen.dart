@@ -658,7 +658,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             // students actually ask for. Placed above the
                             // module list because a list of modules is what
                             // they are confused BY. ──
-                            _RoadmapCard(onTap: () => context.push('/roadmap/embedded-engineer')),
+                            _RoadmapCard(onTap: () => context.push('/roadmap/product-engineering')),
                             const SizedBox(height: 28),
 
                             // ── Continue Training: only modules that actually have
@@ -2824,7 +2824,7 @@ class _RoadmapCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                         color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
-                Text('What to learn, in what order — ending at a paid Challenge',
+                Text('4 months · 3-4 real products · PCB to Cloud to AI',
                     style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.85),
                         fontSize: 12,

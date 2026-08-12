@@ -112,6 +112,7 @@ class ApiConstants {
   static String studentTrialStart() => '$baseUrl/student/trial/start';
   static String roadmaps() => '$baseUrl/roadmaps';
   static String roadmap(String slug) => '$baseUrl/roadmaps/$slug';
+  static String roadmapStepToggle(int id) => '$baseUrl/roadmaps/steps/$id/toggle';
 
   // student self-practice generation
   static String studentGenerateTest() => '$baseUrl/student/tests/generate';

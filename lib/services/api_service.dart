@@ -728,6 +728,15 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Ticks or unticks one curriculum item. Returns the new state.
+  static Future<Map<String, dynamic>> toggleRoadmapStep(int stepId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
+    final res = await http.post(Uri.parse(ApiConstants.roadmapStepToggle(stepId)),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
   /// Starts the free platform trial. [phone] is required when the account has
   /// no real number of its own — the trial is the one moment we can ask for
   /// one before any money is involved, and it is what makes a trial limitable
