@@ -544,6 +544,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                         padding: EdgeInsets.only(top: isMobile ? 16 : 12, bottom: 16),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
+                            // ── The roadmap, first, before anything else. It is
+                            // the premium programme and the thing that turns a
+                            // free visitor into a paying one, so it does not sit
+                            // below a fold. Everything under it is material; this
+                            // is the reason to want any of it. ──
+                            _RoadmapCard(onTap: () => context.push('/roadmap/product-engineering')),
+                            const SizedBox(height: 24),
+
                             // ── Hero moment: continue an in-progress module, else the
                             // featured live session — never both at once. ──
                             Consumer<TrainingModuleProvider>(
@@ -652,14 +660,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               ),
                               const SizedBox(height: 28),
                             ],
-
-                            // ── Roadmap: the answer to "what do I learn, in
-                            // what order, and am I on track" — the thing
-                            // students actually ask for. Placed above the
-                            // module list because a list of modules is what
-                            // they are confused BY. ──
-                            _RoadmapCard(onTap: () => context.push('/roadmap/product-engineering')),
-                            const SizedBox(height: 28),
 
                             // ── Continue Training: only modules that actually have
                             // content — an empty coaching gets no section at all,
@@ -2785,8 +2785,10 @@ class _FooterLink extends StatelessWidget {
   }
 }
 
-/// Entry point to the roadmap. A single card rather than a menu item: the
-/// path is the pitch, and it has to be visible without hunting for it.
+/// Entry point to the roadmap — the first thing on the homepage.
+///
+/// It has to carry three facts before a tap: this is long, it is structured,
+/// and it ends somewhere worth reaching. A plain menu row carries none of them.
 class _RoadmapCard extends StatelessWidget {
   final VoidCallback onTap;
   const _RoadmapCard({required this.onTap});
@@ -2797,44 +2799,106 @@ class _RoadmapCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF12326B), Color(0xFF1565C0)],
+              colors: [Color(0xFF0B2450), Color(0xFF16407F), Color(0xFF1565C0)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0B2450).withValues(alpha: 0.25),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
-              child: const Icon(Icons.route_rounded, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Your roadmap',
-                    style: GoogleFonts.poppins(
-                        color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 3),
-                Text('4 months · 3-4 real products · PCB to Cloud to AI',
+            ],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFC107),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('FLAGSHIP PROGRAM',
                     style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 12,
-                        height: 1.35)),
-              ]),
-            ),
-            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.7,
+                        color: const Color(0xFF3E2700))),
+              ),
+              const Spacer(),
+              Icon(Icons.arrow_forward_rounded,
+                  color: Colors.white.withValues(alpha: 0.9), size: 20),
+            ]),
+            const SizedBox(height: 14),
+            Text('Product Engineering Program',
+                style: GoogleFonts.poppins(
+                    color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700, height: 1.2)),
+            const SizedBox(height: 6),
+            Text('Build 3-4 real industrial products — PCB in your hand, cloud, AI, portfolio',
+                style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.85), fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 16),
+            // The ladder, stated. Seeing where it ends is what makes someone
+            // ask whether they would really get there on their own.
+            Row(children: [
+              for (final l in const [
+                ('Foundation', Color(0xFF66BB6A)),
+                ('Intermediate', Color(0xFF42A5F5)),
+                ('Advanced', Color(0xFFAB47BC)),
+                ('Industry', Color(0xFFFF9800)),
+              ]) ...[
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(height: 3, decoration: BoxDecoration(
+                        color: l.$2, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(height: 5),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(l.$1,
+                          style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.75))),
+                    ),
+                  ]),
+                ),
+                const SizedBox(width: 6),
+              ],
+            ]),
+            const SizedBox(height: 16),
+            Row(children: [
+              _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
+              const SizedBox(width: 14),
+              _MiniFact(icon: Icons.checklist_rounded, label: '165 milestones'),
+              const SizedBox(width: 14),
+              _MiniFact(icon: Icons.memory_rounded, label: 'Real PCB'),
+            ]),
           ]),
         ),
       ),
     );
   }
+}
+
+class _MiniFact extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MiniFact({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),
+        const SizedBox(width: 4),
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 11, color: Colors.white.withValues(alpha: 0.88))),
+      ]);
 }

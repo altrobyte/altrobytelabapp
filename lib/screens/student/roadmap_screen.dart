@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
@@ -141,6 +142,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                   () => _open.contains(id) ? _open.remove(id) : _open.add(id)),
                               onTick: _toggle,
                             ),
+                          const SizedBox(height: 8),
+                          _EnrollCta(roadmap: r),
                         ],
                       ),
                     ),
@@ -282,6 +285,14 @@ class _Node extends StatelessWidget {
   bool get _tickable => _kind == 'topic' || _kind == 'deliverable';
   bool get _complete => step['complete'] == true;
   bool get _current => step['is_current'] == true;
+
+  /// True only for the innermost current node. The server marks the whole
+  /// chain so any level can be highlighted; showing the badge on all three at
+  /// once just repeats itself.
+  bool get _isDeepestCurrent {
+    if (!_current) return false;
+    return !_children.any((c) => (c as Map)['is_current'] == true);
+  }
   List get _children => (step['children'] as List?) ?? [];
 
   @override
@@ -379,11 +390,19 @@ class _Node extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(step['title'] as String? ?? '',
-                  style: GoogleFonts.poppins(
-                      fontSize: isMonth ? 14.5 : 13,
-                      fontWeight: isMonth ? FontWeight.w600 : FontWeight.w500,
-                      color: AppColors.textPrimary)),
+              Row(children: [
+                Flexible(
+                  child: Text(step['title'] as String? ?? '',
+                      style: GoogleFonts.poppins(
+                          fontSize: isMonth ? 14.5 : 13,
+                          fontWeight: isMonth ? FontWeight.w600 : FontWeight.w500,
+                          color: AppColors.textPrimary)),
+                ),
+                if ((step['level_label'] as String? ?? '').isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _LevelPill(label: step['level_label'] as String, index: (step['order'] as int?) ?? 0),
+                ],
+              ]),
               if (signedIn && total > 0) ...[
                 const SizedBox(height: 5),
                 Row(children: [
@@ -408,7 +427,7 @@ class _Node extends StatelessWidget {
               ],
             ]),
           ),
-          if (_current)
+          if (_isDeepestCurrent)
             Container(
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -492,4 +511,120 @@ class _ErrorState extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Foundation -> Industry-ready. Colour carries the progression as much as the
+/// word does, so the jump in difficulty is legible before anything is read.
+class _LevelPill extends StatelessWidget {
+  final String label;
+  final int index;
+  const _LevelPill({required this.label, required this.index});
+
+  static const _colors = [
+    Color(0xFF2E7D32), // Foundation
+    Color(0xFF0277BD), // Intermediate
+    Color(0xFF6A1B9A), // Advanced
+    Color(0xFFE65100), // Industry-ready
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _colors[index.clamp(0, _colors.length - 1)];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.11),
+        border: Border.all(color: c.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label.toUpperCase(),
+          style: GoogleFonts.inter(
+              fontSize: 8.5, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: c)),
+    );
+  }
+}
+
+/// The conversion point. Everything above proves the programme is real and
+/// long; this says the obvious thing out loud — you could try this alone — and
+/// then names what alone does not get you.
+class _EnrollCta extends StatelessWidget {
+  final Map<String, dynamic> roadmap;
+  const _EnrollCta({required this.roadmap});
+
+  Future<void> _openWhatsApp(BuildContext context) async {
+    final number = roadmap['whatsapp_number'] as String? ?? '';
+    final title = roadmap['title'] as String? ?? 'the programme';
+    final text = Uri.encodeComponent(
+        "Hi! I saw the $title roadmap on your site and I'd like to join. "
+        "Could you tell me about the next batch and the fees?");
+    // No number configured yet — send them somewhere real rather than opening
+    // a broken link.
+    final uri = number.isEmpty
+        ? Uri.parse('/partner')
+        : Uri.parse('https://wa.me/$number?text=$text');
+    if (number.isEmpty) {
+      if (context.mounted) Navigator.pushNamed(context, '/partner');
+      return;
+    }
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open WhatsApp')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final headline = roadmap['cta_headline'] as String? ?? '';
+    final body = roadmap['cta_body'] as String? ?? '';
+    if (headline.isEmpty && body.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B2450), Color(0xFF16407F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (headline.isNotEmpty)
+          Text(headline,
+              style: GoogleFonts.poppins(
+                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600, height: 1.3)),
+        if (body.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(body,
+              style: GoogleFonts.inter(
+                  color: Colors.white.withValues(alpha: 0.88), fontSize: 13.5, height: 1.6)),
+        ],
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () => _openWhatsApp(context),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.chat_rounded, size: 19, color: Colors.white),
+            label: Text('Talk to us about joining',
+                style: GoogleFonts.poppins(
+                    fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: Text('Ask about the next batch, the fees, or anything else',
+              style: GoogleFonts.inter(
+                  color: Colors.white.withValues(alpha: 0.6), fontSize: 11.5)),
+        ),
+      ]),
+    );
+  }
 }
