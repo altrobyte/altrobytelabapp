@@ -54,6 +54,7 @@ import 'screens/enquiries/partner_enquiry_screen.dart';
 import 'screens/enquiries/enquiries_admin_screen.dart';
 import 'screens/mock_interview/mock_interview_screen.dart';
 import 'screens/pricing/pricing_screen.dart';
+import 'screens/student/roadmap_screen.dart';
 import 'screens/pricing/pricing_admin_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_page_view_screen.dart';
@@ -249,6 +250,13 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(path: '/partner', builder: (_, __) => const PartnerEnquiryScreen()),
         // Pricing — public, no login.
         GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
+        // Public on purpose: the roadmap is the pitch, so it must be
+        // shareable as a link to someone who has never signed in.
+        GoRoute(
+          path: '/roadmap/:slug',
+          builder: (_, state) =>
+              RoadmapScreen(slug: state.pathParameters['slug'] ?? ''),
+        ),
         // TEMPORARY direct-link pre-launch shortcuts — remove before launch.
         GoRoute(
           path: '/admin-access',

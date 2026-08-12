@@ -110,6 +110,8 @@ class ApiConstants {
   static String studentSubscriptionVerify() => '$baseUrl/student/subscription/verify';
   static String studentSubscriptionQuotes() => '$baseUrl/student/subscription/quotes';
   static String studentTrialStart() => '$baseUrl/student/trial/start';
+  static String roadmaps() => '$baseUrl/roadmaps';
+  static String roadmap(String slug) => '$baseUrl/roadmaps/$slug';
 
   // student self-practice generation
   static String studentGenerateTest() => '$baseUrl/student/tests/generate';

@@ -711,6 +711,23 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  /// The published roadmaps, with this student's progress when signed in.
+  /// Public: seeing the path is the pitch, so a signed-out visitor gets the
+  /// same list with progress simply absent.
+  static Future<List<dynamic>> getRoadmaps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
+    final res = await http.get(Uri.parse(ApiConstants.roadmaps()), headers: _headers(token));
+    return (_parse(res)['roadmaps'] as List?) ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getRoadmap(String slug) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
+    final res = await http.get(Uri.parse(ApiConstants.roadmap(slug)), headers: _headers(token));
+    return _parse(res);
+  }
+
   /// Starts the free platform trial. [phone] is required when the account has
   /// no real number of its own — the trial is the one moment we can ask for
   /// one before any money is involved, and it is what makes a trial limitable
