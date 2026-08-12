@@ -476,7 +476,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           // cards' own action buttons, which is worse than what it was
           // avoiding. bottom:88 sits above the Chat AI FAB when there is
           // one, and low enough to clear the carousel's next-arrow.
-          const Positioned(right: 16, bottom: 88, child: _ActivityFeedTicker()),
+          Positioned(
+              right: 12,
+              bottom: isMobile ? 14 : 88,
+              child: const _ActivityFeedTicker()),
         ],
       ),
       bottomNavigationBar: isMobile
@@ -997,9 +1000,21 @@ class _HomeHeader extends StatelessWidget {
                                   style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
                           ],
                         )
-                      : Text('AltrobyteLab',
-                          style: GoogleFonts.poppins(
-                              color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+                      // scaleDown rather than ellipsis: the brand name broke
+                      // across two lines as "AltrobyteL / ab" on a narrow
+                      // phone, and truncating it to "Altrobyte…" would be no
+                      // better. It shrinks to fit instead.
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text('AltrobyteLab',
+                              maxLines: 1,
+                              softWrap: false,
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600)),
+                        ),
                 ),
                 const _WhatsAppButton(),
                 if (isLoggedIn) ...[
@@ -1385,6 +1400,7 @@ class _ActivityFeedTickerState extends State<_ActivityFeedTicker> {
   int _index = 0;
   Timer? _timer;
   bool _dismissed = false;
+  int _shown = 0;
 
   @override
   void initState() {
@@ -1397,8 +1413,18 @@ class _ActivityFeedTickerState extends State<_ActivityFeedTicker> {
       final items = await ApiService.getActivityFeed(limit: 10);
       if (!mounted || items.isEmpty) return;
       setState(() => _items = items);
-      _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      // Every 5s was relentless on a phone: whatever you were reading, a
+      // card slid over it twelve times a minute. Slower, and it retires after
+      // a few turns — social proof works once; after that it is just a thing
+      // covering the page.
+      _timer = Timer.periodic(const Duration(seconds: 11), (t) {
         if (!mounted) return;
+        _shown++;
+        if (_shown >= 6) {
+          t.cancel();
+          setState(() => _dismissed = true);
+          return;
+        }
         setState(() => _index = (_index + 1) % _items.length);
       });
     } catch (_) {}
@@ -1427,7 +1453,8 @@ class _ActivityFeedTickerState extends State<_ActivityFeedTicker> {
         elevation: 4,
         shadowColor: Colors.black.withValues(alpha: 0.2),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 260),
+          constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width < 600 ? 215 : 260),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
