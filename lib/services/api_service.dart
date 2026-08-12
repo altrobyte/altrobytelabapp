@@ -711,6 +711,63 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  // ── Showcase admin ────────────────────────────────────────────────────
+  static Future<List<dynamic>> adminGetShowcase(String kind) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/showcase-admin/all?kind=$kind'),
+        headers: _headers(token));
+    return (_parse(res)['items'] as List?) ?? [];
+  }
+
+  static Future<Map<String, dynamic>> adminSaveShowcase(
+      Map<String, dynamic> body, {int? id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final url = id == null
+        ? '${ApiConstants.baseUrl}/showcase-admin'
+        : '${ApiConstants.baseUrl}/showcase-admin/$id';
+    final res = id == null
+        ? await http.post(Uri.parse(url), headers: _headers(token), body: jsonEncode(body))
+        : await http.put(Uri.parse(url), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<void> adminDeleteShowcase(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/showcase-admin/$id'), headers: _headers(token));
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> adminAddShowcaseMedia(
+      int itemId, String mediaType, String url,
+      {String caption = '', int orderIndex = 0}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/showcase-admin/$itemId/media'),
+        headers: _headers(token),
+        body: jsonEncode({
+          'media_type': mediaType,
+          'url': url,
+          'caption': caption,
+          'order_index': orderIndex,
+        }));
+    return _parse(res);
+  }
+
+  static Future<void> adminDeleteShowcaseMedia(int mediaId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/showcase-admin/media/$mediaId'),
+        headers: _headers(token));
+    _parse(res);
+  }
+
   /// Admin-curated Top Stories or Lab Setups. Media comes down with the list
   /// so the rotating strip does not stutter on its first turn.
   static Future<List<dynamic>> getShowcase(String kind) async {

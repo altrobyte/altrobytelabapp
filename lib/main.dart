@@ -55,6 +55,7 @@ import 'screens/enquiries/enquiries_admin_screen.dart';
 import 'screens/mock_interview/mock_interview_screen.dart';
 import 'screens/pricing/pricing_screen.dart';
 import 'screens/student/roadmap_screen.dart';
+import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/pricing/pricing_admin_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_page_view_screen.dart';
@@ -145,6 +146,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/broadcast', '/settings',
           '/live-sessions-admin', '/events-admin', '/jobs-admin', '/enquiries-admin', '/pricing-admin',
           '/platform-users', '/challenges-admin', '/home-strip-admin', '/activity-feed-admin',
+          '/showcase-admin',
         ];
         final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
 
@@ -273,6 +275,10 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(path: '/partner', builder: (_, __) => const PartnerEnquiryScreen()),
         // Pricing — public, no login.
         GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
+        // Admin: Top Stories + Lab Setups. Login-protected via the list above.
+        GoRoute(
+            path: '/showcase-admin',
+            builder: (_, __) => const ShowcaseAdminScreen()),
         // Public on purpose: the roadmap is the pitch, so it must be
         // shareable as a link to someone who has never signed in.
         GoRoute(
