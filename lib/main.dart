@@ -161,6 +161,29 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Everything else (/, /:slug branded landing, student/super/manager/test) is public.
         return null;
       },
+      // Without this an unmatched URL fails silently and looks like a
+      // redirect to the homepage, which is exactly what made a broken link
+      // impossible to diagnose. Say what happened and offer a way out.
+      errorBuilder: (context, state) => Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.link_off_rounded, size: 44),
+              const SizedBox(height: 12),
+              Text('This page does not exist',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              Text(state.uri.toString(), textAlign: TextAlign.center),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: () => context.go('/'),
+                child: const Text('Go home'),
+              ),
+            ]),
+          ),
+        ),
+      ),
       refreshListenable: auth,
       routes: [
         // Unified homepage — public feed for everyone, personalized when

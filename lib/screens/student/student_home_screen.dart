@@ -653,6 +653,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               const SizedBox(height: 28),
                             ],
 
+                            // ── Roadmap: the answer to "what do I learn, in
+                            // what order, and am I on track" — the thing
+                            // students actually ask for. Placed above the
+                            // module list because a list of modules is what
+                            // they are confused BY. ──
+                            _RoadmapCard(onTap: () => context.push('/roadmap/embedded-engineer')),
+                            const SizedBox(height: 28),
+
                             // ── Continue Training: only modules that actually have
                             // content — an empty coaching gets no section at all,
                             // not a "0 modules" placeholder. ──
@@ -2777,3 +2785,56 @@ class _FooterLink extends StatelessWidget {
   }
 }
 
+/// Entry point to the roadmap. A single card rather than a menu item: the
+/// path is the pitch, and it has to be visible without hunting for it.
+class _RoadmapCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _RoadmapCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF12326B), Color(0xFF1565C0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(children: [
+            Container(
+              padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.route_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Your roadmap',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 3),
+                Text('What to learn, in what order — ending at a paid Challenge',
+                    style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        height: 1.35)),
+              ]),
+            ),
+            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+          ]),
+        ),
+      ),
+    );
+  }
+}
