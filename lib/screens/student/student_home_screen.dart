@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/showcase_widgets.dart';
+import 'showcase_screens.dart';
 import '../../utils/formatters.dart';
 import '../../constants/api_constants.dart';
 import '../../l10n/app_localizations.dart';
@@ -57,6 +59,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   /// server is the authority (/platform/features); this only decides whether
   /// to show an entry point for something the API would refuse anyway.
   bool _customTestEnabled = false;
+  /// Admin-curated strips. Empty until an admin adds one, and each section
+  /// renders nothing at all rather than an empty placeholder — a "0 stories"
+  /// heading is worse than no heading.
+  List<dynamic> _stories = [];
+  List<dynamic> _labSetups = [];
   bool _loading = true;
   String? _feedError;
 
@@ -270,6 +277,17 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       _studentName = prefs.getString('student_name') ?? 'Student';
       _instituteName = prefs.getString('student_institute_name') ?? '';
     });
+
+    // Admin-curated strips. Each is optional and independent: a failure in one
+    // must not cost the page the other, and neither may block the feed.
+    try {
+      final stories = await ApiService.getShowcase('story');
+      if (mounted) setState(() => _stories = stories);
+    } catch (_) {}
+    try {
+      final setups = await ApiService.getShowcase('lab_setup');
+      if (mounted) setState(() => _labSetups = setups);
+    } catch (_) {}
 
     // This only feeds the institute tests/notices/results section — it must
     // never block the rest of the home page (Practice/Training/Dev Tools
@@ -590,6 +608,84 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               },
                             ),
                             const SizedBox(height: 20),
+
+                            // ── Top Stories: the proof. Everything else on
+                            // this page is a claim about what students get;
+                            // these are photographs of them getting it. Each
+                            // card cycles its own media so one card with five
+                            // photos shows five. ──
+                            if (_stories.isNotEmpty) ...[
+                              ShowcaseHeader(
+                                title: 'Top Stories',
+                                subtitle: 'What our students are building',
+                                onViewAll: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ShowcaseAlbumScreen(kind: 'story'))),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 210,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _stories.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
+                                  itemBuilder: (context, i) {
+                                    final item = _stories[i] as Map<String, dynamic>;
+                                    return StoryCard(
+                                      item: item,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                ShowcaseDetailScreen(item: item)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                            ],
+
+                            // ── Choose your lab setup: the core product. Square
+                            // cards with a price, because a lab setup is a thing
+                            // you buy, not a thing you read. ──
+                            if (_labSetups.isNotEmpty) ...[
+                              ShowcaseHeader(
+                                title: 'Choose your lab setup',
+                                subtitle: 'Everything you need to build, in one box',
+                                onViewAll: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const ShowcaseAlbumScreen(
+                                            kind: 'lab_setup'))),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 268,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _labSetups.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                                  itemBuilder: (context, i) {
+                                    final item = _labSetups[i] as Map<String, dynamic>;
+                                    return LabSetupCard(
+                                      item: item,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                ShowcaseDetailScreen(item: item)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                            ],
 
                             if (_waNumber != null && _waNumber!.isNotEmpty) ...[
                               Padding(

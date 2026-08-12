@@ -711,6 +711,18 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  /// Admin-curated Top Stories or Lab Setups. Media comes down with the list
+  /// so the rotating strip does not stutter on its first turn.
+  static Future<List<dynamic>> getShowcase(String kind) async {
+    final res = await http.get(Uri.parse(ApiConstants.showcase(kind)));
+    return (_parse(res)['items'] as List?) ?? [];
+  }
+
+  static Future<Map<String, dynamic>> getShowcaseItem(int id) async {
+    final res = await http.get(Uri.parse(ApiConstants.showcaseItem(id)));
+    return _parse(res);
+  }
+
   /// The published roadmaps, with this student's progress when signed in.
   /// Public: seeing the path is the pitch, so a signed-out visitor gets the
   /// same list with progress simply absent.
