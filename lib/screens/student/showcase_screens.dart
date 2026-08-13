@@ -415,6 +415,15 @@ class _BodyRenderer extends StatelessWidget {
   // "LEDs" with a quantity of "Red, Green, Yellow — 1 each".
   static final _specLine = RegExp(r'^\s*[•\-\*]\s*(.+)\s+[—–-]\s+(.+)$');
 
+  /// The other way people write a parts list: name, a run of spaces, quantity.
+  ///
+  /// This is what a list pasted from a spec sheet looks like, and it is what
+  /// the first version of this renderer missed entirely — it only understood
+  /// bulleted lines, so an existing list changed not at all and looked exactly
+  /// as broken as before. The quantity must be short and contain a digit, so a
+  /// sentence that happens to hold a double space is not turned into a row.
+  static final _columnLine = RegExp(r'^\s*(\S.*?\S)\s{2,}(\d[\w. ]{0,11})\s*$');
+
   @override
   Widget build(BuildContext context) {
     final lines = body.split('\n');
@@ -429,7 +438,7 @@ class _BodyRenderer extends StatelessWidget {
         continue;
       }
 
-      final spec = _specLine.firstMatch(raw);
+      final spec = _specLine.firstMatch(raw) ?? _columnLine.firstMatch(raw);
       if (spec != null) {
         out.add(_SpecRow(name: spec.group(1)!.trim(), qty: spec.group(2)!.trim()));
         continue;
@@ -439,6 +448,7 @@ class _BodyRenderer extends StatelessWidget {
       // is what keeps "Sensors & display" from rendering as a sentence.
       final next = i + 1 < lines.length ? lines[i + 1] : '';
       final headsAList = _specLine.hasMatch(next) ||
+          _columnLine.hasMatch(next) ||
           next.trimLeft().startsWith('•') ||
           next.trimLeft().startsWith('-');
       if (headsAList && line.length <= 48) {
