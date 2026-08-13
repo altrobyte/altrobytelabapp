@@ -38,6 +38,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   /// the rest of the list.
   final Set<int> _busy = {};
 
+  /// Which delivery plan is being viewed. The syllabus is identical across
+  /// plans - only the pace changes - so this switches the header, never the
+  /// steps.
+  int _plan = 0;
+
   @override
   void initState() {
     super.initState();
@@ -128,7 +133,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(14, 14, 14, 48),
                         children: [
-                          _Header(roadmap: r),
+                          _Header(
+                            roadmap: r,
+                            planIndex: _plan,
+                            onPlanChanged: (i) => setState(() => _plan = i),
+                          ),
                           const SizedBox(height: 18),
                           for (final m in (r['steps'] as List?) ?? [])
                             _Node(
@@ -143,7 +152,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                               onTick: _toggle,
                             ),
                           const SizedBox(height: 8),
-                          _EnrollCta(roadmap: r),
+                          _EnrollCta(roadmap: r, planIndex: _plan),
                         ],
                       ),
                     ),
@@ -153,13 +162,27 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 
 class _Header extends StatelessWidget {
   final Map<String, dynamic> roadmap;
-  const _Header({required this.roadmap});
+  final int planIndex;
+  final ValueChanged<int> onPlanChanged;
+  const _Header({
+    required this.roadmap,
+    required this.planIndex,
+    required this.onPlanChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final done = (roadmap['steps_done'] as int?) ?? 0;
     final total = (roadmap['step_count'] as int?) ?? 0;
-    final duration = roadmap['duration_label'] as String? ?? '';
+    final plans = (roadmap['plans'] as List?) ?? [];
+    final plan = plans.isEmpty
+        ? null
+        : plans[planIndex.clamp(0, plans.length - 1)] as Map<String, dynamic>;
+    // Duration comes from the plan when there is one; the roadmap's own label
+    // is the fallback for a programme with a single fixed length.
+    final duration = plan?['duration_label'] as String? ??
+        roadmap['duration_label'] as String? ??
+        '';
     final outcome = roadmap['outcome'] as String? ?? '';
     final signedIn = roadmap['signed_in'] == true;
 
@@ -178,11 +201,72 @@ class _Header extends StatelessWidget {
           Text(roadmap['subtitle'] as String,
               style: GoogleFonts.inter(
                   color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, height: 1.4)),
+        if (plans.length > 1) ...[
+          const SizedBox(height: 16),
+          // Same syllabus, two paces. The switch sits above everything because
+          // "can I actually fit this in?" is the first question, and the
+          // answer changes nothing below it.
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Row(children: [
+              for (var i = 0; i < plans.length; i++)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => onPlanChanged(i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      decoration: BoxDecoration(
+                        color: i == planIndex ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Column(children: [
+                        Text((plans[i] as Map)['name'] as String? ?? '',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: i == planIndex
+                                    ? const Color(0xFF0B2450)
+                                    : Colors.white)),
+                        const SizedBox(height: 1),
+                        Text((plans[i] as Map)['duration_label'] as String? ?? '',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                color: i == planIndex
+                                    ? const Color(0xFF0B2450).withValues(alpha: 0.65)
+                                    : Colors.white.withValues(alpha: 0.7))),
+                      ]),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ],
         const SizedBox(height: 14),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (duration.isNotEmpty) _Chip(icon: Icons.schedule_rounded, label: duration),
+          if ((plan?['schedule_label'] as String? ?? '').isNotEmpty)
+            _Chip(icon: Icons.calendar_month_rounded, label: plan!['schedule_label'] as String),
+          if ((plan?['hours_label'] as String? ?? '').isNotEmpty)
+            _Chip(icon: Icons.timer_outlined, label: plan!['hours_label'] as String),
+          if ((plan?['mode_label'] as String? ?? '').isNotEmpty)
+            _Chip(icon: Icons.location_on_outlined, label: plan!['mode_label'] as String),
           _Chip(icon: Icons.checklist_rounded, label: '$total milestones'),
         ]),
+        if ((plan?['note'] as String? ?? '').isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(plan!['note'] as String,
+              style: GoogleFonts.inter(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 12,
+                  height: 1.45)),
+        ],
         if (outcome.isNotEmpty) ...[
           const SizedBox(height: 16),
           Container(
@@ -549,13 +633,20 @@ class _LevelPill extends StatelessWidget {
 /// then names what alone does not get you.
 class _EnrollCta extends StatelessWidget {
   final Map<String, dynamic> roadmap;
-  const _EnrollCta({required this.roadmap});
+  final int planIndex;
+  const _EnrollCta({required this.roadmap, this.planIndex = 0});
 
   Future<void> _openWhatsApp(BuildContext context) async {
     final number = roadmap['whatsapp_number'] as String? ?? '';
     final title = roadmap['title'] as String? ?? 'the programme';
+    final plans = (roadmap['plans'] as List?) ?? [];
+    // Naming the plan they were looking at saves the first two messages of
+    // every conversation.
+    final planName = plans.isEmpty
+        ? ''
+        : ' (' + ((plans[planIndex.clamp(0, plans.length - 1)] as Map)['name'] as String? ?? '') + ' batch)';
     final text = Uri.encodeComponent(
-        "Hi! I saw the $title roadmap on your site and I'd like to join. "
+        "Hi! I saw the $title roadmap on your site and I'd like to join$planName. "
         "Could you tell me about the next batch and the fees?");
     // No number configured yet — send them somewhere real rather than opening
     // a broken link.
