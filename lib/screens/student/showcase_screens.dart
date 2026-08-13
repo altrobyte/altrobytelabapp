@@ -285,9 +285,7 @@ class _ShowcaseDetailScreenState extends State<ShowcaseDetailScreen> {
             ],
             if (body.isNotEmpty) ...[
               const SizedBox(height: 18),
-              Text(body,
-                  style: GoogleFonts.inter(
-                      fontSize: 14, height: 1.65, color: AppColors.textPrimary)),
+              _BodyRenderer(body: body),
             ],
             if (ctaLabel.isNotEmpty && (_item['cta_url'] as String? ?? '').isNotEmpty) ...[
               const SizedBox(height: 24),
@@ -390,6 +388,137 @@ class _Empty extends StatelessWidget {
           const SizedBox(height: 12),
           Text(message,
               style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 13.5)),
+        ]),
+      );
+}
+
+/// Renders the admin's body text as a product page rather than a wall of text.
+///
+/// Admins write plain text; asking them for structured spec rows would mean a
+/// second editor and a schema for something they can already type. So the
+/// shape is inferred:
+///
+///   "• Name — 2 pcs"   a spec row: name left, quantity right-aligned
+///   "Heading"          a section heading (a short line before bullets)
+///   anything else      a paragraph
+///
+/// Space-aligned columns were the first attempt at this and they only line up
+/// in a monospace font; the page uses a proportional one, so every quantity
+/// landed in a different place.
+class _BodyRenderer extends StatelessWidget {
+  final String body;
+  const _BodyRenderer({required this.body});
+
+  // Greedy on the name so the split happens at the LAST separator, not the
+  // first: "LEDs — Red, Green, Yellow — 1 each" is one component whose name
+  // contains a dash, and a non-greedy match read it as a component called
+  // "LEDs" with a quantity of "Red, Green, Yellow — 1 each".
+  static final _specLine = RegExp(r'^\s*[•\-\*]\s*(.+)\s+[—–-]\s+(.+)$');
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = body.split('\n');
+    final out = <Widget>[];
+
+    for (var i = 0; i < lines.length; i++) {
+      final raw = lines[i];
+      final line = raw.trim();
+
+      if (line.isEmpty) {
+        out.add(const SizedBox(height: 14));
+        continue;
+      }
+
+      final spec = _specLine.firstMatch(raw);
+      if (spec != null) {
+        out.add(_SpecRow(name: spec.group(1)!.trim(), qty: spec.group(2)!.trim()));
+        continue;
+      }
+
+      // A short line immediately followed by bullets is a group heading. This
+      // is what keeps "Sensors & display" from rendering as a sentence.
+      final next = i + 1 < lines.length ? lines[i + 1] : '';
+      final headsAList = _specLine.hasMatch(next) ||
+          next.trimLeft().startsWith('•') ||
+          next.trimLeft().startsWith('-');
+      if (headsAList && line.length <= 48) {
+        out.add(Padding(
+          padding: EdgeInsets.only(top: out.isEmpty ? 0 : 6, bottom: 6),
+          child: Text(line.toUpperCase(),
+              style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                  color: AppColors.primary)),
+        ));
+        continue;
+      }
+
+      // A bullet with no quantity is still a bullet.
+      if (line.startsWith('•') || line.startsWith('- ')) {
+        out.add(Padding(
+          padding: const EdgeInsets.only(bottom: 5),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 9),
+              child: Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.textSecondary, shape: BoxShape.circle)),
+            ),
+            Expanded(
+              child: Text(line.replaceFirst(RegExp(r'^[•\-]\s*'), ''),
+                  style: GoogleFonts.inter(
+                      fontSize: 13.5, height: 1.5, color: AppColors.textPrimary)),
+            ),
+          ]),
+        ));
+        continue;
+      }
+
+      out.add(Text(line,
+          style: GoogleFonts.inter(
+              fontSize: 14, height: 1.65, color: AppColors.textPrimary)));
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: out);
+  }
+}
+
+/// One component: name on the left, quantity pinned right so a column of them
+/// lines up regardless of how long the names are.
+class _SpecRow extends StatelessWidget {
+  final String name;
+  final String qty;
+  const _SpecRow({required this.name, required this.qty});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(
+              bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06))),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Text(name,
+                style: GoogleFonts.inter(
+                    fontSize: 13.5, height: 1.35, color: AppColors.textPrimary)),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(qty,
+                style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary)),
+          ),
         ]),
       );
 }
