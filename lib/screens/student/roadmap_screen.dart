@@ -14,6 +14,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
@@ -103,6 +105,26 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     }
   }
 
+  /// The page is the pitch, so sharing it has to be one tap. The link is
+  /// public and carries an OG card, so what lands in a WhatsApp thread is the
+  /// programme poster rather than a bare URL.
+  Future<void> _share() async {
+    final r = _roadmap;
+    if (r == null) return;
+    final url = 'https://lab.altrobyte.com/roadmap/${widget.slug}';
+    final text = '${r['title']} — ${r['subtitle'] ?? ''}\n\n$url';
+    try {
+      await Share.share(text, subject: r['title'] as String?);
+    } catch (_) {
+      // Desktop browsers without the Web Share API land here.
+      await Clipboard.setData(ClipboardData(text: url));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Link copied')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = _roadmap;
@@ -113,6 +135,14 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (r != null)
+            IconButton(
+              tooltip: 'Share',
+              icon: const Icon(Icons.share_rounded, size: 21),
+              onPressed: _share,
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
