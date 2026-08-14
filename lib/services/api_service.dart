@@ -711,6 +711,53 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  // ── Roadmap curriculum admin ──────────────────────────────────────────
+  static Future<List<dynamic>> adminGetRoadmaps() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/roadmaps-admin/all'),
+        headers: _headers(token));
+    return (_parse(res)['roadmaps'] as List?) ?? [];
+  }
+
+  /// The curriculum as a tree. The server nests it and rolls progress up, so
+  /// the admin screen renders the same shape the student screen does.
+  static Future<List<dynamic>> adminGetRoadmapSteps(int roadmapId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/roadmaps-admin/$roadmapId/steps'),
+        headers: _headers(token));
+    return (_parse(res)['steps'] as List?) ?? [];
+  }
+
+  /// Creates when [id] is null (needs [roadmapId]), updates otherwise.
+  static Future<Map<String, dynamic>> adminSaveRoadmapStep(
+      Map<String, dynamic> body, {int? id, int? roadmapId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = id == null
+        ? await http.post(
+            Uri.parse('${ApiConstants.baseUrl}/roadmaps-admin/$roadmapId/steps'),
+            headers: _headers(token),
+            body: jsonEncode(body))
+        : await http.put(
+            Uri.parse('${ApiConstants.baseUrl}/roadmaps-admin/steps/$id'),
+            headers: _headers(token),
+            body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<void> adminDeleteRoadmapStep(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/roadmaps-admin/steps/$id'),
+        headers: _headers(token));
+    _parse(res);
+  }
+
   // ── Showcase admin ────────────────────────────────────────────────────
   static Future<List<dynamic>> adminGetShowcase(String kind) async {
     final prefs = await SharedPreferences.getInstance();
