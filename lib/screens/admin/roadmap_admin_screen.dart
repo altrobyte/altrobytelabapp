@@ -56,7 +56,12 @@ class _RoadmapAdminScreenState extends State<RoadmapAdminScreen> {
     try {
       _roadmaps = await ApiService.adminGetRoadmaps();
       if (_roadmaps.isNotEmpty) {
-        _selected = _roadmaps.first as Map<String, dynamic>;
+        // Default to the roadmap with the most steps rather than the first
+        // one. Sorting by id opened a near-empty placeholder and gave no way
+        // to reach the real curriculum.
+        final sorted = [..._roadmaps]..sort((a, b) =>
+            ((b['step_count'] as int?) ?? 0).compareTo((a['step_count'] as int?) ?? 0));
+        _selected = sorted.first as Map<String, dynamic>;
         await _loadSteps();
       }
     } catch (_) {}
@@ -223,12 +228,61 @@ class _RoadmapAdminScreenState extends State<RoadmapAdminScreen> {
               : Column(children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                     color: Colors.white,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(_selected!['title'] as String? ?? '',
-                          style: GoogleFonts.poppins(
-                              fontSize: 15, fontWeight: FontWeight.w600)),
+                      if (_roadmaps.length > 1)
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            value: _selected!['id'] as int,
+                            items: [
+                              for (final r in _roadmaps)
+                                DropdownMenuItem(
+                                  value: r['id'] as int,
+                                  child: Row(children: [
+                                    Flexible(
+                                      child: Text(r['title'] as String? ?? '',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w600)),
+                                    ),
+                                    if (r['is_published'] != true) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.textSecondary
+                                              .withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text('hidden',
+                                            style: GoogleFonts.inter(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textSecondary)),
+                                      ),
+                                    ],
+                                  ]),
+                                ),
+                            ],
+                            onChanged: (id) async {
+                              final r = _roadmaps.firstWhere((x) => x['id'] == id);
+                              setState(() {
+                                _selected = r as Map<String, dynamic>;
+                                _tree = [];
+                                _open.clear();
+                              });
+                              await _loadSteps();
+                            },
+                          ),
+                        )
+                      else
+                        Text(_selected!['title'] as String? ?? '',
+                            style: GoogleFonts.poppins(
+                                fontSize: 15, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 3),
                       Text(
                           '${_tree.length} stages · ${_countLeaves(_tree)} tickable items',
