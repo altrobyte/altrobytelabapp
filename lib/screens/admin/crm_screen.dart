@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 
 const _stageLabels = {
@@ -591,7 +592,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                     const SizedBox(height: 12),
                     _Card(
                       title: 'Recent conversation',
-                      subtitle: 'Read-only — reply from the WhatsApp dashboard',
+                      subtitle: 'What they sent us. The full thread, the AI '
+                          'replies and the reply box are on the WhatsApp dashboard.',
                       child: messages.isEmpty
                           ? Text('No messages yet.',
                               style: GoogleFonts.inter(
@@ -622,6 +624,24 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                               ],
                             ),
                     ),
+                    if ((_data?['dashboard_url'] as String? ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => launchUrl(
+                              Uri.parse(_data!['dashboard_url'] as String),
+                              mode: LaunchMode.externalApplication),
+                          icon: const Icon(Icons.open_in_new_rounded, size: 17),
+                          label: const Text('Open chat in WhatsApp dashboard'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11)),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 30),
                   ]),
       ),
