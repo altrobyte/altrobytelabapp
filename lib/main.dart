@@ -58,6 +58,7 @@ import 'screens/student/roadmap_screen.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
 import 'screens/admin/crm_screen.dart';
+import 'screens/admin/wa_messages_screen.dart';
 import 'screens/pricing/pricing_admin_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_page_view_screen.dart';
@@ -151,6 +152,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/showcase-admin',
           '/curriculum-admin',
           '/crm',
+          '/wa-messages',
         ];
         final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
 
@@ -287,6 +289,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             path: '/curriculum-admin',
             builder: (_, __) => const RoadmapAdminScreen()),
         GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
+        GoRoute(
+            path: '/wa-messages',
+            builder: (_, __) => const WaMessagesScreen()),
         // Public on purpose: the roadmap is the pitch, so it must be
         // shareable as a link to someone who has never signed in.
         GoRoute(

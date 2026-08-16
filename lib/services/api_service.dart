@@ -756,6 +756,15 @@ class ApiService {
     _parse(res);
   }
 
+  /// What WhatsApp messages exist, and what actually went out.
+  static Future<Map<String, dynamic>> waOverview() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/wa/overview'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
   // ── Admin-editable platform settings ──────────────────────────────────
   static Future<List<dynamic>> getAdminSettings() async {
     final prefs = await SharedPreferences.getInstance();
