@@ -43,6 +43,12 @@ class _AuthSheetState extends State<_AuthSheet> {
   final _phone = TextEditingController();
   final _otp = TextEditingController();
   final _name = TextEditingController();
+  final _org = TextEditingController();
+  /// 'student' or 'working'. Asked only on first registration, because it
+  /// changes which batch we would put them in — a working professional cannot
+  /// do a weekday intensive — and because a CRM full of unknowns is a CRM
+  /// nobody segments.
+  String _occupation = 'student';
 
   bool _busy = false;
   String _error = '';
@@ -55,6 +61,7 @@ class _AuthSheetState extends State<_AuthSheet> {
     _phone.dispose();
     _otp.dispose();
     _name.dispose();
+    _org.dispose();
     super.dispose();
   }
 
@@ -105,6 +112,17 @@ class _AuthSheetState extends State<_AuthSheet> {
         otp: _otp.text.trim(),
         name: _name.text.trim(),
       );
+      // Sent after the account exists rather than as part of it: a profile
+      // field must never be the reason a sign-in fails.
+      if (_needsName) {
+        try {
+          await ApiService.updateMyProfile({
+            'occupation': _occupation,
+            if (_occupation == 'student') 'college': _org.text.trim(),
+            if (_occupation == 'working') 'company': _org.text.trim(),
+          }, token: res['jwt_token'] as String? ?? '');
+        } catch (_) {}
+      }
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('student_token', res['token'] as String? ?? '');
       await prefs.setString('token', res['jwt_token'] as String? ?? '');
@@ -334,6 +352,50 @@ class _AuthSheetState extends State<_AuthSheet> {
             textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(
               labelText: 'Your name',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(11)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            for (final o in const [('student', 'Student'), ('working', 'Working')])
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _occupation = o.$1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: BoxDecoration(
+                        color: _occupation == o.$1
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        border: Border.all(
+                            color: _occupation == o.$1
+                                ? AppColors.primary
+                                : Colors.black26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Text(o.$2,
+                            style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _occupation == o.$1
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _org,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: _occupation == 'working' ? 'Company' : 'College',
+              hintText: 'Optional',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(11)),
             ),
           ),

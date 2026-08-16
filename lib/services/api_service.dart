@@ -739,6 +739,23 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Fills in profile fields. Accepts an explicit [token] because signup uses
+  /// it in the same breath as verifying, before the token has been stored.
+  static Future<void> updateMyProfile(Map<String, dynamic> body,
+      {String token = ''}) async {
+    var t = token;
+    if (t.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      t = prefs.getString('student_token') ?? prefs.getString('token') ?? '';
+    }
+    final res = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/student/me'),
+      headers: _headers(t),
+      body: jsonEncode(body),
+    );
+    _parse(res);
+  }
+
   // ── CRM ───────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = ''}) async {
     final prefs = await SharedPreferences.getInstance();

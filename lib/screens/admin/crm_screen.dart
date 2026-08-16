@@ -272,6 +272,11 @@ class _LeadRow extends StatelessWidget {
     final optedOut = lead['opt_in'] == false;
     final last = lead['last_message'] as String? ?? '';
     final plan = lead['plan'] as String? ?? '';
+    final occupation = lead['occupation'] as String? ?? '';
+    final org = (lead['company'] as String?)?.isNotEmpty == true
+        ? lead['company'] as String
+        : lead['college'] as String? ?? '';
+    final email = lead['email'] as String? ?? '';
 
     return InkWell(
       onTap: onTap,
@@ -321,6 +326,26 @@ class _LeadRow extends StatelessWidget {
                           fontSize: 11.5, color: AppColors.textSecondary)),
                   const SizedBox(width: 8),
                 ],
+                if (occupation.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: (occupation == 'working'
+                              ? const Color(0xFF6A1B9A)
+                              : const Color(0xFF0277BD))
+                          .withValues(alpha: 0.11),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(occupation == 'working' ? 'WORKING' : 'STUDENT',
+                        style: GoogleFonts.inter(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            color: occupation == 'working'
+                                ? const Color(0xFF6A1B9A)
+                                : const Color(0xFF0277BD))),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 if (plan.isNotEmpty && plan != 'free')
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -335,13 +360,24 @@ class _LeadRow extends StatelessWidget {
                             color: AppColors.primary)),
                   ),
               ]),
+              if (org.isNotEmpty || email.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                    [org, email].where((x) => x.isNotEmpty).join('  ·  '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                        fontSize: 11, color: AppColors.textSecondary)),
+              ],
               if (last.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(last,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                        fontSize: 11, color: AppColors.textSecondary)),
+                        fontSize: 10.5,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.textSecondary)),
               ],
             ]),
           ),
@@ -492,10 +528,20 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                         title: 'Student account',
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _kv('Name', '${student['name'] ?? ''}'),
+                          if (student['phone'] != null) _kv('Phone', '${student['phone']}'),
                           if (student['email'] != null) _kv('Email', '${student['email']}'),
+                          if ((student['occupation'] as String? ?? '').isNotEmpty)
+                            _kv('Occupation',
+                                student['occupation'] == 'working'
+                                    ? 'Working professional'
+                                    : 'Student'),
                           if (student['college'] != null) _kv('College', '${student['college']}'),
+                          if (student['company'] != null) _kv('Company', '${student['company']}'),
+                          if (student['address'] != null) _kv('Address', '${student['address']}'),
                           _kv('Plan', '${student['plan'] ?? 'free'}'),
                           if (student['status'] != null) _kv('Status', '${student['status']}'),
+                          if (student['created_at'] != null)
+                            _kv('Joined', '${student['created_at']}'.split('T').first),
                         ]),
                       ),
                     ],
