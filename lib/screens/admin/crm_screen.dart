@@ -105,7 +105,7 @@ class _CrmScreenState extends State<CrmScreen> {
           child: Column(children: [
             Row(children: [
               _Stat(label: 'Total', value: '${_summary['total'] ?? '—'}'),
-              _Stat(label: 'Students', value: '${_summary['linked_students'] ?? '—'}'),
+              _Stat(label: 'Registered', value: '${_summary['linked_students'] ?? '—'}'),
               _Stat(label: 'Active 24h', value: '${_summary['active_24h'] ?? '—'}'),
               _Stat(
                   label: 'Opted out',
@@ -271,6 +271,7 @@ class _LeadRow extends StatelessWidget {
     final isStudent = lead['student_user_id'] != null;
     final optedOut = lead['opt_in'] == false;
     final last = lead['last_message'] as String? ?? '';
+    final plan = lead['plan'] as String? ?? '';
 
     return InkWell(
       onTap: onTap,
@@ -313,13 +314,35 @@ class _LeadRow extends StatelessWidget {
                 ],
               ]),
               const SizedBox(height: 2),
-              Text(
-                last.isEmpty ? (lead['phone'] as String? ?? '') : last,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                    fontSize: 11.5, color: AppColors.textSecondary),
-              ),
+              Row(children: [
+                if ((lead['phone'] as String? ?? '').isNotEmpty) ...[
+                  Text(lead['phone'] as String,
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5, color: AppColors.textSecondary)),
+                  const SizedBox(width: 8),
+                ],
+                if (plan.isNotEmpty && plan != 'free')
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.11),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(plan.toUpperCase(),
+                        style: GoogleFonts.inter(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary)),
+                  ),
+              ]),
+              if (last.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(last,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                        fontSize: 11, color: AppColors.textSecondary)),
+              ],
             ]),
           ),
           const SizedBox(width: 8),
