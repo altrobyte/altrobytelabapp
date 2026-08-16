@@ -756,6 +756,25 @@ class ApiService {
     _parse(res);
   }
 
+  // ── Admin-editable platform settings ──────────────────────────────────
+  static Future<List<dynamic>> getAdminSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/settings'),
+        headers: _headers(token));
+    return (_parse(res)['settings'] as List?) ?? [];
+  }
+
+  static Future<void> setAdminSetting(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/admin/settings/$key'),
+        headers: _headers(token),
+        body: jsonEncode({'value': value}));
+    _parse(res);
+  }
+
   // ── CRM ───────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = ''}) async {
     final prefs = await SharedPreferences.getInstance();

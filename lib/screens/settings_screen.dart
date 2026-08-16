@@ -18,6 +18,35 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  List<dynamic> _waSettings = [];
+  bool _waLoading = true;
+
+  Future<void> _loadWaSettings() async {
+    try {
+      _waSettings = await ApiService.getAdminSettings();
+    } catch (_) {
+      _waSettings = [];
+    }
+    if (mounted) setState(() => _waLoading = false);
+  }
+
+  Future<void> _saveWaSetting(String key, String value) async {
+    try {
+      await ApiService.setAdminSetting(key, value);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Saved')));
+      }
+      await _loadWaSettings();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is ApiException ? e.message : 'Could not save'),
+            backgroundColor: AppColors.error));
+      }
+    }
+  }
+
   static const _supportEmail = 'support@altrobyte.com';
   static const _supportWa = '917691971623'; // Altrobyte sales/support WhatsApp
   static const _privacyUrl = 'https://coachingclub-bba5c.web.app/privacy.html';
@@ -49,6 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadWaSettings();
     _loadSettings();
   }
 
@@ -106,6 +136,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// WhatsApp settings, editable here rather than only under super admin.
+  /// The backend exposes a named allowlist — plan prices and AI quotas stay
+  /// where they were, because saving one login is not worth handing those out.
+  Widget _buildWhatsAppCard() {
+    return _SectionCard(
+      icon: Icons.chat_rounded,
+      iconColor: const Color(0xFF25D366),
+      title: 'WhatsApp',
+      subtitle: 'The number, the dashboard link, and template switches',
+      child: _waLoading
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()))
+          : Column(children: [
+              for (final setting in _waSettings)
+                _WaSettingRow(
+                  setting: setting as Map<String, dynamic>,
+                  onSave: (v) => _saveWaSetting(setting['key'] as String, v),
+                ),
+            ]),
+    );
   }
 
   Widget _buildSubscriptionCard() {
@@ -630,6 +683,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
             ),
+            const SizedBox(height: 16),
+
+            // ── WhatsApp ──
+            _buildWhatsAppCard(),
             const SizedBox(height: 16),
 
             // ── Subscription / Billing ──
@@ -1195,6 +1252,73 @@ class _ConfigChipSection extends StatelessWidget {
                 style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
           ),
       ],
+    );
+  }
+}
+
+
+/// One editable setting. Saves on demand rather than on every keystroke — a
+/// half-typed phone number written to the live config would break the CTA it
+/// powers.
+class _WaSettingRow extends StatefulWidget {
+  final Map<String, dynamic> setting;
+  final Future<void> Function(String value) onSave;
+  const _WaSettingRow({required this.setting, required this.onSave});
+
+  @override
+  State<_WaSettingRow> createState() => _WaSettingRowState();
+}
+
+class _WaSettingRowState extends State<_WaSettingRow> {
+  late final _ctrl =
+      TextEditingController(text: widget.setting['value'] as String? ?? '');
+  bool _dirty = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  String get _label => (widget.setting['key'] as String)
+      .replaceAll('_', ' ')
+      .replaceFirst('wa ', 'WhatsApp ');
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_label,
+            style: GoogleFonts.inter(
+                fontSize: 12.5, fontWeight: FontWeight.w600)),
+        Text(widget.setting['description'] as String? ?? '',
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _ctrl,
+              onChanged: (_) => setState(() => _dirty = true),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Not set',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: _dirty
+                ? () async {
+                    await widget.onSave(_ctrl.text);
+                    if (mounted) setState(() => _dirty = false);
+                  }
+                : null,
+            child: const Text('Save'),
+          ),
+        ]),
+      ]),
     );
   }
 }
