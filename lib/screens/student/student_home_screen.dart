@@ -583,7 +583,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 if (_featuredSessions.isNotEmpty) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: _FeaturedCarousel(sessions: _featuredSessions),
+                                    child: _FeaturedCarousel(
+                                        sessions: _featuredSessions,
+                                        waNumber: _waNumber),
                                   );
                                 }
                                 return const SizedBox.shrink();
@@ -1927,7 +1929,8 @@ class _QuickAccessTile extends StatelessWidget {
 /// of the home feed.
 class _FeaturedCarousel extends StatefulWidget {
   final List<dynamic> sessions;
-  const _FeaturedCarousel({required this.sessions});
+  final String? waNumber;
+  const _FeaturedCarousel({required this.sessions, this.waNumber});
 
   @override
   State<_FeaturedCarousel> createState() => _FeaturedCarouselState();
@@ -1981,7 +1984,7 @@ class _FeaturedCarouselState extends State<_FeaturedCarousel> {
                 width: _cardWidth,
                 child: item['_type'] == 'test_series'
                     ? _FeaturedSeriesPosterCard(series: item)
-                    : _FeaturedPosterCard(session: item),
+                    : _FeaturedPosterCard(session: item, waNumber: widget.waNumber),
               );
             },
           ),
@@ -2027,7 +2030,9 @@ class _CarouselArrow extends StatelessWidget {
 
 class _FeaturedPosterCard extends StatelessWidget {
   final Map<String, dynamic> session;
-  const _FeaturedPosterCard({required this.session});
+  /// So a finished session can capture the interest its button promises.
+  final String? waNumber;
+  const _FeaturedPosterCard({required this.session, this.waNumber});
 
   @override
   Widget build(BuildContext context) {
@@ -2037,22 +2042,46 @@ class _FeaturedPosterCard extends StatelessWidget {
     } catch (_) {}
     final isPast = date != null && date.isBefore(DateTime.now());
     final hasRecording = (session['recording_url'] ?? '').toString().isNotEmpty;
-    final tagLabel = isPast ? (hasRecording ? 'Watch Recording' : 'Session Ended') : 'Register Now';
+    // A finished workshop with no recording used to say "Session Ended" and
+    // do nothing. On a homepage where every session has passed, that is three
+    // dead ends as the first thing a visitor sees. The card still earns its
+    // place — it is proof these run — but the button now captures the interest
+    // it was throwing away.
+    final tagLabel = isPast
+        ? (hasRecording ? 'Watch Recording' : 'Notify me about the next one')
+        : 'Register Now';
     final tagIcon = isPast
-        ? (hasRecording ? Icons.play_circle_fill_rounded : Icons.event_busy_rounded)
+        ? (hasRecording ? Icons.play_circle_fill_rounded : Icons.notifications_active_rounded)
         : Icons.arrow_forward_rounded;
-    final ended = isPast && !hasRecording;
-    final tagColor = ended
-        ? Colors.grey.shade200
+    final isFinished = isPast && !hasRecording;
+    final tagColor = isFinished
+        ? const Color(0xFFE8F5E9)
         : hasRecording && isPast
             ? AppColors.primary
             : AppColors.accent;
-    final tagTextColor = ended ? AppColors.textSecondary : Colors.white;
+    // Green on pale green, not white on grey: this pill is an invitation
+    // now, and it has to read like one.
+    final tagTextColor = isFinished ? const Color(0xFF2E7D32) : Colors.white;
     final banner = (session['banner_url'] ?? '').toString();
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => context.push('/live-sessions/${session['id']}'),
+      // A finished session with no recording has nothing on its detail page,
+      // so sending someone there is the same dead end the old label was. This
+      // opens WhatsApp with the workshop named — which also lands them in the
+      // CRM as a lead, from a card that used to convert nobody.
+      onTap: () {
+        if (isFinished && (waNumber ?? '').isNotEmpty) {
+          final phone = waNumber!.replaceAll(RegExp(r'\D'), '');
+          final title = (session['title'] ?? 'your workshop').toString();
+          final text = Uri.encodeComponent(
+              'Hi! I missed "$title". Please let me know when the next batch is.');
+          launchUrl(Uri.parse('https://wa.me/$phone?text=$text'),
+              mode: LaunchMode.externalApplication);
+          return;
+        }
+        context.push('/live-sessions/${session['id']}');
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2078,7 +2107,7 @@ class _FeaturedPosterCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: tagColor,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: ended
+            boxShadow: isFinished
                 ? null
                 : [BoxShadow(color: tagColor.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
           ),
