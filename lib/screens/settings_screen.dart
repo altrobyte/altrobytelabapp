@@ -187,27 +187,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                   ),
 
-              // Everything else is here only for the day something breaks.
-              Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: EdgeInsets.zero,
-                  title: Text('Advanced',
-                      style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey)),
-                  children: [
-                    for (final key in const ['wa_otp_template', 'wa_otp_lang'])
-                      if (_wa(key) != null)
-                        _WaSettingRow(
-                          setting: _wa(key)!,
-                          onSave: (v) => _saveWaSetting(key, v),
-                        ),
-                  ],
-                ),
-              ),
             ]),
     );
   }
@@ -1334,8 +1313,6 @@ class _WaSettingRowState extends State<_WaSettingRow> {
   static const _labels = {
     'program_whatsapp_number': 'Enquiry number',
     'wa_dashboard_url': 'WhatsApp dashboard link',
-    'wa_otp_template': 'OTP template name',
-    'wa_otp_lang': 'OTP template language',
   };
 
   String get _label =>
