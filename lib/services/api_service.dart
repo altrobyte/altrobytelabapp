@@ -711,6 +711,52 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  // ── CRM ───────────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final uri = Uri.parse('${ApiConstants.baseUrl}/crm/leads').replace(queryParameters: {
+      if (stage.isNotEmpty) 'stage': stage,
+      if (q.isNotEmpty) 'q': q,
+    });
+    final res = await http.get(uri, headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> crmSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/summary'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> crmLead(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<void> crmUpdateLead(String phone, Map<String, dynamic> body) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.put(Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone'),
+        headers: _headers(token), body: jsonEncode(body));
+    _parse(res);
+  }
+
+  static Future<void> crmAddNote(String phone, String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/notes'),
+        headers: _headers(token),
+        body: jsonEncode({'text': text}));
+    _parse(res);
+  }
+
   // ── Roadmap curriculum admin ──────────────────────────────────────────
   static Future<List<dynamic>> adminGetRoadmaps() async {
     final prefs = await SharedPreferences.getInstance();

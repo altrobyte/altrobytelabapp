@@ -118,6 +118,7 @@ class _Nav extends StatelessWidget {
       _NavItem(Icons.view_stream_rounded, 'Home Strip', '/home-strip-admin'),
       _NavItem(Icons.collections_rounded, 'Stories & Lab', '/showcase-admin'),
       _NavItem(Icons.route_rounded, 'Curriculum', '/curriculum-admin'),
+      _NavItem(Icons.contact_phone_rounded, 'CRM', '/crm'),
       _NavItem(Icons.timeline_rounded, 'Activity Feed', '/activity-feed-admin'),
       _NavItem(Icons.event_rounded, 'Events', '/events-admin'),
       _NavItem(Icons.work_rounded, 'Job Updates', '/jobs-admin'),
