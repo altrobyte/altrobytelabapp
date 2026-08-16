@@ -21,6 +21,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<dynamic> _waSettings = [];
   bool _waLoading = true;
 
+  Map<String, dynamic>? _wa(String key) {
+    for (final x in _waSettings) {
+      if ((x as Map)['key'] == key) return x.cast<String, dynamic>();
+    }
+    return null;
+  }
+
   Future<void> _loadWaSettings() async {
     try {
       _waSettings = await ApiService.getAdminSettings();
@@ -152,11 +159,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()))
           : Column(children: [
-              for (final setting in _waSettings)
-                _WaSettingRow(
-                  setting: setting as Map<String, dynamic>,
-                  onSave: (v) => _saveWaSetting(setting['key'] as String, v),
+              // The two anyone actually sets.
+              for (final key in const ['program_whatsapp_number', 'wa_dashboard_url'])
+                if (_wa(key) != null)
+                  _WaSettingRow(
+                    setting: _wa(key)!,
+                    onSave: (v) => _saveWaSetting(key, v),
+                  ),
+
+              // One-time switches. These were text boxes asking for "1", which
+              // is a toggle wearing a keyboard.
+              for (final t in const [
+                ('wa_template_welcome_ready', 'Welcome template approved'),
+                ('wa_template_enroll_ready', 'Enrolment template approved'),
+              ])
+                if (_wa(t.$1) != null)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: (_wa(t.$1)!['value'] as String? ?? '') == '1',
+                    onChanged: (v) => _saveWaSetting(t.$1, v ? '1' : ''),
+                    title: Text(t.$2,
+                        style: GoogleFonts.inter(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
+                    subtitle: Text(
+                        'Off until Meta approves it — we send a plain update instead',
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                  ),
+
+              // Everything else is here only for the day something breaks.
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: Text('Advanced',
+                      style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey)),
+                  children: [
+                    for (final key in const ['wa_otp_template', 'wa_otp_lang'])
+                      if (_wa(key) != null)
+                        _WaSettingRow(
+                          setting: _wa(key)!,
+                          onSave: (v) => _saveWaSetting(key, v),
+                        ),
+                  ],
                 ),
+              ),
             ]),
     );
   }
@@ -1280,9 +1331,16 @@ class _WaSettingRowState extends State<_WaSettingRow> {
     super.dispose();
   }
 
-  String get _label => (widget.setting['key'] as String)
-      .replaceAll('_', ' ')
-      .replaceFirst('wa ', 'WhatsApp ');
+  static const _labels = {
+    'program_whatsapp_number': 'Enquiry number',
+    'wa_dashboard_url': 'WhatsApp dashboard link',
+    'wa_otp_template': 'OTP template name',
+    'wa_otp_lang': 'OTP template language',
+  };
+
+  String get _label =>
+      _labels[widget.setting['key']] ??
+      (widget.setting['key'] as String).replaceAll('_', ' ');
 
   @override
   Widget build(BuildContext context) {
