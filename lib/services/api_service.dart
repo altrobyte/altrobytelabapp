@@ -711,6 +711,34 @@ class ApiService {
   /// Google sign-in gives no phone, so those accounts carry a placeholder
   /// that Cashfree rejects. The backend saves whatever is supplied, so the
   /// student is asked once rather than on every purchase.
+  // ── Student WhatsApp-OTP login ────────────────────────────────────────
+  /// Sends a WhatsApp OTP. The endpoint 502s when Meta rejects the send, so a
+  /// success here really does mean a code is on its way — it used to answer
+  /// "sent" unconditionally.
+  static Future<void> standaloneRequestOtp({required String phone, String name = ''}) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/student/standalone/request-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phone, 'name': name}),
+    );
+    _parse(res);
+  }
+
+  /// Verifies and signs in, registering the number if it is new. `name` is
+  /// required only for a new number; the server says so with a 422.
+  static Future<Map<String, dynamic>> standaloneVerifyOtp({
+    required String phone,
+    required String otp,
+    String name = '',
+  }) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/student/standalone/verify-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'phone': phone, 'otp': otp, 'name': name}),
+    );
+    return _parse(res);
+  }
+
   // ── CRM ───────────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = ''}) async {
     final prefs = await SharedPreferences.getInstance();

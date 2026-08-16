@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/showcase_widgets.dart';
+import '../../widgets/auth_sheet.dart';
 import 'showcase_screens.dart';
 import '../../utils/formatters.dart';
 import '../../constants/api_constants.dart';
@@ -16,7 +17,6 @@ import '../../models/training_module_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/training_module_provider.dart';
 import '../../services/api_service.dart';
-import '../../services/google_auth_service.dart';
 import '../../widgets/upgrade_sheet.dart';
 import '../tools/ble_tester_screen.dart';
 import '../tools/http_tester_screen.dart';
@@ -242,32 +242,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   /// Working login path (WhatsApp OTP delivery is unreliable) — one Google
   /// button resolves to super_admin / admin / student based on the
   /// account's email.
-  Future<void> _signInWithGoogle() async {
-    try {
-      final result = await GoogleAuthService.signIn();
-      if (!mounted) return;
-      switch (result.role) {
-        case 'super_admin':
-          await context.read<AuthProvider>().setFromResponse(result.data);
-          if (mounted) context.go('/super/dashboard');
-          break;
-        case 'admin':
-          await context.read<AuthProvider>().setFromResponse(result.data);
-          if (mounted) context.go('/dashboard');
-          break;
-        default:
-          _loadFeed();
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-    }
+  /// Opens the sheet with both methods. Google alone was the only way in, so
+  /// every account arrived without a phone number — which is the one thing the
+  /// OTP, the reminders and the CRM all need.
+  Future<void> _signIn() async {
+    final ok = await showAuthSheet(context);
+    if (ok && mounted) _loadFeed();
   }
 
-  // TEMPORARY: login/OTP disabled entirely pre-launch. The backend treats
-  // a missing token as a shared anonymous guest, so the feed just loads
-  // with no token, no account, no Login/Logout UI anywhere. Restore real
-  // per-student login before launch.
   Future<void> _loadFeed() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token');
@@ -446,13 +428,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.sizeOf(context).width < 700;
-    // Signed-out tap goes straight to the working Google sign-in (same as the
-    // header's "Sign in" button) — not '/join', which is a WhatsApp-OTP-only
-    // flow that's known unreliable pre-launch.
     final profileOrLogin = _isLoggedIn
         ? () => Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => StudentProfileScreen(waNumber: _waNumber)))
-        : _signInWithGoogle;
+        : _signIn;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -537,7 +516,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               builder: (_) => StudentProfileScreen(waNumber: _waNumber))),
                           onLogin: () => context.push('/join'),
                           onLogoTap: _onLogoTap,
-                          onGoogleSignIn: _signInWithGoogle,
+                          onGoogleSignIn: _signIn,
                         ),
                       ),
                       if (isMobile)
@@ -1036,7 +1015,7 @@ class _HomeHeader extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
+                    icon: const Icon(Icons.login_rounded, size: 17),
                     label: Text('Sign in', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
                   ),
               ]),
