@@ -132,15 +132,34 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       if ((r['outcome'] as String? ?? '').isNotEmpty) '\n${r['outcome']}',
       '\n$url',
     ].join('\n');
+    // Copy first, always. Most desktop browsers have no Web Share API, and a
+    // share sheet that silently does nothing is worse than a link on the
+    // clipboard — this way the link is in hand either way.
+    await Clipboard.setData(ClipboardData(text: url));
+    var shared = false;
     try {
       await Share.share(text, subject: r['title'] as String?);
-    } catch (_) {
-      // Desktop browsers without the Web Share API land here.
-      await Clipboard.setData(ClipboardData(text: url));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Link copied')));
-      }
+      shared = true;
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(shared ? 'Link copied' : 'Link copied to clipboard'),
+        action: SnackBarAction(
+          label: 'Show',
+          onPressed: () => showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Roadmap link'),
+              content: SelectableText(url),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close')),
+              ],
+            ),
+          ),
+        ),
+      ));
     }
   }
 

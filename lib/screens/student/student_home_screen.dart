@@ -59,9 +59,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   /// server is the authority (/platform/features); this only decides whether
   /// to show an entry point for something the API would refuse anyway.
   bool _customTestEnabled = false;
-  /// Shown on the programme card. Free text from settings, so "starts next
-  /// week" cannot quietly become false a fortnight later.
-  String _programStart = '';
+  /// Everything the programme card states, straight from the roadmap it links
+  /// to. Hardcoding "4 months" and "165 milestones" in the widget meant the
+  /// card could disagree with the page one tap away — and the start date,
+  /// which is a setting, never appeared at all.
+  Map<String, dynamic> _programFacts = const {};
 
   /// Admin-curated strips. Empty until an admin adds one, and each section
   /// renders nothing at all rather than an empty placeholder — a "0 stories"
@@ -268,8 +270,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     // must not cost the page the other, and neither may block the feed.
     try {
       final r = await ApiService.getRoadmap('product-engineering');
-      final label = r['start_label'] as String? ?? '';
-      if (mounted) setState(() => _programStart = label);
+      final plans = (r['plans'] as List?) ?? [];
+      if (mounted) {
+        setState(() => _programFacts = {
+              'duration': plans.isEmpty
+                  ? (r['duration_label'] as String? ?? '')
+                  : plans.map((p) => (p as Map)['duration_label']).join(' or '),
+              'milestones': '${r['step_count'] ?? ''}',
+              'start': r['start_label'] as String? ?? '',
+            });
+      }
     } catch (_) {}
     try {
       final stories = await ApiService.getShowcase('story');
@@ -559,9 +569,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             // below a fold. Everything under it is material; this
                             // is the reason to want any of it. ──
                             _RoadmapCard(
-                                startLabel: _programStart,
+                                facts: _programFacts,
+                                // go, not push: in go_router 12 an imperative
+                                // push does not write the browser address bar,
+                                // so the roadmap opened at the homepage URL and
+                                // could not be copied or bookmarked.
                                 onTap: () =>
-                                    context.push('/roadmap/product-engineering')),
+                                    context.go('/roadmap/product-engineering')),
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -2938,8 +2952,10 @@ class _FooterLink extends StatelessWidget {
 /// of growing taller and pushing everything else down the page.
 class _RoadmapCard extends StatelessWidget {
   final VoidCallback onTap;
-  final String startLabel;
-  const _RoadmapCard({required this.onTap, this.startLabel = ''});
+  final Map<String, dynamic> facts;
+  const _RoadmapCard({required this.onTap, this.facts = const {}});
+
+  String _f(String k) => '${facts[k] ?? ''}';
 
   static const _levels = [
     ('Foundation', Color(0xFF66BB6A)),
@@ -3014,13 +3030,17 @@ class _RoadmapCard extends StatelessWidget {
                     runSpacing: 6,
                     alignment: wide ? WrapAlignment.end : WrapAlignment.start,
                     children: [
-                      _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
-                      _MiniFact(
-                          icon: Icons.checklist_rounded, label: '165 milestones'),
-                      if (startLabel.isNotEmpty)
+                      if (_f('duration').isNotEmpty)
+                        _MiniFact(
+                            icon: Icons.schedule_rounded, label: _f('duration')),
+                      if (_f('milestones').isNotEmpty)
+                        _MiniFact(
+                            icon: Icons.checklist_rounded,
+                            label: '${_f('milestones')} milestones'),
+                      if (_f('start').isNotEmpty)
                         _MiniFact(
                             icon: Icons.event_available_rounded,
-                            label: startLabel,
+                            label: _f('start'),
                             highlight: true),
                     ],
                   ),
