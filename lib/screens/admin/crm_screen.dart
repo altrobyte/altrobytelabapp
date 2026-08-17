@@ -448,6 +448,104 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     }
   }
 
+  /// Admin filling in what a student never did. Most accounts predate the
+  /// occupation question, so without this the CRM can never segment them.
+  Future<void> _editStudent(Map<String, dynamic> student) async {
+    final name = TextEditingController(text: '${student['name'] ?? ''}');
+    final email = TextEditingController(text: '${student['email'] ?? ''}');
+    final org = TextEditingController(
+        text: '${student['company'] ?? student['college'] ?? ''}');
+    var occupation = '${student['occupation'] ?? 'student'}';
+    if (occupation != 'working') occupation = 'student';
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text('Edit details',
+              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                  controller: name,
+                  decoration: const InputDecoration(labelText: 'Name')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: email,
+                  decoration: const InputDecoration(labelText: 'Email')),
+              const SizedBox(height: 14),
+              Row(children: [
+                for (final o in const [('student', 'Student'), ('working', 'Working')])
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setLocal(() => occupation = o.$1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: occupation == o.$1
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : Colors.transparent,
+                            border: Border.all(
+                                color: occupation == o.$1
+                                    ? AppColors.primary
+                                    : Colors.black26),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Center(
+                            child: Text(o.$2,
+                                style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: occupation == o.$1
+                                        ? AppColors.primary
+                                        : AppColors.textSecondary)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]),
+              const SizedBox(height: 10),
+              TextField(
+                controller: org,
+                decoration: InputDecoration(
+                    labelText: occupation == 'working' ? 'Company' : 'College'),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+    if (saved != true) return;
+    try {
+      await ApiService.crmUpdateStudent(student['id'] as int, {
+        'name': name.text.trim(),
+        'email': email.text.trim(),
+        'occupation': occupation,
+        if (occupation == 'student') 'college': org.text.trim(),
+        if (occupation == 'working') 'company': org.text.trim(),
+      });
+      _changed = true;
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is ApiException ? e.message : 'Could not save'),
+            backgroundColor: AppColors.error));
+      }
+    }
+  }
+
   Future<void> _addNote() async {
     final text = _noteCtrl.text.trim();
     if (text.isEmpty) return;
@@ -527,6 +625,11 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                       const SizedBox(height: 12),
                       _Card(
                         title: 'Student account',
+                        trailing: TextButton.icon(
+                          onPressed: () => _editStudent(student),
+                          icon: const Icon(Icons.edit_outlined, size: 15),
+                          label: const Text('Edit'),
+                        ),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _kv('Name', '${student['name'] ?? ''}'),
                           if (student['phone'] != null) _kv('Phone', '${student['phone']}'),
@@ -667,7 +770,13 @@ class _Card extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget child;
-  const _Card({required this.title, this.subtitle = '', required this.child});
+  final Widget? trailing;
+  const _Card({
+    required this.title,
+    this.subtitle = '',
+    required this.child,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -679,8 +788,14 @@ class _Card extends StatelessWidget {
           border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+          Row(children: [
+            Expanded(
+              child: Text(title,
+                  style: GoogleFonts.poppins(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            if (trailing != null) trailing!,
+          ]),
           if (subtitle.isNotEmpty)
             Text(subtitle,
                 style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textSecondary)),

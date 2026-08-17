@@ -765,6 +765,45 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Pairs of accounts that look like one person.
+  static Future<List<dynamic>> crmMergeCandidates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/crm/merge/candidates'),
+        headers: _headers(token));
+    return (_parse(res)['candidates'] as List?) ?? [];
+  }
+
+  static Future<Map<String, dynamic>> crmMergePreview(int keepId, int mergeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/crm/merge/preview'
+            '?keep_id=$keepId&merge_id=$mergeId'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> crmMerge(int keepId, int mergeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/merge'),
+        headers: _headers(token),
+        body: jsonEncode({'keep_id': keepId, 'merge_id': mergeId}));
+    return _parse(res);
+  }
+
+  /// Admin editing a student's own details from the CRM.
+  static Future<void> crmUpdateStudent(int id, Map<String, dynamic> body) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/crm/students/$id'),
+        headers: _headers(token), body: jsonEncode(body));
+    _parse(res);
+  }
+
   // ── Admin-editable platform settings ──────────────────────────────────
   static Future<List<dynamic>> getAdminSettings() async {
     final prefs = await SharedPreferences.getInstance();
