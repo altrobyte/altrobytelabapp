@@ -32,6 +32,12 @@ class _Plan {
   final String duration;
   final String hours;
   final int fee;
+  /// The standard fee this mode is normally sold at. Struck through beside the
+  /// current price, so it must be a price actually charged — an invented
+  /// "before" figure is a misleading advertisement under the CCPA guidelines,
+  /// and one complaint is enough. Set it to the same value as `fee` to hide
+  /// the strike entirely.
+  final int listFee;
   final List<String> bestFor;
   final String outcome;
   const _Plan({
@@ -41,9 +47,13 @@ class _Plan {
     required this.duration,
     required this.hours,
     required this.fee,
+    required this.listFee,
     required this.bestFor,
     required this.outcome,
   });
+
+  int get saving => listFee - fee;
+  bool get discounted => saving > 0;
 }
 
 const _fastTrack = _Plan(
@@ -53,6 +63,7 @@ const _fastTrack = _Plan(
   duration: '4–5 weeks',
   hours: '~60–70 hours of hands-on learning',
   fee: 18000,
+  listFee: 25000,
   bestFor: [
     'Engineering students',
     'Freshers',
@@ -71,6 +82,7 @@ const _weekend = _Plan(
   duration: '3 months',
   hours: '~72 hours of guided product engineering',
   fee: 28000,
+  listFee: 36000,
   bestFor: [
     'College students',
     'Working professionals',
@@ -111,6 +123,7 @@ class ProgramPage extends StatefulWidget {
 
 class _ProgramPageState extends State<ProgramPage> {
   String _waNumber = '';
+  String _seatsLeft = '';
 
   @override
   void initState() {
@@ -124,7 +137,13 @@ class _ProgramPageState extends State<ProgramPage> {
     try {
       final r = await ApiService.getRoadmap('product-engineering');
       final n = r['whatsapp_number'] as String? ?? '';
-      if (mounted) setState(() => _waNumber = n);
+      final seats = '${r['seats_left'] ?? ''}';
+      if (mounted) {
+        setState(() {
+          _waNumber = n;
+          _seatsLeft = seats;
+        });
+      }
     } catch (_) {}
   }
 
@@ -360,6 +379,7 @@ class _ProgramPageState extends State<ProgramPage> {
           _lead('Same programme, same product, same workflow. The only thing '
               'that changes is the pace — and which one you can actually fit '
               'around your week.'),
+          _seatsBanner(),
           if (wide)
             IntrinsicHeight(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -403,21 +423,43 @@ class _ProgramPageState extends State<ProgramPage> {
           _fact(Icons.schedule_rounded, p.duration),
           _fact(Icons.timelapse_rounded, p.hours),
           const SizedBox(height: 16),
-          Row(crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(_rs(p.fee),
-                    style: GoogleFonts.poppins(
-                        fontSize: 28, fontWeight: FontWeight.w800, color: _navy)),
-                const SizedBox(width: 6),
-                Text('+ GST',
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: AppColors.textSecondary)),
-              ]),
+          _price(p),
           const SizedBox(height: 4),
           Text('Optional Mini Product Lab: ${_rs(_labFee)} + GST',
               style: GoogleFonts.inter(
                   fontSize: 12.5, color: AppColors.textSecondary)),
+          // Right here, not four screens down. Someone who reads the price and
+          // decides it is too much never reaches a discount further along.
+          if (p.fee == _fastTrack.fee) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () => _enquire('${p.name} (group booking)'),
+              child: Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
+                  border: Border.all(
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.groups_rounded,
+                      size: 17, color: Color(0xFF2E7D32)),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                        'Coming with friends? From ${_rs(16000)} each — '
+                        'see group pricing',
+                        style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1B5E20))),
+                  ),
+                ]),
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           Text('BEST FOR',
               style: GoogleFonts.inter(
@@ -463,6 +505,92 @@ class _ProgramPageState extends State<ProgramPage> {
           ),
         ]),
       );
+
+  /// Current price against the standard one. Reading 18,000 alone gives a
+  /// reader nothing to weigh it against; reading it beside 25,000 does the
+  /// weighing for them.
+  Widget _price(_Plan p, {bool onDark = false}) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (p.discounted)
+            Row(children: [
+              Text(_rs(p.listFee),
+                  style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: onDark
+                          ? Colors.white.withValues(alpha: 0.55)
+                          : AppColors.textSecondary,
+                      decoration: TextDecoration.lineThrough,
+                      decorationThickness: 2)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD32F2F),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text('SAVE ${_rs(p.saving)}',
+                    style: GoogleFonts.inter(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                        color: Colors.white)),
+              ),
+            ]),
+          const SizedBox(height: 2),
+          Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(_rs(p.fee),
+                    style: GoogleFonts.poppins(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: onDark ? _amber : _navy)),
+                const SizedBox(width: 6),
+                Text('+ GST',
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: onDark
+                            ? Colors.white.withValues(alpha: 0.75)
+                            : AppColors.textSecondary)),
+              ]),
+        ],
+      );
+
+  /// Red, specific, and true because the number comes from a setting an admin
+  /// keeps current. A permanent "10 seats left" is just decoration.
+  Widget _seatsBanner() {
+    final n = int.tryParse(_seatsLeft);
+    if (n == null || n <= 0) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD32F2F).withValues(alpha: 0.08),
+        border: Border.all(color: const Color(0xFFD32F2F).withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [
+        const Icon(Icons.local_fire_department_rounded,
+            size: 18, color: Color(0xFFD32F2F)),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+              n == 1
+                  ? 'Only 1 seat left in this batch — batches are capped at 10 '
+                      'so everyone gets bench time.'
+                  : 'Only $n seats left in this batch — batches are capped at 10 '
+                      'so everyone gets bench time.',
+              style: GoogleFonts.inter(
+                  fontSize: 13,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFB71C1C))),
+        ),
+      ]),
+    );
+  }
 
   Widget _fact(IconData icon, String text) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -796,9 +924,7 @@ class _ProgramPageState extends State<ProgramPage> {
               style: GoogleFonts.poppins(
                   color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
-          Text('${_rs(p.fee)} + GST',
-              style: GoogleFonts.poppins(
-                  color: _amber, fontSize: 26, fontWeight: FontWeight.w800)),
+          _price(p, onDark: true),
           const SizedBox(height: 8),
           Text('${p.duration} · ${p.schedule}',
               style: GoogleFonts.inter(
