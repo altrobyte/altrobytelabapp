@@ -2932,10 +2932,21 @@ class _FooterLink extends StatelessWidget {
 ///
 /// It has to carry three facts before a tap: this is long, it is structured,
 /// and it ends somewhere worth reaching. A plain menu row carries none of them.
+///
+/// On a wide screen the facts and the button sit in the empty right-hand half
+/// rather than below, so the card fills the width it already occupies instead
+/// of growing taller and pushing everything else down the page.
 class _RoadmapCard extends StatelessWidget {
   final VoidCallback onTap;
   final String startLabel;
   const _RoadmapCard({required this.onTap, this.startLabel = ''});
+
+  static const _levels = [
+    ('Foundation', Color(0xFF66BB6A)),
+    ('Intermediate', Color(0xFF42A5F5)),
+    ('Advanced', Color(0xFFAB47BC)),
+    ('Industry', Color(0xFFFF9800)),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -2961,109 +2972,140 @@ class _RoadmapCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFC107),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text('FLAGSHIP PROGRAM',
-                    style: GoogleFonts.inter(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.7,
-                        color: const Color(0xFF3E2700))),
-              ),
-              const Spacer(),
-              Icon(Icons.arrow_forward_rounded,
-                  color: Colors.white.withValues(alpha: 0.9), size: 20),
-            ]),
-            const SizedBox(height: 14),
-            Text('Product Engineering Program',
-                style: GoogleFonts.poppins(
-                    color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700, height: 1.2)),
-            const SizedBox(height: 3),
-            // Naming it a roadmap sets the expectation before the tap: this is
-            // the whole path, not a signup page.
-            Text('The full roadmap — every stage, in order',
-                style: GoogleFonts.inter(
-                    color: const Color(0xFFFFC107),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            Text('Build 3-4 real industrial products — PCB in your hand, cloud, AI, portfolio',
-                style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.85), fontSize: 12.5, height: 1.4)),
-            const SizedBox(height: 16),
-            // The ladder, stated. Seeing where it ends is what makes someone
-            // ask whether they would really get there on their own.
-            Row(children: [
-              for (final l in const [
-                ('Foundation', Color(0xFF66BB6A)),
-                ('Intermediate', Color(0xFF42A5F5)),
-                ('Advanced', Color(0xFFAB47BC)),
-                ('Industry', Color(0xFFFF9800)),
-              ]) ...[
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(height: 3, decoration: BoxDecoration(
-                        color: l.$2, borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(height: 5),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(l.$1,
-                          style: GoogleFonts.inter(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.75))),
-                    ),
-                  ]),
-                ),
-                const SizedBox(width: 6),
-              ],
-            ]),
-            const SizedBox(height: 16),
-            Wrap(spacing: 14, runSpacing: 6, children: [
-              _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
-              _MiniFact(icon: Icons.checklist_rounded, label: '165 milestones'),
-              _MiniFact(icon: Icons.memory_rounded, label: 'Real PCB'),
-              if (startLabel.isNotEmpty)
-                _MiniFact(
-                    icon: Icons.event_available_rounded,
-                    label: startLabel,
-                    highlight: true),
-            ]),
-            const SizedBox(height: 16),
-            // An arrow in the corner is not a call to action. This is.
-            Row(children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(11),
+          child: LayoutBuilder(builder: (context, c) {
+            final wide = c.maxWidth > 720;
+            final left = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _badge(),
+                  const SizedBox(height: 14),
+                  Text('Product Engineering Program',
+                      style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2)),
+                  const SizedBox(height: 3),
+                  Text('The full roadmap — every stage, in order',
+                      style: GoogleFonts.inter(
+                          color: const Color(0xFFFFC107),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Text(
+                      'Build 3-4 real industrial products — PCB in your hand, '
+                      'cloud, AI, portfolio',
+                      style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 12.5,
+                          height: 1.4)),
+                  const SizedBox(height: 16),
+                  _ladder(),
+                ]);
+
+            final right = Column(
+                crossAxisAlignment:
+                    wide ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    alignment: wide ? WrapAlignment.end : WrapAlignment.start,
+                    children: [
+                      _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
+                      _MiniFact(
+                          icon: Icons.checklist_rounded, label: '165 milestones'),
+                      _MiniFact(icon: Icons.memory_rounded, label: 'Real PCB'),
+                      if (startLabel.isNotEmpty)
+                        _MiniFact(
+                            icon: Icons.event_available_rounded,
+                            label: startLabel,
+                            highlight: true),
+                    ],
                   ),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.route_rounded,
-                        size: 17, color: Color(0xFF0B2450)),
-                    const SizedBox(width: 7),
-                    Text('Open the roadmap',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0B2450))),
-                  ]),
-                ),
-              ),
-            ]),
-          ]),
+                  const SizedBox(height: 14),
+                  _button(wide),
+                ]);
+
+            if (!wide) {
+              return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [left, const SizedBox(height: 16), right]);
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(flex: 3, child: left),
+                const SizedBox(width: 28),
+                Flexible(flex: 2, child: right),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
+
+  Widget _badge() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFC107),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text('FLAGSHIP PROGRAM',
+            style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.7,
+                color: const Color(0xFF3E2700))),
+      );
+
+  Widget _ladder() => Row(children: [
+        for (final l in _levels) ...[
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                      color: l.$2, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 5),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(l.$1,
+                    style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.75))),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 6),
+        ],
+      ]);
+
+  Widget _button(bool wide) => Container(
+        width: wide ? null : double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: wide ? 22 : 0, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (!wide) const Spacer(),
+          const Icon(Icons.route_rounded, size: 17, color: Color(0xFF0B2450)),
+          const SizedBox(width: 7),
+          Text('Open the roadmap',
+              style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0B2450))),
+          if (!wide) const Spacer(),
+        ]),
+      );
 }
 
 class _MiniFact extends StatelessWidget {
