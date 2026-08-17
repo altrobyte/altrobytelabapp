@@ -53,6 +53,9 @@ class _WaMessagesScreenState extends State<WaMessagesScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        // The theme paints AppBar foreground white for the dark bars used
+        // elsewhere; on a white bar that hides the title and every action.
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         title: Text('WhatsApp messages',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),

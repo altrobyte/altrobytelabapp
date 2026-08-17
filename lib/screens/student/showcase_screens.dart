@@ -53,6 +53,9 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        // The theme paints AppBar foreground white for the dark bars used
+        // elsewhere; on a white bar that hides the title and every action.
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         title: Text(_isLab ? 'Lab Setups' : 'Top Stories',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
@@ -218,6 +221,9 @@ class _ShowcaseDetailScreenState extends State<ShowcaseDetailScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        // The theme paints AppBar foreground white for the dark bars used
+        // elsewhere; on a white bar that hides the title and every action.
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         title: Text(_item['title'] as String? ?? '',
             maxLines: 1,

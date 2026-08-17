@@ -153,6 +153,9 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         title: Text(r?['title'] as String? ?? 'Roadmap',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         backgroundColor: Colors.white,
+        // The theme paints AppBar foreground white for the dark bars used
+        // elsewhere; on a white bar that hides the title and every action.
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         actions: [
           if (r != null)

@@ -3017,7 +3017,6 @@ class _RoadmapCard extends StatelessWidget {
                       _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
                       _MiniFact(
                           icon: Icons.checklist_rounded, label: '165 milestones'),
-                      _MiniFact(icon: Icons.memory_rounded, label: 'Real PCB'),
                       if (startLabel.isNotEmpty)
                         _MiniFact(
                             icon: Icons.event_available_rounded,
