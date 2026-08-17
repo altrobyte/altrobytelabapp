@@ -32,6 +32,12 @@ class ApiService {
 
   static Map<String, String> _headers([String? token]) => {
         'Content-Type': 'application/json',
+        // The API sets no cache headers of its own, so browsers cached these
+        // responses heuristically: a client that had fetched a roadmap before
+        // `plans` and `start_label` existed kept being handed that older shape,
+        // and the card silently rendered without them.
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
@@ -976,12 +982,14 @@ class ApiService {
   /// Admin-curated Top Stories or Lab Setups. Media comes down with the list
   /// so the rotating strip does not stutter on its first turn.
   static Future<List<dynamic>> getShowcase(String kind) async {
-    final res = await http.get(Uri.parse(ApiConstants.showcase(kind)));
+    final res = await http.get(Uri.parse(ApiConstants.showcase(kind)),
+        headers: _headers());
     return (_parse(res)['items'] as List?) ?? [];
   }
 
   static Future<Map<String, dynamic>> getShowcaseItem(int id) async {
-    final res = await http.get(Uri.parse(ApiConstants.showcaseItem(id)));
+    final res = await http.get(Uri.parse(ApiConstants.showcaseItem(id)),
+        headers: _headers());
     return _parse(res);
   }
 
