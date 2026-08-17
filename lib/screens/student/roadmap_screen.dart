@@ -111,8 +111,27 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   Future<void> _share() async {
     final r = _roadmap;
     if (r == null) return;
+    // A direct link to this page, not the homepage. Firebase rewrites every
+    // path to index.html and the app reads the path, so this opens straight on
+    // the roadmap even for someone who has never been here before.
     final url = 'https://lab.altrobyte.com/roadmap/${widget.slug}';
-    final text = '${r['title']} — ${r['subtitle'] ?? ''}\n\n$url';
+    final total = '${r['step_count'] ?? ''}';
+    final plans = (r['plans'] as List?) ?? [];
+    final duration = plans.isEmpty
+        ? (r['duration_label'] as String? ?? '')
+        : plans.map((p) => (p as Map)['duration_label']).join(' or ');
+    final facts = [
+      if (duration.isNotEmpty) duration,
+      if (total.isNotEmpty) '$total milestones',
+    ].join(' · ');
+    // What lands in a WhatsApp thread should say what it is without the link
+    // having to be opened first.
+    final text = [
+      r['title'] ?? 'Roadmap',
+      if (facts.isNotEmpty) facts,
+      if ((r['outcome'] as String? ?? '').isNotEmpty) '\n${r['outcome']}',
+      '\n$url',
+    ].join('\n');
     try {
       await Share.share(text, subject: r['title'] as String?);
     } catch (_) {

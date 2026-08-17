@@ -59,6 +59,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   /// server is the authority (/platform/features); this only decides whether
   /// to show an entry point for something the API would refuse anyway.
   bool _customTestEnabled = false;
+  /// Shown on the programme card. Free text from settings, so "starts next
+  /// week" cannot quietly become false a fortnight later.
+  String _programStart = '';
+
   /// Admin-curated strips. Empty until an admin adds one, and each section
   /// renders nothing at all rather than an empty placeholder — a "0 stories"
   /// heading is worse than no heading.
@@ -262,6 +266,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
     // Admin-curated strips. Each is optional and independent: a failure in one
     // must not cost the page the other, and neither may block the feed.
+    try {
+      final r = await ApiService.getRoadmap('product-engineering');
+      final label = r['start_label'] as String? ?? '';
+      if (mounted) setState(() => _programStart = label);
+    } catch (_) {}
     try {
       final stories = await ApiService.getShowcase('story');
       if (mounted) setState(() => _stories = stories);
@@ -549,7 +558,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             // free visitor into a paying one, so it does not sit
                             // below a fold. Everything under it is material; this
                             // is the reason to want any of it. ──
-                            _RoadmapCard(onTap: () => context.push('/roadmap/product-engineering')),
+                            _RoadmapCard(
+                                startLabel: _programStart,
+                                onTap: () =>
+                                    context.push('/roadmap/product-engineering')),
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -2922,7 +2934,8 @@ class _FooterLink extends StatelessWidget {
 /// and it ends somewhere worth reaching. A plain menu row carries none of them.
 class _RoadmapCard extends StatelessWidget {
   final VoidCallback onTap;
-  const _RoadmapCard({required this.onTap});
+  final String startLabel;
+  const _RoadmapCard({required this.onTap, this.startLabel = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -2971,6 +2984,14 @@ class _RoadmapCard extends StatelessWidget {
             Text('Product Engineering Program',
                 style: GoogleFonts.poppins(
                     color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700, height: 1.2)),
+            const SizedBox(height: 3),
+            // Naming it a roadmap sets the expectation before the tap: this is
+            // the whole path, not a signup page.
+            Text('The full roadmap — every stage, in order',
+                style: GoogleFonts.inter(
+                    color: const Color(0xFFFFC107),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             Text('Build 3-4 real industrial products — PCB in your hand, cloud, AI, portfolio',
                 style: GoogleFonts.inter(
@@ -3005,12 +3026,38 @@ class _RoadmapCard extends StatelessWidget {
               ],
             ]),
             const SizedBox(height: 16),
-            Row(children: [
+            Wrap(spacing: 14, runSpacing: 6, children: [
               _MiniFact(icon: Icons.schedule_rounded, label: '4 months'),
-              const SizedBox(width: 14),
               _MiniFact(icon: Icons.checklist_rounded, label: '165 milestones'),
-              const SizedBox(width: 14),
               _MiniFact(icon: Icons.memory_rounded, label: 'Real PCB'),
+              if (startLabel.isNotEmpty)
+                _MiniFact(
+                    icon: Icons.event_available_rounded,
+                    label: startLabel,
+                    highlight: true),
+            ]),
+            const SizedBox(height: 16),
+            // An arrow in the corner is not a call to action. This is.
+            Row(children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.route_rounded,
+                        size: 17, color: Color(0xFF0B2450)),
+                    const SizedBox(width: 7),
+                    Text('Open the roadmap',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0B2450))),
+                  ]),
+                ),
+              ),
             ]),
           ]),
         ),
@@ -3022,14 +3069,20 @@ class _RoadmapCard extends StatelessWidget {
 class _MiniFact extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _MiniFact({required this.icon, required this.label});
+  final bool highlight;
+  const _MiniFact({required this.icon, required this.label, this.highlight = false});
 
   @override
-  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),
-        const SizedBox(width: 4),
-        Text(label,
-            style: GoogleFonts.inter(
-                fontSize: 11, color: Colors.white.withValues(alpha: 0.88))),
-      ]);
+  Widget build(BuildContext context) {
+    final color = highlight ? const Color(0xFFFFC107) : Colors.white;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: color.withValues(alpha: highlight ? 1 : 0.8)),
+      const SizedBox(width: 4),
+      Text(label,
+          style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: highlight ? FontWeight.w700 : FontWeight.w400,
+              color: color.withValues(alpha: highlight ? 1 : 0.88))),
+    ]);
+  }
 }
