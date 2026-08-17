@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
@@ -14,6 +15,10 @@ class PartnerEnquiryScreen extends StatefulWidget {
 }
 
 class _PartnerEnquiryScreenState extends State<PartnerEnquiryScreen> {
+  /// From settings, not written in here — the enquiry number lives in one
+  /// place so changing it does not mean hunting through screens.
+  String _waNumber = '';
+
   final _nameCtrl = TextEditingController();
   final _orgCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -32,6 +37,41 @@ class _PartnerEnquiryScreenState extends State<PartnerEnquiryScreen> {
     _countCtrl.dispose();
     _messageCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNumber();
+  }
+
+  Future<void> _loadNumber() async {
+    try {
+      final r = await ApiService.getRoadmap('product-engineering');
+      final n = r['whatsapp_number'] as String? ?? '';
+      if (mounted) setState(() => _waNumber = n);
+    } catch (_) {}
+  }
+
+  /// Whatever the form already has goes into the message, so someone who
+  /// typed their college name and then chose WhatsApp does not type it again.
+  Future<void> _whatsapp() async {
+    if (_waNumber.isEmpty) return;
+    final org = _orgCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
+    final count = _countCtrl.text.trim();
+    final lines = [
+      'Hi! I would like to bring Altrobyte Lab to my institution.',
+      if (name.isNotEmpty) 'Name: $name',
+      if (org.isNotEmpty) 'Institution: $org',
+      if (count.isNotEmpty) 'Approx. students: $count',
+    ];
+    final body = Uri.encodeComponent(lines.join('\n'));
+    final uri = Uri.parse('https://wa.me/$_waNumber?text=$body');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')));
+    }
   }
 
   Future<void> _submit() async {
@@ -118,6 +158,38 @@ class _PartnerEnquiryScreenState extends State<PartnerEnquiryScreen> {
                             : Text('Submit', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                       ),
                     ),
+                    if (_waNumber.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text('or talk to us now',
+                              style: GoogleFonts.inter(
+                                  fontSize: 12, color: AppColors.textSecondary)),
+                        ),
+                        const Expanded(child: Divider()),
+                      ]),
+                      const SizedBox(height: 14),
+                      // A form is a promise to reply later. Some people would
+                      // rather ask now, and the ones who would were leaving
+                      // without a way to.
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _whatsapp,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF128C7E),
+                            side: const BorderSide(color: Color(0xFF25D366)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.chat_rounded, size: 19),
+                          label: Text('Chat on WhatsApp',
+                              style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
                   ]),
           ),
         ),
