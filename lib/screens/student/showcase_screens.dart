@@ -57,7 +57,13 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
         // elsewhere; on a white bar that hides the title and every action.
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        title: Text(_isLab ? 'Lab Setups' : 'Top Stories',
+        title: Text(
+            switch (widget.kind) {
+              'lab_setup' => 'Lab Setups',
+              'placement' => 'Where our students are now',
+              'review' => 'What students say',
+              _ => 'Top Stories',
+            },
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
       ),
       body: _loading
@@ -65,9 +71,12 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
           : _items.isEmpty
               ? _Empty(
                   icon: _isLab ? Icons.science_outlined : Icons.auto_stories_outlined,
-                  message: _isLab
-                      ? 'Lab setups are being added.'
-                      : 'Stories are being added.')
+                  message: switch (widget.kind) {
+                    'lab_setup' => 'Lab setups are being added.',
+                    'placement' => 'Placements are being added.',
+                    'review' => 'Reviews are being added.',
+                    _ => 'Stories are being added.',
+                  })
               : RefreshIndicator(
                   onRefresh: _load,
                   child: GridView.builder(

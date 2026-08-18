@@ -23,8 +23,11 @@ class ShowcaseAdminScreen extends StatefulWidget {
 
 class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
-  final _byKind = <String, List<dynamic>>{'story': [], 'lab_setup': []};
+  late final TabController _tabs = TabController(length: 4, vsync: this);
+  static const _kinds = ['story', 'lab_setup', 'placement', 'review'];
+  final _byKind = <String, List<dynamic>>{
+    'story': [], 'lab_setup': [], 'placement': [], 'review': []
+  };
   bool _loading = true;
 
   @override
@@ -40,10 +43,10 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
     super.dispose();
   }
 
-  String get _kind => _tabs.index == 0 ? 'story' : 'lab_setup';
+  String get _kind => _kinds[_tabs.index];
 
   Future<void> _loadAll() async {
-    for (final k in ['story', 'lab_setup']) {
+    for (final k in _kinds) {
       try {
         _byKind[k] = await ApiService.adminGetShowcase(k);
       } catch (_) {}
@@ -116,14 +119,25 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textSecondary,
           indicatorColor: AppColors.primary,
-          tabs: const [Tab(text: 'Top Stories'), Tab(text: 'Lab Setups')],
+          isScrollable: true,
+          tabs: const [
+            Tab(text: 'Top Stories'),
+            Tab(text: 'Lab Setups'),
+            Tab(text: 'Placements'),
+            Tab(text: 'Reviews'),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add),
-        label: Text(_kind == 'story' ? 'New story' : 'New lab setup'),
+        label: Text(switch (_kind) {
+          'story' => 'New story',
+          'lab_setup' => 'New lab setup',
+          'placement' => 'New placement',
+          _ => 'New review',
+        }),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -136,11 +150,21 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
                           size: 46, color: AppColors.textSecondary.withValues(alpha: 0.5)),
                       const SizedBox(height: 12),
                       Text(
-                        _kind == 'story'
-                            ? 'No stories yet. Add photos of what students are building — '
-                                'that is the proof the homepage is missing.'
-                            : 'No lab setups yet. Add each setup as a product with photos '
+                        switch (_kind) {
+                          'story' =>
+                            'No stories yet. Add photos of what students are building — '
+                                'that is the proof the homepage is missing.',
+                          'lab_setup' =>
+                            'No lab setups yet. Add each setup as a product with photos '
                                 'and a price.',
+                          'placement' =>
+                            'No placements yet. Add real ones only — a made-up placement '
+                                'is the one thing that would cost you every real student '
+                                'who checks.',
+                          _ =>
+                            'No reviews yet. Ask the students who finished. Their words '
+                                'convert better than anything we write.',
+                        },
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                             color: AppColors.textSecondary, fontSize: 13, height: 1.5),
@@ -274,6 +298,13 @@ class _EditorSheetState extends State<_EditorSheet> {
       TextEditingController(text: widget.item?['cta_label'] as String? ?? '');
   late final _ctaUrl = TextEditingController(text: widget.item?['cta_url'] as String? ?? '');
   late final _youtube = TextEditingController();
+  // Placement: where they went. Review: what they are rating.
+  late final _company = TextEditingController(
+      text: '${(widget.item?['attributes'] ?? {})['company'] ?? ''}');
+  late final _role = TextEditingController(
+      text: '${(widget.item?['attributes'] ?? {})['role'] ?? ''}');
+  late final _rating = TextEditingController(
+      text: '${(widget.item?['attributes'] ?? {})['rating'] ?? ''}');
 
   late bool _published = widget.item?['is_published'] as bool? ?? true;
   late String _cover = widget.item?['cover_url'] as String? ?? '';
@@ -284,6 +315,8 @@ class _EditorSheetState extends State<_EditorSheet> {
   int? _id;
 
   bool get _isLab => widget.kind == 'lab_setup';
+  bool get _isPlacement => widget.kind == 'placement';
+  bool get _isReview => widget.kind == 'review';
 
   @override
   void initState() {
@@ -326,6 +359,11 @@ class _EditorSheetState extends State<_EditorSheet> {
         'cta_url': _ctaUrl.text.trim(),
         'is_published': _published,
         'order_index': widget.item?['order'] as int? ?? 0,
+        'attributes': {
+          if (_isPlacement) 'company': _company.text.trim(),
+          if (_isPlacement) 'role': _role.text.trim(),
+          if (_isReview) 'rating': _rating.text.trim(),
+        },
       };
 
   Future<void> _pickAndUpload({bool asCover = false}) async {
@@ -441,7 +479,23 @@ class _EditorSheetState extends State<_EditorSheet> {
             padding: EdgeInsets.fromLTRB(
                 18, 4, 18, MediaQuery.of(context).viewInsets.bottom + 24),
             children: [
-              _field(_title, 'Title', hint: _isLab ? 'Starter Embedded Lab' : "Aman's first PCB"),
+              _field(_title, 'Title',
+                  hint: switch (widget.kind) {
+                    'lab_setup' => 'Starter Embedded Lab',
+                    'placement' => 'Aman Verma',
+                    'review' => 'Priya Sharma',
+                    _ => "Aman's first PCB",
+                  }),
+              if (_isPlacement) ...[
+                Row(children: [
+                  Expanded(child: _field(_company, 'Company', hint: 'Bosch')),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _field(_role, 'Role', hint: 'Embedded Engineer')),
+                ]),
+              ],
+              if (_isReview)
+                _field(_rating, 'Rating out of 5', hint: '5'),
               _field(_short, 'Short description',
                   hint: _isLab
                       ? 'Everything for Month 1 — ESP32, sensors, tools'

@@ -298,3 +298,149 @@ class ShowcaseHeader extends StatelessWidget {
         ]),
       );
 }
+
+/// Where someone ended up after doing this. The one thing a student and a
+/// parent both look for, and the hardest to fake convincingly — which is
+/// exactly why it is worth showing when it is real.
+class PlacementCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+  const PlacementCard({super.key, required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final attrs = (item['attributes'] as Map?) ?? {};
+    final company = '${attrs['company'] ?? ''}';
+    final role = '${attrs['role'] ?? ''}';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 250,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: SizedBox(
+                  width: 46, height: 46, child: ShowcaseCover(item: item)),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(item['title'] as String? ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                if (role.isNotEmpty)
+                  Text(role,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5, color: AppColors.textSecondary)),
+              ]),
+            ),
+          ]),
+          if (company.isNotEmpty) ...[
+            const SizedBox(height: 11),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.work_rounded, size: 13, color: Color(0xFF2E7D32)),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(company,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1B5E20))),
+                ),
+              ]),
+            ),
+          ],
+          if ((item['short_description'] as String? ?? '').isNotEmpty) ...[
+            const SizedBox(height: 9),
+            Text(item['short_description'] as String,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                    fontSize: 12, height: 1.45, color: AppColors.textSecondary)),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// A review in the student's own words. Their sentence converts better than
+/// anything written for them, so it is shown whole rather than trimmed to a
+/// pull-quote.
+class ReviewCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+  const ReviewCard({super.key, required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final attrs = (item['attributes'] as Map?) ?? {};
+    final rating = int.tryParse('${attrs['rating'] ?? ''}') ?? 0;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 290,
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (rating > 0)
+            Row(children: [
+              for (var i = 0; i < 5; i++)
+                Icon(i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                    size: 16, color: const Color(0xFFFFA000)),
+            ]),
+          const SizedBox(height: 9),
+          Text(
+              '"${item['short_description'] as String? ?? item['body'] as String? ?? ''}"',
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                  fontSize: 13, height: 1.55, color: AppColors.textPrimary)),
+          const SizedBox(height: 12),
+          Row(children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: SizedBox(
+                  width: 32, height: 32, child: ShowcaseCover(item: item)),
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(item['title'] as String? ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      fontSize: 12.5, fontWeight: FontWeight.w600)),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+}

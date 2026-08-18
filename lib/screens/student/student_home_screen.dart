@@ -70,6 +70,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   /// heading is worse than no heading.
   List<dynamic> _stories = [];
   List<dynamic> _labSetups = [];
+  List<dynamic> _placements = [];
+  List<dynamic> _reviews = [];
   bool _loading = true;
   String? _feedError;
 
@@ -288,6 +290,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     try {
       final setups = await ApiService.getShowcase('lab_setup');
       if (mounted) setState(() => _labSetups = setups);
+    } catch (_) {}
+    try {
+      final p = await ApiService.getShowcase('placement');
+      if (mounted) setState(() => _placements = p);
+    } catch (_) {}
+    try {
+      final rv = await ApiService.getShowcase('review');
+      if (mounted) setState(() => _reviews = rv);
     } catch (_) {}
 
     // This only feeds the institute tests/notices/results section — it must
@@ -577,6 +587,80 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 onTap: () =>
                                     context.go('/roadmap/product-engineering')),
                             const SizedBox(height: 24),
+
+                            // ── Results, right under the claim they support. A
+                            // page that describes a programme and never says
+                            // what happened to anyone who did it is asking for
+                            // trust it has not earned. ──
+                            if (_placements.isNotEmpty) ...[
+                              ShowcaseHeader(
+                                title: 'Where our students are now',
+                                subtitle: 'Placed after training with us',
+                                onViewAll: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const ShowcaseAlbumScreen(
+                                            kind: 'placement'))),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 170,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _placements.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
+                                  itemBuilder: (context, i) {
+                                    final item = _placements[i] as Map<String, dynamic>;
+                                    return PlacementCard(
+                                      item: item,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                ShowcaseDetailScreen(item: item)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                            ],
+
+                            if (_reviews.isNotEmpty) ...[
+                              ShowcaseHeader(
+                                title: 'What students say',
+                                subtitle: 'In their own words',
+                                onViewAll: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const ShowcaseAlbumScreen(
+                                            kind: 'review'))),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 210,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _reviews.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
+                                  itemBuilder: (context, i) {
+                                    final item = _reviews[i] as Map<String, dynamic>;
+                                    return ReviewCard(
+                                      item: item,
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                ShowcaseDetailScreen(item: item)),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                            ],
 
                             // ── Hero moment: continue an in-progress module, else the
                             // featured live session — never both at once. ──
