@@ -72,6 +72,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   List<dynamic> _labSetups = [];
   List<dynamic> _placements = [];
   List<dynamic> _reviews = [];
+
+  /// Placements first, then reviews, then stories: a result outranks a
+  /// work-in-progress, and the first two cards are the only ones some people
+  /// will ever see.
+  List<dynamic> get _topStrip => [..._placements, ..._reviews, ..._stories];
   bool _loading = true;
   String? _feedError;
 
@@ -588,80 +593,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     context.go('/roadmap/product-engineering')),
                             const SizedBox(height: 24),
 
-                            // ── Results, right under the claim they support. A
-                            // page that describes a programme and never says
-                            // what happened to anyone who did it is asking for
-                            // trust it has not earned. ──
-                            if (_placements.isNotEmpty) ...[
-                              ShowcaseHeader(
-                                title: 'Where our students are now',
-                                subtitle: 'Placed after training with us',
-                                onViewAll: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const ShowcaseAlbumScreen(
-                                            kind: 'placement'))),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 170,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: _placements.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
-                                  itemBuilder: (context, i) {
-                                    final item = _placements[i] as Map<String, dynamic>;
-                                    return PlacementCard(
-                                      item: item,
-                                      onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                ShowcaseDetailScreen(item: item)),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 26),
-                            ],
-
-                            if (_reviews.isNotEmpty) ...[
-                              ShowcaseHeader(
-                                title: 'What students say',
-                                subtitle: 'In their own words',
-                                onViewAll: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const ShowcaseAlbumScreen(
-                                            kind: 'review'))),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 210,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: _reviews.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
-                                  itemBuilder: (context, i) {
-                                    final item = _reviews[i] as Map<String, dynamic>;
-                                    return ReviewCard(
-                                      item: item,
-                                      onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                ShowcaseDetailScreen(item: item)),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(height: 26),
-                            ],
-
                             // ── Hero moment: continue an in-progress module, else the
                             // featured live session — never both at once. ──
                             Consumer<TrainingModuleProvider>(
@@ -708,10 +639,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             // these are photographs of them getting it. Each
                             // card cycles its own media so one card with five
                             // photos shows five. ──
-                            if (_stories.isNotEmpty) ...[
+                            // ── One strip, not three. Placements and reviews
+                            // ride along with the stories: three sections cost
+                            // the page more height than the extra headings were
+                            // worth, and each card still reads as what it is. ──
+                            if (_topStrip.isNotEmpty) ...[
                               ShowcaseHeader(
                                 title: 'Top Stories',
-                                subtitle: 'What our students are building',
+                                subtitle: 'What our students build — and where '
+                                    'they end up',
                                 onViewAll: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -719,26 +655,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                             const ShowcaseAlbumScreen(kind: 'story'))),
                               ),
                               const SizedBox(height: 12),
-                              SizedBox(
+                              AutoScrollStrip(
                                 height: 210,
-                                child: ListView.separated(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: _stories.length,
-                                  separatorBuilder: (_, __) => const SizedBox(width: 11),
-                                  itemBuilder: (context, i) {
-                                    final item = _stories[i] as Map<String, dynamic>;
-                                    return StoryCard(
-                                      item: item,
-                                      onTap: () => Navigator.push(
+                                itemCount: _topStrip.length,
+                                itemBuilder: (context, i) {
+                                  final item = _topStrip[i] as Map<String, dynamic>;
+                                  void open() => Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                             builder: (_) =>
                                                 ShowcaseDetailScreen(item: item)),
-                                      ),
-                                    );
-                                  },
-                                ),
+                                      );
+                                  return switch (item['kind']) {
+                                    'placement' =>
+                                      PlacementCard(item: item, onTap: open),
+                                    'review' => ReviewCard(item: item, onTap: open),
+                                    _ => StoryCard(item: item, onTap: open),
+                                  };
+                                },
                               ),
                               const SizedBox(height: 26),
                             ],

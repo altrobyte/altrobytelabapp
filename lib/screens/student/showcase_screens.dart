@@ -36,6 +36,16 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
   Future<void> _load() async {
     try {
       _items = await ApiService.getShowcase(widget.kind);
+      // The strip mixes kinds, so View All has to as well — otherwise a
+      // placement seen on the homepage vanishes when you tap through to
+      // "see all".
+      if (widget.kind == 'story') {
+        for (final k in const ['placement', 'review']) {
+          try {
+            _items = [...await ApiService.getShowcase(k), ..._items];
+          } catch (_) {}
+        }
+      }
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }

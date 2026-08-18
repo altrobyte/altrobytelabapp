@@ -444,3 +444,81 @@ class ReviewCard extends StatelessWidget {
     );
   }
 }
+
+/// A horizontal strip that scrolls itself.
+///
+/// One section instead of three saves the page a lot of height, but a strip
+/// nobody swipes only ever shows its first two cards — so it drifts on its
+/// own. It stops the moment a finger touches it and does not start again:
+/// fighting someone who is reading is worse than never having moved.
+class AutoScrollStrip extends StatefulWidget {
+  final double height;
+  final int itemCount;
+  final Widget Function(BuildContext, int) itemBuilder;
+  const AutoScrollStrip({
+    super.key,
+    required this.height,
+    required this.itemCount,
+    required this.itemBuilder,
+  });
+
+  @override
+  State<AutoScrollStrip> createState() => _AutoScrollStripState();
+}
+
+class _AutoScrollStripState extends State<AutoScrollStrip> {
+  final _controller = ScrollController();
+  Timer? _timer;
+  bool _stopped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.itemCount > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) => _step());
+    }
+  }
+
+  void _step() {
+    if (_stopped || !_controller.hasClients) return;
+    final max = _controller.position.maxScrollExtent;
+    if (max <= 0) return;
+    // Back to the start once the end is reached, so the strip keeps offering
+    // something rather than sitting on its last card forever.
+    final next = _controller.offset >= max - 8 ? 0.0 : _controller.offset + 170;
+    _controller.animateTo(
+      next.clamp(0.0, max),
+      duration: Duration(milliseconds: next == 0 ? 700 : 550),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: widget.height,
+        child: NotificationListener<ScrollStartNotification>(
+          onNotification: (n) {
+            if (n.dragDetails != null) {
+              _stopped = true;
+              _timer?.cancel();
+            }
+            return false;
+          },
+          child: ListView.separated(
+            controller: _controller,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: widget.itemCount,
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
+            itemBuilder: widget.itemBuilder,
+          ),
+        ),
+      );
+}
