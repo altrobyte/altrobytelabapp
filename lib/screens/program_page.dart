@@ -930,7 +930,7 @@ class _ProgramPageState extends State<ProgramPage> {
                     color: _blue)),
             const SizedBox(height: 10),
             SizedBox(
-              height: 170,
+              height: 210,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _placements.length,

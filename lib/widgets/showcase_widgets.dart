@@ -302,6 +302,10 @@ class ShowcaseHeader extends StatelessWidget {
 /// Where someone ended up after doing this. The one thing a student and a
 /// parent both look for, and the hardest to fake convincingly — which is
 /// exactly why it is worth showing when it is real.
+///
+/// Same portrait shape as a story card. They sit in one strip, and a white
+/// box of a different size beside three posters reads as something that broke
+/// rather than something that matters.
 class PlacementCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
@@ -313,81 +317,23 @@ class PlacementCard extends StatelessWidget {
     final company = '${attrs['company'] ?? ''}';
     final role = '${attrs['role'] ?? ''}';
 
-    return InkWell(
+    return _PosterCard(
+      item: item,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 250,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(26),
-              child: SizedBox(
-                  width: 46, height: 46, child: ShowcaseCover(item: item)),
+      badge: company.isEmpty
+          ? null
+          : _Badge(
+              icon: Icons.work_rounded,
+              text: company,
+              color: const Color(0xFF2E7D32),
             ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(item['title'] as String? ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                if (role.isNotEmpty)
-                  Text(role,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                          fontSize: 11.5, color: AppColors.textSecondary)),
-              ]),
-            ),
-          ]),
-          if (company.isNotEmpty) ...[
-            const SizedBox(height: 11),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.work_rounded, size: 13, color: Color(0xFF2E7D32)),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(company,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1B5E20))),
-                ),
-              ]),
-            ),
-          ],
-          if ((item['short_description'] as String? ?? '').isNotEmpty) ...[
-            const SizedBox(height: 9),
-            Text(item['short_description'] as String,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                    fontSize: 12, height: 1.45, color: AppColors.textSecondary)),
-          ],
-        ]),
-      ),
+      title: item['title'] as String? ?? '',
+      subtitle: role,
     );
   }
 }
 
-/// A review in the student's own words. Their sentence converts better than
-/// anything written for them, so it is shown whole rather than trimmed to a
-/// pull-quote.
+/// A review in the student's own words, in the same portrait shape.
 class ReviewCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
@@ -397,52 +343,131 @@ class ReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final attrs = (item['attributes'] as Map?) ?? {};
     final rating = int.tryParse('${attrs['rating'] ?? ''}') ?? 0;
+    final quote = (item['short_description'] as String? ?? '').trim();
 
-    return InkWell(
+    return _PosterCard(
+      item: item,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 290,
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (rating > 0)
-            Row(children: [
-              for (var i = 0; i < 5; i++)
-                Icon(i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 16, color: const Color(0xFFFFA000)),
+      badge: rating <= 0
+          ? null
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              for (var i = 0; i < rating.clamp(0, 5); i++)
+                const Icon(Icons.star_rounded, size: 13, color: Color(0xFFFFC107)),
             ]),
-          const SizedBox(height: 9),
-          Text(
-              '"${item['short_description'] as String? ?? item['body'] as String? ?? ''}"',
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                  fontSize: 13, height: 1.55, color: AppColors.textPrimary)),
-          const SizedBox(height: 12),
-          Row(children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: SizedBox(
-                  width: 32, height: 32, child: ShowcaseCover(item: item)),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: Text(item['title'] as String? ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12.5, fontWeight: FontWeight.w600)),
-            ),
-          ]),
-        ]),
-      ),
+      title: item['title'] as String? ?? '',
+      subtitle: quote.isEmpty ? '' : '"$quote"',
+      subtitleLines: 3,
     );
   }
+}
+
+/// The shared shape: a portrait image, a readable gradient, and whatever the
+/// card wants to say sitting on top of it.
+class _PosterCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+  final Widget? badge;
+  final String title;
+  final String subtitle;
+  final int subtitleLines;
+  const _PosterCard({
+    required this.item,
+    required this.onTap,
+    required this.title,
+    this.badge,
+    this.subtitle = '',
+    this.subtitleLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 150,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Stack(fit: StackFit.expand, children: [
+              ShowcaseCover(item: item),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.78),
+                      ],
+                      stops: const [0.35, 1],
+                    ),
+                  ),
+                ),
+              ),
+              if (badge != null) Positioned(top: 9, left: 9, child: badge!),
+              Positioned(
+                left: 10,
+                right: 10,
+                bottom: 10,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.25)),
+                      if (subtitle.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(subtitle,
+                              maxLines: subtitleLines,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 10.5,
+                                  height: 1.35)),
+                        ),
+                    ]),
+              ),
+            ]),
+          ),
+        ),
+      );
+}
+
+class _Badge extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _Badge({required this.icon, required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 96),
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+          ),
+        ]),
+      );
 }
 
 /// A horizontal strip that scrolls itself.
