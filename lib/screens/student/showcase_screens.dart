@@ -95,9 +95,11 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
                       crossAxisCount: columns,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 16,
-                      // Lab setups are square with a price under them; stories
-                      // are portrait, so they need the taller cell.
-                      childAspectRatio: _isLab ? 0.72 : 0.62,
+                      // Lab setups are square with a price under them.
+                      // Everything else is a portrait poster, and a poster
+                      // wants the proportion it was designed at — cropping one
+                      // to a square cuts the name off the bottom.
+                      childAspectRatio: _isLab ? 0.72 : 0.66,
                     ),
                     itemCount: _items.length,
                     itemBuilder: (context, i) {
@@ -128,6 +130,9 @@ class _AlbumTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final price = item['price_label'] as String? ?? '';
     final count = (item['media_count'] as int?) ?? 0;
+    final attrs = (item['attributes'] as Map?) ?? {};
+    final company = '${attrs['company'] ?? ''}';
+    final rating = int.tryParse('${attrs['rating'] ?? ''}') ?? 0;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -137,6 +142,42 @@ class _AlbumTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             child: Stack(fit: StackFit.expand, children: [
               ShowcaseCover(item: item),
+              if (company.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.work_rounded, size: 11, color: Colors.white),
+                      const SizedBox(width: 4),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 110),
+                        child: Text(company,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
+                      ),
+                    ]),
+                  ),
+                )
+              else if (rating > 0)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    for (var i = 0; i < rating.clamp(0, 5); i++)
+                      const Icon(Icons.star_rounded,
+                          size: 13, color: Color(0xFFFFC107)),
+                  ]),
+                ),
               if (count > 1)
                 Positioned(
                   top: 8,
@@ -252,7 +293,10 @@ class _ShowcaseDetailScreenState extends State<ShowcaseDetailScreen> {
       body: ListView(padding: EdgeInsets.zero, children: [
         if (media.isNotEmpty)
           SizedBox(
-            height: 320,
+            // Tall enough for a portrait poster to be readable. At 320 a 4:5
+            // congratulations poster shrank to a stamp between two black bars
+            // that took up more of the screen than it did.
+            height: MediaQuery.of(context).size.height * 0.62,
             child: Stack(children: [
               PageView.builder(
                 controller: _controller,
@@ -360,13 +404,16 @@ class _MediaSlide extends StatelessWidget {
             }
           : null,
       child: Container(
-        color: Colors.black,
+        // A poster on black is a poster in a cinema. These are shared to
+        // WhatsApp and read on a phone; a light ground sits with the page
+        // instead of punching a hole in it.
+        color: const Color(0xFFF2F4F8),
         child: Stack(fit: StackFit.expand, children: [
           if (url.isNotEmpty)
             Image.network(url,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined,
-                    color: Colors.white38, size: 40)),
+                    color: Colors.black26, size: 40)),
           if (isVideo)
             Center(
               child: Container(
