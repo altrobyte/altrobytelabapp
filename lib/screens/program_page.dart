@@ -17,6 +17,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
+import '../widgets/showcase_widgets.dart';
+import 'student/showcase_screens.dart';
 
 const _navy = Color(0xFF0B2450);
 const _blue = Color(0xFF1565C0);
@@ -124,11 +126,32 @@ class ProgramPage extends StatefulWidget {
 class _ProgramPageState extends State<ProgramPage> {
   String _waNumber = '';
   String _seatsLeft = '';
+  List<dynamic> _placements = [];
+  List<dynamic> _reviews = [];
 
   @override
   void initState() {
     super.initState();
     _loadNumber();
+    _loadResults();
+  }
+
+  /// The page asks for money four screens down. What it owes a reader before
+  /// that is evidence that anyone who paid it got anything back.
+  Future<void> _loadResults() async {
+    for (final entry in {'placement': 0, 'review': 1}.entries) {
+      try {
+        final items = await ApiService.getShowcase(entry.key);
+        if (!mounted) continue;
+        setState(() {
+          if (entry.key == 'placement') {
+            _placements = items;
+          } else {
+            _reviews = items;
+          }
+        });
+      } catch (_) {}
+    }
   }
 
   /// The enquiry number is a setting, so this page cannot be the one place it
@@ -196,6 +219,8 @@ class _ProgramPageState extends State<ProgramPage> {
         _section(child: _portfolio(wide)),
         _section(color: const Color(0xFFF7F9FC), child: _career(wide)),
         _section(child: _forWhom(wide)),
+        if (_placements.isNotEmpty || _reviews.isNotEmpty)
+          _section(color: const Color(0xFFF7F9FC), child: _results(wide)),
         _section(color: _navy, child: _fees(wide)),
         _section(child: _groupUnlock(wide)),
         _section(color: const Color(0xFFF7F9FC), child: _whyHandsOn(wide)),
@@ -889,6 +914,72 @@ class _ProgramPageState extends State<ProgramPage> {
       ]),
     ]);
   }
+
+  Widget _results(bool wide) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _h2('📈  What happened to people who did this'),
+          _lead('The rest of this page is a description. This part is the '
+              'evidence.'),
+          if (_placements.isNotEmpty) ...[
+            Text('WHERE THEY ARE NOW',
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                    color: _blue)),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 170,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _placements.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, i) {
+                  final item = _placements[i] as Map<String, dynamic>;
+                  return PlacementCard(
+                    item: item,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ShowcaseDetailScreen(item: item)),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 26),
+          ],
+          if (_reviews.isNotEmpty) ...[
+            Text('IN THEIR OWN WORDS',
+                style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.7,
+                    color: _blue)),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 210,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _reviews.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, i) {
+                  final item = _reviews[i] as Map<String, dynamic>;
+                  return ReviewCard(
+                    item: item,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ShowcaseDetailScreen(item: item)),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      );
 
   Widget _fees(bool wide) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
