@@ -988,7 +988,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getShowcaseItem(int id) async {
-    final res = await http.get(Uri.parse(ApiConstants.showcaseItem(id)),
+    final res = await safeGet(Uri.parse(ApiConstants.showcaseItem(id)),
         headers: _headers());
     return _parse(res);
   }
@@ -999,14 +999,14 @@ class ApiService {
   static Future<List<dynamic>> getRoadmaps() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
-    final res = await http.get(Uri.parse(ApiConstants.roadmaps()), headers: _headers(token));
+    final res = await safeGet(Uri.parse(ApiConstants.roadmaps()), headers: _headers(token));
     return (_parse(res)['roadmaps'] as List?) ?? [];
   }
 
   static Future<Map<String, dynamic>> getRoadmap(String slug) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
-    final res = await http.get(Uri.parse(ApiConstants.roadmap(slug)), headers: _headers(token));
+    final res = await safeGet(Uri.parse(ApiConstants.roadmap(slug)), headers: _headers(token));
     return _parse(res);
   }
 
@@ -1014,7 +1014,7 @@ class ApiService {
   static Future<Map<String, dynamic>> toggleRoadmapStep(int stepId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
-    final res = await http.post(Uri.parse(ApiConstants.roadmapStepToggle(stepId)),
+    final res = await safePost(Uri.parse(ApiConstants.roadmapStepToggle(stepId)),
         headers: _headers(token));
     return _parse(res);
   }
@@ -1086,7 +1086,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getPushPrefs() async {
     final authToken = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.pushPrefs()),
       headers: _headers(authToken),
     );
@@ -1166,13 +1166,13 @@ class ApiService {
 
   // PWA branding
   static Future<Map<String, dynamic>> getBrand(String slug) async {
-    final res = await http.get(Uri.parse(ApiConstants.brand(slug)));
+    final res = await safeGet(Uri.parse(ApiConstants.brand(slug)));
     return _parse(res);
   }
 
   static Future<Map<String, dynamic>> getInstituteBrand(int instituteId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.instituteBrand(instituteId)),
       headers: _headers(token),
     );
@@ -1219,7 +1219,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getInstituteProfile(
       int instituteId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.instituteProfile(instituteId)),
       headers: _headers(token),
     );
@@ -1271,7 +1271,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getGenerationUsage(
       int instituteId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.instituteGenerationUsage(instituteId)),
       headers: _headers(token),
     );
@@ -1293,7 +1293,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getAttendance(
       int batchId, String date) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.getAttendance(batchId, date)),
       headers: _headers(token),
     );
@@ -1303,7 +1303,7 @@ class ApiService {
   // Fees
   static Future<List<dynamic>> getPendingFees(int instituteId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.pendingFees(instituteId)),
       headers: _headers(token),
     );
@@ -1316,14 +1316,14 @@ class ApiService {
     final token = await _token();
     var url = ApiConstants.fees(instituteId);
     if (status != null) url += '?status=$status';
-    final res = await http.get(Uri.parse(url), headers: _headers(token));
+    final res = await safeGet(Uri.parse(url), headers: _headers(token));
     final data = _parse(res);
     return data['fees'] as List;
   }
 
   static Future<List<dynamic>> getStudentFees(int studentId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.studentFees(studentId)),
       headers: _headers(token),
     );
@@ -1356,7 +1356,7 @@ class ApiService {
   // Analytics
   static Future<Map<String, dynamic>> getAnalytics(int instituteId) async {
     final token = await _token();
-    final res = await http.get(
+    final res = await safeGet(
       Uri.parse(ApiConstants.analytics(instituteId)),
       headers: _headers(token),
     );

@@ -58,7 +58,13 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       _roadmap = r;
       if (_open.isEmpty) _openCurrentBranch((r['steps'] as List?) ?? []);
     } catch (e) {
-      _error = e is ApiException ? e.message : 'Could not load the roadmap';
+      // The generic line told a student nothing and told us nothing either.
+      // ApiException already distinguishes "no internet" from "slow network"
+      // from a real server error; passing it through is the difference
+      // between a retry that helps and one that repeats.
+      _error = e is ApiException
+          ? e.message
+          : 'Could not load the roadmap. $e';
     }
     if (mounted) setState(() => _loading = false);
   }
