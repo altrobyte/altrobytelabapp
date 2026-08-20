@@ -46,6 +46,33 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   /// steps.
   int _plan = 0;
 
+  /// Whether the plan currently selected reaches stage [index].
+  ///
+  /// A plan with no limit covers the whole roadmap, which is also the right
+  /// answer when a roadmap has no plans at all.
+  bool _stageIncluded(Map<String, dynamic> r, int index) {
+    final plans = (r['plans'] as List?) ?? [];
+    if (plans.isEmpty) return true;
+    final plan = plans[_plan.clamp(0, plans.length - 1)] as Map;
+    final limit = plan['stage_limit'] as int?;
+    return limit == null || index < limit;
+  }
+
+  /// The first plan that does reach stage [index], so the badge can name it
+  /// rather than just refusing.
+  String _planCovering(Map<String, dynamic> r, int index) {
+    for (final p in (r['plans'] as List?) ?? []) {
+      final limit = (p as Map)['stage_limit'] as int?;
+      if (limit == null || index < limit) {
+        final name = p['name'] as String? ?? '';
+        final duration = p['duration_label'] as String? ?? '';
+        if (name.isEmpty) return '';
+        return duration.isEmpty ? name : '$duration $name';
+      }
+    }
+    return '';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -234,10 +261,17 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                             onPlanChanged: (i) => setState(() => _plan = i),
                           ),
                           const SizedBox(height: 18),
-                          for (final m in (r['steps'] as List?) ?? [])
+                          for (final (i, m)
+                              in ((r['steps'] as List?) ?? []).indexed)
                             _Node(
                               step: m as Map<String, dynamic>,
                               depth: 0,
+                              // Stage 4 is real and worth seeing whichever
+                              // track you are weighing — it is the argument
+                              // for the longer one. Naming the track that
+                              // includes it is the whole point of showing it.
+                              includedInPlan: _stageIncluded(r, i),
+                              otherPlanName: _planCovering(r, i),
                               signedIn: r['signed_in'] == true,
                               isOpen: _open.contains(m['id']),
                               openIds: _open,
@@ -352,6 +386,12 @@ class _Header extends StatelessWidget {
             _Chip(icon: Icons.timer_outlined, label: plan!['hours_label'] as String),
           if ((plan?['mode_label'] as String? ?? '').isNotEmpty)
             _Chip(icon: Icons.location_on_outlined, label: plan!['mode_label'] as String),
+          // Scope, stated rather than left to be inferred from which stages
+          // carry a badge further down the page.
+          if (plan?['stage_limit'] is int)
+            _Chip(
+                icon: Icons.layers_outlined,
+                label: 'Stages 1-${plan!['stage_limit']}'),
           _Chip(icon: Icons.checklist_rounded, label: '$total milestones'),
         ]),
         if ((plan?['note'] as String? ?? '').isNotEmpty) ...[
@@ -449,9 +489,17 @@ class _Node extends StatelessWidget {
   final void Function(int id) onToggleOpen;
   final Future<void> Function(Map<String, dynamic> step) onTick;
 
+  /// False only for a top-level stage the selected plan stops short of.
+  final bool includedInPlan;
+
+  /// The plan that does include it, named on the badge.
+  final String otherPlanName;
+
   const _Node({
     required this.step,
     required this.depth,
+    this.includedInPlan = true,
+    this.otherPlanName = '',
     required this.signedIn,
     required this.isOpen,
     required this.openIds,
@@ -582,6 +630,33 @@ class _Node extends StatelessWidget {
                   _LevelPill(label: step['level_label'] as String, index: (step['order'] as int?) ?? 0),
                 ],
               ]),
+              if (!includedInPlan) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFFCC80)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.lock_clock_rounded,
+                        size: 12, color: Color(0xFFE65100)),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        otherPlanName.isEmpty
+                            ? 'Not part of this track'
+                            : 'Included in the $otherPlanName track',
+                        style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE65100)),
+                      ),
+                    ),
+                  ]),
+                ),
+              ],
               if (signedIn && total > 0) ...[
                 const SizedBox(height: 5),
                 Row(children: [
