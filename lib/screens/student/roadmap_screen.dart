@@ -18,6 +18,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../widgets/callback_sheet.dart';
 
 class RoadmapScreen extends StatefulWidget {
   final String slug;
@@ -823,8 +824,8 @@ class _EnrollCta extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () => openRoadmapWhatsApp(context, roadmap,
-                planIndex: planIndex, callback: true),
+            onPressed: () =>
+                askForCallback(context, roadmap, planIndex: planIndex),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF0B2450),
@@ -873,6 +874,24 @@ class _EnrollCta extends StatelessWidget {
 /// what they want before they know what to ask for. A callback request is a
 /// smaller thing to agree to than "enquire", and it moves the conversation to
 /// a channel where we can actually answer.
+/// The callback ask. Opens the form; WhatsApp stays available inside it.
+void askForCallback(BuildContext context, Map<String, dynamic> roadmap,
+    {required int planIndex}) {
+  final plans = (roadmap['plans'] as List?) ?? [];
+  final planName = plans.isEmpty
+      ? ''
+      : ((plans[planIndex.clamp(0, plans.length - 1)] as Map)['name']
+              as String? ??
+          '');
+  CallbackSheet.show(
+    context,
+    plan: planName,
+    source: 'roadmap',
+    onWhatsApp: () => openRoadmapWhatsApp(context, roadmap,
+        planIndex: planIndex, callback: true),
+  );
+}
+
 Future<void> openRoadmapWhatsApp(
   BuildContext context,
   Map<String, dynamic> roadmap, {
@@ -978,8 +997,8 @@ class _StickyCta extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => openRoadmapWhatsApp(context, roadmap,
-                      planIndex: planIndex, callback: true),
+                  onPressed: () =>
+                      askForCallback(context, roadmap, planIndex: planIndex),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF12326B),
                     padding: const EdgeInsets.symmetric(vertical: 14),

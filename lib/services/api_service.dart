@@ -1003,6 +1003,31 @@ class ApiService {
     return (_parse(res)['roadmaps'] as List?) ?? [];
   }
 
+  /// Records a callback request. The lead is saved server-side before any
+  /// WhatsApp message is attempted, so a failed send never costs us the lead.
+  static Future<Map<String, dynamic>> requestCallback({
+    required String name,
+    required String phone,
+    String email = '',
+    String segment = '',
+    String plan = '',
+    String source = 'roadmap',
+  }) async {
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/callback'),
+      headers: _headers(null),
+      body: jsonEncode({
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'segment': segment,
+        'plan': plan,
+        'source': source,
+      }),
+    );
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> getRoadmap(String slug) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
