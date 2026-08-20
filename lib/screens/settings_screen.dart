@@ -174,12 +174,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onSave: (v) => _saveWaSetting(key, v),
                   ),
 
-              // One-time switches. These were text boxes asking for "1", which
-              // is a toggle wearing a keyboard.
+              // The template switches are gone. Whether Meta has approved a
+              // template is something Meta knows and we can ask, so the
+              // backend asks — a switch here could only be flipped late, or
+              // flipped early and hard-error on an unapproved name.
               for (final t in const [
-                ('wa_template_welcome_ready', 'Welcome template approved'),
-                ('wa_template_enroll_ready', 'Enrolment template approved'),
-                ('wa_template_callback_ready', 'Callback template approved'),
                 ('wa_daily_enabled', 'Send one nudge a day'),
               ])
                 if (_wa(t.$1) != null)
@@ -192,9 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: GoogleFonts.inter(
                             fontSize: 13, fontWeight: FontWeight.w500)),
                     subtitle: Text(
-                        t.$1 == 'wa_daily_enabled'
-                            ? 'Opted-in students only, one line a day'
-                            : 'Off until Meta approves it — we send a plain update instead',
+                        'Opted-in students only, one line a day',
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                   ),
 
