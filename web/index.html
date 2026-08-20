@@ -48,7 +48,178 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>AltrobyteLab</title>
+  <title>Altrobyte Lab - Product Engineering Program | Embedded, PCB and IoT Training in Indore</title>
+
+  <!-- Structured data. Everything else on this page is drawn into a canvas a
+       crawler cannot read, so this block is the only description of the
+       business Google gets without executing our bundle. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "EducationalOrganization",
+        "@id": "https://lab.altrobyte.com/#org",
+        "name": "Altrobyte Lab",
+        "alternateName": "Altrobyte",
+        "url": "https://lab.altrobyte.com/",
+        "logo": "https://lab.altrobyte.com/icons/Icon-512.png",
+        "image": "https://lab.altrobyte.com/og-program.jpg",
+        "email": "support@altrobyte.com",
+        "description": "Hands-on product engineering training in embedded systems, PCB design, firmware, IoT and applied AI. Students build real industrial products instead of following tutorials.",
+        "areaServed": { "@type": "City", "name": "Indore" },
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Indore",
+          "addressRegion": "Madhya Pradesh",
+          "addressCountry": "IN"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "admissions",
+          "telephone": "+91-9111530407",
+          "email": "support@altrobyte.com",
+          "areaServed": "IN",
+          "availableLanguage": ["en", "hi"]
+        }
+      },
+      {
+        "@type": "Course",
+        "@id": "https://lab.altrobyte.com/program#course",
+        "name": "Product Engineering Program",
+        "url": "https://lab.altrobyte.com/program",
+        "description": "Build 3-4 real industrial products across 165 milestones - schematic to PCB, firmware, cloud and applied AI. Offered as a 1-month intensive or a 3-month weekend track, online or in person at Indore.",
+        "provider": { "@id": "https://lab.altrobyte.com/#org" },
+        "educationalLevel": "Beginner to Intermediate",
+        "teaches": [
+          "Embedded C and firmware development",
+          "Schematic capture and PCB design",
+          "IoT connectivity and cloud integration",
+          "Applied AI on edge devices",
+          "Hardware debugging and testing"
+        ],
+        "inLanguage": "en",
+        "hasCourseInstance": [
+          {
+            "@type": "CourseInstance",
+            "name": "Intensive track",
+            "courseMode": ["Online", "Onsite"],
+            "courseWorkload": "PT60H",
+            "location": { "@type": "Place", "name": "Altrobyte Lab, Indore" }
+          },
+          {
+            "@type": "CourseInstance",
+            "name": "Weekend track",
+            "courseMode": ["Online", "Onsite"],
+            "courseWorkload": "PT72H",
+            "location": { "@type": "Place", "name": "Altrobyte Lab, Indore" }
+          }
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://lab.altrobyte.com/#website",
+        "url": "https://lab.altrobyte.com/",
+        "name": "Altrobyte Lab",
+        "publisher": { "@id": "https://lab.altrobyte.com/#org" }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Rescue for links shared before this app used real paths.
+       Flutter's old default put the route after a "#", and a fragment is
+       never sent to the server: /#/roadmap/x arrives as "/" and the reader
+       lands on the homepage wondering what they clicked. Those links are in
+       WhatsApp forwards we cannot recall, so translate them here, before the
+       router boots and before anything is painted. -->
+  <script>
+  (function () {
+    var h = location.hash;
+    if (h.length > 2 && h.charAt(1) === '/') {
+      history.replaceState(null, '', h.slice(1) + location.search);
+    }
+  })();
+  </script>
+
+  <!-- Per-route title, description and canonical.
+       A single-page app serves one HTML file for every URL, so without this
+       every page would share the homepage's title, and a static canonical
+       would tell Google the whole site is a duplicate of "/". The map is
+       deliberately small: only routes we would be glad to be found on. -->
+  <script>
+  (function () {
+    var META = {
+      '/': ['Altrobyte Lab - Learn Embedded, PCB and IoT by Building Real Products',
+            'Hands-on embedded systems, PCB design and IoT training in Indore. Build real industrial products, not tutorials.'],
+      '/program': ['Product Engineering Program - 165 Milestones, Real Hardware | Altrobyte Lab',
+            'Build 3-4 real industrial products in one program. Schematic to PCB, firmware, cloud and AI. Intensive or weekend track, online or at Indore.'],
+      '/pricing': ['Pricing - Altrobyte Lab',
+            'Platform access, live workshops and the Product Engineering Program.'],
+      '/placements': ['Placements and Results - Altrobyte Lab',
+            'Where our students work now, and what they said about getting there.'],
+      '/services': ['Services - Altrobyte Lab',
+            'Product engineering, embedded development and PCB design for teams building hardware.'],
+      '/products': ['Lab Setups and Products - Altrobyte Lab',
+            'Complete embedded and IoT lab setups for colleges and institutes.'],
+      '/institutes': ['For Colleges and Institutes - Altrobyte Lab',
+            'Bring a working embedded and IoT lab to your campus, with curriculum and trainers.'],
+      '/events': ['Workshops and Events - Altrobyte Lab',
+            'Upcoming hands-on workshops in embedded systems, PCB design and IoT.'],
+      '/jobs': ['Embedded and IoT Job Updates - Altrobyte Lab',
+            'Curated embedded systems, firmware and hardware openings for engineers in India.'],
+      '/partner': ['Partner With Us - Altrobyte Lab',
+            'Run Altrobyte Lab programs at your college, institute or company.'],
+      '/about': ['About - Altrobyte Lab', 'Why we teach engineering by building products.'],
+      '/founder': ['Founder - Altrobyte Lab', 'The person behind Altrobyte Lab.'],
+      '/contact': ['Contact - Altrobyte Lab', 'Talk to us about programs, workshops or lab setups.'],
+      '/privacy': ['Privacy Policy - Altrobyte Lab', 'What we collect, why, and how to have it removed.'],
+      '/terms': ['Terms and Conditions - Altrobyte Lab', 'Terms of use for Altrobyte Lab.'],
+      '/refunds': ['Refund Policy - Altrobyte Lab', 'When and how refunds are issued.']
+    };
+
+    function put(tag, keyAttr, keyVal, valAttr, val) {
+      var el = document.head.querySelector(tag + '[' + keyAttr + '="' + keyVal + '"]');
+      if (!el) {
+        el = document.createElement(tag);
+        el.setAttribute(keyAttr, keyVal);
+        document.head.appendChild(el);
+      }
+      el.setAttribute(valAttr, val);
+    }
+
+    function apply() {
+      var path = location.pathname.replace(/\/+$/, '') || '/';
+      var m = META[path];
+      // A roadmap URL carries its own subject. Anything unmapped keeps the
+      // site defaults rather than inheriting the homepage's claims.
+      if (!m && path.indexOf('/roadmap/') === 0) {
+        m = ['Engineering Roadmap - Altrobyte Lab',
+             'A milestone-by-milestone roadmap from first principles to a working product.'];
+      }
+      if (m) {
+        document.title = m[0];
+        put('meta', 'name', 'description', 'content', m[1]);
+        put('meta', 'property', 'og:title', 'content', m[0]);
+        put('meta', 'property', 'og:description', 'content', m[1]);
+        put('meta', 'name', 'twitter:title', 'content', m[0]);
+        put('meta', 'name', 'twitter:description', 'content', m[1]);
+      }
+      var url = 'https://lab.altrobyte.com' + path;
+      put('link', 'rel', 'canonical', 'href', url);
+      put('meta', 'property', 'og:url', 'content', url);
+    }
+
+    apply();
+    // go_router pushes state rather than reloading, so the tags have to follow.
+    var push = history.pushState;
+    history.pushState = function () { push.apply(this, arguments); setTimeout(apply, 0); };
+    var rep = history.replaceState;
+    history.replaceState = function () { rep.apply(this, arguments); setTimeout(apply, 0); };
+    window.addEventListener('popstate', function () { setTimeout(apply, 0); });
+  })();
+  </script>
+
   <link rel="manifest" href="manifest.json">
   <style>
     #splash {

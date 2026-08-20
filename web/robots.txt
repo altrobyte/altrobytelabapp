@@ -1,0 +1,18 @@
+# Altrobyte Lab
+
+User-agent: *
+Allow: /
+
+# Nothing behind a login is worth a crawl budget, and an indexed dashboard
+# URL only ever sends a stranger to a login screen.
+Disallow: /student/
+Disallow: /admin
+Disallow: /admin-access
+Disallow: /super-access
+Disallow: /crm
+Disallow: /showcase-admin
+Disallow: /curriculum-admin
+Disallow: /wa-messages
+Disallow: /debug
+
+Sitemap: https://lab.altrobyte.com/sitemap.xml
