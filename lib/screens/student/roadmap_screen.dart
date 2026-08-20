@@ -82,7 +82,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     try {
       final r = await ApiService.getRoadmap(widget.slug);
       _roadmap = r;
-      if (_open.isEmpty) _openCurrentBranch((r['steps'] as List?) ?? []);
+      if (_open.isEmpty) _openAll((r['steps'] as List?) ?? []);
     } catch (e) {
       // The generic line told a student nothing and told us nothing either.
       // ApiException already distinguishes "no internet" from "slow network"
@@ -95,18 +95,21 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
-  /// Open every ancestor of the current step, so it is visible without hunting.
-  bool _openCurrentBranch(List nodes) {
+  /// Open every section on arrival.
+  ///
+  /// This page is the pitch, and a collapsed pitch asks the reader to work
+  /// for it. Someone weighing the programme should see the whole syllabus by
+  /// scrolling — not discover it a tap at a time, deciding at each closed
+  /// heading whether it is worth opening. Sections still collapse; the
+  /// default is just the other way round now.
+  void _openAll(List nodes) {
     for (final n in nodes) {
       final node = n as Map<String, dynamic>;
       final children = (node['children'] as List?) ?? [];
-      final hit = node['is_current'] == true || _openCurrentBranch(children);
-      if (hit) {
-        _open.add(node['id'] as int);
-        return true;
-      }
+      if (children.isEmpty) continue;
+      _open.add(node['id'] as int);
+      _openAll(children);
     }
-    return false;
   }
 
   Future<void> _toggle(Map<String, dynamic> step) async {
@@ -241,19 +244,38 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                   ? const SizedBox.shrink()
                   : RefreshIndicator(
                       onRefresh: _load,
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 48),
-                        children: [
-                          _Header(
-                            roadmap: r,
-                            planIndex: _plan,
-                            onPlanChanged: (i) => setState(() => _plan = i),
-                          ),
-                          const SizedBox(height: 18),
-                          for (final (i, m)
-                              in ((r['steps'] as List?) ?? []).indexed)
-                            _Node(
-                              step: m as Map<String, dynamic>,
+                      // Every section is open now, which is ~210 widgets for
+                      // this roadmap. Built eagerly that is a visible hitch on
+                      // a cheap phone, so the list builds a stage at a time
+                      // and only near the viewport — expanded stays cheap.
+                      child: Builder(builder: (context) {
+                        final stages = (r['steps'] as List?) ?? [];
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 48),
+                          // header + stages + closing CTA
+                          itemCount: stages.length + 2,
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 18),
+                                child: _Header(
+                                  roadmap: r,
+                                  planIndex: _plan,
+                                  onPlanChanged: (i) =>
+                                      setState(() => _plan = i),
+                                ),
+                              );
+                            }
+                            if (index == stages.length + 1) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: _EnrollCta(roadmap: r, planIndex: _plan),
+                              );
+                            }
+                            final i = index - 1;
+                            final m = stages[i] as Map<String, dynamic>;
+                            return _Node(
+                              step: m,
                               depth: 0,
                               // Stage 4 is real and worth seeing whichever
                               // track you are weighing — it is the argument
@@ -265,14 +287,15 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                               isOpen: _open.contains(m['id']),
                               openIds: _open,
                               busyIds: _busy,
-                              onToggleOpen: (id) => setState(
-                                  () => _open.contains(id) ? _open.remove(id) : _open.add(id)),
+                              onToggleOpen: (id) => setState(() =>
+                                  _open.contains(id)
+                                      ? _open.remove(id)
+                                      : _open.add(id)),
                               onTick: _toggle,
-                            ),
-                          const SizedBox(height: 8),
-                          _EnrollCta(roadmap: r, planIndex: _plan),
-                        ],
-                      ),
+                            );
+                          },
+                        );
+                      }                      ),
                     ),
     );
   }

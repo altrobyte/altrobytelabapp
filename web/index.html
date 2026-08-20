@@ -222,25 +222,6 @@
 
   <link rel="manifest" href="manifest.json">
   <style>
-    /* Reserved height whether or not a photo arrives, so the line beneath it
-       never jumps when one does. */
-    #splash .story {
-      height: 76px;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #splash .story img {
-      width: 72px; height: 72px;
-      border-radius: 50%;
-      object-fit: cover;
-      opacity: 0;
-      transition: opacity .45s ease;
-      border: 2px solid rgba(255,255,255,0.28);
-      background: rgba(255,255,255,0.06);
-    }
-    #splash .story img.on { opacity: 1; }
     #splash {
       position: fixed; inset: 0;
       background: linear-gradient(160deg, #1A3C5E 0%, #0F2540 100%);
@@ -286,125 +267,34 @@
 <body>
   <div id="splash">
     <div class="logo-wrap"><img src="icons/Icon-192.png" alt="AltrobyteLab"></div>
-    <div class="story" id="splash-story"><img id="splash-photo" alt=""></div>
     <div class="msg" id="splash-msg">Warming up your workshop...</div>
     <div class="dots"><span></span><span></span><span></span></div>
   </div>
   <script>
     // A bare spinner on a plain white/navy screen reads as "broken" on a
-    // slow connection. Rotating lines make the same wait feel intentional,
-    // and real ones - where somebody ended up, what somebody built - do a job
-    // the generic lines never could: the wait becomes the pitch.
-    //
-    // Text only, deliberately. The cover images behind these stories are
-    // ~1.8MB each and would be pulled over the same connection that is busy
-    // fetching a 5.5MB bundle, so showing one would make the wait it is
-    // decorating measurably longer. The JSON is about 5KB.
+    // slow connection — rotating short, upbeat lines make the same wait
+    // feel intentional instead of stuck. Purely cosmetic; load time itself
+    // is unaffected by this part.
     var _splashMessages = [
       'Warming up your workshop...',
       'Good things are worth a short wait...',
       'Getting your seat ready...',
-      'Almost there - loading the good stuff...',
+      'Almost there — loading the good stuff...',
       'Preparing something worth building...'
     ];
-
-    // Last visit's lines, shown instantly with no network at all. A repeat
-    // visitor sees real content in the first frame of the splash rather than
-    // in its last.
-    try {
-      var cached = JSON.parse(localStorage.getItem('splashLines') || '[]');
-      if (cached.length) _splashMessages = cached;
-    } catch (e) {}
-
     var _splashIdx = 0;
     var _splashMsgEl = document.getElementById('splash-msg');
-    var _splashPhotoEl = document.getElementById('splash-photo');
-
-    // The generic lines carry no photo; a story may or may not have one, and
-    // the frame stays empty rather than showing a broken or stale face.
-    function _splashShow(i) {
-      var m = _splashMessages[i];
-      var text = typeof m === 'string' ? m : (m && m.t) || '';
-      var photo = typeof m === 'string' ? '' : (m && m.photo) || '';
-      if (_splashMsgEl) _splashMsgEl.textContent = text;
-      if (!_splashPhotoEl) return;
-      if (photo) {
-        _splashPhotoEl.onload = function () { _splashPhotoEl.className = 'on'; };
-        _splashPhotoEl.onerror = function () { _splashPhotoEl.className = ''; };
-        _splashPhotoEl.src = photo;
-      } else {
-        _splashPhotoEl.className = '';
-        _splashPhotoEl.removeAttribute('src');
-      }
-    }
-
-    if (_splashMessages.length) _splashShow(0);
-
     var _splashTimer = setInterval(function () {
       if (!_splashMsgEl) { clearInterval(_splashTimer); return; }
       _splashIdx = (_splashIdx + 1) % _splashMessages.length;
       _splashMsgEl.style.opacity = 0;
-      if (_splashPhotoEl) _splashPhotoEl.className = '';
       setTimeout(function () {
-        if (!_splashMsgEl) return;
-        _splashShow(_splashIdx);
-        _splashMsgEl.style.opacity = 1;
+        if (_splashMsgEl) {
+          _splashMsgEl.textContent = _splashMessages[_splashIdx];
+          _splashMsgEl.style.opacity = 1;
+        }
       }, 400);
     }, 2200);
-
-    // Fetched alongside the bundle, never in front of it. Nothing below can
-    // hold the splash open: if it lands late the splash is already gone, and
-    // the lines are still worth keeping for next time.
-    (function () {
-      var API = 'https://altrocoach-backend-production.up.railway.app';
-      function lines(kind) {
-        return fetch(API + '/showcase?kind=' + kind)
-          .then(function (r) { return r.ok ? r.json() : { items: [] }; })
-          .then(function (d) {
-            return (d.items || []).map(function (it) {
-              var a = it.attributes || {};
-              // A thumbnail, never the original. These posters are around
-              // 1.8MB whole and 11KB at 160 - small enough to sit alongside
-              // the bundle rather than compete with it.
-              var photo = it.cover_url || '';
-              if (photo && photo.indexOf('/uploads/image/') > -1) {
-                photo += (photo.indexOf('?') > -1 ? '&' : '?') + 'w=160';
-              } else {
-                photo = '';
-              }
-              if (it.kind === 'placement') {
-                // "Name is now Role at Company" only reads as a sentence when
-                // both halves are there; otherwise fall back to what we have.
-                var who = it.title || '';
-                var what = a.role || it.short_description || '';
-                var where = a.company || '';
-                var line = who;
-                if (what && where) line = who + ' is now ' + what + ' at ' + where;
-                else if (what) line = who + ' - ' + what;
-                return { t: line, photo: photo };
-              }
-              return { t: it.title || '', photo: photo };
-            }).filter(function (x) { return x.t && x.t.length < 90; });
-          })
-          .catch(function () { return []; });
-      }
-      Promise.all([lines('placement'), lines('story')]).then(function (r) {
-        // Placements first: where somebody ended up outranks what somebody
-        // is building.
-        var all = r[0].concat(r[1]);
-        if (!all.length) return;
-        try { localStorage.setItem('splashLines', JSON.stringify(all)); } catch (e) {}
-        // Only swap in if the splash is still up; replacing the array under a
-        // running rotation is fine, the index is taken modulo its length.
-        if (document.getElementById('splash')) {
-          _splashMessages = all;
-          _splashIdx = _splashIdx % all.length;
-          // Repaint now rather than waiting out the rest of the current
-          // 2.2s slot, which on a fast connection is the whole splash.
-          _splashShow(_splashIdx);
-        }
-      });
-    })();
 
     // Remove the splash the moment Flutter renders its first frame — plus a
     // hard safety-net timeout so a missed/renamed event can never again
