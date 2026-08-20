@@ -272,18 +272,35 @@
   </div>
   <script>
     // A bare spinner on a plain white/navy screen reads as "broken" on a
-    // slow connection — rotating short, upbeat lines make the same wait
-    // feel intentional instead of stuck. Purely cosmetic; load time itself
-    // is unaffected by this part.
+    // slow connection. Rotating lines make the same wait feel intentional,
+    // and real ones - where somebody ended up, what somebody built - do a job
+    // the generic lines never could: the wait becomes the pitch.
+    //
+    // Text only, deliberately. The cover images behind these stories are
+    // ~1.8MB each and would be pulled over the same connection that is busy
+    // fetching a 5.5MB bundle, so showing one would make the wait it is
+    // decorating measurably longer. The JSON is about 5KB.
     var _splashMessages = [
       'Warming up your workshop...',
       'Good things are worth a short wait...',
       'Getting your seat ready...',
-      'Almost there — loading the good stuff...',
+      'Almost there - loading the good stuff...',
       'Preparing something worth building...'
     ];
+
+    // Last visit's lines, shown instantly with no network at all. A repeat
+    // visitor sees real content in the first frame of the splash rather than
+    // in its last.
+    try {
+      var cached = JSON.parse(localStorage.getItem('splashLines') || '[]');
+      if (cached.length) _splashMessages = cached;
+    } catch (e) {}
+
     var _splashIdx = 0;
     var _splashMsgEl = document.getElementById('splash-msg');
+    if (_splashMsgEl && _splashMessages.length) {
+      _splashMsgEl.textContent = _splashMessages[0];
+    }
     var _splashTimer = setInterval(function () {
       if (!_splashMsgEl) { clearInterval(_splashTimer); return; }
       _splashIdx = (_splashIdx + 1) % _splashMessages.length;
@@ -295,6 +312,47 @@
         }
       }, 400);
     }, 2200);
+
+    // Fetched alongside the bundle, never in front of it. Nothing below can
+    // hold the splash open: if it lands late the splash is already gone, and
+    // the lines are still worth keeping for next time.
+    (function () {
+      var API = 'https://altrocoach-backend-production.up.railway.app';
+      function lines(kind) {
+        return fetch(API + '/showcase?kind=' + kind)
+          .then(function (r) { return r.ok ? r.json() : { items: [] }; })
+          .then(function (d) {
+            return (d.items || []).map(function (it) {
+              var a = it.attributes || {};
+              if (it.kind === 'placement') {
+                // "Name is now Role at Company" only reads as a sentence when
+                // both halves are there; otherwise fall back to what we have.
+                var who = it.title || '';
+                var what = a.role || it.short_description || '';
+                var where = a.company || '';
+                if (what && where) return who + ' is now ' + what + ' at ' + where;
+                if (what) return who + ' - ' + what;
+                return who;
+              }
+              return it.title || '';
+            }).filter(function (t) { return t && t.length < 90; });
+          })
+          .catch(function () { return []; });
+      }
+      Promise.all([lines('placement'), lines('story')]).then(function (r) {
+        // Placements first: where somebody ended up outranks what somebody
+        // is building.
+        var all = r[0].concat(r[1]);
+        if (!all.length) return;
+        try { localStorage.setItem('splashLines', JSON.stringify(all)); } catch (e) {}
+        // Only swap in if the splash is still up; replacing the array under a
+        // running rotation is fine, the index is taken modulo its length.
+        if (document.getElementById('splash')) {
+          _splashMessages = all;
+          _splashIdx = _splashIdx % all.length;
+        }
+      });
+    })();
 
     // Remove the splash the moment Flutter renders its first frame — plus a
     // hard safety-net timeout so a missed/renamed event can never again
