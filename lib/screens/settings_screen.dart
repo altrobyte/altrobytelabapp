@@ -160,7 +160,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Center(child: CircularProgressIndicator()))
           : Column(children: [
               // The two anyone actually sets.
-              for (final key in const ['program_whatsapp_number', 'wa_dashboard_url'])
+              for (final key in const [
+                'program_whatsapp_number',
+                'wa_dashboard_url',
+                // Read by the roadmap's sticky bar. Blank and it drops the
+                // line — an empty scarcity claim is worse than none.
+                'program_start_label',
+                'program_seats_left',
+              ])
                 if (_wa(key) != null)
                   _WaSettingRow(
                     setting: _wa(key)!,
@@ -172,6 +179,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final t in const [
                 ('wa_template_welcome_ready', 'Welcome template approved'),
                 ('wa_template_enroll_ready', 'Enrolment template approved'),
+                ('wa_template_callback_ready', 'Callback template approved'),
+                ('wa_daily_enabled', 'Send one nudge a day'),
               ])
                 if (_wa(t.$1) != null)
                   SwitchListTile(
@@ -183,7 +192,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: GoogleFonts.inter(
                             fontSize: 13, fontWeight: FontWeight.w500)),
                     subtitle: Text(
-                        'Off until Meta approves it — we send a plain update instead',
+                        t.$1 == 'wa_daily_enabled'
+                            ? 'Opted-in students only, one line a day'
+                            : 'Off until Meta approves it — we send a plain update instead',
                         style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                   ),
 
