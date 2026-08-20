@@ -344,49 +344,10 @@ class _Header extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, height: 1.4)),
         if (plans.length > 1) ...[
           const SizedBox(height: 16),
-          // Same syllabus, two paces. The switch sits above everything because
-          // "can I actually fit this in?" is the first question, and the
-          // answer changes nothing below it.
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Row(children: [
-              for (var i = 0; i < plans.length; i++)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => onPlanChanged(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      decoration: BoxDecoration(
-                        color: i == planIndex ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: Column(children: [
-                        Text((plans[i] as Map)['name'] as String? ?? '',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: i == planIndex
-                                    ? const Color(0xFF0B2450)
-                                    : Colors.white)),
-                        const SizedBox(height: 1),
-                        Text((plans[i] as Map)['duration_label'] as String? ?? '',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                color: i == planIndex
-                                    ? const Color(0xFF0B2450).withValues(alpha: 0.65)
-                                    : Colors.white.withValues(alpha: 0.7))),
-                      ]),
-                    ),
-                  ),
-                ),
-            ]),
+          _PlanBuilder(
+            plans: plans,
+            planIndex: planIndex,
+            onPlanChanged: onPlanChanged,
           ),
         ],
         const SizedBox(height: 14),
@@ -470,23 +431,32 @@ class _Header extends StatelessWidget {
 class _Chip extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _Chip({required this.icon, required this.label});
+
+  /// These sit on the navy header by default. The plan card underneath is
+  /// white, where white-on-white would be no chip at all.
+  final bool dark;
+  const _Chip({required this.icon, required this.label, this.dark = false});
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: Colors.white),
-          const SizedBox(width: 5),
-          Text(label,
-              style: GoogleFonts.inter(
-                  color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600)),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final fg = dark ? const Color(0xFF12326B) : Colors.white;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: dark
+            ? const Color(0xFF12326B).withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: fg),
+        const SizedBox(width: 5),
+        Text(label,
+            style: GoogleFonts.inter(
+                color: fg, fontSize: 11.5, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
 }
 
 /// One node at any depth. Months and phases are collapsible headers; topics and
@@ -1046,6 +1016,248 @@ class _StickyCta extends StatelessWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+
+/// Lets a reader arrive at a price instead of being handed one.
+///
+/// People were stalling at the number. The number had not changed, but the
+/// question had: shown one figure with nothing around it, someone decides
+/// whether they can afford us. Asked when they are free and how long they
+/// want to take, they decide which of our options fits — and every answer
+/// has a price attached.
+///
+/// Availability comes first because it is the only hard constraint. Someone
+/// in class on weekdays cannot buy a weekday track at any price, and showing
+/// them one is worse than showing them nothing.
+class _PlanBuilder extends StatelessWidget {
+  final List plans;
+  final int planIndex;
+  final ValueChanged<int> onPlanChanged;
+  const _PlanBuilder({
+    required this.plans,
+    required this.planIndex,
+    required this.onPlanChanged,
+  });
+
+  String _avail(int i) => (plans[i] as Map)['availability'] as String? ?? '';
+
+  /// Indices sharing the selected plan's availability, cheapest first, so the
+  /// slider always moves through real options rather than empty stops.
+  List<int> get _siblings {
+    final want = _avail(planIndex);
+    final out = <int>[];
+    for (var i = 0; i < plans.length; i++) {
+      if (_avail(i) == want) out.add(i);
+    }
+    out.sort((a, b) => ((plans[a] as Map)['fee'] as int? ?? 0)
+        .compareTo((plans[b] as Map)['fee'] as int? ?? 0));
+    return out.isEmpty ? [planIndex] : out;
+  }
+
+  /// The cheapest plan for an availability — where the slider lands when
+  /// someone switches, because starting at the top of a range is the thing
+  /// that made them hesitate in the first place.
+  int _cheapestFor(String availability) {
+    int? best;
+    for (var i = 0; i < plans.length; i++) {
+      if (_avail(i) != availability) continue;
+      final fee = (plans[i] as Map)['fee'] as int? ?? 0;
+      if (best == null || fee < ((plans[best] as Map)['fee'] as int? ?? 0)) {
+        best = i;
+      }
+    }
+    return best ?? planIndex;
+  }
+
+  static String _money(int rupees) {
+    // Indian grouping: 1,49,000 rather than 149,000.
+    final s = rupees.toString();
+    if (s.length <= 3) return s;
+    final head = s.substring(0, s.length - 3);
+    final tail = s.substring(s.length - 3);
+    final buf = StringBuffer();
+    for (var i = 0; i < head.length; i++) {
+      if (i > 0 && (head.length - i) % 2 == 0) buf.write(',');
+      buf.write(head[i]);
+    }
+    return '$buf,$tail';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = plans[planIndex.clamp(0, plans.length - 1)] as Map;
+    final fee = plan['fee'] as int? ?? 0;
+    final listFee = plan['list_fee'] as int?;
+    final sibs = _siblings;
+    final slot = sibs.indexOf(planIndex).clamp(0, sibs.length - 1);
+
+    final availabilities = <String>[];
+    for (var i = 0; i < plans.length; i++) {
+      final a = _avail(i);
+      if (a.isNotEmpty && !availabilities.contains(a)) availabilities.add(a);
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(15, 14, 15, 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('BUILD YOUR PLAN',
+            style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.9,
+                color: Colors.white.withValues(alpha: 0.55))),
+        const SizedBox(height: 12),
+
+        if (availabilities.length > 1) ...[
+          Text('When are you free?',
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: Colors.white.withValues(alpha: 0.82))),
+          const SizedBox(height: 7),
+          Row(children: [
+            for (final a in availabilities) ...[
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onPlanChanged(_cheapestFor(a)),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    decoration: BoxDecoration(
+                      color: a == _avail(planIndex)
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(a == 'weekend' ? 'Weekends' : 'Weekdays',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: a == _avail(planIndex)
+                                ? const Color(0xFF0B2450)
+                                : Colors.white)),
+                  ),
+                ),
+              ),
+              if (a != availabilities.last) const SizedBox(width: 8),
+            ],
+          ]),
+          const SizedBox(height: 14),
+        ],
+
+        if (sibs.length > 1) ...[
+          Row(children: [
+            Text('How long do you want to take?',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: Colors.white.withValues(alpha: 0.82))),
+          ]),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white.withValues(alpha: 0.22),
+              thumbColor: Colors.white,
+              overlayColor: Colors.white.withValues(alpha: 0.14),
+              trackHeight: 3,
+              tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2.5),
+              activeTickMarkColor: Colors.white,
+              inactiveTickMarkColor: Colors.white.withValues(alpha: 0.35),
+            ),
+            child: Slider(
+              value: slot.toDouble(),
+              min: 0,
+              max: (sibs.length - 1).toDouble(),
+              divisions: sibs.length - 1,
+              onChanged: (v) => onPlanChanged(sibs[v.round()]),
+            ),
+          ),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            for (final i in sibs)
+              Text((plans[i] as Map)['duration_label'] as String? ?? '',
+                  style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight:
+                          i == planIndex ? FontWeight.w700 : FontWeight.w400,
+                      color: Colors.white.withValues(
+                          alpha: i == planIndex ? 0.95 : 0.5))),
+          ]),
+          const SizedBox(height: 14),
+        ],
+
+        // The outcome of the two answers above.
+        Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(plan['name'] as String? ?? '',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0B2450))),
+                      const SizedBox(height: 2),
+                      Text(plan['schedule_label'] as String? ?? '',
+                          style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: const Color(0xFF5A6B82))),
+                    ]),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                if (listFee != null)
+                  Text('Rs ${_money(listFee)}',
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          color: const Color(0xFF9AA5B5),
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: const Color(0xFF9AA5B5))),
+                Text('Rs ${_money(fee)}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                        color: const Color(0xFF0B2450))),
+                Text('+ GST',
+                    style: GoogleFonts.inter(
+                        fontSize: 10, color: const Color(0xFF9AA5B5))),
+              ]),
+            ]),
+            const SizedBox(height: 11),
+            Wrap(spacing: 7, runSpacing: 7, children: [
+              _Chip(
+                  icon: Icons.timer_outlined,
+                  label: plan['hours_label'] as String? ?? '',
+                  dark: true),
+              _Chip(
+                  icon: Icons.layers_outlined,
+                  label: plan['stage_limit'] is int
+                      ? 'Stages 1-${plan['stage_limit']}'
+                      : 'All 4 stages',
+                  dark: true),
+            ]),
+            if ((plan['note'] as String? ?? '').isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(plan['note'] as String,
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      height: 1.5,
+                      color: const Color(0xFF5A6B82))),
+            ],
+          ]),
+        ),
+      ]),
     );
   }
 }

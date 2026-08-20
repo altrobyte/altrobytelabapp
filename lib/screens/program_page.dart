@@ -64,7 +64,7 @@ const _fastTrack = _Plan(
   schedule: 'Monday – Friday · 3 hours a day',
   duration: '4–5 weeks',
   hours: '~60–70 hours of hands-on learning',
-  fee: 18000,
+  fee: 19000,
   listFee: 25000,
   bestFor: [
     'Engineering students',
@@ -83,7 +83,7 @@ const _weekend = _Plan(
   schedule: 'Saturday + Sunday · 3 hours a day',
   duration: '3 months',
   hours: '~72 hours of guided product engineering',
-  fee: 28000,
+  fee: 29000,
   listFee: 36000,
   bestFor: [
     'College students',
@@ -102,11 +102,11 @@ const _labFee = 6000;
 /// Group slabs. Stated against the Fast Track fee, which is what they are
 /// derived from — a weekend group would need its own row and does not have one.
 const _groupSlabs = [
-  ('1–2 students', 18000),
-  ('3–4 students', 17500),
-  ('5–6 students', 17000),
-  ('7–8 students', 16500),
-  ('9–10 students', 16000),
+  ('1–2 students', 19000),
+  ('3–4 students', 18500),
+  ('5–6 students', 18000),
+  ('7–8 students', 17500),
+  ('9–10 students', 17000),
 ];
 
 String _rs(int n) {
