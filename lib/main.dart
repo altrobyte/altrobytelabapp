@@ -230,6 +230,15 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (_, __) => const CompanyPageViewScreen(slug: 'terms', fallbackTitle: 'Terms & Conditions'),
         ),
         GoRoute(
+          // Required before the Play Store will accept a listing, and linked
+          // from it. Without its own route it fell through to the branded
+          // landing page, which answered a policy URL with a stranger's
+          // college page.
+          path: '/privacy',
+          builder: (_, __) => const CompanyPageViewScreen(
+              slug: 'privacy', fallbackTitle: 'Privacy Policy'),
+        ),
+        GoRoute(
           path: '/refunds',
           builder: (_, __) => const CompanyPageViewScreen(slug: 'refunds', fallbackTitle: 'Refunds & Cancellations'),
         ),

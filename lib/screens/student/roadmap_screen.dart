@@ -203,6 +203,12 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
           ],
         ],
       ),
+      // The persuading happens while someone is still reading, and this page
+      // is 165 milestones long: a call to action that lives only at the end is
+      // one that almost nobody reaches. This bar rides along with them.
+      bottomNavigationBar: (_loading || r == null)
+          ? null
+          : _StickyCta(roadmap: r, planIndex: _plan),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error.isNotEmpty
@@ -725,35 +731,6 @@ class _EnrollCta extends StatelessWidget {
   final int planIndex;
   const _EnrollCta({required this.roadmap, this.planIndex = 0});
 
-  Future<void> _openWhatsApp(BuildContext context) async {
-    final number = roadmap['whatsapp_number'] as String? ?? '';
-    final title = roadmap['title'] as String? ?? 'the programme';
-    final plans = (roadmap['plans'] as List?) ?? [];
-    // Naming the plan they were looking at saves the first two messages of
-    // every conversation.
-    final planName = plans.isEmpty
-        ? ''
-        : ' (' + ((plans[planIndex.clamp(0, plans.length - 1)] as Map)['name'] as String? ?? '') + ' batch)';
-    final text = Uri.encodeComponent(
-        "Hi! I saw the $title roadmap on your site and I'd like to join$planName. "
-        "Could you tell me about the next batch and the fees?");
-    // No number configured yet — send them somewhere real rather than opening
-    // a broken link.
-    final uri = number.isEmpty
-        ? Uri.parse('/partner')
-        : Uri.parse('https://wa.me/$number?text=$text');
-    if (number.isEmpty) {
-      if (context.mounted) Navigator.pushNamed(context, '/partner');
-      return;
-    }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open WhatsApp')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final headline = roadmap['cta_headline'] as String? ?? '';
@@ -783,19 +760,42 @@ class _EnrollCta extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.88), fontSize: 13.5, height: 1.6)),
         ],
         const SizedBox(height: 20),
+        // Leading with the callback: after a page this long the reader is
+        // persuaded but tired, and naming a time is less work than composing
+        // a question.
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () => _openWhatsApp(context),
+            onPressed: () => openRoadmapWhatsApp(context, roadmap,
+                planIndex: planIndex, callback: true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF25D366),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF0B2450),
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            icon: const Icon(Icons.chat_rounded, size: 19, color: Colors.white),
-            label: Text('Talk to us about joining',
+            icon: const Icon(Icons.phone_in_talk_rounded, size: 19),
+            label: Text('Request a callback',
                 style: GoogleFonts.poppins(
-                    fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                    fontSize: 15, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => openRoadmapWhatsApp(context, roadmap,
+                planIndex: planIndex, callback: false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.chat_rounded, size: 18),
+            label: Text('Message us on WhatsApp instead',
+                style: GoogleFonts.poppins(
+                    fontSize: 14, fontWeight: FontWeight.w500)),
           ),
         ),
         const SizedBox(height: 10),
@@ -805,6 +805,160 @@ class _EnrollCta extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.6), fontSize: 11.5)),
         ),
       ]),
+    );
+  }
+}
+
+
+/// Opens WhatsApp with a message already written.
+///
+/// Asking someone to compose their own first message is asking them to decide
+/// what they want before they know what to ask for. A callback request is a
+/// smaller thing to agree to than "enquire", and it moves the conversation to
+/// a channel where we can actually answer.
+Future<void> openRoadmapWhatsApp(
+  BuildContext context,
+  Map<String, dynamic> roadmap, {
+  required int planIndex,
+  required bool callback,
+}) async {
+  final number = roadmap['whatsapp_number'] as String? ?? '';
+  final title = roadmap['title'] as String? ?? 'the programme';
+  final plans = (roadmap['plans'] as List?) ?? [];
+  // Naming the plan they were looking at saves the first two messages of
+  // every conversation.
+  final planName = plans.isEmpty
+      ? ''
+      : ((plans[planIndex.clamp(0, plans.length - 1)] as Map)['name']
+              as String? ??
+          '');
+
+  final text = Uri.encodeComponent(callback
+      ? "Hi! Please call me back about the $title"
+          "${planName.isEmpty ? '' : ' ($planName batch)'}.\n\n"
+          "Name:\nCity:\nBest time to call:"
+      : "Hi! I saw the $title roadmap on your site and I'd like to join"
+          "${planName.isEmpty ? '' : ' ($planName batch)'}. "
+          "Could you tell me about the next batch and the fees?");
+
+  if (number.isEmpty) {
+    // No number configured yet — send them somewhere real rather than
+    // opening a broken link.
+    if (context.mounted) Navigator.pushNamed(context, '/partner');
+    return;
+  }
+  final uri = Uri.parse('https://wa.me/$number?text=$text');
+  if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')));
+    }
+  }
+}
+
+/// The bar pinned to the bottom of the roadmap.
+///
+/// Two actions, weighted. Requesting a callback is the smaller commitment and
+/// gets the width; chatting now is for the person who has already decided and
+/// does not want to wait for us.
+class _StickyCta extends StatelessWidget {
+  final Map<String, dynamic> roadmap;
+  final int planIndex;
+  const _StickyCta({required this.roadmap, required this.planIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (roadmap['start_label'] as String? ?? '').trim();
+    final seats = (roadmap['seats_left'] as String? ?? '').trim();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 16,
+              offset: const Offset(0, -3)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            // Only shown when there is something true to say. An empty
+            // scarcity line is worse than none.
+            if (start.isNotEmpty || seats.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  if (start.isNotEmpty) ...[
+                    const Icon(Icons.event_rounded,
+                        size: 13, color: Color(0xFF12326B)),
+                    const SizedBox(width: 5),
+                    Text(start,
+                        style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF12326B))),
+                  ],
+                  if (start.isNotEmpty && seats.isNotEmpty)
+                    Container(
+                      width: 3,
+                      height: 3,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF9AA5B5), shape: BoxShape.circle),
+                    ),
+                  if (seats.isNotEmpty)
+                    Text('Only $seats seats left',
+                        style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFC62828))),
+                ]),
+              ),
+            Row(children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => openRoadmapWhatsApp(context, roadmap,
+                      planIndex: planIndex, callback: true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF12326B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.phone_in_talk_rounded,
+                      size: 18, color: Colors.white),
+                  label: Text('Request a callback',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white)),
+                ),
+              ),
+              const SizedBox(width: 9),
+              SizedBox(
+                width: 52,
+                height: 48,
+                child: FilledButton(
+                  onPressed: () => openRoadmapWhatsApp(context, roadmap,
+                      planIndex: planIndex, callback: false),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Icon(Icons.chat_rounded,
+                      size: 21, color: Colors.white),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
     );
   }
 }
