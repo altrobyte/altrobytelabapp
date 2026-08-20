@@ -410,7 +410,12 @@ class _MediaSlide extends StatelessWidget {
         color: const Color(0xFFF2F4F8),
         child: Stack(fit: StackFit.expand, children: [
           if (url.isNotEmpty)
-            Image.network(url,
+            // 800 is plenty for a poster read at arm's length on a phone, and
+            // it is a twentieth of what these files weigh whole.
+            Image.network(
+                url.contains('/uploads/image/')
+                    ? (url.contains('?') ? '$url&w=800' : '$url?w=800')
+                    : url,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined,
                     color: Colors.black26, size: 40)),

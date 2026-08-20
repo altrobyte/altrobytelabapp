@@ -222,6 +222,25 @@
 
   <link rel="manifest" href="manifest.json">
   <style>
+    /* Reserved height whether or not a photo arrives, so the line beneath it
+       never jumps when one does. */
+    #splash .story {
+      height: 76px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #splash .story img {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity .45s ease;
+      border: 2px solid rgba(255,255,255,0.28);
+      background: rgba(255,255,255,0.06);
+    }
+    #splash .story img.on { opacity: 1; }
     #splash {
       position: fixed; inset: 0;
       background: linear-gradient(160deg, #1A3C5E 0%, #0F2540 100%);
@@ -267,6 +286,7 @@
 <body>
   <div id="splash">
     <div class="logo-wrap"><img src="icons/Icon-192.png" alt="AltrobyteLab"></div>
+    <div class="story" id="splash-story"><img id="splash-photo" alt=""></div>
     <div class="msg" id="splash-msg">Warming up your workshop...</div>
     <div class="dots"><span></span><span></span><span></span></div>
   </div>
@@ -298,18 +318,37 @@
 
     var _splashIdx = 0;
     var _splashMsgEl = document.getElementById('splash-msg');
-    if (_splashMsgEl && _splashMessages.length) {
-      _splashMsgEl.textContent = _splashMessages[0];
+    var _splashPhotoEl = document.getElementById('splash-photo');
+
+    // The generic lines carry no photo; a story may or may not have one, and
+    // the frame stays empty rather than showing a broken or stale face.
+    function _splashShow(i) {
+      var m = _splashMessages[i];
+      var text = typeof m === 'string' ? m : (m && m.t) || '';
+      var photo = typeof m === 'string' ? '' : (m && m.photo) || '';
+      if (_splashMsgEl) _splashMsgEl.textContent = text;
+      if (!_splashPhotoEl) return;
+      if (photo) {
+        _splashPhotoEl.onload = function () { _splashPhotoEl.className = 'on'; };
+        _splashPhotoEl.onerror = function () { _splashPhotoEl.className = ''; };
+        _splashPhotoEl.src = photo;
+      } else {
+        _splashPhotoEl.className = '';
+        _splashPhotoEl.removeAttribute('src');
+      }
     }
+
+    if (_splashMessages.length) _splashShow(0);
+
     var _splashTimer = setInterval(function () {
       if (!_splashMsgEl) { clearInterval(_splashTimer); return; }
       _splashIdx = (_splashIdx + 1) % _splashMessages.length;
       _splashMsgEl.style.opacity = 0;
+      if (_splashPhotoEl) _splashPhotoEl.className = '';
       setTimeout(function () {
-        if (_splashMsgEl) {
-          _splashMsgEl.textContent = _splashMessages[_splashIdx];
-          _splashMsgEl.style.opacity = 1;
-        }
+        if (!_splashMsgEl) return;
+        _splashShow(_splashIdx);
+        _splashMsgEl.style.opacity = 1;
       }, 400);
     }, 2200);
 
@@ -324,18 +363,28 @@
           .then(function (d) {
             return (d.items || []).map(function (it) {
               var a = it.attributes || {};
+              // A thumbnail, never the original. These posters are around
+              // 1.8MB whole and 11KB at 160 - small enough to sit alongside
+              // the bundle rather than compete with it.
+              var photo = it.cover_url || '';
+              if (photo && photo.indexOf('/uploads/image/') > -1) {
+                photo += (photo.indexOf('?') > -1 ? '&' : '?') + 'w=160';
+              } else {
+                photo = '';
+              }
               if (it.kind === 'placement') {
                 // "Name is now Role at Company" only reads as a sentence when
                 // both halves are there; otherwise fall back to what we have.
                 var who = it.title || '';
                 var what = a.role || it.short_description || '';
                 var where = a.company || '';
-                if (what && where) return who + ' is now ' + what + ' at ' + where;
-                if (what) return who + ' - ' + what;
-                return who;
+                var line = who;
+                if (what && where) line = who + ' is now ' + what + ' at ' + where;
+                else if (what) line = who + ' - ' + what;
+                return { t: line, photo: photo };
               }
-              return it.title || '';
-            }).filter(function (t) { return t && t.length < 90; });
+              return { t: it.title || '', photo: photo };
+            }).filter(function (x) { return x.t && x.t.length < 90; });
           })
           .catch(function () { return []; });
       }
@@ -350,6 +399,9 @@
         if (document.getElementById('splash')) {
           _splashMessages = all;
           _splashIdx = _splashIdx % all.length;
+          // Repaint now rather than waiting out the rest of the current
+          // 2.2s slot, which on a fast connection is the whole splash.
+          _splashShow(_splashIdx);
         }
       });
     })();

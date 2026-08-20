@@ -17,12 +17,20 @@ class ShowcaseCover extends StatelessWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+
+  /// Width to request from the server, in the closed set it accepts:
+  /// 160, 320, 480, 800. Zero asks for the original, which is what a
+  /// full-screen viewer wants and what a 150px card very much does not —
+  /// these posters are around 1.8MB whole and 35KB at 320.
+  final int requestWidth;
+
   const ShowcaseCover({
     super.key,
     required this.item,
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.requestWidth = 320,
   });
 
   /// The cover if the admin set one, else the first media's thumbnail — a
@@ -35,12 +43,19 @@ class ShowcaseCover extends StatelessWidget {
     return (media.first as Map)['thumbnail_url'] as String? ?? '';
   }
 
+  /// Only our own uploads understand ?w=. A YouTube thumbnail or any other
+  /// external URL is left exactly as it came.
+  String _sized(String url) {
+    if (requestWidth == 0 || !url.contains('/uploads/image/')) return url;
+    return url.contains('?') ? '$url&w=$requestWidth' : '$url?w=$requestWidth';
+  }
+
   bool get _hasVideo =>
       ((item['media'] as List?) ?? []).any((m) => (m as Map)['media_type'] == 'youtube');
 
   @override
   Widget build(BuildContext context) {
-    final url = _url;
+    final url = _sized(_url);
     return Stack(fit: StackFit.expand, children: [
       if (url.isEmpty)
         Container(color: AppColors.primary.withValues(alpha: 0.12),
