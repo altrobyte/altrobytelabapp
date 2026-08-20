@@ -17,7 +17,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
-import '../../constants/api_constants.dart';
 import '../../services/api_service.dart';
 
 class RoadmapScreen extends StatefulWidget {
@@ -212,16 +211,6 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         elevation: 0,
         actions: [
           if (r != null) ...[
-            IconButton(
-              tooltip: 'Download as PDF',
-              icon: const Icon(Icons.picture_as_pdf_rounded, size: 21),
-              // Opened rather than fetched: the browser handles the download,
-              // and on a phone that means it lands in Files where it can be
-              // forwarded — which is what people actually do with it.
-              onPressed: () => launchUrl(
-                  Uri.parse('${ApiConstants.baseUrl}/roadmaps/${widget.slug}/pdf'),
-                  mode: LaunchMode.externalApplication),
-            ),
             IconButton(
               tooltip: 'Share',
               icon: const Icon(Icons.share_rounded, size: 21),
