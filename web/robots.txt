@@ -10,6 +10,7 @@ Disallow: /admin
 Disallow: /admin-access
 Disallow: /super-access
 Disallow: /crm
+Disallow: /bookings
 Disallow: /showcase-admin
 Disallow: /curriculum-admin
 Disallow: /wa-messages

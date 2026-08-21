@@ -1003,6 +1003,63 @@ class ApiService {
     return (_parse(res)['roadmaps'] as List?) ?? [];
   }
 
+  /// Where the .ics link is rooted. The booking page hands the browser a
+  /// server URL directly rather than fetching the file itself.
+  static String get base => ApiConstants.baseUrl;
+
+  /// Open call slots, grouped by day. Public — this drives /book.
+  static Future<Map<String, dynamic>> getBookingSlots() async {
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/booking/slots'),
+        headers: _headers(null));
+    return _parse(res);
+  }
+
+  /// Takes a slot. A 409 means somebody else got there first.
+  static Future<Map<String, dynamic>> bookCall({
+    required String name,
+    required String phone,
+    required String slotUtc,
+    String email = '',
+    String topic = '',
+    String segment = '',
+    String source = 'booking',
+  }) async {
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/booking'),
+      headers: _headers(null),
+      body: jsonEncode({
+        'name': name,
+        'phone': phone,
+        'slot_utc': slotUtc,
+        'email': email,
+        'topic': topic,
+        'segment': segment,
+        'source': source,
+      }),
+    );
+    return _parse(res);
+  }
+
+  /// The schedule, soonest first.
+  static Future<List<dynamic>> getBookings({bool upcoming = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/booking/list?upcoming=$upcoming'),
+        headers: _headers(token));
+    return (_parse(res)['bookings'] as List?) ?? [];
+  }
+
+  static Future<void> setBookingStatus(int id, String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/booking/$id/status'),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+  }
+
   /// Records a callback request. The lead is saved server-side before any
   /// WhatsApp message is attempted, so a failed send never costs us the lead.
   static Future<Map<String, dynamic>> requestCallback({
