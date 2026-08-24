@@ -1012,6 +1012,42 @@ class ApiService {
   /// server URL directly rather than fetching the file itself.
   static String get base => ApiConstants.baseUrl;
 
+  // ── Lead sheet ─────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> getSheetStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/crm/sheet'),
+        headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
+  /// Attaches a sheet. Fails if it is not readable by link, which is the
+  /// only moment that is cheap to find out.
+  static Future<Map<String, dynamic>> linkSheet(String sheetUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/crm/sheet/link'),
+      headers: _headers(prefs.getString('token')),
+      body: jsonEncode({'sheet_url': sheetUrl}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> syncSheetNow() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+        Uri.parse('${ApiConstants.baseUrl}/crm/sheet/sync'),
+        headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
+  static Future<void> unlinkSheet() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/crm/sheet/link'),
+        headers: _headers(prefs.getString('token')));
+    _parse(res);
+  }
+
   /// Upcoming free demo classes. Public — no token, no account.
   static Future<List<dynamic>> getDemos() async {
     final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/demos'),

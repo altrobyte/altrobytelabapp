@@ -37,6 +37,68 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
   bool _busy = false;
   String _error = '';
 
+  final _sheetUrl = TextEditingController();
+  Map<String, dynamic>? _sheet;
+  bool _sheetBusy = false;
+  String _sheetError = '';
+  String _sheetNote = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSheet();
+  }
+
+  @override
+  void dispose() {
+    _sheetUrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSheet() async {
+    try {
+      final r = await ApiService.getSheetStatus();
+      if (!mounted) return;
+      setState(() {
+        _sheet = r;
+        if ((r['sheet_url'] as String? ?? '').isNotEmpty) {
+          _sheetUrl.text = r['sheet_url'] as String;
+        }
+      });
+    } catch (_) {
+      // The file upload above works with or without this; a failure here
+      // should not take the whole sheet down with it.
+    }
+  }
+
+  Future<void> _sheetAction(Future<Map<String, dynamic>> Function() run) async {
+    setState(() {
+      _sheetBusy = true;
+      _sheetError = '';
+      _sheetNote = '';
+    });
+    try {
+      final r = await run();
+      if (!mounted) return;
+      final created = (r['created'] as int?) ?? (r['ready'] as int?) ?? 0;
+      final updated = (r['updated'] as int?) ?? 0;
+      final skipped = (r['unusable'] as int?) ?? 0;
+      setState(() {
+        _sheetNote = '$created new'
+            '${updated > 0 ? ', $updated updated' : ''}'
+            '${skipped > 0 ? ', $skipped skipped' : ''}';
+      });
+      await _loadSheet();
+      widget.onImported();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sheetError = e is ApiException ? e.message : '$e');
+      }
+    } finally {
+      if (mounted) setState(() => _sheetBusy = false);
+    }
+  }
+
   Future<void> _pick() async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -211,6 +273,8 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
               ]),
             ),
           ],
+          const SizedBox(height: 22),
+          _sheetSection(),
           if (_preview != null && !_busy) ...[
             const SizedBox(height: 18),
             _report(_preview!, preview: true),
@@ -373,4 +437,146 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
                   fontSize: 11, color: const Color(0xFF9AA5B5))),
         ]),
       );
+
+  /// A linked Google Sheet, pulled on a schedule.
+  ///
+  /// The sheet has to be readable by link. That is the whole setup — no
+  /// service account, no consent screen — and it is also the one thing that
+  /// goes wrong, so linking says so immediately rather than at the first
+  /// silent empty sync.
+  Widget _sheetSection() {
+    final linked = _sheet?['linked'] == true;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE1E7F0)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.table_chart_rounded, size: 17, color: Color(0xFF0F9D58)),
+          const SizedBox(width: 7),
+          Text('Google Sheet',
+              style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0B2450))),
+          const Spacer(),
+          if (linked)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text('Linked',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF2E7D32))),
+            ),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          linked
+              ? 'Pulled automatically. Anything new in the sheet turns up here.'
+              : 'Paste the sheet link. Share it as "Anyone with the link — '
+                  'Viewer" first, or it cannot be read.',
+          style: GoogleFonts.inter(
+              fontSize: 11.5, height: 1.45, color: const Color(0xFF5A6B82)),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _sheetUrl,
+          style: GoogleFonts.inter(fontSize: 12),
+          decoration: InputDecoration(
+            hintText: 'https://docs.google.com/spreadsheets/d/...',
+            hintStyle: GoogleFonts.inter(
+                fontSize: 12, color: const Color(0xFF9AA5B5)),
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 11, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE1E7F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE1E7F0)),
+            ),
+          ),
+        ),
+        if (_sheetError.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(_sheetError,
+              style: GoogleFonts.inter(
+                  fontSize: 11.5, height: 1.4, color: const Color(0xFFC62828))),
+        ],
+        if (_sheetNote.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(_sheetNote,
+              style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2E7D32))),
+        ],
+        if (linked && '${_sheet?['last_result'] ?? ''}'.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text('Last sync: ${_sheet!['last_result']}',
+              style: GoogleFonts.inter(
+                  fontSize: 10.5, color: const Color(0xFF9AA5B5))),
+        ],
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: _sheetBusy
+                  ? null
+                  : () => _sheetAction(
+                      () => ApiService.linkSheet(_sheetUrl.text.trim())),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F9D58),
+                disabledBackgroundColor: const Color(0xFFD7DEE8),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: _sheetBusy
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.link_rounded, size: 16, color: Colors.white),
+              label: Text(linked ? 'Relink' : 'Link sheet',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
+            ),
+          ),
+          if (linked) ...[
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: _sheetBusy
+                  ? null
+                  : () => _sheetAction(ApiService.syncSheetNow),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.sync_rounded, size: 16),
+              label: Text('Sync now',
+                  style: GoogleFonts.inter(fontSize: 12.5)),
+            ),
+          ],
+        ]),
+      ]),
+    );
+  }
+
 }
