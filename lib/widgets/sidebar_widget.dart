@@ -119,6 +119,7 @@ class _Nav extends StatelessWidget {
       _NavItem(Icons.route_rounded, 'Curriculum', '/curriculum-admin'),
       // Next to the CRM, because a booked call and a lead are the same job
       // on two different days.
+      _NavItem(Icons.event_seat_rounded, 'Free Demos', '/demos-admin'),
       _NavItem(Icons.event_available_rounded, 'Booked Calls', '/bookings'),
       _NavItem(Icons.contact_phone_rounded, 'CRM & Users', '/crm'),
       _NavItem(Icons.forum_rounded, 'WhatsApp', '/wa-messages'),
