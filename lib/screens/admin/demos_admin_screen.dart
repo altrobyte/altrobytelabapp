@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -99,10 +100,31 @@ class _DemosAdminScreenState extends State<DemosAdminScreen> {
           initialChildSize: 0.7,
           builder: (_, controller) => Column(children: [
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('${rows.length} booked  ·  ${d['title']}',
-                  style: GoogleFonts.poppins(
-                      fontSize: 14, fontWeight: FontWeight.w600)),
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              child: Row(children: [
+                Expanded(
+                  child: Text('${rows.length} booked  ·  ${d['title']}',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                if (rows.isNotEmpty)
+                  TextButton.icon(
+                    // For messaging the batch by hand. WhatsApp's own
+                    // broadcast wants numbers saved as contacts, so a
+                    // newline-separated list is what actually gets pasted.
+                    onPressed: () {
+                      final numbers = rows
+                          .map((r) => '+${(r as Map)['phone']}')
+                          .join('\n');
+                      Clipboard.setData(ClipboardData(text: numbers));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('${rows.length} numbers copied')));
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 15),
+                    label: Text('Copy all',
+                        style: GoogleFonts.inter(fontSize: 12)),
+                  ),
+              ]),
             ),
             Expanded(
               child: rows.isEmpty
@@ -121,8 +143,14 @@ class _DemosAdminScreenState extends State<DemosAdminScreen> {
                           title: Text('${a['name']}',
                               style: GoogleFonts.inter(
                                   fontSize: 13, fontWeight: FontWeight.w500)),
-                          subtitle: Text('+${a['phone']}',
+                          subtitle: Text(
+                              [
+                                if ('${a['email'] ?? ''}'.isNotEmpty)
+                                  '${a['email']}',
+                                '+${a['phone']}',
+                              ].join('\n'),
                               style: GoogleFonts.inter(fontSize: 11.5)),
+                          isThreeLine: '${a['email'] ?? ''}'.isNotEmpty,
                           trailing: IconButton(
                             icon: const Icon(Icons.chat_rounded,
                                 size: 19, color: Color(0xFF25D366)),
