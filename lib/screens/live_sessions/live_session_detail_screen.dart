@@ -445,7 +445,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareSession(Map<String, dynamic> session) {
-    final link = 'https://lab.altrobyte.com/live-sessions/${widget.sessionId}';
+    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final text = "Join me for \"$title\" on AltrobyteLab!\nRegister here: $link";
     if (kIsWeb) {
@@ -459,7 +459,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareToSocial(String platform, Map<String, dynamic> session) {
-    final link = 'https://lab.altrobyte.com/live-sessions/${widget.sessionId}';
+    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final caption = '🚀 Just started my learning journey into tech with "$title" on AltrobyteLab! '
         'Excited to keep building and growing. Join me:';

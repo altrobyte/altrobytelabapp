@@ -151,7 +151,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     // A direct link to this page, not the homepage. Firebase rewrites every
     // path to index.html and the app reads the path, so this opens straight on
     // the roadmap even for someone who has never been here before.
-    final url = 'https://lab.altrobyte.com/roadmap/${widget.slug}';
+    final url = 'https://altrobytelab.com/roadmap/${widget.slug}';
     final total = '${r['step_count'] ?? ''}';
     final plans = (r['plans'] as List?) ?? [];
     final duration = plans.isEmpty

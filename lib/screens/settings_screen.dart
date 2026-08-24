@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  static const _supportEmail = 'support@altrobyte.com';
+  static const _supportEmail = 'support@altrobytelab.com';
   static const _supportWa = '917691971623'; // Altrobyte sales/support WhatsApp
   static const _privacyUrl = 'https://coachingclub-bba5c.web.app/privacy.html';
   static const _deleteAccountUrl =
@@ -385,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildBrandingCard() {
     final slug = _slugCtrl.text.trim();
     final previewUrl = slug.isNotEmpty
-        ? 'https://lab.altrobyte.com/$slug'
+        ? 'https://altrobytelab.com/$slug'
         : null;
 
     return _SectionCard(

@@ -126,7 +126,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                                           color: const Color(0xFF0B2450))),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Share lab.altrobyte.com/book and slots '
+                                    'Share altrobytelab.com/book and slots '
                                     'will appear here as people take them.',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.inter(

@@ -1267,7 +1267,7 @@ class _ActionBar extends StatelessWidget {
   }
 
   void _showSendDialog(BuildContext context, AltroTest test) {
-    final testLink = 'https://lab.altrobyte.com/test/${test.id}';
+    final testLink = 'https://altrobytelab.com/test/${test.id}';
     final message = '*${test.title}*\n\n'
         'Subject: ${test.subject}\n'
         'Questions: ${test.questions.length}\n'

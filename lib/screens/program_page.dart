@@ -175,7 +175,7 @@ class _ProgramPageState extends State<ProgramPage> {
         "Hi! I want to join the $about at Altrobyte. Could you tell me about "
         "the next batch and how to enrol?");
     final uri = _waNumber.isEmpty
-        ? Uri.parse('https://lab.altrobyte.com/partner')
+        ? Uri.parse('https://altrobytelab.com/partner')
         : Uri.parse('https://wa.me/$_waNumber?text=$text');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +184,7 @@ class _ProgramPageState extends State<ProgramPage> {
   }
 
   Future<void> _share() async {
-    const url = 'https://lab.altrobyte.com/program';
+    const url = 'https://altrobytelab.com/program';
     await Clipboard.setData(const ClipboardData(text: url));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

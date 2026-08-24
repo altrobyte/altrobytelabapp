@@ -450,7 +450,7 @@ class _NextDemoCardState extends State<_NextDemoCard> {
   List<dynamic> _upcoming = [];
   bool _loading = true;
 
-  static const _shareUrl = 'https://lab.altrobyte.com/demo';
+  static const _shareUrl = 'https://altrobytelab.com/demo';
 
   @override
   void initState() {

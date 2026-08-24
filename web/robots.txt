@@ -17,4 +17,4 @@ Disallow: /curriculum-admin
 Disallow: /wa-messages
 Disallow: /debug
 
-Sitemap: https://lab.altrobyte.com/sitemap.xml
+Sitemap: https://altrobytelab.com/sitemap.xml

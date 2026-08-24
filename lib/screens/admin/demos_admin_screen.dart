@@ -261,7 +261,7 @@ class _DemosAdminScreenState extends State<DemosAdminScreen> {
                                   fontSize: 15, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
                           Text(
-                            'Add one and it appears at lab.altrobyte.com/demo '
+                            'Add one and it appears at altrobytelab.com/demo '
                             'for anyone with the link.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(

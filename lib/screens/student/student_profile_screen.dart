@@ -190,8 +190,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   void _shareApp() {
     final link = _instituteCode.isNotEmpty
-        ? 'https://lab.altrobyte.com/${_instituteCode.toLowerCase()}'
-        : 'https://lab.altrobyte.com';
+        ? 'https://altrobytelab.com/${_instituteCode.toLowerCase()}'
+        : 'https://altrobytelab.com';
     Share.share('$_institute\nJoin us on AltrobyteLab: $link');
   }
 
@@ -538,8 +538,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                               'https://wa.me/${widget.waNumber!.replaceAll(RegExp(r'\D'), '')}')),
                     if ((widget.waNumber ?? '').isNotEmpty) _divider(),
                     _settingsTile(Icons.support_agent_rounded, l10n.settingsContactSupport,
-                        'support@altrobyte.com', AppColors.textSecondary,
-                        () => _launch('mailto:support@altrobyte.com')),
+                        'support@altrobytelab.com', AppColors.textSecondary,
+                        () => _launch('mailto:support@altrobytelab.com')),
                     _divider(),
                     _settingsTile(Icons.privacy_tip_rounded, l10n.settingsPrivacyPolicy,
                         'Read our privacy policy', AppColors.textSecondary,
