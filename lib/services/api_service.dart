@@ -1069,6 +1069,16 @@ class ApiService {
     _parse(res);
   }
 
+  /// Sends the joining link to everyone already registered for a demo.
+  /// Deduped server-side, so pressing it twice messages nobody twice.
+  static Future<Map<String, dynamic>> adminSendDemoLink(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+        Uri.parse('${ApiConstants.baseUrl}/demos/admin/$id/send-link'),
+        headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
   static Future<List<dynamic>> adminGetDemoAttendees(int id) async {
     final prefs = await SharedPreferences.getInstance();
     final res = await safeGet(

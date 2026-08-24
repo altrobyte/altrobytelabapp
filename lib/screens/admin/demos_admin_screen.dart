@@ -88,6 +88,48 @@ class _DemosAdminScreenState extends State<DemosAdminScreen> {
     }
   }
 
+  Future<void> _sendLink(Map<String, dynamic> d) async {
+    final booked = (d['registration_count'] as int?) ?? 0;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Send the joining link?',
+            style: GoogleFonts.poppins(fontSize: 16)),
+        content: Text(
+          'Everyone booked into "${d['title']}" gets the meeting link on '
+          'WhatsApp. Anyone already sent it is skipped, so this is safe to '
+          'press again.',
+          style: GoogleFonts.inter(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Not now')),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Send to $booked'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final r = await ApiService.adminSendDemoLink(d['id'] as int);
+      if (!mounted) return;
+      final skipped = (r['already_sent'] as int?) ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Sent ${r['sent']}'
+            '${(r['failed'] as int? ?? 0) > 0 ? ', ${r['failed']} failed' : ''}'
+            '${skipped > 0 ? ', $skipped already had it' : ''}'),
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is ApiException ? e.message : 'Could not send: $e')));
+      }
+    }
+  }
+
   Future<void> _attendees(Map<String, dynamic> d) async {
     try {
       final rows = await ApiService.adminGetDemoAttendees(d['id'] as int);
@@ -299,8 +341,37 @@ class _DemosAdminScreenState extends State<DemosAdminScreen> {
                       ? const Color(0xFFC62828)
                       : const Color(0xFF5A6B82))),
         ]),
+        if (d['needs_link'] == true) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE65100).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(
+                  color: const Color(0xFFE65100).withValues(alpha: 0.3)),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.warning_amber_rounded,
+                  size: 16, color: Color(0xFFE65100)),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  'No meeting link yet. Confirmations and reminders go out '
+                  'without one until you add it.',
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      height: 1.4,
+                      color: const Color(0xFF0B2450)),
+                ),
+              ),
+            ]),
+          ),
+        ],
         const Divider(height: 20),
         Wrap(spacing: 8, runSpacing: 8, children: [
+          if (d['needs_link'] != true && booked > 0)
+            _act(Icons.send_rounded, 'Send link', () => _sendLink(d)),
           _act(Icons.group_rounded, 'Who booked', () => _attendees(d)),
           _act(Icons.edit_rounded, 'Edit', () => _edit(demo: d)),
           _act(Icons.delete_outline_rounded, 'Delete', () => _delete(d),
