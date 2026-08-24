@@ -76,10 +76,17 @@ class ApiService {
   }
 
   static Future<http.Response> safePost(Uri uri,
-      {Map<String, String>? headers, Object? body}) {
-    return _withNetworkRetry(() =>
-        http.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 20)));
+      {Map<String, String>? headers, Object? body, Duration? timeout}) {
+    return _withNetworkRetry(() => http
+        .post(uri, headers: headers, body: body)
+        .timeout(timeout ?? const Duration(seconds: 20)));
   }
+
+  /// A sheet sync fetches from Google, parses it and merges hundreds of rows.
+  /// Twenty seconds is right for asking a question and wrong for setting a
+  /// job going — a client that gives up first reports a working server as a
+  /// bad connection.
+  static const _bulkTimeout = Duration(seconds: 90);
 
   /// Many students are on a real mobile connection that shows full signal
   /// bars but very low actual throughput (congested 4G, poor indoor
@@ -1028,6 +1035,7 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}/crm/sheet/link'),
       headers: _headers(prefs.getString('token')),
       body: jsonEncode({'sheet_url': sheetUrl}),
+     timeout: _bulkTimeout,
     );
     return _parse(res);
   }
@@ -1036,7 +1044,8 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final res = await safePost(
         Uri.parse('${ApiConstants.baseUrl}/crm/sheet/sync'),
-        headers: _headers(prefs.getString('token')));
+        headers: _headers(prefs.getString('token')),
+        timeout: _bulkTimeout);
     return _parse(res);
   }
 
@@ -1056,6 +1065,7 @@ class ApiService {
       Uri.parse('${ApiConstants.baseUrl}/crm/sheet/write-url'),
       headers: _headers(prefs.getString('token')),
       body: jsonEncode({'write_url': writeUrl}),
+     timeout: _bulkTimeout,
     );
     return _parse(res);
   }
