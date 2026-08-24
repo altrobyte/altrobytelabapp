@@ -6,6 +6,7 @@
 // student. Conversation history appears read-only, as context for that
 // decision.
 
+import '../../widgets/lead_import_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
@@ -94,6 +95,13 @@ class _CrmScreenState extends State<CrmScreen> {
         title: Text('CRM',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         actions: [
+          IconButton(
+              tooltip: 'Import leads from a CSV',
+              onPressed: () => LeadImportSheet.show(context, () {
+                    setState(() => _loading = true);
+                    _load();
+                  }),
+              icon: const Icon(Icons.upload_file_rounded, size: 21)),
           IconButton(
               onPressed: () {
                 setState(() => _loading = true);
