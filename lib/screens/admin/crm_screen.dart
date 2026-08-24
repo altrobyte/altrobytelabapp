@@ -625,7 +625,14 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         _kv('Phone', lead['phone'] as String? ?? ''),
                         _kv('Opted in',
-                            lead['opt_in'] == false ? 'No — do not send marketing' : 'Yes'),
+                            // Three states, not two. Null is "never asked",
+                            // which is the honest answer for an imported lead
+                            // and a different thing from consent.
+                            lead['opt_in'] == false
+                                ? 'No — do not send marketing'
+                                : lead['opt_in'] == true
+                                    ? 'Yes'
+                                    : 'Not asked — imported, no consent on file'),
                         if (lead['opt_in_source'] != null)
                           _kv('Opt-in source', '${lead['opt_in_source']}'),
                         if (lead['last_inbound_at'] != null)
