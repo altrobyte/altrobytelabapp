@@ -1040,6 +1040,26 @@ class ApiService {
     return _parse(res);
   }
 
+  /// The Apps Script to paste, with this installation's secret in it.
+  static Future<Map<String, dynamic>> getSheetScript() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/crm/sheet/script'),
+        headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
+  /// Connects the deployment. Fails unless the script actually answers.
+  static Future<Map<String, dynamic>> setSheetWriteUrl(String writeUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/crm/sheet/write-url'),
+      headers: _headers(prefs.getString('token')),
+      body: jsonEncode({'write_url': writeUrl}),
+    );
+    return _parse(res);
+  }
+
   static Future<void> unlinkSheet() async {
     final prefs = await SharedPreferences.getInstance();
     final res = await http.delete(

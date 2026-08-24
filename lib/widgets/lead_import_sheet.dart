@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +39,9 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
   String _error = '';
 
   final _sheetUrl = TextEditingController();
+  final _writeUrl = TextEditingController();
+  String _script = '';
+  bool _showScript = false;
   Map<String, dynamic>? _sheet;
   bool _sheetBusy = false;
   String _sheetError = '';
@@ -52,6 +56,7 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
   @override
   void dispose() {
     _sheetUrl.dispose();
+    _writeUrl.dispose();
     super.dispose();
   }
 
@@ -63,6 +68,9 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
         _sheet = r;
         if ((r['sheet_url'] as String? ?? '').isNotEmpty) {
           _sheetUrl.text = r['sheet_url'] as String;
+        }
+        if ((r['write_url'] as String? ?? '').isNotEmpty) {
+          _writeUrl.text = r['write_url'] as String;
         }
       });
     } catch (_) {
@@ -575,8 +583,196 @@ class _LeadImportSheetState extends State<LeadImportSheet> {
             ),
           ],
         ]),
+        const Divider(height: 26),
+        _scriptPanel(),
       ]),
     );
   }
+
+  /// The private-sheet route: a script the owner deploys inside their own
+  /// sheet, which then answers both reads and writes.
+  ///
+  /// Sharing by link is two clicks and means anybody holding the URL can
+  /// read every lead. This is more setup, once, and the sheet never leaves
+  /// private — which for a list of everyone who ever enquired is the trade
+  /// worth making.
+  Widget _scriptPanel() {
+    final connected = _sheet?['two_way'] == true;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Icon(connected ? Icons.lock_rounded : Icons.lock_outline_rounded,
+            size: 15,
+            color: connected ? const Color(0xFF2E7D32) : const Color(0xFF5A6B82)),
+        const SizedBox(width: 6),
+        Text('Keep the sheet private',
+            style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF0B2450))),
+        const Spacer(),
+        if (connected)
+          Text('Two-way',
+              style: GoogleFonts.inter(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF2E7D32))),
+      ]),
+      const SizedBox(height: 4),
+      Text(
+        connected
+            ? 'Reading and writing through your script. The sheet is not '
+                'shared with anyone.'
+            : 'A short script inside your own sheet. Nothing gets shared by '
+                'link, and new leads get written back too.',
+        style: GoogleFonts.inter(
+            fontSize: 11.5, height: 1.45, color: const Color(0xFF5A6B82)),
+      ),
+      const SizedBox(height: 9),
+      if (!_showScript)
+        OutlinedButton.icon(
+          onPressed: _sheetBusy ? null : _loadScript,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+          ),
+          icon: const Icon(Icons.code_rounded, size: 15),
+          label: Text(connected ? 'Show the script again' : 'Set this up',
+              style: GoogleFonts.inter(fontSize: 12)),
+        )
+      else ...[
+        _step(1, 'Open the sheet, then Extensions \u203A Apps Script'),
+        _step(2, 'Delete whatever is there, paste this in, and save'),
+        const SizedBox(height: 7),
+        Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 140),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+              color: const Color(0xFF1B2733),
+              borderRadius: BorderRadius.circular(9)),
+          child: SingleChildScrollView(
+            child: SelectableText(_script,
+                style: const TextStyle(
+                    fontSize: 10, height: 1.4, color: Color(0xFFB2DFDB),
+                    fontFamily: 'monospace')),
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextButton.icon(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: _script));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Script copied')));
+          },
+          style: TextButton.styleFrom(
+              padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+          icon: const Icon(Icons.copy_rounded, size: 14),
+          label: Text('Copy script', style: GoogleFonts.inter(fontSize: 12)),
+        ),
+        const SizedBox(height: 8),
+        _step(3, 'Deploy \u203A New deployment \u203A type: Web app'),
+        _step(4, 'Execute as: Me.  Who has access: Anyone.  Deploy'),
+        _step(5, 'Authorise when Google asks, then copy the Web app URL'),
+        const SizedBox(height: 9),
+        TextField(
+          controller: _writeUrl,
+          style: GoogleFonts.inter(fontSize: 12),
+          decoration: InputDecoration(
+            hintText: 'https://script.google.com/macros/s/.../exec',
+            hintStyle: GoogleFonts.inter(
+                fontSize: 12, color: const Color(0xFF9AA5B5)),
+            filled: true,
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 11, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE1E7F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE1E7F0)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 9),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _sheetBusy
+                ? null
+                : () => _sheetAction(() async {
+                      await ApiService.setSheetWriteUrl(_writeUrl.text.trim());
+                      // Connecting proves it answers; syncing proves it has
+                      // something to say.
+                      return ApiService.syncSheetNow();
+                    }),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF12326B),
+              disabledBackgroundColor: const Color(0xFFD7DEE8),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.link_rounded, size: 16, color: Colors.white),
+            label: Text('Connect and sync',
+                style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white)),
+          ),
+        ),
+      ],
+    ]);
+  }
+
+  Future<void> _loadScript() async {
+    setState(() {
+      _sheetBusy = true;
+      _sheetError = '';
+    });
+    try {
+      final r = await ApiService.getSheetScript();
+      if (!mounted) return;
+      setState(() {
+        _script = '${r['code'] ?? ''}';
+        _showScript = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sheetError = e is ApiException ? e.message : '$e');
+      }
+    } finally {
+      if (mounted) setState(() => _sheetBusy = false);
+    }
+  }
+
+  Widget _step(int n, String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 5),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 17,
+            height: 17,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+                color: Color(0xFF12326B), shape: BoxShape.circle),
+            child: Text('$n',
+                style: GoogleFonts.inter(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(text,
+                style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: const Color(0xFF0B2450))),
+          ),
+        ]),
+      );
 
 }
