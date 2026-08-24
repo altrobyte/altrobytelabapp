@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api_service.dart';
@@ -20,12 +21,44 @@ class DemosScreen extends StatefulWidget {
 
 class _DemosScreenState extends State<DemosScreen> {
   List<dynamic> _demos = [];
+
+  /// Demo ids this browser has already taken a seat in.
+  ///
+  /// There is no account here on purpose, so the only place this can live is
+  /// the device. Offering "Book a free seat" to somebody who booked an hour
+  /// ago reads as though their booking did not register, and the second
+  /// attempt only ever comes back as "you already have a seat" anyway.
+  Set<int> _booked = {};
   bool _loading = true;
   String _error = '';
+
+  static const _bookedKey = 'booked_demo_ids';
+
+  Future<void> _rememberBooked(int id) async {
+    setState(() => _booked = {..._booked, id});
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+          _bookedKey, _booked.map((e) => '$e').toList());
+    } catch (_) {
+      // Private windows and cleared site data both land here. The seat is
+      // safe on the server either way; only this shortcut is lost.
+    }
+  }
+
+  Future<void> _loadBooked() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_bookedKey) ?? [];
+      final ids = raw.map(int.tryParse).whereType<int>().toSet();
+      if (mounted) setState(() => _booked = ids);
+    } catch (_) {}
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadBooked();
     _load();
   }
 
@@ -95,7 +128,12 @@ class _DemosScreenState extends State<DemosScreen> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _DemoCard(
                           demo: d as Map<String, dynamic>,
-                          onBooked: _load,
+                          alreadyBooked:
+                              _booked.contains((d as Map)['id'] as int),
+                          onBooked: (id) async {
+                            await _rememberBooked(id);
+                            await _load();
+                          },
                         ),
                       ),
                   const SizedBox(height: 10),
@@ -140,8 +178,13 @@ class _DemosScreenState extends State<DemosScreen> {
 
 class _DemoCard extends StatelessWidget {
   final Map<String, dynamic> demo;
-  final VoidCallback onBooked;
-  const _DemoCard({required this.demo, required this.onBooked});
+  final bool alreadyBooked;
+  final Future<void> Function(int demoId) onBooked;
+  const _DemoCard({
+    required this.demo,
+    required this.onBooked,
+    this.alreadyBooked = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -193,28 +236,63 @@ class _DemoCard extends StatelessWidget {
           _chip(Icons.currency_rupee_rounded, 'Free'),
         ]),
         const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: full
-                ? null
-                : () => _DemoSheet.show(context, demo, onBooked),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF12326B),
-              disabledBackgroundColor: const Color(0xFFD7DEE8),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11)),
+        if (alreadyBooked)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(
+                  color: const Color(0xFF2E7D32).withValues(alpha: 0.25)),
             ),
-            icon: Icon(full ? Icons.block_rounded : Icons.event_seat_rounded,
-                size: 17, color: full ? const Color(0xFF9AA5B5) : Colors.white),
-            label: Text(full ? 'This one is full' : 'Book a free seat',
-                style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: full ? const Color(0xFF9AA5B5) : Colors.white)),
+            child: Row(children: [
+              const Icon(Icons.check_circle_rounded,
+                  size: 18, color: Color(0xFF2E7D32)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Your seat is booked',
+                          style: GoogleFonts.poppins(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF2E7D32))),
+                      const SizedBox(height: 1),
+                      Text('The joining link comes on WhatsApp before it starts',
+                          style: GoogleFonts.inter(
+                              fontSize: 11,
+                              height: 1.35,
+                              color: const Color(0xFF5A6B82))),
+                    ]),
+              ),
+            ]),
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: full
+                  ? null
+                  : () => _DemoSheet.show(context, demo, onBooked),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF12326B),
+                disabledBackgroundColor: const Color(0xFFD7DEE8),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(11)),
+              ),
+              icon: Icon(full ? Icons.block_rounded : Icons.event_seat_rounded,
+                  size: 17,
+                  color: full ? const Color(0xFF9AA5B5) : Colors.white),
+              label: Text(full ? 'This one is full' : 'Book a free seat',
+                  style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: full ? const Color(0xFF9AA5B5) : Colors.white)),
+            ),
           ),
-        ),
       ]),
     );
   }
@@ -250,11 +328,11 @@ class _DemoCard extends StatelessWidget {
 /// Name and number, then the joining link.
 class _DemoSheet extends StatefulWidget {
   final Map<String, dynamic> demo;
-  final VoidCallback onBooked;
+  final Future<void> Function(int demoId) onBooked;
   const _DemoSheet({required this.demo, required this.onBooked});
 
   static Future<void> show(BuildContext context, Map<String, dynamic> demo,
-          VoidCallback onBooked) =>
+          Future<void> Function(int demoId) onBooked) =>
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -269,6 +347,7 @@ class _DemoSheet extends StatefulWidget {
 class _DemoSheetState extends State<_DemoSheet> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
+  final _email = TextEditingController();
   bool _sending = false;
   String _error = '';
   Map<String, dynamic>? _done;
@@ -277,6 +356,7 @@ class _DemoSheetState extends State<_DemoSheet> {
   void dispose() {
     _name.dispose();
     _phone.dispose();
+    _email.dispose();
     super.dispose();
   }
 
@@ -300,15 +380,18 @@ class _DemoSheetState extends State<_DemoSheet> {
         demoId: widget.demo['id'] as int,
         name: name,
         phone: digits,
+        email: _email.text.trim(),
       );
       if (mounted) setState(() => _done = r);
-      widget.onBooked();
+      await widget.onBooked(widget.demo['id'] as int);
     } catch (e) {
       if (mounted) {
         final msg = e is ApiException ? e.message : 'Could not book that. $e';
         setState(() => _error = msg);
         // Filled up while this sheet was open — the card behind it is stale.
-        if (msg.toLowerCase().contains('filled')) widget.onBooked();
+        if (msg.toLowerCase().contains('filled')) {
+          widget.onBooked(widget.demo['id'] as int);
+        }
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -381,10 +464,15 @@ class _DemoSheetState extends State<_DemoSheet> {
           ),
         )
       else
-        Text('We will send the joining link on WhatsApp before it starts.',
+        Text('We will send the joining link on your WhatsApp before it starts.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-                fontSize: 12, color: const Color(0xFF5A6B82))),
+                fontSize: 12, height: 1.5, color: const Color(0xFF5A6B82))),
+      const SizedBox(height: 8),
+      Text('A copy is on its way to your WhatsApp.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+              fontSize: 11, color: const Color(0xFF9AA5B5))),
       const SizedBox(height: 9),
       TextButton(
         onPressed: () => Navigator.pop(context),
@@ -415,6 +503,32 @@ class _DemoSheetState extends State<_DemoSheet> {
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(10),
           ], prefix: '+91 '),
+          const SizedBox(height: 11),
+          _field(_email, 'Email', TextInputType.emailAddress),
+          const SizedBox(height: 14),
+          // Said before they commit, not after. Somebody who does not use
+          // WhatsApp needs to know that now.
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFF25D366).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.chat_rounded, size: 16, color: Color(0xFF25D366)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'You will get the joining link on your WhatsApp before the '
+                  'session starts.',
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      height: 1.45,
+                      color: const Color(0xFF0B2450)),
+                ),
+              ),
+            ]),
+          ),
           if (_error.isNotEmpty) ...[
             const SizedBox(height: 13),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -456,11 +570,9 @@ class _DemoSheetState extends State<_DemoSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'We will send the joining link on WhatsApp. Reply STOP any time.',
-            style: GoogleFonts.inter(
-                fontSize: 10.5, height: 1.45, color: const Color(0xFF9AA5B5)),
-          ),
+          Text('Reply STOP on WhatsApp any time.',
+              style: GoogleFonts.inter(
+                  fontSize: 10.5, height: 1.45, color: const Color(0xFF9AA5B5))),
         ],
       );
 

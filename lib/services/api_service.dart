@@ -102,7 +102,12 @@ class ApiService {
         throw ApiException('Server unreachable. Try again later.');
       } catch (e) {
         if (e is ApiException) rethrow;
-        throw ApiException('Connection failed. Please try again.');
+        // Keep the real one. A bare "Connection failed" is what a browser
+        // reports for an unhandled 500 too, because the error response comes
+        // back without CORS headers — so this line has to distinguish a dead
+        // network from a broken endpoint, or every backend bug looks like bad
+        // signal.
+        throw ApiException('Connection failed. Please try again. ($e)');
       }
     }
   }
