@@ -16,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
+import '../../widgets/placement_test_sheet.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 import '../../widgets/callback_sheet.dart';
@@ -257,15 +258,19 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                           itemCount: stages.length + 2,
                           itemBuilder: (context, index) {
                             if (index == 0) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 18),
-                                child: _Header(
+                              return Column(children: [
+                                _Header(
                                   roadmap: r,
                                   planIndex: _plan,
                                   onPlanChanged: (i) =>
                                       setState(() => _plan = i),
                                 ),
-                              );
+                                const SizedBox(height: 16),
+                                // Before the 165 items: why they are in this
+                                // order, and a way to find your place in them.
+                                _WhyThisOrder(roadmap: r, planIndex: _plan),
+                                const SizedBox(height: 18),
+                              ]);
                             }
                             if (index == stages.length + 1) {
                               return Padding(
@@ -573,18 +578,31 @@ class _Node extends StatelessWidget {
     final done = (step['items_done'] as int?) ?? 0;
     final isMonth = _kind == 'month';
     final isOutcome = _kind == 'outcome';
+    final isPhase = _kind == 'phase';
 
+    // Four levels used two treatments: a phase and a group were the same
+    // size, weight, icon and colour, so 165 items opened as one flat wall
+    // with nothing telling a reader where they were. A stage is a heading, a
+    // phase is a section, a group is a label, a topic is a line.
     final accent = isMonth
         ? const Color(0xFF12326B)
         : isOutcome
             ? const Color(0xFFE65100)
-            : AppColors.primary;
+            : isPhase
+                ? const Color(0xFF1565C0)
+                : AppColors.textSecondary;
 
     final header = InkWell(
       onTap: () => onToggleOpen(id),
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: isMonth ? 14 : 11, horizontal: 13),
+        padding: EdgeInsets.symmetric(
+            vertical: isMonth
+                ? 14
+                : isPhase
+                    ? 11
+                    : 7,
+            horizontal: 13),
         child: Row(children: [
           Icon(
             _complete
@@ -592,21 +610,41 @@ class _Node extends StatelessWidget {
                 : isOutcome
                     ? Icons.workspace_premium_rounded
                     : isMonth
-                        ? Icons.calendar_month_rounded
-                        : Icons.folder_outlined,
-            size: isMonth ? 20 : 17,
+                        ? Icons.flag_rounded
+                        : isPhase
+                            ? Icons.arrow_forward_rounded
+                            : Icons.remove_rounded,
+            size: isMonth
+                ? 20
+                : isPhase
+                    ? 16
+                    : 12,
             color: _complete ? const Color(0xFF4CAF50) : accent,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: isMonth ? 10 : (isPhase ? 8 : 6)),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Flexible(
                   child: Text(step['title'] as String? ?? '',
                       style: GoogleFonts.poppins(
-                          fontSize: isMonth ? 14.5 : 13,
-                          fontWeight: isMonth ? FontWeight.w600 : FontWeight.w500,
-                          color: AppColors.textPrimary)),
+                          fontSize: isMonth
+                              ? 15.5
+                              : isPhase
+                                  ? 13
+                                  : 11,
+                          fontWeight: isMonth
+                              ? FontWeight.w700
+                              : isPhase
+                                  ? FontWeight.w600
+                                  : FontWeight.w700,
+                          // A group is a label over the lines beneath it, not
+                          // another thing to read: small, spaced, and quiet.
+                          letterSpacing: (isMonth || isPhase) ? 0 : 0.6,
+                          height: isMonth ? 1.25 : 1.3,
+                          color: (isMonth || isPhase)
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary)),
                 ),
                 if ((step['level_label'] as String? ?? '').isNotEmpty) ...[
                   const SizedBox(width: 8),
@@ -639,6 +677,14 @@ class _Node extends StatelessWidget {
                     ),
                   ]),
                 ),
+              ],
+              if (isMonth && (step['description'] as String? ?? '').isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Text(step['description'] as String,
+                    style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        height: 1.4,
+                        color: AppColors.textSecondary)),
               ],
               if (signedIn && total > 0) ...[
                 const SizedBox(height: 5),
@@ -1275,6 +1321,147 @@ class _PlanBuilder extends StatelessWidget {
                       color: const Color(0xFF5A6B82))),
             ],
           ]),
+        ),
+      ]),
+    );
+  }
+}
+
+
+/// The argument for the path, and a way to find your place on it.
+///
+/// A list of 165 things answers "what is covered" and leaves the two
+/// questions a reader actually has — why this order, and where do I start —
+/// to be inferred from a syllabus. Most people do not infer them; they scroll,
+/// decide it is a lot, and leave.
+class _WhyThisOrder extends StatelessWidget {
+  final Map<String, dynamic> roadmap;
+  final int planIndex;
+  const _WhyThisOrder({required this.roadmap, required this.planIndex});
+
+  // Each line is the reason the next stage cannot come first. That is what
+  // makes this an order rather than a list.
+  static const _steps = [
+    ('Build it offline', 'A thing that works on your desk, with your own '
+        'firmware and your own board.'),
+    ('Make it real', 'Solder what you designed, then find the fault that is '
+        'on every first board.'),
+    ('Put it online', 'It reports home and stores what it sees — the step '
+        'from demo to product.'),
+    ('Make it think', 'The model runs on the device, not in somebody else\'s '
+        'API.'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final outcome = (roadmap['outcome'] as String? ?? '').trim();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6EBF3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('WHY THIS ORDER',
+            style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.9,
+                color: const Color(0xFF9AA5B5))),
+        const SizedBox(height: 8),
+        Text(
+          'One product, carried further four times. Each stage is the same '
+          'device with the next thing it could not do before — so nothing is '
+          'learned twice and nothing is learned out of order.',
+          style: GoogleFonts.inter(
+              fontSize: 13, height: 1.6, color: const Color(0xFF0B2450)),
+        ),
+        const SizedBox(height: 14),
+        for (var i = 0; i < _steps.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 9),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 20,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF12326B).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text('${i + 1}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF12326B))),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(children: [
+                    TextSpan(
+                        text: '${_steps[i].$1}. ',
+                        style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            height: 1.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0B2450))),
+                    TextSpan(
+                        text: _steps[i].$2,
+                        style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            height: 1.5,
+                            color: const Color(0xFF5A6B82))),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        if (outcome.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.workspace_premium_rounded,
+                  size: 16, color: Color(0xFF2E7D32)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('At the end: $outcome',
+                    style: GoogleFonts.inter(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: const Color(0xFF0B2450))),
+              ),
+            ]),
+          ),
+        ],
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => PlacementTestSheet.show(
+              context,
+              onTalkToUs: () =>
+                  askForCallback(context, roadmap, planIndex: planIndex),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF12326B),
+              side: const BorderSide(color: Color(0xFF12326B)),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+            ),
+            icon: const Icon(Icons.explore_outlined, size: 18),
+            label: Text('Where do I start? — 30 second check',
+                style: GoogleFonts.poppins(
+                    fontSize: 13.5, fontWeight: FontWeight.w600)),
+          ),
         ),
       ]),
     );

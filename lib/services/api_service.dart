@@ -1087,6 +1087,25 @@ class ApiService {
     _parse(res);
   }
 
+  // ── Roadmap placement ──────────────────────────────────────────────────
+  /// Six questions. Public — this runs before anybody signs in.
+  static Future<List<dynamic>> getPlacementQuestions() async {
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/roadmap/placement/questions'),
+        headers: _headers(null));
+    return (_parse(res)['questions'] as List?) ?? [];
+  }
+
+  /// Where they stand. Nothing is stored against them.
+  static Future<Map<String, dynamic>> getPlacementResult(List<String> yes) async {
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/roadmap/placement/result'),
+      headers: _headers(null),
+      body: jsonEncode({'yes': yes}),
+    );
+    return _parse(res);
+  }
+
   /// Upcoming free demo classes. Public — no token, no account.
   static Future<List<dynamic>> getDemos() async {
     final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/demos'),
