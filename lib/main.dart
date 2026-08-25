@@ -342,8 +342,13 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // shareable as a link to someone who has never signed in.
         GoRoute(
           path: '/roadmap/:slug',
-          builder: (_, state) =>
-              RoadmapScreen(slug: state.pathParameters['slug'] ?? ''),
+          // ?present=1 for showing this on a screen to a room: no fees, the
+          // stages closed so they can be opened one at a time, and type that
+          // survives a projector.
+          builder: (_, state) => RoadmapScreen(
+            slug: state.pathParameters['slug'] ?? '',
+            present: state.uri.queryParameters['present'] == '1',
+          ),
         ),
         GoRoute(
           path: '/student/login',

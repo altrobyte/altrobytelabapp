@@ -11,6 +11,7 @@
 // It is public on purpose: the path IS the pitch, and hiding it behind a login
 // wastes the thing that makes someone want an account. Ticking items needs one.
 
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,7 +24,17 @@ import '../../widgets/callback_sheet.dart';
 
 class RoadmapScreen extends StatefulWidget {
   final String slug;
-  const RoadmapScreen({super.key, required this.slug});
+
+  /// Presenting to a room rather than reading alone.
+  ///
+  /// Two things change. Fees come off — the plan builder sits above
+  /// everything, so projecting this puts a price on screen in the first
+  /// thirty seconds, before anybody has been shown what they would be paying
+  /// for. And the stages start closed: 165 open items cannot be walked
+  /// through live, only scrolled past.
+  final bool present;
+
+  const RoadmapScreen({super.key, required this.slug, this.present = false});
 
   @override
   State<RoadmapScreen> createState() => _RoadmapScreenState();
@@ -84,7 +95,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     try {
       final r = await ApiService.getRoadmap(widget.slug);
       _roadmap = r;
-      if (_open.isEmpty) _openAll((r['steps'] as List?) ?? []);
+      // Closed when presenting, so stages open one at a time in front of a
+      // room. Open otherwise, because a reader wants the whole syllabus.
+      if (_open.isEmpty && !widget.present) {
+        _openAll((r['steps'] as List?) ?? []);
+      }
     } catch (e) {
       // The generic line told a student nothing and told us nothing either.
       // ApiException already distinguishes "no internet" from "slow network"
@@ -227,7 +242,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       // The persuading happens while someone is still reading, and this page
       // is 165 milestones long: a call to action that lives only at the end is
       // one that almost nobody reaches. This bar rides along with them.
-      bottomNavigationBar: (_loading || r == null)
+      bottomNavigationBar: (_loading || r == null || widget.present)
           ? null
           : _StickyCta(roadmap: r, planIndex: _plan),
       body: _loading
@@ -262,13 +277,17 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                 _Header(
                                   roadmap: r,
                                   planIndex: _plan,
+                                  present: widget.present,
                                   onPlanChanged: (i) =>
                                       setState(() => _plan = i),
                                 ),
                                 const SizedBox(height: 16),
                                 // Before the 165 items: why they are in this
                                 // order, and a way to find your place in them.
-                                _WhyThisOrder(roadmap: r, planIndex: _plan),
+                                _WhyThisOrder(
+                                    roadmap: r,
+                                    planIndex: _plan,
+                                    present: widget.present),
                                 const SizedBox(height: 18),
                               ]);
                             }
@@ -289,6 +308,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                               // includes it is the whole point of showing it.
                               includedInPlan: _stageIncluded(r, i),
                               otherPlanName: _planCovering(r, i),
+                              present: widget.present,
                               signedIn: r['signed_in'] == true,
                               isOpen: _open.contains(m['id']),
                               openIds: _open,
@@ -311,10 +331,12 @@ class _Header extends StatelessWidget {
   final Map<String, dynamic> roadmap;
   final int planIndex;
   final ValueChanged<int> onPlanChanged;
+  final bool present;
   const _Header({
     required this.roadmap,
     required this.planIndex,
     required this.onPlanChanged,
+    this.present = false,
   });
 
   @override
@@ -348,7 +370,7 @@ class _Header extends StatelessWidget {
           Text(roadmap['subtitle'] as String,
               style: GoogleFonts.inter(
                   color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, height: 1.4)),
-        if (plans.length > 1) ...[
+        if (plans.length > 1 && !present) ...[
           const SizedBox(height: 16),
           _PlanBuilder(
             plans: plans,
@@ -483,11 +505,16 @@ class _Node extends StatelessWidget {
   /// The plan that does include it, named on the badge.
   final String otherPlanName;
 
+  /// Shown on a screen to a room: larger type, since 11px group labels are
+  /// invisible from the third row.
+  final bool present;
+
   const _Node({
     required this.step,
     required this.depth,
     this.includedInPlan = true,
     this.otherPlanName = '',
+    this.present = false,
     required this.signedIn,
     required this.isOpen,
     required this.openIds,
@@ -558,7 +585,7 @@ class _Node extends StatelessWidget {
             child: Text(
               step['title'] as String? ?? '',
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: present ? 16 : 13,
                 height: 1.4,
                 fontWeight: isDeliverable ? FontWeight.w600 : FontWeight.w400,
                 color: _complete ? AppColors.textSecondary : AppColors.textPrimary,
@@ -628,11 +655,12 @@ class _Node extends StatelessWidget {
                 Flexible(
                   child: Text(step['title'] as String? ?? '',
                       style: GoogleFonts.poppins(
-                          fontSize: isMonth
-                              ? 15.5
-                              : isPhase
-                                  ? 13
-                                  : 11,
+                          fontSize: (isMonth
+                                  ? 15.5
+                                  : isPhase
+                                      ? 13
+                                      : 11) +
+                              (present ? 4 : 0),
                           fontWeight: isMonth
                               ? FontWeight.w700
                               : isPhase
@@ -676,6 +704,33 @@ class _Node extends StatelessWidget {
                       ),
                     ),
                   ]),
+                ),
+              ],
+              if (isMonth && (step['walk_away'] as String? ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.inventory_2_outlined,
+                            size: 15, color: Color(0xFF2E7D32)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          // What they hold at the end, not what is covered —
+                          // and the line to say out loud when this is on a
+                          // screen in front of a room.
+                          child: Text(step['walk_away'] as String,
+                              style: GoogleFonts.inter(
+                                  fontSize: present ? 14.5 : 12,
+                                  height: 1.5,
+                                  color: const Color(0xFF0B2450))),
+                        ),
+                      ]),
                 ),
               ],
               if (isMonth && (step['description'] as String? ?? '').isNotEmpty) ...[
@@ -739,6 +794,7 @@ class _Node extends StatelessWidget {
               step: c as Map<String, dynamic>,
               depth: depth + 1,
               signedIn: signedIn,
+              present: present,
               isOpen: openIds.contains(c['id']),
               openIds: openIds,
               busyIds: busyIds,
@@ -1337,7 +1393,17 @@ class _PlanBuilder extends StatelessWidget {
 class _WhyThisOrder extends StatelessWidget {
   final Map<String, dynamic> roadmap;
   final int planIndex;
-  const _WhyThisOrder({required this.roadmap, required this.planIndex});
+
+  /// On a screen in front of a room, the check stops being a button
+  /// somebody might press and becomes something everybody does at once —
+  /// so it shows the code to point a phone at instead.
+  final bool present;
+
+  const _WhyThisOrder({
+    required this.roadmap,
+    required this.planIndex,
+    this.present = false,
+  });
 
   // Each line is the reason the next stage cannot come first. That is what
   // makes this an order rather than a list.
@@ -1376,7 +1442,9 @@ class _WhyThisOrder extends StatelessWidget {
           'device with the next thing it could not do before — so nothing is '
           'learned twice and nothing is learned out of order.',
           style: GoogleFonts.inter(
-              fontSize: 13, height: 1.6, color: const Color(0xFF0B2450)),
+              fontSize: present ? 16 : 13,
+              height: 1.6,
+              color: const Color(0xFF0B2450)),
         ),
         const SizedBox(height: 14),
         for (var i = 0; i < _steps.length; i++)
@@ -1442,6 +1510,46 @@ class _WhyThisOrder extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 14),
+        if (present) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F9FC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE1E7F0)),
+            ),
+            child: Row(children: [
+              QrImageView(
+                data: 'https://altrobytelab.com/roadmap/product-engineering',
+                size: 108,
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.all(7),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Find out where you stand',
+                          style: GoogleFonts.poppins(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              height: 1.3,
+                              color: const Color(0xFF0B2450))),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Point your phone here, then tap "Where do I start". '
+                        'Six questions, about thirty seconds.',
+                        style: GoogleFonts.inter(
+                            fontSize: 13.5,
+                            height: 1.5,
+                            color: const Color(0xFF5A6B82)),
+                      ),
+                    ]),
+              ),
+            ]),
+          ),
+        ] else
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
