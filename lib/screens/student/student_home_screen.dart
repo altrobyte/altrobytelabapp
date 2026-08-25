@@ -213,54 +213,28 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   bool get _isLoggedIn => _token != null;
 
-  int _logoTaps = 0;
-  Timer? _logoTapTimer;
-  // TEMPORARY pre-launch shortcut: 5 taps = admin, 10 taps (without pausing)
-  // = super admin, both skip login entirely via the debug auto-login
-  // endpoints. Waits briefly after the last tap so reaching 10 doesn't
-  // fire the 5-tap admin navigation first. Remove this and restore the
-  // normal /login and /super/login flows before real launch.
-  void _onLogoTap() {
-    _logoTaps++;
-    _logoTapTimer?.cancel();
-    _logoTapTimer = Timer(const Duration(milliseconds: 2000), () {
-      final taps = _logoTaps;
-      _logoTaps = 0;
-      if (taps >= 10) {
-        _debugGoSuperAdmin();
-      } else if (taps >= 5) {
-        _debugGoAdmin();
-      }
-    });
-  }
+  // Removed: a five-tap logo gesture that signed you in as admin and a
+  // ten-tap one for super admin, both through zero-credential endpoints. The
+  // endpoints are gone, so it could only fail — but a hidden way in is worth
+  // deleting rather than leaving broken.
 
-  Future<void> _debugGoAdmin() async {
-    final auth = context.read<AuthProvider>();
-    try {
-      final data = await ApiService.debugAutoLoginAdmin();
-      await auth.setFromResponse(data);
-      if (mounted) context.go('/dashboard');
-    } catch (_) {}
-  }
-
-  Future<void> _debugGoSuperAdmin() async {
-    final auth = context.read<AuthProvider>();
-    try {
-      final data = await ApiService.debugAutoLoginSuperAdmin();
-      await auth.setFromResponse(data);
-      if (mounted) context.go('/super/dashboard');
-    } catch (_) {}
-  }
-
-  /// Working login path (WhatsApp OTP delivery is unreliable) — one Google
-  /// button resolves to super_admin / admin / student based on the
-  /// account's email.
-  /// Opens the sheet with both methods. Google alone was the only way in, so
-  /// every account arrived without a phone number — which is the one thing the
-  /// OTP, the reminders and the CRM all need.
   Future<void> _signIn() async {
     final ok = await showAuthSheet(context);
     if (ok && mounted) _loadFeed();
+  }
+
+  /// True once the reader is signed in; otherwise asks them to, and reports
+  /// whether they did.
+  ///
+  /// The gate used to be commented out because WhatsApp OTP delivery was
+  /// broken. Delivery works, and the server now refuses an unsigned request
+  /// rather than quietly treating it as a shared guest — so without this, a
+  /// signed-out tap opened a screen that could only fail.
+  Future<bool> _requireSignIn() async {
+    if ((_token ?? '').isNotEmpty) return true;
+    final ok = await showAuthSheet(context);
+    if (ok && mounted) await _loadFeed();
+    return ok;
   }
 
   Future<void> _loadFeed() async {
@@ -364,8 +338,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       context.push('/student/test-series');
       return;
     }
-    // TEMPORARY: login gate disabled while WhatsApp OTP delivery is broken.
-    // Re-enable this check once OTP is confirmed working.
+    if (!await _requireSignIn()) return;
+    if (!mounted) return;
     final result = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -376,8 +350,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     if (result == 'upgrade') _showUpgradeSheet();
   }
 
-  void _openTrainingScreen() {
-    // TEMPORARY: login gate disabled while WhatsApp OTP delivery is broken.
+  Future<void> _openTrainingScreen() async {
+    if (!await _requireSignIn()) return;
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const StudentTrainingScreen()),
@@ -549,7 +524,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                           onProfile: () => Navigator.of(context).push(MaterialPageRoute(
                               builder: (_) => StudentProfileScreen(waNumber: _waNumber))),
                           onLogin: () => context.push('/join'),
-                          onLogoTap: _onLogoTap,
                           onGoogleSignIn: _signIn,
                         ),
                       ),
@@ -970,7 +944,6 @@ class _HomeHeader extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onProfile;
   final VoidCallback onLogin;
-  final VoidCallback onLogoTap;
   final VoidCallback onGoogleSignIn;
 
   const _HomeHeader({
@@ -981,7 +954,6 @@ class _HomeHeader extends StatelessWidget {
     required this.onRefresh,
     required this.onProfile,
     required this.onLogin,
-    required this.onLogoTap,
     required this.onGoogleSignIn,
   });
 
@@ -1005,7 +977,7 @@ class _HomeHeader extends StatelessWidget {
             children: [
               Row(children: [
                 GestureDetector(
-                  onTap: onLogoTap,
+                  onTap: null,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(11),
                     child: Image.asset('assets/images/logo.png', width: 40, height: 40, fit: BoxFit.cover),

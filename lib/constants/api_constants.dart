@@ -62,7 +62,6 @@ class ApiConstants {
   // super admin
   static String superSetup() => '$baseUrl/super/setup';
   static String superLogin() => '$baseUrl/super/login';
-  static String superDebugAutoLogin() => '$baseUrl/super/debug/auto-login';
   static String superInstitutes() => '$baseUrl/super/institutes';
   static String superStats() => '$baseUrl/super/stats';
   static String superRevenue() => '$baseUrl/super/revenue';
@@ -82,7 +81,6 @@ class ApiConstants {
 
   // auth
   static String login() => '$baseUrl/auth/login';
-  static String debugAutoLogin() => '$baseUrl/auth/debug/auto-login';
   static String register() => '$baseUrl/auth/register';
   static String logout() => '$baseUrl/auth/logout';
   static String me() => '$baseUrl/auth/me';

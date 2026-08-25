@@ -225,22 +225,9 @@ class ApiService {
     return _parse(res);
   }
 
-  // TEMPORARY pre-launch dev shortcuts — remove once real launch happens.
-  static Future<Map<String, dynamic>> debugAutoLoginAdmin() async {
-    final res = await http.post(
-      Uri.parse(ApiConstants.debugAutoLogin()),
-      headers: _headers(),
-    );
-    return _parse(res);
-  }
+  // Removed: debugAutoLoginAdmin / debugAutoLoginSuperAdmin — zero-credential
+  // logins from the pre-launch period. The endpoints behind them are gone.
 
-  static Future<Map<String, dynamic>> debugAutoLoginSuperAdmin() async {
-    final res = await http.post(
-      Uri.parse(ApiConstants.superDebugAutoLogin()),
-      headers: _headers(),
-    );
-    return _parse(res);
-  }
 
   static Future<Map<String, dynamic>> getSuperStats(String token) async {
     final res = await http.get(

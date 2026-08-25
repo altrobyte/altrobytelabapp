@@ -13,7 +13,6 @@ import 'providers/institute_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/test_provider.dart';
 import 'providers/training_module_provider.dart';
-import 'screens/debug_access_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_layout.dart';
 import 'screens/dashboard_screen.dart';
@@ -325,16 +324,6 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (_, state) =>
               RoadmapScreen(slug: state.pathParameters['slug'] ?? ''),
         ),
-        // TEMPORARY direct-link pre-launch shortcuts — remove before launch.
-        GoRoute(
-          path: '/admin-access',
-          builder: (_, __) => const DebugAccessScreen(superAdmin: false),
-        ),
-        GoRoute(
-          path: '/super-access',
-          builder: (_, __) => const DebugAccessScreen(superAdmin: true),
-        ),
-        // Student routes (self-guarded)
         GoRoute(
           path: '/student/login',
           builder: (_, __) => const StudentLoginScreen(),
