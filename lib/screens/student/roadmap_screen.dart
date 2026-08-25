@@ -225,6 +225,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         title: Text(r?['title'] as String? ?? 'Roadmap',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         backgroundColor: Colors.white,
+        // Material 3 tints an AppBar once content scrolls beneath it, which
+        // on a white bar washed the title to a grey nobody could read. The
+        // bar stays white and the content stays behind it.
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         // The theme paints AppBar foreground white for the dark bars used
         // elsewhere; on a white bar that hides the title and every action.
         foregroundColor: AppColors.textPrimary,
@@ -733,14 +738,10 @@ class _Node extends StatelessWidget {
                       ]),
                 ),
               ],
-              if (isMonth && (step['description'] as String? ?? '').isNotEmpty) ...[
-                const SizedBox(height: 5),
-                Text(step['description'] as String,
-                    style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        height: 1.4,
-                        color: AppColors.textSecondary)),
-              ],
+              // description holds two different things separated by a blank
+              // line — the stack, then a PROJECT line — and printing it whole
+              // ran them into one grey paragraph that read as neither.
+              if (isMonth) ..._stageMeta(step, present),
               if (signedIn && total > 0) ...[
                 const SizedBox(height: 5),
                 Row(children: [
@@ -1574,4 +1575,54 @@ class _WhyThisOrder extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// The two halves of a stage's `description`, told apart.
+///
+/// It arrives as "ESP32 · ESP-IDF · …\n\nPROJECT: Day/Night + …": a stack and
+/// the thing built with it. As one paragraph neither was readable — the stack
+/// wants to be scanned, the project wants to be read.
+List<Widget> _stageMeta(Map<String, dynamic> step, bool present) {
+  final raw = (step['description'] as String? ?? '').trim();
+  if (raw.isEmpty) return const [];
+
+  final parts = raw.split(RegExp(r'\n\s*\n'));
+  final stack = parts.first.trim();
+  final project = parts.length > 1 ? parts.sublist(1).join('\n').trim() : '';
+
+  return [
+    if (stack.isNotEmpty) ...[
+      const SizedBox(height: 9),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final t in stack.split('·').map((e) => e.trim()).where((e) => e.isNotEmpty))
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF12326B).withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(t,
+                  style: GoogleFonts.inter(
+                      fontSize: present ? 13 : 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF12326B))),
+            ),
+        ],
+      ),
+    ],
+    if (project.isNotEmpty) ...[
+      const SizedBox(height: 9),
+      Text(
+        // The label is already in the text; repeating it would be noise.
+        project.replaceFirst(RegExp(r'^PROJECT:\s*'), 'You build: '),
+        style: GoogleFonts.inter(
+            fontSize: present ? 14 : 11.5,
+            height: 1.5,
+            color: AppColors.textSecondary),
+      ),
+    ],
+  ];
 }
