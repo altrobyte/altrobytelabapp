@@ -13,6 +13,7 @@ import 'providers/institute_provider.dart';
 import 'providers/language_provider.dart';
 import 'providers/test_provider.dart';
 import 'providers/training_module_provider.dart';
+import 'services/error_reporter.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_layout.dart';
 import 'screens/dashboard_screen.dart';
@@ -58,6 +59,7 @@ import 'screens/book_call_screen.dart';
 import 'screens/demos_screen.dart';
 import 'screens/admin/demos_admin_screen.dart';
 import 'screens/admin/bookings_screen.dart';
+import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
@@ -90,6 +92,22 @@ void main() async {
   // shared workshop/course links were landing on the home page instead of
   // the intended page.
   usePathUrlStrategy();
+
+  // Anything Flutter catches on the way to the red screen. Without this, a
+  // widget that throws for one person on one browser is something nobody ever
+  // hears about — which is how every problem this week was found: by somebody
+  // hitting it and saying so.
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    previousOnError?.call(details);
+    ErrorReporter.send(
+      details.library ?? 'flutter',
+      details.exception,
+      details.stack,
+      context: details.context?.toString(),
+    );
+  };
+
   runZonedGuarded(() async {
     try {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -114,6 +132,7 @@ void main() async {
     );
   }, (error, stack) {
     debugPrint('Uncaught zone error: $error\n$stack');
+    ErrorReporter.send('zone', error, stack);
   });
 }
 
@@ -159,6 +178,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/wa-messages',
           '/bookings',
           '/demos-admin',
+          '/errors',
         ];
         final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
 
@@ -306,6 +326,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(path: '/demo', builder: (_, __) => const DemosScreen()),
         GoRoute(path: '/demos-admin', builder: (_, __) => const DemosAdminScreen()),
         GoRoute(path: '/bookings', builder: (_, __) => const BookingsScreen()),
+        GoRoute(path: '/errors', builder: (_, __) => const ErrorsScreen()),
         // Admin: Top Stories + Lab Setups. Login-protected via the list above.
         GoRoute(
             path: '/showcase-admin',

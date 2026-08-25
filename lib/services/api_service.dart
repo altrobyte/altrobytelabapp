@@ -1006,6 +1006,28 @@ class ApiService {
   /// server URL directly rather than fetching the file itself.
   static String get base => ApiConstants.baseUrl;
 
+  /// How many errors are open, for the dashboard.
+  static Future<Map<String, dynamic>> getErrorSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/errors/summary'),
+        headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> getErrors({bool includeResolved = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/errors?include_resolved=$includeResolved'),
+        headers: _headers(prefs.getString('token')));
+    return (_parse(res)['errors'] as List?) ?? [];
+  }
+
+  static Future<void> resolveError(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await safePost(Uri.parse('${ApiConstants.baseUrl}/errors/$id/resolve'),
+        headers: _headers(prefs.getString('token')));
+  }
+
   // ── Lead sheet ─────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> getSheetStatus() async {
     final prefs = await SharedPreferences.getInstance();

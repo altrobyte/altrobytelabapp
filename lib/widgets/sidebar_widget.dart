@@ -135,6 +135,9 @@ class _Nav extends StatelessWidget {
         _NavItem(Icons.campaign_rounded, l10n.navBroadcast, '/broadcast'),
       if (auth.canAccessSettings)
         _NavItem(Icons.settings_rounded, l10n.navSettings, '/settings'),
+      // Last, because it should usually be empty — and first thing you look
+      // at when something is wrong.
+      _NavItem(Icons.bug_report_rounded, 'Errors', '/errors'),
     ];
 
     return ListView(
