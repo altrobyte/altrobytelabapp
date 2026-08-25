@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -112,6 +114,14 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
   Map<String, Offset> _from = {};
   Map<String, _Placed> _last = {};
 
+  final TransformationController _view = TransformationController();
+
+  /// The map is fitted to the viewport once, on the first frame that knows
+  /// both sizes. Re-fitting on every rebuild would yank the canvas back
+  /// whenever somebody had panned somewhere deliberately.
+  bool _fitted = false;
+  Size _canvas = Size.zero;
+
   @override
   void initState() {
     super.initState();
@@ -141,7 +151,21 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
   @override
   void dispose() {
     _morph.dispose();
+    _view.dispose();
     super.dispose();
+  }
+
+  /// Scale and centre the whole tree in the space available.
+  void _fit(Size viewport) {
+    if (_canvas.isEmpty || viewport.isEmpty) return;
+    final scale = math.min(
+        math.min(viewport.width / _canvas.width, viewport.height / _canvas.height),
+        1.0);
+    final dx = (viewport.width - _canvas.width * scale) / 2;
+    final dy = (viewport.height - _canvas.height * scale) / 2;
+    _view.value = Matrix4.identity()
+      ..translateByDouble(dx, dy, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
   }
 
   @override
@@ -151,26 +175,43 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
       return AnimatedBuilder(
         animation: _morph,
         builder: (context, _) {
-          final placed = _layout(size);
+          final placed = _layout();
           _last = placed;
-          // Pinch and drag: a full mind map does not fit a phone, and
-          // shrinking it until it does would make it unreadable.
+
+          // The canvas is the size of the tree, not the size of the window.
+          // Painting a 900px map onto a 500px canvas simply cut the rest off,
+          // and panning stopped at the canvas edge — so the branches were
+          // there, unreachable, which is exactly what it looked like.
+          if (_canvas != size && !_fitted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || _fitted) return;
+              _fit(size);
+              _fitted = true;
+            });
+          }
+
           return InteractiveViewer(
-            minScale: 0.35,
+            constrained: false,
+            minScale: 0.25,
             maxScale: 2.5,
-            boundaryMargin: const EdgeInsets.all(400),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (d) => _hit(placed, d.localPosition),
-              child: CustomPaint(
-                size: size,
-                painter: _MindPainter(
-                  placed: placed,
-                  edges: widget.edges,
-                  selectedId: widget.selectedId,
-                  focusId: widget.focusId,
-                  morph: Curves.easeOutCubic.transform(_morph.value),
-                  present: widget.present,
+            boundaryMargin: const EdgeInsets.all(120),
+            transformationController: _view,
+            child: SizedBox(
+              width: _canvas.width,
+              height: _canvas.height,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (d) => _hit(placed, d.localPosition),
+                child: CustomPaint(
+                  size: _canvas,
+                  painter: _MindPainter(
+                    placed: placed,
+                    edges: widget.edges,
+                    selectedId: widget.selectedId,
+                    focusId: widget.focusId,
+                    morph: Curves.easeOutCubic.transform(_morph.value),
+                    present: widget.present,
+                  ),
                 ),
               ),
             ),
@@ -187,7 +228,7 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
   /// Everything hanging off the student is split into two halves that grow
   /// left and right, because a single left-to-right run puts the root against
   /// one edge and wastes the screen it was given.
-  Map<String, _Placed> _layout(Size size) {
+  Map<String, _Placed> _layout() {
     final byId = {for (final n in widget.nodes) n.id: n};
     final children = <String, List<String>>{};
     final hasParent = <String>{};
@@ -269,12 +310,21 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
           _MindPainter.measure(rootNode, 0, widget.present));
     }
 
-    // Everything was laid out around the origin; move it to the middle of
-    // whatever space we were handed.
-    final centre = Offset(size.width / 2, size.height / 2);
+    // Everything was laid out around the origin. Measure what that came to,
+    // and shift it into a canvas that actually holds it.
+    var bounds = Rect.zero;
+    for (final v in out.values) {
+      final r = Rect.fromCenter(
+          center: v.at, width: v.size.width + 40, height: v.size.height + 26);
+      bounds = bounds == Rect.zero ? r : bounds.expandToInclude(r);
+    }
+    const pad = 40.0;
+    _canvas = Size(bounds.width + pad * 2, bounds.height + pad * 2);
+    final shift = Offset(pad - bounds.left, pad - bounds.top);
+
     return {
       for (final e in out.entries)
-        e.key: _Placed(e.value.node, e.value.at + centre, e.value.depth,
+        e.key: _Placed(e.value.node, e.value.at + shift, e.value.depth,
             e.value.side, e.value.size)
     };
   }
