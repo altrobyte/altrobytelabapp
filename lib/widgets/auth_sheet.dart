@@ -9,6 +9,7 @@
 // Google stays because some people bounce at "enter your number", and half a
 // record beats none.
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -153,11 +154,32 @@ class _AuthSheetState extends State<_AuthSheet> {
       await GoogleAuthService.signIn();
       if (!mounted) return;
       Navigator.pop(context, true);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        // Naming the cause. "Did not complete" covered a closed popup, a
+        // blocked popup and a domain Firebase has never been told about —
+        // three different problems with three different fixes, and only the
+        // reader could tell which one they were looking at.
+        _error = switch (e.code) {
+          'unauthorized-domain' =>
+            'This site is not authorised for Google sign-in yet. '
+                'Use WhatsApp above, or add this domain in Firebase.',
+          'popup-blocked' =>
+            'Your browser blocked the popup. Allow popups and try again.',
+          'popup-closed-by-user' || 'cancelled-popup-request' =>
+            'Sign-in was cancelled.',
+          'network-request-failed' =>
+            'Network problem. Check your connection and try again.',
+          _ => 'Google sign-in did not complete (${e.code}).',
+        };
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = 'Google sign-in did not complete';
+        _error = 'Google sign-in did not complete. $e';
       });
     }
   }
