@@ -62,6 +62,7 @@ import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
 import 'screens/student/what_if_screen.dart';
+import 'screens/student/test_series_page.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
 import 'screens/admin/crm_screen.dart';
@@ -344,6 +345,13 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Public like the roadmap: the argument for a path is no use behind
         // a login when the people who most need it have not signed up yet.
         GoRoute(path: '/what-if', builder: (_, __) => const WhatIfScreen()),
+        // Public: the link is posted in class WhatsApp groups, so it has to
+        // render for somebody who has never signed in.
+        GoRoute(
+          path: '/test-series/:id',
+          builder: (_, state) => TestSeriesPage(
+              seriesId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+        ),
         GoRoute(
           path: '/roadmap/:slug',
           // ?present=1 for showing this on a screen to a room: no fees, the

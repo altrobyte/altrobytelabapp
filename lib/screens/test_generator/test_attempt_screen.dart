@@ -923,16 +923,113 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
   late TabController _tabs;
   String? _aiFeedback;
   bool _loadingFeedback = true;
+  Map<String, dynamic>? _next;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _loadAiFeedback();
+    _loadNext();
   }
 
   @override
   void dispose() { _tabs.dispose(); super.dispose(); }
+
+  /// What to do next, worked out from their own results rather than written
+  /// by the model. Silent on failure: a missing suggestion is a smaller loss
+  /// than an error banner on top of a score somebody just earned.
+  Future<void> _loadNext() async {
+    try {
+      final d = await ApiService.getAfterTest(widget.test.id);
+      if (mounted && (d['cards'] as List?)?.isNotEmpty == true) {
+        setState(() => _next = d);
+      }
+    } catch (_) {}
+  }
+
+  Widget _nextSteps() {
+    final cards = (_next?['cards'] as List?) ?? const [];
+    final note = '${_next?['note'] ?? ''}';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('What next',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600, fontSize: 14)),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(note,
+                style: GoogleFonts.inter(
+                    fontSize: 11.5, height: 1.45, color: Colors.grey)),
+          ],
+          const SizedBox(height: 12),
+          for (final raw in cards)
+            _nextCard(Map<String, dynamic>.from(raw as Map)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _nextCard(Map<String, dynamic> c) {
+    final kind = '${c['kind']}';
+    final done = kind == 'series_complete';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: const Color(0xFFE6EBF3)),
+      ),
+      child: InkWell(
+        onTap: done
+            ? null
+            : () {
+                if (c['test_id'] != null && kind == 'retake') {
+                  widget.onRetake();
+                } else if (c['test_id'] != null) {
+                  context.pushReplacement('/test/${c['test_id']}');
+                } else if (c['series_id'] != null) {
+                  context.push('/test-series/${c['series_id']}');
+                }
+              },
+        borderRadius: BorderRadius.circular(11),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(children: [
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${c['label']}',
+                        style: GoogleFonts.inter(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.6,
+                            color: AppColors.accent)),
+                    const SizedBox(height: 3),
+                    Text('${c['title']}',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary)),
+                    const SizedBox(height: 3),
+                    // The reason names one of their own results. A suggestion
+                    // that cannot say where it came from is just an advert.
+                    Text('${c['reason']}',
+                        style: GoogleFonts.inter(
+                            fontSize: 11.5, height: 1.45, color: Colors.grey)),
+                  ]),
+            ),
+            if (!done)
+              const Icon(Icons.chevron_right_rounded,
+                  size: 20, color: Color(0xFFC3CCD9)),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Future<void> _loadAiFeedback() async {
     try {
@@ -1045,6 +1142,10 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                 ]),
               ),
             ),
+            if (_next != null) ...[
+              const SizedBox(height: 12),
+              _nextSteps(),
+            ],
             const SizedBox(height: 12),
             Row(children: [
               Expanded(child: OutlinedButton.icon(

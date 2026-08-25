@@ -35,6 +35,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   int? _instituteId;
   bool _isStandalone = false;
   Map<String, dynamic>? _stats;
+  Map<String, dynamic>? _testStats;
   List<dynamic> _results = [];
   bool _loading = true;
   bool _loadingResults = false;
@@ -79,7 +80,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       } catch (_) {}
     }
 
-    // Load analytics
+    // The header used to read /students/{id}/analytics, which keys on the
+    // institute roster row. Anybody who signed up with Google has no such
+    // row, so the header said zero tests and zero average while the list
+    // below it showed their results — the same student, two different
+    // truths on one screen. This is keyed on the account.
+    try {
+      _testStats = await ApiService.getMyTestStats();
+    } catch (_) {}
     if (_studentId != null && _studentId! > 0) {
       try {
         _stats = await ApiService.getStudentAnalytics(_studentId!);
@@ -333,10 +341,16 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final lang = context.watch<LanguageProvider>();
     final initials = _name.trim().isNotEmpty ? _name.trim()[0].toUpperCase() : 'S';
 
-    final testsTakenNum = (_stats?['total_tests_taken'] as num?)?.toInt() ?? 0;
+    final testsTakenNum = (_testStats?['tests_taken'] as num?)?.toInt() ??
+        (_stats?['total_tests_taken'] as num?)?.toInt() ?? 0;
     final attendanceNum = (_stats?['attendance_rate'] as num?)?.toInt() ?? 0;
     final hasActivity = testsTakenNum > 0 || attendanceNum > 0;
-    final avg = (_stats?['avg_test_score'] ?? 0).toString();
+    final avgNum = (_testStats?['avg_pct'] as num?) ??
+        (_stats?['avg_test_score'] as num?);
+    final avg = (avgNum ?? 0).toStringAsFixed(0);
+    final seriesAttempts =
+        (_testStats?['series_attempts'] as num?)?.toInt() ?? 0;
+    final attemptsNum = (_testStats?['attempts'] as num?)?.toInt() ?? 0;
     final attend = attendanceNum.toString();
     final tests = testsTakenNum.toString();
 
@@ -429,6 +443,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _stat('Attendance', '$attend%', AppColors.success),
                     const SizedBox(width: 10),
                     _stat('Tests', tests, AppColors.primary),
+                    // Attempts, not tests: retaking is the point of a series,
+                    // and a header that hides it undercounts the work done.
+                    if (attemptsNum > testsTakenNum)
+                      _stat('Attempts', '$attemptsNum', AppColors.primaryLight),
+                    if (seriesAttempts > 0)
+                      _stat('Series tests', '$seriesAttempts', AppColors.success),
                   ])
                 else
                   Container(

@@ -365,7 +365,27 @@ class _SeriesCardState extends State<_SeriesCard> {
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
                 onTap: () => context.push('/test/${t['id']}'),
               )),
-          const SizedBox(height: 8),
+          // The series has an address of its own now, and that page is the
+          // one worth sending to a group — this tab cannot be shared.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    context.push('/test-series/${widget.series['id']}'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: widget.color,
+                  side: BorderSide(color: widget.color.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                label: Text('Open series page · share',
+                    style: GoogleFonts.inter(
+                        fontSize: 12.5, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ),
         ],
       ]),
     );

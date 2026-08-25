@@ -75,6 +75,12 @@
         "type": 302
       },
       {
+        "//": "The short link for a shared test series. Keeps what gets pasted into a group on the domain people recognise.",
+        "source": "/ts/:id",
+        "destination": "https://altrocoach-backend-production.up.railway.app/s/series/:id",
+        "type": 302
+      },
+      {
         "source": "/sr/:slug",
         "destination": "https://altrocoach-backend-production.up.railway.app/s/roadmap/:slug",
         "type": 302

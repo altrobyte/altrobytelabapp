@@ -1089,6 +1089,40 @@ class ApiService {
 
   // ── What If ────────────────────────────────────────────────────────────
   /// Directions, goals, what we already know, and what we still need to ask.
+  // ── Test series ─────────────────────────────────────────────────────────
+
+  /// A whole series page in one request.
+  ///
+  /// Public: the link is posted in WhatsApp groups, so it has to render for
+  /// somebody who has never signed in. The token is sent when there is one
+  /// and the response carries their own progress back in `me`.
+  static Future<Map<String, dynamic>> getSeriesPublic(int seriesId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/test-series/$seriesId/public'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
+  /// The student's own test record, keyed on the account rather than on the
+  /// institute roster row a Google sign-up never had.
+  static Future<Map<String, dynamic>> getMyTestStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/student/test-stats'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
+  /// What to do next, asked once a test has been submitted.
+  static Future<Map<String, dynamic>> getAfterTest(int testId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/student/after-test/$testId'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> whatIfOptions() async {
     final prefs = await SharedPreferences.getInstance();
     final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/options'),
