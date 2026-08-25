@@ -434,11 +434,17 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareSession(Map<String, dynamic> session) {
-    // /s/ rather than the app route: a crawler follows the redirect and reads
-    // the session's own tags on the way, so the preview shows this session
-    // instead of the homepage card. A browser lands on the same page either
-    // way.
-    final link = 'https://altrobytelab.com/s/${widget.sessionId}';
+    // The app's own URL, not the /s/ preview route.
+    //
+    // /s/ redirects to the API host for its OG tags, and a shared link goes
+    // to strangers on networks we do not control — one of which could not
+    // resolve *.up.railway.app at all, so the link was simply dead for them.
+    // A generic preview is a small loss; a link that does not open is the
+    // whole thing.
+    //
+    // Point this back at /s/ once the API answers on a subdomain of this
+    // site: same registrable domain, so if the site resolves, so does it.
+    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final text = "Join me for \"$title\" on AltrobyteLab!\nRegister here: $link";
     if (kIsWeb) {
@@ -452,11 +458,17 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareToSocial(String platform, Map<String, dynamic> session) {
-    // /s/ rather than the app route: a crawler follows the redirect and reads
-    // the session's own tags on the way, so the preview shows this session
-    // instead of the homepage card. A browser lands on the same page either
-    // way.
-    final link = 'https://altrobytelab.com/s/${widget.sessionId}';
+    // The app's own URL, not the /s/ preview route.
+    //
+    // /s/ redirects to the API host for its OG tags, and a shared link goes
+    // to strangers on networks we do not control — one of which could not
+    // resolve *.up.railway.app at all, so the link was simply dead for them.
+    // A generic preview is a small loss; a link that does not open is the
+    // whole thing.
+    //
+    // Point this back at /s/ once the API answers on a subdomain of this
+    // site: same registrable domain, so if the site resolves, so does it.
+    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final caption = '🚀 Just started my learning journey into tech with "$title" on AltrobyteLab! '
         'Excited to keep building and growing. Join me:';
