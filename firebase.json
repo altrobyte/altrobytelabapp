@@ -52,6 +52,23 @@
           }
         ]
       }
+    ],
+    "redirects": [
+      {
+        "source": "/s/:id",
+        "destination": "https://altrocoach-backend-production.up.railway.app/s/live-session/:id",
+        "type": 302
+      },
+      {
+        "source": "/sd/:id",
+        "destination": "https://altrocoach-backend-production.up.railway.app/s/demo/:id",
+        "type": 302
+      },
+      {
+        "source": "/sr/:slug",
+        "destination": "https://altrocoach-backend-production.up.railway.app/s/roadmap/:slug",
+        "type": 302
+      }
     ]
   },
   "storage": {

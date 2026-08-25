@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/auth_sheet.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../services/api_service.dart';
@@ -271,28 +272,16 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   // but the backend now rejects the shared pre-launch guest identity for
   // /register (401), so prompt a real sign-in and retry once done.
   Future<void> _promptSignInThenRetry() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sign in to register'),
-        content: const Text(
-            'Please sign in with Google to register — this keeps your registration and payment linked to you.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign in with Google')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await GoogleAuthService.signIn();
-      if (!mounted) return;
-      await _register();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _actionError = 'Sign-in failed: $e');
-    }
+    // The shared sheet, which leads with WhatsApp.
+    //
+    // This offered Google alone, and Google hands back an email and no phone
+    // number. The joining link, the reminder before the session and every
+    // follow-up after it all go over WhatsApp — so registering through Google
+    // produced somebody we had promised to message and no way to.
+    final ok = await showAuthSheet(context,
+        reason: 'to register for this session');
+    if (!ok || !mounted) return;
+    await _register();
   }
 
   void _showSuccessCard() {
@@ -445,7 +434,11 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareSession(Map<String, dynamic> session) {
-    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
+    // /s/ rather than the app route: a crawler follows the redirect and reads
+    // the session's own tags on the way, so the preview shows this session
+    // instead of the homepage card. A browser lands on the same page either
+    // way.
+    final link = 'https://altrobytelab.com/s/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final text = "Join me for \"$title\" on AltrobyteLab!\nRegister here: $link";
     if (kIsWeb) {
@@ -459,7 +452,11 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareToSocial(String platform, Map<String, dynamic> session) {
-    final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
+    // /s/ rather than the app route: a crawler follows the redirect and reads
+    // the session's own tags on the way, so the preview shows this session
+    // instead of the homepage card. A browser lands on the same page either
+    // way.
+    final link = 'https://altrobytelab.com/s/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final caption = '🚀 Just started my learning journey into tech with "$title" on AltrobyteLab! '
         'Excited to keep building and growing. Join me:';

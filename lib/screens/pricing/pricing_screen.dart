@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/auth_sheet.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 import '../../services/cashfree_checkout.dart';
@@ -326,13 +327,12 @@ class _PricingScreenState extends State<PricingScreen> {
       ),
     );
     if (proceed != true) return false;
-    try {
-      await GoogleAuthService.signIn();
-      return await _isLoggedIn();
-    } catch (e) {
-      _snack('Sign-in failed. Please try again.', error: true);
-      return false;
-    }
+    // The shared sheet, which leads with WhatsApp. Google hands back an
+    // email and no phone number, and every message we owe somebody after
+    // this — joining link, reminder, follow-up — goes over WhatsApp.
+    final ok = await showAuthSheet(context, reason: 'to continue');
+    if (!ok || !mounted) return false;
+    return await _isLoggedIn();
   }
 
   void _showSuccess(String displayName, String? validTill) {

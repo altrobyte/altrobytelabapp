@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/auth_sheet.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../services/api_service.dart';
@@ -234,28 +235,12 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
   }
 
   Future<void> _promptSignInThenRetry() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sign in to continue'),
-        content: const Text(
-            'Please sign in with Google to enroll — this keeps your enrollment and payment linked to you.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign in with Google')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await GoogleAuthService.signIn();
-      if (!mounted) return;
-      await _register();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _actionError = 'Sign-in failed: $e');
-    }
+    // The shared sheet, which leads with WhatsApp. Google hands back an
+    // email and no phone number, and every message we owe somebody after
+    // this — joining link, reminder, follow-up — goes over WhatsApp.
+    final ok = await showAuthSheet(context, reason: 'to continue');
+    if (!ok || !mounted) return;
+    await _register();
   }
 
   void _showSuccessCard() {
@@ -374,7 +359,7 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
           icon: _submitting
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.login_rounded, size: 18),
-          label: const Text('Sign in with Google'),
+          label: const Text('Sign in'),
         ),
       ),
     ];
@@ -383,9 +368,13 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
   Future<void> _signInNow() async {
     setState(() { _submitting = true; _actionError = null; });
     try {
-      await GoogleAuthService.signIn();
+      // WhatsApp first, same as everywhere a student signs in: Google gives
+      // us an email and no number, and the number is what every message
+      // after this needs.
+      final ok = await showAuthSheet(context, reason: 'to unlock this module');
       if (!mounted) return;
       setState(() => _submitting = false);
+      if (!ok) return;
       // Reloads the parent's module detail with the now-real student
       // token — this widget's `module.loginRequired`/`locked` props come
       // from the parent, not from here, so it must refetch there.
