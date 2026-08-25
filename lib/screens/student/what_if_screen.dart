@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../services/api_service.dart';
 import '../../widgets/mind_map.dart';
 
@@ -36,7 +38,6 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
 
   bool _loading = true;
   bool _thinking = false;
-  bool _savingProfile = false;
   String _error = '';
   String? _selectedId;
 
@@ -44,6 +45,19 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// rather than opening a card over it — the map is the thing being
   /// explored, so it should be what responds.
   String? _focusId;
+
+  /// The AI's answer for whichever node is focused, and the children it grew
+  /// out of that node. Kept per node id so tapping back and forth does not
+  /// re-ask a question we have already paid for.
+  Map<String, dynamic>? _node;
+  final Map<String, List<dynamic>> _grown = {};
+  bool _asking = false;
+
+  /// Branch and year, remembered locally. A visitor who has not signed in can
+  /// still say which branch they are in, and without it every direction on
+  /// the map reads "not enough evidence yet" — which is true, and useless.
+  String _branch = '';
+  String _year = '';
 
   @override
   void initState() {
@@ -53,7 +67,10 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
 
   Future<void> _load() async {
     try {
-      final u = await ApiService.whatIfUniverse();
+      final prefs = await SharedPreferences.getInstance();
+      _branch = prefs.getString('what_if_branch') ?? '';
+      _year = prefs.getString('what_if_year') ?? '';
+      final u = await ApiService.whatIfUniverse(branch: _branch, year: _year);
       if (!mounted) return;
       setState(() {
         _universe = u;
@@ -81,6 +98,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       _error = '';
       _selectedId = null;
       _focusId = null;
+      _node = null;
     });
     try {
       final r = await ApiService.whatIfExplore(kind: kind, choice: choice);
@@ -144,6 +162,32 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           ));
           edges.add(MindEdge('${d['id']}', childId,
               relation: 'Part of ${d['label']}'));
+
+          // Whatever the model grew out of this step, last time it was
+          // asked. Kept on the map so exploring makes the map bigger rather
+          // than replacing it.
+          for (final g in _grown[childId] ?? const []) {
+            final gm = Map<String, dynamic>.from(g as Map);
+            final gid = '$childId/${gm['label']}';
+            nodes.add(MindNode(
+                id: gid,
+                label: '${gm['label']}',
+                note: '${gm['note'] ?? ''}',
+                state: MindState.grown));
+            edges.add(MindEdge(childId, gid, relation: 'Grew from $c'));
+          }
+        }
+
+        for (final g in _grown['${d['id']}'] ?? const []) {
+          final gm = Map<String, dynamic>.from(g as Map);
+          final gid = '${d['id']}/ai/${gm['label']}';
+          nodes.add(MindNode(
+              id: gid,
+              label: '${gm['label']}',
+              note: '${gm['note'] ?? ''}',
+              state: MindState.grown));
+          edges.add(MindEdge('${d['id']}', gid,
+              relation: 'Suggested for you'));
         }
       }
       return (nodes, edges);
@@ -203,6 +247,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                 _result = null;
                 _selectedId = null;
                 _focusId = null;
+                _node = null;
               }),
               child: Text('Reset',
                   style: GoogleFonts.inter(
@@ -312,14 +357,58 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       _focusId = node.id;
     });
 
-    if (_result == null) {
-      final d = _directions.cast<Map?>().firstWhere(
-          (e) => '${e?['id']}' == node.id,
-          orElse: () => null);
-      if (d != null) _showDirectionSheet(Map<String, dynamic>.from(d));
-    } else {
-      _showSkipSheet(node);
+    _askNode(node);
+  }
+
+  /// A tap is a question, and the answer arrives on the map.
+  ///
+  /// This used to open a sheet of text we had written in advance, which is
+  /// why the page could be looked at and no AI found in it. Now the node is
+  /// put to the model with whatever we honestly know about the student, and
+  /// what comes back grows out of the node itself.
+  Future<void> _askNode(MindNode node) async {
+    final cached = _grown.containsKey(node.id);
+    setState(() {
+      _asking = !cached;
+      _node = null;
+      _error = '';
+    });
+    if (cached) return;
+
+    // Which direction this node hangs off, so the answer knows whether it is
+    // looking at a whole direction or one step inside one.
+    final parentId = _parentOf(node.id);
+    final parent = _directions.cast<Map?>().firstWhere(
+        (e) => '${e?['id']}' == parentId,
+        orElse: () => null);
+
+    try {
+      final r = await ApiService.whatIfNode(
+        node: node.label,
+        kind: parent == null ? 'direction' : 'capability',
+        parent: parent == null ? '' : '${parent['label']}',
+        branch: _branch,
+        year: _year,
+      );
+      if (!mounted) return;
+      setState(() {
+        _node = r;
+        _asking = false;
+        _grown[node.id] = (r['children'] as List?) ?? const [];
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _asking = false;
+          _error = e is ApiException ? e.message : '$e';
+        });
+      }
     }
+  }
+
+  String? _parentOf(String id) {
+    final cut = id.lastIndexOf('/');
+    return cut <= 0 ? null : id.substring(0, cut);
   }
 
   /// A tap on a connection answers what the line means.
@@ -386,11 +475,139 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       );
 
   List<Widget> _panelChildren() => [
-        if (_signal != null && _result == null) _signalCard(),
         if (_error.isNotEmpty) _errorCard(),
-        if (_result == null) ..._prompts() else ..._answer(),
-        if (_result == null) _needsCard(),
+        // The branch question first, always, until it is answered. Every
+        // direction on the map reads "not enough evidence yet" without it.
+        _branchCard(),
+        if (_signal != null && _result == null && _node == null) _signalCard(),
+        if (_asking)
+          ..._askingState()
+        else if (_node != null)
+          ..._nodeAnswer()
+        else if (_result != null)
+          ..._answer()
+        else
+          ..._prompts(),
       ];
+
+  List<Widget> _askingState() => [
+        Row(children: [
+          const SizedBox(
+              width: 15,
+              height: 15,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: 10),
+          Text('Working out what this means for you…',
+              style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white70)),
+        ]),
+      ];
+
+  /// The model's answer for one node, and the map has already grown to match.
+  List<Widget> _nodeAnswer() {
+    final n = _node!;
+    final sig = Map<String, dynamic>.from(n['signal'] ?? const {});
+    final exp = Map<String, dynamic>.from(n['experiment'] ?? const {});
+    final uncertainty = '${n['uncertainty'] ?? ''}'.trim();
+    return [
+      Text('${n['node']}',
+          style: GoogleFonts.poppins(
+              fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
+      const SizedBox(height: 5),
+      Text('${n['headline'] ?? ''}',
+          style: GoogleFonts.inter(
+              fontSize: 12.5, height: 1.55, color: Colors.white70)),
+      if (sig.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        _signalRow(sig),
+      ],
+      const SizedBox(height: 16),
+      if ('${n['why'] ?? ''}'.trim().isNotEmpty)
+        _block('WHY THIS MATTERS FOR YOU', '${n['why']}'),
+      _list('LEADS ON TO', n['leads_to'], const Color(0xFF5B9BEA)),
+      if (uncertainty.isNotEmpty)
+        _block('WHAT WE STILL CANNOT TELL', uncertainty),
+      if (exp.isNotEmpty) _experiment(exp),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: () => setState(() {
+            _node = null;
+            _focusId = null;
+            _selectedId = null;
+          }),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          child: Text('Back to the whole map',
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    ];
+  }
+
+  /// Asked without a login, because the alternative was telling a visitor the
+  /// map sharpens once we know their branch and giving them no way to say it.
+  Widget _branchCard() {
+    if (_branch.isNotEmpty) return const SizedBox.shrink();
+    final branches = (_universe?['branches'] as List?) ?? const [];
+    if (branches.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5B9BEA).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: const Color(0xFF5B9BEA).withValues(alpha: 0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Which branch are you in?',
+            style: GoogleFonts.poppins(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white)),
+        const SizedBox(height: 3),
+        Text('One tap. The whole map is generic until it knows.',
+            style: GoogleFonts.inter(
+                fontSize: 12, height: 1.5, color: Colors.white60)),
+        const SizedBox(height: 11),
+        Wrap(spacing: 7, runSpacing: 7, children: [
+          for (final b in branches)
+            _pill('${(b as Map)['label']}', () => _setBranch('${b['id']}')),
+        ]),
+      ]),
+    );
+  }
+
+  Future<void> _setBranch(String id) async {
+    setState(() {
+      _branch = id;
+      _loading = true;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('what_if_branch', id);
+    // Signed-in students get it saved on the account too, so the next feature
+    // that needs a branch does not have to ask again.
+    try {
+      if (_universe?['you']?['signed_in'] == true) {
+        await ApiService.whatIfSaveProfile(branch: id);
+      }
+    } catch (_) {}
+    try {
+      final u = await ApiService.whatIfUniverse(branch: id, year: _year);
+      if (mounted) setState(() { _universe = u; _loading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e is ApiException ? e.message : '$e';
+        });
+      }
+    }
+  }
 
   List<Widget> _prompts() {
     final prompts = (_universe?['prompts'] as List?) ?? const [];
@@ -484,7 +701,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
-          onPressed: () => setState(() { _result = null; _selectedId = null; _focusId = null; }),
+          onPressed: () => setState(() { _result = null; _selectedId = null; _focusId = null; _node = null; }),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
             side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
@@ -760,79 +977,6 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
 
   // ── The one-time ask ──────────────────────────────────────────────────────
 
-  /// Asked here rather than at the door.
-  ///
-  /// A form standing between a student and the idea is a form they close. Once
-  /// the map is on screen and visibly generic, the same question reads as an
-  /// offer to make it theirs.
-  Widget _needsCard() {
-    final needs = ((_universe?['needs'] as List?) ?? const [])
-        .map((e) => '$e')
-        .toList();
-    if (needs.isEmpty || _universe?['you']?['signed_in'] != true) {
-      return const SizedBox.shrink();
-    }
-    final ask = needs.contains('branch')
-        ? 'branches'
-        : needs.contains('study_year')
-            ? 'years'
-            : 'goals';
-    final copy = {
-      'branches': (
-        'Make this map yours',
-        'Your branch decides which of these are actually close to you.'
-      ),
-      'years': (
-        'Which year are you in?',
-        'How soon this has to pay off changes the order.'
-      ),
-      'goals': (
-        'What are you aiming at?',
-        'The trade-offs read differently depending on it.'
-      ),
-    }[ask]!;
-    final items = (_universe?[ask] as List?) ?? const [];
-
-    return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(copy.$1,
-            style: GoogleFonts.poppins(
-                fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-        const SizedBox(height: 3),
-        Text(copy.$2,
-            style: GoogleFonts.inter(
-                fontSize: 12, height: 1.5, color: Colors.white60)),
-        const SizedBox(height: 11),
-        if (_savingProfile)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 6),
-            child: SizedBox(
-                height: 18,
-                width: 18,
-                child: CircularProgressIndicator(strokeWidth: 2)),
-          )
-        else
-          Wrap(spacing: 7, runSpacing: 7, children: [
-            for (final item in items)
-              _pill('${(item as Map)['label']}', () {
-                final id = '${item['id']}';
-                _saveProfile(
-                  branch: ask == 'branches' ? id : '',
-                  studyYear: ask == 'years' ? id : '',
-                  goal: ask == 'goals' ? id : '',
-                );
-              }),
-          ]),
-      ]),
-    );
-  }
-
   Widget _pill(String label, VoidCallback onTap) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -851,133 +995,4 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         ),
       );
 
-  Future<void> _saveProfile(
-      {String branch = '', String studyYear = '', String goal = ''}) async {
-    setState(() => _savingProfile = true);
-    try {
-      await ApiService.whatIfSaveProfile(
-          branch: branch, studyYear: studyYear, goal: goal);
-      // Reload rather than patch: the signals are recomputed server-side, and
-      // the whole point is watching the map tighten around the new fact.
-      final u = await ApiService.whatIfUniverse();
-      if (mounted) setState(() { _universe = u; _savingProfile = false; });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _savingProfile = false;
-          _error = e is ApiException ? e.message : '$e';
-        });
-      }
-    }
-  }
-
-  // ── Sheets ────────────────────────────────────────────────────────────────
-
-  void _showDirectionSheet(Map<String, dynamic> d) {
-    final sig = Map<String, dynamic>.from(d['signal'] ?? const {});
-    final built = (d['built_from'] as List?) ?? const [];
-    _sheet(children: [
-      Text('${d['label']}',
-          style: GoogleFonts.poppins(
-              fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-      const SizedBox(height: 5),
-      Text('${d['blurb'] ?? ''}',
-          style: GoogleFonts.inter(
-              fontSize: 12.5, height: 1.5, color: Colors.white60)),
-      const SizedBox(height: 14),
-      _signalRow(sig),
-      if (built.isNotEmpty) ...[
-        const SizedBox(height: 14),
-        _list('BUILT OUT OF', built, const Color(0xFF3E7BD6)),
-      ],
-      const SizedBox(height: 6),
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _explore('direction', '${d['id']}');
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3E7BD6),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: Text('What if I choose this?',
-              style: GoogleFonts.poppins(
-                  fontSize: 14, fontWeight: FontWeight.w600)),
-        ),
-      ),
-    ]);
-  }
-
-  void _showSkipSheet(MindNode node) {
-    _sheet(children: [
-      Text(node.label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-              fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
-      const SizedBox(height: 5),
-      Text('Every step on a path should be able to justify itself.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-              fontSize: 12.5, height: 1.5, color: Colors.white60)),
-      const SizedBox(height: 16),
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _explore('skip', node.label);
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3E7BD6),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: Text('What if I skip this?',
-              style: GoogleFonts.poppins(
-                  fontSize: 14, fontWeight: FontWeight.w600)),
-        ),
-      ),
-    ]);
-  }
-
-  void _sheet({required List<Widget> children}) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF0D1D34),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.75),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 26),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                        width: 36,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(2))),
-                  ),
-                  ...children,
-                ]),
-          ),
-        ),
-      ),
-    ).whenComplete(() {
-      if (mounted) setState(() => _selectedId = null);
-    });
-  }
 }

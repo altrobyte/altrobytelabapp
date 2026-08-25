@@ -1125,10 +1125,41 @@ class ApiService {
 
   /// The map, answered from data we already hold — no model call, so the
   /// page can draw something the instant it opens.
-  static Future<Map<String, dynamic>> whatIfUniverse() async {
+  static Future<Map<String, dynamic>> whatIfUniverse(
+      {String branch = '', String year = ''}) async {
     final prefs = await SharedPreferences.getInstance();
-    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/universe'),
+    final q = <String, String>{};
+    if (branch.isNotEmpty) q['branch'] = branch;
+    if (year.isNotEmpty) q['year'] = year;
+    final uri = Uri.parse('${ApiConstants.baseUrl}/what-if/universe')
+        .replace(queryParameters: q.isEmpty ? null : q);
+    final res = await safeGet(uri,
         headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
+  /// One node on the map, answered for this student. Grows the map rather
+  /// than opening a page over it.
+  static Future<Map<String, dynamic>> whatIfNode({
+    required String node,
+    String kind = 'direction',
+    String parent = '',
+    String branch = '',
+    String year = '',
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/what-if/node'),
+      headers: _headers(prefs.getString('student_token')),
+      body: jsonEncode({
+        'node': node,
+        'kind': kind,
+        'parent': parent,
+        'branch': branch,
+        'year': year,
+      }),
+      timeout: const Duration(seconds: 60),
+    );
     return _parse(res);
   }
 
