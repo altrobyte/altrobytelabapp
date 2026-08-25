@@ -434,16 +434,14 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareSession(Map<String, dynamic> session) {
-    // The app's own URL, not the /s/ preview route.
+    // /s/ redirects through a page carrying this session's own tags, so a
+    // crawler reads them on the way and the preview shows the session rather
+    // than the homepage card.
     //
-    // /s/ redirects to the API host for its OG tags, and a shared link goes
-    // to strangers on networks we do not control — one of which could not
-    // resolve *.up.railway.app at all, so the link was simply dead for them.
-    // A generic preview is a small loss; a link that does not open is the
-    // whole thing.
-    //
-    // Point this back at /s/ once the API answers on a subdomain of this
-    // site: same registrable domain, so if the site resolves, so does it.
+    // Safe to share again now that the API answers on api.altrobytelab.com:
+    // the redirect stays inside one registrable domain, so a reader who can
+    // open the site can follow it. It briefly pointed at the railway.app
+    // host, and a phone that could not resolve that got a dead link.
     final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final text = "Join me for \"$title\" on AltrobyteLab!\nRegister here: $link";
@@ -458,16 +456,14 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   }
 
   void _shareToSocial(String platform, Map<String, dynamic> session) {
-    // The app's own URL, not the /s/ preview route.
+    // /s/ redirects through a page carrying this session's own tags, so a
+    // crawler reads them on the way and the preview shows the session rather
+    // than the homepage card.
     //
-    // /s/ redirects to the API host for its OG tags, and a shared link goes
-    // to strangers on networks we do not control — one of which could not
-    // resolve *.up.railway.app at all, so the link was simply dead for them.
-    // A generic preview is a small loss; a link that does not open is the
-    // whole thing.
-    //
-    // Point this back at /s/ once the API answers on a subdomain of this
-    // site: same registrable domain, so if the site resolves, so does it.
+    // Safe to share again now that the API answers on api.altrobytelab.com:
+    // the redirect stays inside one registrable domain, so a reader who can
+    // open the site can follow it. It briefly pointed at the railway.app
+    // host, and a phone that could not resolve that got a dead link.
     final link = 'https://altrobytelab.com/live-sessions/${widget.sessionId}';
     final title = session['title'] ?? 'this workshop';
     final caption = '🚀 Just started my learning journey into tech with "$title" on AltrobyteLab! '

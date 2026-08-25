@@ -3,6 +3,12 @@ class ApiConstants {
   // Example: flutter build web --release --dart-define=API_BASE_URL=https://your-staging.up.railway.app
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
+    // Still the railway.app host. api.altrobytelab.com is meant to replace
+    // it — a reader whose network cannot resolve *.up.railway.app gets a site
+    // that loads and then fails at every request, which happened on a real
+    // phone — but that CNAME currently points at a different Railway service:
+    // /health answers there and every real route 404s. Switch once it points
+    // at this backend.
     defaultValue: 'https://altrocoach-backend-production.up.railway.app',
   );
 
