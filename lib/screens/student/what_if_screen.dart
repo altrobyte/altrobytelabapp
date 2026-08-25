@@ -40,6 +40,11 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   String _error = '';
   String? _selectedId;
 
+  /// The node the map is arranged around. Tapping a direction focuses it
+  /// rather than opening a card over it — the map is the thing being
+  /// explored, so it should be what responds.
+  String? _focusId;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +80,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       _thinking = true;
       _error = '';
       _selectedId = null;
+      _focusId = null;
     });
     try {
       final r = await ApiService.whatIfExplore(kind: kind, choice: choice);
@@ -121,12 +127,15 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           label: '${d['label']}',
           state: value == null ? MindState.faint : MindState.current,
           signal: value,
-          // The strongest few sit on the inner ring. Everything else stays on
-          // the map, just further out — hiding a direction would quietly
-          // narrow the student's world without telling them.
-          ring: i < 4 ? 1 : 2,
+          tier: '${sig['tier'] ?? ''}',
+          // All seven on one ring, evenly spread. Splitting them across two
+          // left the outer one with three nodes and gaps you could park a car
+          // in; the radius already carries the meaning, because a node we have
+          // evidence for is pulled in and one we do not drifts out.
+          ring: 1,
         ));
-        edges.add(MindEdge('you', '${d['id']}'));
+        edges.add(MindEdge('you', '${d['id']}',
+            relation: '${d['relation'] ?? ''}'));
       }
       return (nodes, edges);
     }
@@ -154,7 +163,13 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         // caption.
         ring: state == MindState.fading ? 2 : (i < 4 ? 1 : 2),
       ));
-      edges.add(MindEdge(state == MindState.fading ? 'you' : previous, id));
+      edges.add(MindEdge(state == MindState.fading ? 'you' : previous, id,
+          relation: switch (state) {
+            MindState.shared => 'You already have this — it still counts',
+            MindState.grown => 'New on this route',
+            MindState.fading => 'Still reachable, no longer on the direct path',
+            _ => '',
+          }));
       if (state != MindState.fading) previous = id;
     }
     return (nodes, edges);
@@ -182,6 +197,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               onPressed: () => setState(() {
                 _result = null;
                 _selectedId = null;
+                _focusId = null;
               }),
               child: Text('Reset',
                   style: GoogleFonts.inter(
@@ -241,23 +257,17 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           nodes: nodes,
           edges: edges,
           selectedId: _selectedId,
+          focusId: _focusId,
           onTap: _onNodeTap,
+          onEdgeTap: _onEdgeTap,
         ),
       ),
-      if (_result == null)
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 14,
-          child: IgnorePointer(
-            child: Text('Your engineering future is not one fixed path.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                    fontSize: 12,
-                    height: 1.5,
-                    color: Colors.white.withValues(alpha: 0.42))),
-          ),
-        ),
+      Positioned(
+        left: 20,
+        right: 20,
+        bottom: 12,
+        child: IgnorePointer(child: _status()),
+      ),
       if (_thinking) _thinkingOverlay(),
     ]);
   }
@@ -285,12 +295,18 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       );
 
   void _onNodeTap(MindNode node) {
-    if (node.id == 'you') return;
-    setState(() => _selectedId = node.id);
+    if (node.id == 'you') {
+      setState(() { _focusId = null; _selectedId = null; });
+      return;
+    }
+    // First tap rearranges the map around it; the detail follows. Opening a
+    // card straight over the graph would make the graph a picture of the
+    // answer rather than the answer.
+    setState(() {
+      _selectedId = node.id;
+      _focusId = node.id;
+    });
 
-    // Before a question, tapping a direction is the question. After one, the
-    // map is capabilities rather than futures, so a tap asks the other half:
-    // what happens if this step is skipped.
     if (_result == null) {
       final d = _directions.cast<Map?>().firstWhere(
           (e) => '${e?['id']}' == node.id,
@@ -299,6 +315,48 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     } else {
       _showSkipSheet(node);
     }
+  }
+
+  /// A tap on a connection answers what the line means.
+  void _onEdgeTap(MindEdge edge) {
+    if (edge.relation.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: const Color(0xFF12326B),
+      duration: const Duration(seconds: 4),
+      content: Text(edge.relation,
+          style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white)),
+    ));
+  }
+
+  /// What the map is currently weighing, said plainly.
+  ///
+  /// Not a fake activity indicator: the sentence names real counted things,
+  /// so a student who reads it twice gets a consistent answer.
+  Widget _status() {
+    final text = _result != null
+        ? 'Here is what changes if you take that route.'
+        : '${_universe?['status'] ?? 'Your engineering future is not one fixed path.'}';
+    final emerging = _universe?['emerging'] as Map?;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (_result == null && emerging != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+              'Emerging: ${emerging['name']} — ${emerging['why']}',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                  fontSize: 11.5,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF6FA8F5))),
+        ),
+      Text(text,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+              fontSize: 11.5,
+              height: 1.5,
+              color: Colors.white.withValues(alpha: 0.42))),
+    ]);
   }
 
   // ── Panels ────────────────────────────────────────────────────────────────
@@ -398,6 +456,8 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         _signalRow(sig),
       ],
       const SizedBox(height: 16),
+      if (r['changed'] != null)
+        _changed(Map<String, dynamic>.from(r['changed'] as Map)),
       if ('${r['why_emerging'] ?? ''}'.trim().isNotEmpty)
         _block('WHY IS THIS EMERGING?', '${r['why_emerging']}'),
       _list('YOU GAIN', r['gain'], const Color(0xFF4CAF50)),
@@ -419,7 +479,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
-          onPressed: () => setState(() { _result = null; _selectedId = null; }),
+          onPressed: () => setState(() { _result = null; _selectedId = null; _focusId = null; }),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
             side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
@@ -434,6 +494,59 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     ];
   }
 
+  /// What actually moved, in three lines a student can check against the map.
+  ///
+  /// The middle group is the one that matters. A student changing direction
+  /// assumes the work behind them is wasted, and no amount of encouragement
+  /// fixes that — a list of what still counts, next to a graph where those
+  /// same nodes stayed put, does.
+  Widget _changed(Map<String, dynamic> c) {
+    Widget group(String mark, String title, dynamic items, Color colour) {
+      final list = (items as List?) ?? const [];
+      if (list.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 9),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              style: GoogleFonts.inter(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: colour)),
+          const SizedBox(height: 4),
+          for (final item in list)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Text('$mark  $item',
+                  style: GoogleFonts.inter(
+                      fontSize: 12.5, height: 1.5, color: Colors.white70)),
+            ),
+        ]),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('WHAT CHANGED',
+            style: GoogleFonts.inter(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.9,
+                color: Colors.white.withValues(alpha: 0.45))),
+        const SizedBox(height: 9),
+        group('+', 'NEW', c['added'], const Color(0xFF6FA8F5)),
+        group('✓', 'STILL COUNTS', c['still_useful'], const Color(0xFF4CAF50)),
+        group('↓', 'LESS DIRECT', c['less_direct'], const Color(0xFFE07A1F)),
+      ]),
+    );
+  }
+
   /// The number, and immediately what it is made of.
   ///
   /// A bare percentage on a career page is the thing students have learned to
@@ -441,6 +554,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// it deserves to be there at all.
   Widget _signalRow(Map<String, dynamic> sig) {
     final value = (sig['value'] as num?)?.toInt();
+    final tier = '${sig['tier'] ?? ''}';
     final because = (sig['because'] as List?) ?? const [];
     return Container(
       padding: const EdgeInsets.all(13),
@@ -458,7 +572,9 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                     color: const Color(0xFF6FA8F5))),
           if (value != null) const SizedBox(width: 9),
           Expanded(
-            child: Text('${sig['label'] ?? ''}',
+            child: Text(
+                tier.isEmpty ? '${sig['label'] ?? ''}'
+                             : '$tier · ${sig['label'] ?? ''}',
                 style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

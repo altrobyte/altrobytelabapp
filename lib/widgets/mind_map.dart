@@ -39,6 +39,10 @@ class MindNode {
   /// Ring index from the centre. 0 is the student.
   final int ring;
 
+  /// "Strong signal", "Emerging", "Possible", "Unexplored" — the word that
+  /// stops a number from reading as a probability.
+  final String tier;
+
   const MindNode({
     required this.id,
     required this.label,
@@ -46,13 +50,18 @@ class MindNode {
     this.signal,
     this.note = '',
     this.ring = 1,
+    this.tier = '',
   });
 }
 
 class MindEdge {
   final String from;
   final String to;
-  const MindEdge(this.from, this.to);
+
+  /// Why these two are connected. A line that means nothing is decoration.
+  final String relation;
+
+  const MindEdge(this.from, this.to, {this.relation = ''});
 }
 
 /// The living map.
@@ -74,7 +83,13 @@ class MindMap extends StatefulWidget {
   final List<MindNode> nodes;
   final List<MindEdge> edges;
   final void Function(MindNode node)? onTap;
+  final void Function(MindEdge edge)? onEdgeTap;
   final String? selectedId;
+
+  /// The node the map is currently arranged around. Everything else gives it
+  /// room — which is what "focus" has to mean on a graph, rather than a
+  /// border on a card.
+  final String? focusId;
 
   /// Larger type and spacing, for a projector in a demo class.
   final bool present;
@@ -84,7 +99,9 @@ class MindMap extends StatefulWidget {
     required this.nodes,
     required this.edges,
     this.onTap,
+    this.onEdgeTap,
     this.selectedId,
+    this.focusId,
     this.present = false,
   });
 
@@ -92,8 +109,24 @@ class MindMap extends StatefulWidget {
   State<MindMap> createState() => _MindMapState();
 }
 
-class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
+class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
   late final AnimationController _drift;
+
+  /// Drives every rearrangement: a what-if, a focus, a new fact about the
+  /// student. Nodes travel from where they were to where they belong instead
+  /// of teleporting, which is the whole difference between a graph that
+  /// redrew and a future that changed.
+  late final AnimationController _morph;
+
+  /// Where each node sat when the last change began, so it can be
+  /// interpolated rather than replaced.
+  Map<String, Offset> _from = {};
+  Map<String, double> _fromRadius = {};
+  Map<String, _Placed> _last = {};
+
+  /// Nodes that were not on the previous map. They grow in rather than
+  /// appearing, and are drawn last so they arrive on top.
+  Set<String> _arriving = {};
 
   /// Where each node is, as a fraction of the radius, remembered by id so a
   /// node keeps its place when the graph changes around it. A future that
@@ -108,11 +141,37 @@ class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(seconds: 24),
     )..repeat();
+    // Long enough to be followed, short enough not to be waited through.
+    _morph = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+      value: 1,
+    );
+    // The first draw is a reveal: the student appears, then their
+    // possibilities are found one at a time. It happens once.
+    _morph.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(MindMap old) {
+    super.didUpdateWidget(old);
+    final before = {for (final n in old.nodes) n.id};
+    final now = {for (final n in widget.nodes) n.id};
+    final rearranged = widget.focusId != old.focusId ||
+        before.length != now.length ||
+        !before.containsAll(now);
+    if (rearranged) {
+      _from = {for (final e in _last.entries) e.key: e.value.at};
+      _fromRadius = {for (final e in _last.entries) e.key: e.value.radius};
+      _arriving = now.difference(before);
+      _morph.forward(from: 0);
+    }
   }
 
   @override
   void dispose() {
     _drift.dispose();
+    _morph.dispose();
     super.dispose();
   }
 
@@ -146,20 +205,30 @@ class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
     return LayoutBuilder(builder: (context, box) {
       final size = Size(box.maxWidth, box.maxHeight);
       return AnimatedBuilder(
-        animation: _drift,
+        animation: Listenable.merge([_drift, _morph]),
         builder: (context, _) {
           final placed = _place(size, centre, ring1, ring2);
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: (d) => _hit(placed, d.localPosition),
-            child: CustomPaint(
-              size: size,
-              painter: _MindPainter(
-                placed: placed,
-                edges: widget.edges,
-                selectedId: widget.selectedId,
-                t: _drift.value,
-                present: widget.present,
+          _last = placed;
+          // Pinch and drag, so a phone gets the same map rather than a
+          // shrunken one.
+          return InteractiveViewer(
+            minScale: 0.7,
+            maxScale: 2.6,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (d) => _hit(placed, d.localPosition),
+              child: CustomPaint(
+                size: size,
+                painter: _MindPainter(
+                  placed: placed,
+                  edges: widget.edges,
+                  selectedId: widget.selectedId,
+                  focusId: widget.focusId,
+                  t: _drift.value,
+                  morph: Curves.easeOutCubic.transform(_morph.value),
+                  arriving: _arriving,
+                  present: widget.present,
+                ),
               ),
             ),
           );
@@ -172,13 +241,17 @@ class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
   Map<String, _Placed> _place(
       Size size, List<MindNode> centre, List<MindNode> ring1, List<MindNode> ring2) {
     final c = Offset(size.width / 2, size.height / 2);
+    final morphNow = Curves.easeOutCubic.transform(_morph.value);
     // The map has to fit the narrow side, or the outer ring falls off a phone.
     final unit = math.min(size.width, size.height) / 2;
     final out = <String, _Placed>{};
 
     for (final n in centre) {
-      out[n.id] = _Placed(n, c, widget.present ? 46 : 38);
+      out[n.id] = _Placed(
+          n, c, (widget.present ? 44.0 : 36.0) * (0.75 + 0.25 * morphNow));
     }
+
+    final morph = morphNow;
 
     void ring(List<MindNode> nodes, double fraction, double radius) {
       for (final n in nodes) {
@@ -189,15 +262,36 @@ class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
         final wobble = math.sin((_drift.value + phase) * 2 * math.pi) * unit * 0.018;
         // A node we have evidence for is held closer in. Distance is the
         // first thing read on a graph, so it should carry the real meaning.
-        final pull = n.signal == null ? 1.08 : 1.0 - (n.signal! / 100) * 0.18;
+        var pull = n.signal == null ? 1.08 : 1.0 - (n.signal! / 100) * 0.18;
+        // The focused node comes in; everything else steps back to give it
+        // the room. Focus on a graph is space, not a border.
+        if (widget.focusId != null) {
+          pull *= n.id == widget.focusId ? 0.62 : 1.16;
+        }
         final r = unit * fraction * pull + wobble;
-        out[n.id] = _Placed(n, c + Offset(math.cos(a) * r, math.sin(a) * r * 0.92),
-            radius);
+
+        // Size carries the signal too, so weight is legible before any
+        // number is read.
+        final grow = n.signal == null ? 0.82 : 0.9 + (n.signal! / 100) * 0.5;
+        var size = radius * grow * (n.id == widget.focusId ? 1.25 : 1.0);
+
+        var at = c + Offset(math.cos(a) * r, math.sin(a) * r * 0.92);
+
+        // Travel from wherever this node last was. A node with no history is
+        // new: it grows out of the centre rather than fading in on the spot.
+        final origin = _from[n.id] ?? c;
+        at = Offset.lerp(origin, at, morph)!;
+        size = _lerp(_fromRadius[n.id] ?? 0, size, morph);
+
+        out[n.id] = _Placed(n, at, size);
       }
     }
 
-    ring(ring1, 0.56, widget.present ? 34 : 27);
-    ring(ring2, 0.88, widget.present ? 26 : 21);
+    // One ring for the futures, with the radius doing the talking: a node we
+    // have evidence for is pulled in, one we do not drifts out. Two rings for
+    // seven nodes left the outer one with gaps you could park a car in.
+    ring(ring1, 0.60, widget.present ? 22 : 17);
+    ring(ring2, 0.90, widget.present ? 19 : 15);
     return out;
   }
 
@@ -207,16 +301,45 @@ class _MindMapState extends State<MindMap> with SingleTickerProviderStateMixin {
     var bestD = double.infinity;
     for (final v in placed.values) {
       final d = (v.at - p).distance;
-      // A generous target: these are finger-sized on a phone and a near miss
-      // that does nothing feels broken.
-      if (d < v.radius + 14 && d < bestD) {
+      // Generous, and reaching down over the label: the circle is a marker
+      // now, and people aim at the word they can read.
+      final reach = v.node.state == MindState.you ? v.radius + 8 : v.radius + 34;
+      if (d < reach && d < bestD) {
         best = v;
         bestD = d;
       }
     }
-    if (best != null) widget.onTap!(best.node);
+    if (best != null) {
+      widget.onTap!(best.node);
+      return;
+    }
+    if (widget.onEdgeTap != null) _hitEdge(placed, p);
+  }
+
+  /// A tap that missed every node might have meant the line between two.
+  void _hitEdge(Map<String, _Placed> placed, Offset p) {
+    for (final e in widget.edges) {
+      if (e.relation.isEmpty) continue;
+      final a = placed[e.from], b = placed[e.to];
+      if (a == null || b == null) continue;
+      if (_distanceToSegment(p, a.at, b.at) < 14) {
+        widget.onEdgeTap!(e);
+        return;
+      }
+    }
+  }
+
+  static double _distanceToSegment(Offset p, Offset a, Offset b) {
+    final ab = b - a;
+    final len2 = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (len2 == 0) return (p - a).distance;
+    var t = ((p - a).dx * ab.dx + (p - a).dy * ab.dy) / len2;
+    t = t.clamp(0.0, 1.0);
+    return (p - (a + ab * t)).distance;
   }
 }
+
+double _lerp(double a, double b, double t) => a + (b - a) * t;
 
 class _Placed {
   final MindNode node;
@@ -236,16 +359,37 @@ class _MindPainter extends CustomPainter {
   final Map<String, _Placed> placed;
   final List<MindEdge> edges;
   final String? selectedId;
+  final String? focusId;
   final double t;
+
+  /// 0 at the start of a rearrangement, 1 once it has settled.
+  final double morph;
+
+  /// Nodes that were not on the previous map.
+  final Set<String> arriving;
   final bool present;
 
   _MindPainter({
     required this.placed,
     required this.edges,
     required this.selectedId,
+    required this.focusId,
     required this.t,
+    required this.morph,
+    required this.arriving,
     required this.present,
   });
+
+  /// How far into the rearrangement this particular node is.
+  ///
+  /// Staggered by position in the list, so the map assembles itself rather
+  /// than snapping into place all at once — the difference between watching
+  /// something be worked out and watching a screen refresh.
+  double _progress(String id) {
+    final index = placed.keys.toList().indexOf(id);
+    final start = (index * 0.055).clamp(0.0, 0.55);
+    return ((morph - start) / (1 - start)).clamp(0.0, 1.0);
+  }
 
   (Color, double) _style(MindState s) => switch (s) {
         MindState.you => (_navy, 1.0),
@@ -253,7 +397,10 @@ class _MindPainter extends CustomPainter {
         MindState.shared => (_green, 1.0),
         MindState.grown => (_sky, 1.0),
         MindState.fading => (_grey, 0.42),
-        MindState.faint => (_grey, 0.55),
+        // Unknown, not unimportant. At 0.55 on a dark field the whole map
+        // read as switched off, which says something we do not mean: these
+        // are real directions we simply have no evidence about yet.
+        MindState.faint => (const Color(0xFF93A9C9), 0.78),
       };
 
   @override
@@ -281,20 +428,30 @@ class _MindPainter extends CustomPainter {
         ..moveTo(a.at.dx, a.at.dy)
         ..quadraticBezierTo(mid.dx + bend.dx, mid.dy + bend.dy, b.at.dx, b.at.dy);
 
+      // The line draws itself towards the node it leads to, so a new
+      // possibility looks like it is being reached rather than switched on.
+      final grow = _progress(b.node.id);
+      final metric = path.computeMetrics().firstOrNull;
+      final drawn = metric == null
+          ? path
+          : metric.extractPath(0, metric.length * grow);
+
+      final strong = b.node.signal != null && b.node.signal! >= 80;
       canvas.drawPath(
-        path,
+        drawn,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = dim ? 1.0 : (b.node.signal == null ? 1.2 : 1.8)
-          ..color = colour.withValues(alpha: opacity * (dim ? 0.30 : 0.42)),
+          ..strokeWidth =
+              dim ? 1.0 : (b.node.signal == null ? 1.1 : (strong ? 2.4 : 1.7))
+          ..color = colour.withValues(
+              alpha: opacity * (dim ? 0.28 : (strong ? 0.62 : 0.40))),
       );
 
       // A slow point of light travelling the connection — only on the links
       // we have evidence for, so the eye is drawn to the real signal rather
       // than to decoration. This is the whole of the "alive" budget.
-      if (!dim && b.node.signal != null) {
+      if (!dim && b.node.signal != null && grow > 0.98) {
         final phase = ((t * 1.0) + (b.node.id.hashCode & 0xFF) / 255) % 1.0;
-        final metric = path.computeMetrics().firstOrNull;
         if (metric != null) {
           final pos = metric.getTangentForOffset(metric.length * phase)?.position;
           if (pos != null) {
@@ -310,21 +467,37 @@ class _MindPainter extends CustomPainter {
 
   void _paintNode(Canvas canvas, _Placed p) {
     final n = p.node;
-    final (colour, opacity) = _style(n.state);
-    final selected = selectedId == n.id;
+    var (colour, opacity) = _style(n.state);
+    final selected = selectedId == n.id || focusId == n.id;
     final isYou = n.state == MindState.you;
+
+    final grow = isYou ? 1.0 : _progress(n.id);
+    if (grow <= 0.01) return;
+    opacity *= grow;
+
+    // Emerging directions breathe. Only those: a map where everything
+    // pulsed would be a screensaver, and the pulse is meant to say "this one
+    // is moving" about a specific thing.
+    final emerging = !isYou &&
+        n.signal != null &&
+        n.signal! >= 65 &&
+        n.signal! < 80;
+    final breath = emerging
+        ? 1 + math.sin(t * 2 * math.pi * 2) * 0.045
+        : 1.0;
+    p = _Placed(n, p.at, p.radius * grow * breath);
 
     // A soft halo instead of a hard border. The brief asked for cell-like,
     // and a stroked circle reads as a button.
-    if (n.signal != null || isYou || selected) {
-      canvas.drawCircle(
-        p.at,
-        p.radius + (selected ? 13 : 7),
-        Paint()
-          ..color = colour.withValues(alpha: (selected ? 0.20 : 0.10) * opacity)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
-      );
-    }
+    canvas.drawCircle(
+      p.at,
+      p.radius + (selected ? 13 : 7),
+      Paint()
+        ..color = colour.withValues(
+            alpha: (selected ? 0.24 : (n.signal == null && !isYou ? 0.07 : 0.13)) *
+                opacity)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
+    );
 
     canvas.drawCircle(
       p.at,
@@ -362,44 +535,80 @@ class _MindPainter extends CustomPainter {
     _text(canvas, p, colour, opacity, isYou);
   }
 
+  /// The label.
+  ///
+  /// Inside the circle it had to be shrunk until it fitted, which turned
+  /// "Software Engineering" into three cramped lines and "IoT & Connected
+  /// Products" into a smudge. Outside, the circle can stay small — it is a
+  /// marker, not a box — and the words get the room they need.
   void _text(Canvas canvas, _Placed p, Color colour, double opacity, bool isYou) {
     final n = p.node;
     final painter = TextPainter(
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
-      maxLines: 3,
+      maxLines: 2,
+      ellipsis: '…',
       text: TextSpan(children: [
         TextSpan(
           text: n.label,
           style: GoogleFonts.poppins(
-            fontSize: isYou ? (present ? 15 : 12.5) : (present ? 11.5 : 9.8),
-            height: 1.15,
-            fontWeight: FontWeight.w700,
+            fontSize: isYou ? (present ? 16 : 13.5) : (present ? 13 : 11.5),
+            height: 1.2,
+            fontWeight: FontWeight.w600,
             color: isYou ? Colors.white : colour.withValues(alpha: opacity),
           ),
         ),
+        if (!isYou && n.tier.isNotEmpty)
+          TextSpan(
+            // The words first. "Emerging · 81" cannot be misread as a
+            // probability the way a bare 81 can.
+            text: '\n${n.tier}${n.signal == null ? '' : ' · ${n.signal}'}',
+            style: GoogleFonts.inter(
+              fontSize: present ? 9.5 : 8.5,
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+              color: colour.withValues(alpha: opacity * 0.72),
+            ),
+          ),
         if (n.note.isNotEmpty)
           TextSpan(
             text: '\n${n.note}',
             style: GoogleFonts.inter(
-              fontSize: isYou ? (present ? 10.5 : 8.8) : (present ? 9 : 7.6),
-              height: 1.35,
+              fontSize: isYou ? (present ? 11 : 9.5) : (present ? 10 : 9),
+              height: 1.4,
               fontWeight: FontWeight.w500,
               color: isYou
-                  ? Colors.white.withValues(alpha: 0.78)
-                  : colour.withValues(alpha: opacity * 0.72),
+                  ? Colors.white.withValues(alpha: 0.8)
+                  : colour.withValues(alpha: opacity * 0.7),
             ),
           ),
       ]),
-    )..layout(maxWidth: p.radius * 2.5);
+    )..layout(maxWidth: isYou ? p.radius * 2 : (present ? 132 : 112));
 
-    painter.paint(canvas,
-        p.at - Offset(painter.width / 2, painter.height / 2));
+    // The centre keeps its label inside — it is the one node big enough, and
+    // a name floating under it would stop reading as the middle of anything.
+    final origin = isYou
+        ? p.at - Offset(painter.width / 2, painter.height / 2)
+        : Offset(p.at.dx - painter.width / 2, p.at.dy + p.radius + 9);
+
+    if (!isYou) {
+      // A little ground under the text so a label crossing a connection
+      // stays readable.
+      final box = Rect.fromLTWH(
+          origin.dx - 5, origin.dy - 3, painter.width + 10, painter.height + 6);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, const Radius.circular(6)),
+        Paint()..color = const Color(0xFF0A1628).withValues(alpha: 0.55),
+      );
+    }
+    painter.paint(canvas, origin);
   }
 
   @override
   bool shouldRepaint(_MindPainter old) =>
       old.t != t ||
+      old.morph != morph ||
       old.selectedId != selectedId ||
+      old.focusId != focusId ||
       old.placed.length != placed.length;
 }
