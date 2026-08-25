@@ -128,14 +128,23 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           state: value == null ? MindState.faint : MindState.current,
           signal: value,
           tier: '${sig['tier'] ?? ''}',
-          // All seven on one ring, evenly spread. Splitting them across two
-          // left the outer one with three nodes and gaps you could park a car
-          // in; the radius already carries the meaning, because a node we have
-          // evidence for is pulled in and one we do not drifts out.
-          ring: 1,
         ));
         edges.add(MindEdge('you', '${d['id']}',
             relation: '${d['relation'] ?? ''}'));
+
+        // What the direction is built out of, hanging off it. Without this
+        // the map is seven labels in a fan, which is a menu; with it the
+        // shape says these are one body of work that forks.
+        for (final c in (d['built_from'] as List?) ?? const []) {
+          final childId = '${d['id']}/$c';
+          nodes.add(MindNode(
+            id: childId,
+            label: '$c',
+            state: value == null ? MindState.faint : MindState.current,
+          ));
+          edges.add(MindEdge('${d['id']}', childId,
+              relation: 'Part of ${d['label']}'));
+        }
       }
       return (nodes, edges);
     }
@@ -158,10 +167,6 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         label: '${n['label']}',
         state: state,
         note: '${n['note'] ?? ''}',
-        // Fading steps drift outward. They are still reachable, just no
-        // longer on the direct route, and the map should say that without a
-        // caption.
-        ring: state == MindState.fading ? 2 : (i < 4 ? 1 : 2),
       ));
       edges.add(MindEdge(state == MindState.fading ? 'you' : previous, id,
           relation: switch (state) {
