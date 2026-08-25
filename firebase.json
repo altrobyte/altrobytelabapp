@@ -14,6 +14,16 @@
     ],
     "headers": [
       {
+        "//": "Every route is served the same index.html by the rewrite, but a header rule only matches the literal path. '/' and '/index.html' were covered; '/what-if', '/roadmap/...' and every shared '/live-sessions/:id' link were not, so a visitor on a deep link was pinned to an hour-old app shell and saw the previous build. Placed first so the immutable rules below still claim the assets.",
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "//": "Genuinely immutable: canvaskit, fonts, images and the asset bundle. Named explicitly rather than by extension, because a blanket *.js rule swept up flutter_bootstrap.js and cached the app's entry point for a year.",
         "source": "**/@(assets|canvaskit|icons)/**",
         "headers": [
