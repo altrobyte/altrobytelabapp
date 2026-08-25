@@ -9,6 +9,9 @@
 // Google stays because some people bounce at "enter your number", and half a
 // record beats none.
 
+import '../providers/auth_provider.dart' as app_auth;
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -151,9 +154,23 @@ class _AuthSheetState extends State<_AuthSheet> {
       _error = '';
     });
     try {
-      await GoogleAuthService.signIn();
+      final result = await GoogleAuthService.signIn();
+      if (!mounted) return;
+
+      // Google resolves the role from the email, and only a student gets a
+      // student_token. An admin signing in here used to have their result
+      // thrown away: nothing was stored, so the header still said "Sign in"
+      // and a refresh changed nothing, because there was nothing to reload.
+      if (result.role == 'student') {
+        Navigator.pop(context, true);
+        return;
+      }
+      await context.read<app_auth.AuthProvider>().setFromResponse(result.data);
       if (!mounted) return;
       Navigator.pop(context, true);
+      context.go(result.role == 'super_admin'
+          ? '/super/dashboard'
+          : '/dashboard');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
