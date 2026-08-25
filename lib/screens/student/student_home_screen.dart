@@ -565,6 +565,18 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 // could not be copied or bookmarked.
                                 onTap: () =>
                                     context.go('/roadmap/product-engineering')),
+                            const SizedBox(height: 12),
+
+                            // ── Directly under the roadmap, because that card
+                            // makes a claim and this is the only thing on the
+                            // page that lets a visitor argue with it. Someone
+                            // who is unsure whether embedded is for them will
+                            // not tap "the roadmap"; they will tap this. ──
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: _WhatIfCard(
+                                  onTap: () => context.go('/what-if')),
+                            ),
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -3135,5 +3147,70 @@ class _MiniFact extends StatelessWidget {
               fontWeight: highlight ? FontWeight.w700 : FontWeight.w400,
               color: color.withValues(alpha: highlight ? 1 : 0.88))),
     ]);
+  }
+}
+
+
+/// The entry to WHAT IF, sitting under the roadmap it questions.
+///
+/// Deliberately not styled as another course tile. A student scrolling past
+/// tiles is browsing; this has to read as a question addressed to them, which
+/// is why it is a sentence in the second person rather than a feature name.
+class _WhatIfCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _WhatIfCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF12326B), Color(0xFF1D4E9B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.alt_route_rounded,
+                size: 21, color: Colors.white),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('What if I choose something else?',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                  const SizedBox(height: 3),
+                  Text(
+                      'See how your path changes — and how much of it still counts.',
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          height: 1.45,
+                          color: Colors.white.withValues(alpha: 0.78))),
+                ]),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.arrow_forward_rounded,
+              size: 18, color: Colors.white.withValues(alpha: 0.85)),
+        ]),
+      ),
+    );
   }
 }

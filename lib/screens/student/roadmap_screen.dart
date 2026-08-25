@@ -11,6 +11,7 @@
 // It is public on purpose: the path IS the pitch, and hiding it behind a login
 // wastes the thing that makes someone want an account. Ticking items needs one.
 
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1510,7 +1511,25 @@ class _WhyThisOrder extends StatelessWidget {
             ]),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
+        // The natural place to ask it: right after being told why this order,
+        // which is exactly when somebody wonders about another one.
+        SizedBox(
+          width: double.infinity,
+          child: TextButton.icon(
+            onPressed: () => context.go('/what-if'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF5A6B82),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            icon: const Icon(Icons.alt_route_rounded, size: 17),
+            label: Text('What if I choose something else?',
+                style: GoogleFonts.inter(
+                    fontSize: present ? 14.5 : 12.5,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 4),
         if (present) ...[
           Container(
             padding: const EdgeInsets.all(14),

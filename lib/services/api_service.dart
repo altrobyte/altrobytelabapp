@@ -1087,6 +1087,51 @@ class ApiService {
     _parse(res);
   }
 
+  // ── What If ────────────────────────────────────────────────────────────
+  /// Directions, goals, what we already know, and what we still need to ask.
+  static Future<Map<String, dynamic>> whatIfOptions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/options'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
+  /// The three facts nothing else ever collected.
+  static Future<void> whatIfSaveProfile(
+      {String branch = '', String studyYear = '', String goal = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/what-if/profile'),
+      headers: _headers(prefs.getString('student_token')),
+      body: jsonEncode({
+        'branch': branch,
+        'study_year': studyYear,
+        'goal': goal,
+      }),
+    );
+  }
+
+  /// One alternative future. Slower than a normal call — a model is thinking.
+  static Future<Map<String, dynamic>> whatIfExplore(
+      {required String kind, required String choice}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/what-if/explore'),
+      headers: _headers(prefs.getString('student_token')),
+      body: jsonEncode({'kind': kind, 'choice': choice}),
+      timeout: const Duration(seconds: 60),
+    );
+    return _parse(res);
+  }
+
+  /// A pattern in what they keep exploring, if there is one yet.
+  static Future<Map<String, dynamic>> whatIfSignal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/signal'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
   // ── Roadmap placement ──────────────────────────────────────────────────
   /// Six questions. Public — this runs before anybody signs in.
   static Future<List<dynamic>> getPlacementQuestions() async {

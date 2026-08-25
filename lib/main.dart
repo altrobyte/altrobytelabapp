@@ -61,6 +61,7 @@ import 'screens/admin/demos_admin_screen.dart';
 import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
+import 'screens/student/what_if_screen.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
 import 'screens/admin/crm_screen.dart';
@@ -340,6 +341,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             builder: (_, __) => const WaMessagesScreen()),
         // Public on purpose: the roadmap is the pitch, so it must be
         // shareable as a link to someone who has never signed in.
+        // Public like the roadmap: the argument for a path is no use behind
+        // a login when the people who most need it have not signed up yet.
+        GoRoute(path: '/what-if', builder: (_, __) => const WhatIfScreen()),
         GoRoute(
           path: '/roadmap/:slug',
           // ?present=1 for showing this on a screen to a room: no fees, the
