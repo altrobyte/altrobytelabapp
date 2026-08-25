@@ -1123,6 +1123,15 @@ class ApiService {
     return _parse(res);
   }
 
+  /// The map, answered from data we already hold — no model call, so the
+  /// page can draw something the instant it opens.
+  static Future<Map<String, dynamic>> whatIfUniverse() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/universe'),
+        headers: _headers(prefs.getString('student_token')));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> whatIfOptions() async {
     final prefs = await SharedPreferences.getInstance();
     final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/what-if/options'),

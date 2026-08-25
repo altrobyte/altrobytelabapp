@@ -3192,14 +3192,14 @@ class _WhatIfCard extends StatelessWidget {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('What if I choose something else?',
+                  Text('Explore your engineering futures',
                       style: GoogleFonts.poppins(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white)),
                   const SizedBox(height: 3),
                   Text(
-                      'See how your path changes — and how much of it still counts.',
+                      'A live map of where you are, and what changes if you choose differently.',
                       style: GoogleFonts.inter(
                           fontSize: 11.5,
                           height: 1.45,
