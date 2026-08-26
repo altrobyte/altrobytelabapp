@@ -589,7 +589,16 @@ class _AttendeeCard extends StatelessWidget {
               (a['city'] ?? '').toString(),
             ].where((s) => s.isNotEmpty).join(', '),
           ),
-        if (totalAmount > 0)
+        if ((a['occupation'] ?? '').toString() == 'professional')
+          _AttendeeRow(icon: Icons.work_rounded, label: 'Working professional'),
+        // A held seat that still owes money. Said loudly, because it is the
+        // only row on this list somebody has to act on.
+        if ((a['status'] ?? '').toString() == 'pay_later')
+          _AttendeeRow(
+              icon: Icons.schedule_rounded,
+              label: 'PAY LATER — ₹${(a['amount'] ?? 0)} still owed',
+              colour: AppColors.warning),
+        if (totalAmount > 0 && (a['status'] ?? '').toString() != 'pay_later')
           _AttendeeRow(icon: Icons.payments_rounded, label: '₹$totalAmount paid'),
         if ((a['receipt_number'] ?? '').toString().isNotEmpty)
           _AttendeeRow(icon: Icons.receipt_long_rounded, label: 'Receipt ${a['receipt_number']}'),
@@ -616,16 +625,24 @@ class _AttendeeCard extends StatelessWidget {
 class _AttendeeRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _AttendeeRow({required this.icon, required this.label});
+
+  /// Set for the one row that needs acting on rather than reading.
+  final Color? colour;
+  const _AttendeeRow({required this.icon, required this.label, this.colour});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 5),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary),
+        Icon(icon, size: 14, color: colour ?? AppColors.textSecondary),
         const SizedBox(width: 8),
-        Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textPrimary))),
+        Expanded(
+            child: Text(label,
+                style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    fontWeight: colour == null ? FontWeight.w400 : FontWeight.w700,
+                    color: colour ?? AppColors.textPrimary))),
       ]),
     );
   }

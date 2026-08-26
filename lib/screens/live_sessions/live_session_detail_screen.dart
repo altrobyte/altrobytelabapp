@@ -48,6 +48,12 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _collegeCtrl = TextEditingController();
+
+  /// "student" or "professional". Asked because the card they share
+  /// afterwards is the only part of this that reaches anybody else, and
+  /// "3rd year, IIT Indore" means something to a feed where a name alone
+  /// does not.
+  String _occupation = 'student';
   final _branchCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
@@ -229,7 +235,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     });
   }
 
-  Future<void> _register() async {
+  Future<void> _register({bool payLater = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() { _submitting = true; _actionError = null; });
     final forceNew = _forceNewOnNextRegister;
@@ -240,6 +246,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           college: _collegeCtrl.text.trim(), branch: _branchCtrl.text.trim(),
           address: _addressCtrl.text.trim(), city: _cityCtrl.text.trim(),
           couponCode: _appliedCouponCode ?? '', forceNew: forceNew,
+          occupation: _occupation, payLater: payLater,
           returnUrl: '${Uri.base.origin}/live-sessions/${widget.sessionId}');
       if (!mounted) return;
       _registeredName = _nameCtrl.text.trim();
@@ -255,7 +262,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
         _openPaymentPage();
       } else {
         setState(() { _regState = _RegState.registered; _submitting = false; });
-        _showSuccessCard();
+        _showSuccessCard(payLater: result['status'] == 'pay_later');
       }
     } catch (e) {
       if (!mounted) return;
@@ -284,11 +291,17 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     await _register();
   }
 
-  void _showSuccessCard() {
+  void _showSuccessCard({bool payLater = false}) {
     showRegistrationSuccessDialog(context,
         typeLabel: 'WORKSHOP',
         title: _session!['title'] ?? '',
         studentName: _registeredName ?? '',
+        affiliation: _collegeCtrl.text.trim(),
+        occupation: _occupation,
+        payLater: payLater,
+        // The card points at the session, not the homepage: somebody who
+        // sees it and wants in should land where they can register.
+        shareUrl: 'https://altrobytelab.com/live-sessions/${widget.sessionId}',
         extraLine: (_session!['host_name'] ?? '').isNotEmpty ? 'Hosted by ${_session!['host_name']}' : null);
   }
 
@@ -865,15 +878,23 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           validator: (v) => (v == null || v.trim().isEmpty) ? 'Email is required' : null,
         ),
         const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _whoChip('student', 'Student')),
+          const SizedBox(width: 10),
+          Expanded(child: _whoChip('professional', 'Working professional')),
+        ]),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _collegeCtrl,
-          decoration: _fieldDecoration('College / Company name *'),
+          decoration: _fieldDecoration(
+              _occupation == 'professional' ? 'Company name *' : 'College name *'),
           validator: (v) => (v == null || v.trim().isEmpty) ? 'This field is required' : null,
         ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _branchCtrl,
-          decoration: _fieldDecoration('Branch / Field *'),
+          decoration: _fieldDecoration(
+              _occupation == 'professional' ? 'Role / Field *' : 'Branch & year *'),
           validator: (v) => (v == null || v.trim().isEmpty) ? 'This field is required' : null,
         ),
         const SizedBox(height: 12),
@@ -908,6 +929,32 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)),
           ),
         ),
+        if (total > 0) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton(
+              onPressed: _submitting ? null : () => _register(payLater: true),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text("I'll pay later — hold my seat",
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 13.5)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              'Your seat is held. Pay before the session starts and the '
+              'joining link comes to you on WhatsApp.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                  fontSize: 11, height: 1.4, color: AppColors.textSecondary)),
+        ],
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           const Icon(Icons.lock_outline_rounded, size: 13, color: AppColors.textSecondary),
@@ -915,6 +962,36 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           Text('Secure registration', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
         ]),
       ]),
+    );
+  }
+
+  Widget _whoChip(String value, String label) {
+    final on = _occupation == value;
+    return InkWell(
+      onTap: () => setState(() => _occupation = value),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: on ? AppColors.primary.withValues(alpha: 0.10) : AppColors.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: on ? AppColors.primary : Colors.transparent, width: 1.4),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(on ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              size: 16,
+              color: on ? AppColors.primary : AppColors.textSecondary),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(label,
+                style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: on ? AppColors.primary : AppColors.textSecondary)),
+          ),
+        ]),
+      ),
     );
   }
 

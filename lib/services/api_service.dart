@@ -2411,6 +2411,8 @@ class ApiService {
     String couponCode = '',
     bool forceNew = false,
     String returnUrl = '',
+    String occupation = '',
+    bool payLater = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token');
@@ -2420,6 +2422,8 @@ class ApiService {
       body: jsonEncode({
         'name': name, 'phone': phone, 'email': email,
         'college': college, 'branch': branch, 'address': address, 'city': city,
+        'occupation': occupation, 'company': occupation == 'professional' ? college : '',
+        'pay_later': payLater,
         'coupon_code': couponCode,
         'force_new': forceNew,
         'return_url': returnUrl,
