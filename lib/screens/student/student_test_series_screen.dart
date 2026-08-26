@@ -309,6 +309,24 @@ class _QuizTile extends StatelessWidget {
                 right: -18, top: -18,
                 child: Icon(Icons.fact_check_rounded, size: 90, color: Colors.white.withValues(alpha: 0.14)),
               ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.fact_check_rounded, color: Colors.white, size: 22),
+                    const SizedBox(height: 8),
+                    Text(quiz['title'] ?? '',
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5)),
+                  ],
+                ),
+              ),
             ]),
           ),
           Padding(
@@ -340,9 +358,9 @@ class _QuizTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 7, vertical: 4),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.share_rounded, size: 12, color: color),
+                      Icon(Icons.link_rounded, size: 13, color: color),
                       const SizedBox(width: 4),
-                      Text('Share',
+                      Text('Copy link',
                           style: GoogleFonts.inter(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,

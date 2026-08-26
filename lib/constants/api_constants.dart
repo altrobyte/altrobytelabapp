@@ -3,27 +3,27 @@ class ApiConstants {
   // Example: flutter build web --release --dart-define=API_BASE_URL=https://your-staging.up.railway.app
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // Some networks cannot resolve *.up.railway.app at all. On those the site
-    // loads from Firebase and then fails at every single request, which reads
-    // as "our server is down" — it happened on a real phone on 5G.
+    // Our own subdomain, not the railway.app host.
     //
-    // api.altrobytelab.com is not the answer: it belongs to the Botko backend
-    // and the WhatsApp SaaS app points at it. This backend gets its own
-    // subdomain instead, and until that is live the railway host stays the
-    // default with `fallbackBaseUrl` behind it.
-    defaultValue: 'https://altrocoach-backend-production.up.railway.app',
+    // Some networks cannot resolve *.up.railway.app at all: the site loads
+    // from Firebase and then every single request fails, which reads as "our
+    // server is down". It happened on a real phone on 5G, and it would have
+    // happened to every student on that ISP.
+    //
+    // Not api.altrobytelab.com — that belongs to the Botko backend and the
+    // WhatsApp SaaS app points at it.
+    defaultValue: 'https://edu.altrobytelab.com',
   );
 
   /// Tried once when a request to [baseUrl] fails outright.
   ///
-  /// Not a load-balancing scheme — the two hosts are the same server. It is
-  /// there because a whole ISP being unable to resolve one hostname is a
-  /// failure no amount of retrying the same hostname will fix, and because
-  /// this way the cutover happens the moment DNS is live rather than the next
-  /// time somebody remembers to rebuild the app.
+  /// Not load balancing — the two names are the same server. It is there
+  /// because a whole ISP being unable to resolve one hostname is a failure
+  /// that no amount of retrying that hostname will fix, and one custom
+  /// domain is one DNS record away from being the same kind of outage.
   static const fallbackBaseUrl = String.fromEnvironment(
     'API_FALLBACK_URL',
-    defaultValue: 'https://edu.altrobytelab.com',
+    defaultValue: 'https://altrocoach-backend-production.up.railway.app',
   );
 
   // uploads

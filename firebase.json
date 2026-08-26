@@ -66,29 +66,29 @@
     "redirects": [
       {
         "source": "/s/:id",
-        "destination": "https://altrocoach-backend-production.up.railway.app/s/live-session/:id",
+        "destination": "https://edu.altrobytelab.com/s/live-session/:id",
         "type": 302
       },
       {
         "source": "/sd/:id",
-        "destination": "https://altrocoach-backend-production.up.railway.app/s/demo/:id",
+        "destination": "https://edu.altrobytelab.com/s/demo/:id",
         "type": 302
       },
       {
         "//": "One test, shared. The series link came first and nobody had made a series — the tests exist on their own.",
         "source": "/t/:id",
-        "destination": "https://altrocoach-backend-production.up.railway.app/s/test/:id",
+        "destination": "https://edu.altrobytelab.com/s/test/:id",
         "type": 302
       },
       {
         "//": "The short link for a shared test series. Keeps what gets pasted into a group on the domain people recognise.",
         "source": "/ts/:id",
-        "destination": "https://altrocoach-backend-production.up.railway.app/s/series/:id",
+        "destination": "https://edu.altrobytelab.com/s/series/:id",
         "type": 302
       },
       {
         "source": "/sr/:slug",
-        "destination": "https://altrocoach-backend-production.up.railway.app/s/roadmap/:slug",
+        "destination": "https://edu.altrobytelab.com/s/roadmap/:slug",
         "type": 302
       }
     ]

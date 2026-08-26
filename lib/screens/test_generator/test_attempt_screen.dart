@@ -675,13 +675,13 @@ class _InstructionsScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            tooltip: 'Share this test',
+            tooltip: 'Copy link to this test',
             onPressed: () => shareTestLink(context,
                 id: test.id,
                 title: test.title,
                 minutes: test.durationMins,
                 questions: test.questions.length),
-            icon: const Icon(Icons.share_rounded, size: 20, color: Colors.white),
+            icon: const Icon(Icons.link_rounded, size: 21, color: Colors.white),
           ),
         ],
       ),
