@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/api_constants.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/registration_success_card.dart';
 import '../../services/api_service.dart';
 import '../../widgets/image_upload_field.dart';
 
@@ -380,6 +381,7 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (context, i) => _AttendeeCard(
                           attendee: attendees[i],
+                          sessionTitle: '${session['title'] ?? ''}',
                           onMarkPaid: attendees[i]['status'] == 'paid' ? null : () async {
                             final confirmed = await showDialog<bool>(
                               context: ctx,
@@ -536,7 +538,14 @@ class _AttendeeCard extends StatelessWidget {
   final Map<String, dynamic> attendee;
   final VoidCallback? onDelete;
   final VoidCallback? onMarkPaid;
-  const _AttendeeCard({required this.attendee, this.onDelete, this.onMarkPaid});
+  /// The session they registered for. Needed to build their card.
+  final String sessionTitle;
+
+  const _AttendeeCard(
+      {required this.attendee,
+      this.sessionTitle = '',
+      this.onDelete,
+      this.onMarkPaid});
 
   @override
   Widget build(BuildContext context) {
@@ -574,6 +583,33 @@ class _AttendeeCard extends StatelessWidget {
               child: Text(status.toUpperCase(),
                   style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor, letterSpacing: 0.3)),
             ),
+          // Their card, made from their own registration.
+          //
+          // Most people who register never post anything, and the card was
+          // built for exactly the moment they are least likely to act — the
+          // second after paying. Making it again here means the reach does
+          // not depend on them remembering.
+          IconButton(
+            icon: const Icon(Icons.ios_share_rounded,
+                size: 18, color: AppColors.primary),
+            tooltip: 'Make their card',
+            onPressed: () => showRegistrationSuccessDialog(
+              context,
+              typeLabel: 'WORKSHOP',
+              title: sessionTitle,
+              studentName: (attendee['name'] ?? '').toString(),
+              affiliation: [
+                (attendee['company'] ?? '').toString(),
+                (attendee['college'] ?? '').toString(),
+              ].firstWhere((e) => e.trim().isNotEmpty, orElse: () => ''),
+              occupation: (attendee['occupation'] ?? '').toString(),
+              branch: (attendee['branch'] ?? '').toString(),
+              shareUrl: 'https://altrobytelab.com/roadmap/product-engineering',
+            ),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 8),
+          ),
           if (onMarkPaid != null)
             IconButton(
               icon: const Icon(Icons.check_circle_outline_rounded, size: 19, color: AppColors.success),
