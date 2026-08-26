@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../widgets/auth_sheet.dart';
 
 /// Unified Test Series tab — a "Generate a Custom Test Series"
 /// CTA up top, every individual quiz (whether authored inside a course or
@@ -22,6 +23,7 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
   List<dynamic> _standaloneTests = [];
   bool _loading = true;
   String? _error;
+  bool _needsSignIn = false;
 
   @override
   void initState() {
@@ -30,7 +32,7 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _needsSignIn = false; });
     try {
       // Don't gate on the locally stored institute id. Login writes
       // `institute_id ?? 0`, so a student without one ended up asking for
@@ -46,8 +48,20 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        // A 401 is not an error to report, it is a door to open. Telling
+        // somebody to sign in and then giving them only a Retry button
+        // leaves them pressing it forever.
+        _needsSignIn = e is ApiException && e.statusCode == 401;
+        _error = e is ApiException ? e.message : e.toString();
+        _loading = false;
+      });
     }
+  }
+
+  Future<void> _signInThenLoad() async {
+    final ok = await showAuthSheet(context, reason: 'to see your test series');
+    if (ok && mounted) _load();
   }
 
   Color _parseColor(String? hex) {
@@ -93,11 +107,50 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_error!, style: GoogleFonts.inter(color: AppColors.textSecondary)),
-                    const SizedBox(height: 12),
-                    ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                  ]),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(
+                          _needsSignIn
+                              ? Icons.lock_outline_rounded
+                              : Icons.wifi_off_rounded,
+                          size: 38,
+                          color: AppColors.textSecondary),
+                      const SizedBox(height: 14),
+                      Text(
+                          _needsSignIn
+                              ? 'Sign in to see your test series'
+                              : _error!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: AppColors.textSecondary)),
+                      if (_needsSignIn) ...[
+                        const SizedBox(height: 6),
+                        Text('Your attempts and scores are saved to your account.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                                fontSize: 12,
+                                height: 1.5,
+                                color: AppColors.textSecondary)),
+                      ],
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: 220,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                          ),
+                          onPressed: _needsSignIn ? _signInThenLoad : _load,
+                          child: Text(_needsSignIn ? 'Sign in' : 'Retry',
+                              style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600, fontSize: 14)),
+                        ),
+                      ),
+                    ]),
+                  ),
                 )
               : RefreshIndicator(
                   onRefresh: _load,

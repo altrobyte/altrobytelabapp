@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../widgets/auth_sheet.dart';
 
 /// "My Activity" — consolidated view of everything a student has done:
 /// mock interviews, test series attempts, experiments, events joined,
@@ -19,6 +20,7 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
   Map<String, dynamic>? _data;
   bool _loading = true;
   String? _error;
+  bool _needsSignIn = false;
 
   @override
   void initState() {
@@ -27,15 +29,26 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _needsSignIn = false; });
     try {
       final data = await ApiService.getStudentActivitySummary();
       if (!mounted) return;
       setState(() { _data = data; _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        // Same as the test series tab: a 401 is a door, not an error, and a
+        // Retry button in front of it is something to press forever.
+        _needsSignIn = e is ApiException && e.statusCode == 401;
+        _error = e is ApiException ? e.message : e.toString();
+        _loading = false;
+      });
     }
+  }
+
+  Future<void> _signInThenLoad() async {
+    final ok = await showAuthSheet(context, reason: 'to see your activity');
+    if (ok && mounted) _load();
   }
 
   @override
@@ -52,9 +65,27 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
           : _error != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_error!, style: GoogleFonts.inter(color: AppColors.textSecondary)),
+                    Text(
+                        _needsSignIn
+                            ? 'Sign in to see your activity'
+                            : _error!,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: AppColors.textSecondary)),
                     const SizedBox(height: 12),
-                    ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 13),
+                      ),
+                      onPressed: _needsSignIn ? _signInThenLoad : _load,
+                      child: Text(_needsSignIn ? 'Sign in' : 'Retry',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                    ),
                   ]),
                 )
               : RefreshIndicator(
