@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
-import '../services/api_service.dart';
-import '../services/cashfree_checkout.dart';
 
 class StatRow extends StatelessWidget {
   final IconData icon;
@@ -68,52 +66,6 @@ class UpgradeSheet extends StatefulWidget {
 }
 
 class _UpgradeSheetState extends State<UpgradeSheet> {
-  bool _paying = false;
-
-  Future<void> _upgradeNow() async {
-    setState(() => _paying = true);
-    try {
-      final res = await ApiService.createStudentSubscriptionLink(plan: '999');
-      if (res['already_active'] == true) {
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Your plan is already active!')),
-          );
-        }
-        return;
-      }
-      // payment_session_id + the JS Checkout SDK is the only path that works
-      // — Cashfree's Orders API returns no navigable link_url, and a raw
-      // redirect to their hosted page is rejected as "client session is
-      // invalid" (same as live-session registration).
-      final sessionId = (res['payment_session_id'] ?? '').toString();
-      if (sessionId.isNotEmpty) {
-        CashfreeCheckout.open(
-          paymentSessionId: sessionId,
-          mode: (res['cashfree_mode'] ?? 'production').toString(),
-        );
-        widget.onPaymentOpened();
-        if (mounted) Navigator.pop(context);
-        return;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open payment page. Please try again.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
-        );
-      }
-    }
-    if (mounted) setState(() => _paying = false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,36 +156,32 @@ class _UpgradeSheetState extends State<UpgradeSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _paying ? null : _upgradeNow,
+              // Straight to /pricing, not into checkout from here.
+              //
+              // This sheet showed one tier and one price and asked for money.
+              // Somebody deciding whether to pay wants to see what the other
+              // tiers give and what they are giving up by not taking them —
+              // and that comparison already exists, in full, on the pricing
+              // page. Two half-explanations of the same plans is how they
+              // drift apart.
+              onPressed: () {
+                Navigator.pop(context);
+                context.push('/pricing');
+              },
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
-              child: _paying
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : Text('Upgrade to Plus',
-                      style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
+              child: Text('See plans & upgrade',
+                  style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
             ),
           ),
           const SizedBox(height: 4),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/pricing');
-            },
-            child: Text('Compare all plans',
-                style: GoogleFonts.inter(
-                    color: AppColors.accent, fontWeight: FontWeight.w600)),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Maybe later',

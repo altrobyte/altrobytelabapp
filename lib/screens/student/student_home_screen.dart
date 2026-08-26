@@ -1229,15 +1229,27 @@ class _PlanChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final premium = subscription['is_premium'] == true;
     final plan = (subscription['plan'] ?? 'free').toString();
-    final remaining = subscription['generations_remaining'];
-    final limit = subscription['monthly_generation_limit'];
+    // The daily quiz quota, not the monthly generation one.
+    //
+    // The chip counted custom test-series generations — a feature still
+    // marked "Coming soon" — so it read "5/5 series left" at the exact
+    // moment a student had been turned away for the day. Two quotas, and
+    // the one on screen was the one that never runs out.
+    final remaining = subscription['remaining_today'];
+    final limit = subscription['daily_attempt_limit'];
 
     final label = premium
         ? (plan == '9999' ? 'Elite' : 'Plus')
         : (remaining is int && limit is int
-            ? '$remaining/$limit series left'
+            ? (remaining == 0
+                ? 'No quizzes left today'
+                : '$remaining of $limit quizzes today')
             : 'Free plan');
-    final color = premium ? AppColors.success : AppColors.accent;
+    // Spent means spent: an orange chip saying zero reads as a promotion.
+    final spent = !premium && remaining == 0;
+    final color = premium
+        ? AppColors.success
+        : (spent ? AppColors.error : AppColors.accent);
 
     return InkWell(
       onTap: () => context.push('/pricing'),
