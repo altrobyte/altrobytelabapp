@@ -301,10 +301,13 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
         studentName: _registeredName ?? '',
         affiliation: _collegeCtrl.text.trim(),
         occupation: _occupation,
+        branch: _branchCtrl.text.trim(),
         payLater: payLater,
-        // The card points at the session, not the homepage: somebody who
-        // sees it and wants in should land where they can register.
-        shareUrl: 'https://altrobytelab.com/live-sessions/${widget.sessionId}',
+        // The roadmap, not this session. A shared link lands on somebody who
+        // has never heard of us, and one session's registration page asks
+        // them to buy before it has told them anything — the roadmap is the
+        // page that explains what this is and then leads to registering.
+        shareUrl: 'https://altrobytelab.com/roadmap/product-engineering',
         extraLine: (_session!['host_name'] ?? '').isNotEmpty ? 'Hosted by ${_session!['host_name']}' : null);
   }
 

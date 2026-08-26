@@ -3,13 +3,27 @@ class ApiConstants {
   // Example: flutter build web --release --dart-define=API_BASE_URL=https://your-staging.up.railway.app
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // Still the railway.app host. api.altrobytelab.com is meant to replace
-    // it — a reader whose network cannot resolve *.up.railway.app gets a site
-    // that loads and then fails at every request, which happened on a real
-    // phone — but that CNAME currently points at a different Railway service:
-    // /health answers there and every real route 404s. Switch once it points
-    // at this backend.
+    // Some networks cannot resolve *.up.railway.app at all. On those the site
+    // loads from Firebase and then fails at every single request, which reads
+    // as "our server is down" — it happened on a real phone on 5G.
+    //
+    // api.altrobytelab.com is not the answer: it belongs to the Botko backend
+    // and the WhatsApp SaaS app points at it. This backend gets its own
+    // subdomain instead, and until that is live the railway host stays the
+    // default with `fallbackBaseUrl` behind it.
     defaultValue: 'https://altrocoach-backend-production.up.railway.app',
+  );
+
+  /// Tried once when a request to [baseUrl] fails outright.
+  ///
+  /// Not a load-balancing scheme — the two hosts are the same server. It is
+  /// there because a whole ISP being unable to resolve one hostname is a
+  /// failure no amount of retrying the same hostname will fix, and because
+  /// this way the cutover happens the moment DNS is live rather than the next
+  /// time somebody remembers to rebuild the app.
+  static const fallbackBaseUrl = String.fromEnvironment(
+    'API_FALLBACK_URL',
+    defaultValue: 'https://edu.altrobytelab.com',
   );
 
   // uploads

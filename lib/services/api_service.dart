@@ -71,16 +71,80 @@ class ApiService {
 
   static Future<http.Response> safeGet(Uri uri,
       {Map<String, String>? headers}) {
-    return _withNetworkRetry(
-        () => http.get(uri, headers: headers).timeout(const Duration(seconds: 15)));
+    return _withHostFailover(
+        uri,
+        (u) => _withNetworkRetry(
+            () => http.get(u, headers: headers).timeout(const Duration(seconds: 15))));
   }
 
   static Future<http.Response> safePost(Uri uri,
       {Map<String, String>? headers, Object? body, Duration? timeout}) {
-    return _withNetworkRetry(() => http
-        .post(uri, headers: headers, body: body)
-        .timeout(timeout ?? const Duration(seconds: 20)));
+    return _withHostFailover(
+        uri,
+        (u) => _withNetworkRetry(() => http
+            .post(u, headers: headers, body: body)
+            .timeout(timeout ?? const Duration(seconds: 20))));
   }
+
+  /// The host that has been answering. Null until one has.
+  static String? _liveHost;
+
+  /// Try the other hostname when this one cannot be reached at all.
+  ///
+  /// Some networks fail to resolve *.up.railway.app entirely: the site loads
+  /// from Firebase and then every request dies, which looks exactly like our
+  /// server being down. Retrying the same hostname cannot fix a name that
+  /// does not resolve, so on an outright failure the request is tried once
+  /// against the other host — and whichever answers is remembered for the
+  /// rest of the session, so the cost is one failed request, not one per
+  /// call.
+  static Future<http.Response> _withHostFailover(
+      Uri uri, Future<http.Response> Function(Uri) send) async {
+    const primary = ApiConstants.baseUrl;
+    const secondary = ApiConstants.fallbackBaseUrl;
+    if (secondary.isEmpty || secondary == primary) return send(uri);
+
+    final text = uri.toString();
+    // Only our own API is worth failing over. Google Sheets, Cashfree and
+    // anything else addressed absolutely must be left exactly as asked.
+    if (!text.startsWith(primary) && !text.startsWith(secondary)) {
+      return send(uri);
+    }
+
+    Uri on(String host) => Uri.parse(text.startsWith(primary)
+        ? text.replaceFirst(primary, host)
+        : text.replaceFirst(secondary, host));
+
+    if (_liveHost != null) {
+      try {
+        return await send(on(_liveHost!));
+      } catch (_) {
+        // The remembered host has stopped answering; fall through and try
+        // both again rather than staying stuck on it.
+        _liveHost = null;
+      }
+    }
+
+    try {
+      final res = await send(on(primary));
+      _liveHost = primary;
+      return res;
+    } catch (first) {
+      try {
+        final res = await send(on(secondary));
+        _liveHost = secondary;
+        return res;
+      } catch (_) {
+        // Report the first failure, not the second: the fallback existing is
+        // our business, and an error naming a host the reader has never seen
+        // is worse than one naming the host they were using.
+        rethrowFirst(first);
+      }
+    }
+  }
+
+  static Never rethrowFirst(Object error) =>
+      throw error is ApiException ? error : ApiException('$error');
 
   /// A sheet sync fetches from Google, parses it and merges hundreds of rows.
   /// Twenty seconds is right for asking a question and wrong for setting a

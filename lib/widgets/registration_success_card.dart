@@ -32,6 +32,8 @@ Future<void> showRegistrationSuccessDialog(
   String? affiliation,
   /// "student" or "professional".
   String? occupation,
+  /// Branch and year, or role — whatever they gave.
+  String? branch,
   /// Registered, but the fee is still owed.
   bool payLater = false,
   /// Where the card points the people who see it.
@@ -46,6 +48,7 @@ Future<void> showRegistrationSuccessDialog(
       extraLine: extraLine,
       affiliation: affiliation,
       occupation: occupation,
+      branch: branch,
       payLater: payLater,
       shareUrl: shareUrl,
     ),
@@ -59,6 +62,7 @@ class _SuccessDialog extends StatefulWidget {
   final String? extraLine;
   final String? affiliation;
   final String? occupation;
+  final String? branch;
   final bool payLater;
   final String shareUrl;
 
@@ -69,6 +73,7 @@ class _SuccessDialog extends StatefulWidget {
     this.extraLine,
     this.affiliation,
     this.occupation,
+    this.branch,
     this.payLater = false,
     required this.shareUrl,
   });
@@ -87,18 +92,30 @@ class _SuccessDialogState extends State<_SuccessDialog> {
   /// Written to be posted as-is, because anything a student has to rewrite
   /// before posting does not get posted.
   String get _caption {
-    final where = (widget.affiliation ?? '').trim();
-    final lines = <String>[
+    // Their details on their own line rather than folded into a sentence.
+    // "Building skills alongside davv" read badly the moment somebody typed
+    // their college in lower case, and people type it however they type it.
+    final about = [
+      (widget.occupation ?? '').trim().toLowerCase() == 'professional'
+          ? 'Working professional'
+          : 'Student',
+      (widget.branch ?? '').trim(),
+      (widget.affiliation ?? '').trim(),
+    ].where((e) => e.isNotEmpty).join(' · ');
+
+    return [
       'Just registered for ${widget.title} with Altrobyte Lab 🚀',
-      if (where.isNotEmpty) '',
-      if (where.isNotEmpty) 'Building real embedded and IoT skills alongside $where.',
+      if (about.isNotEmpty) about,
       '',
-      'If you are into electronics, hardware or embedded systems, take a look:',
+      'Four months of building real industrial products — firmware, PCB, '
+          'cloud and AI. Not tutorials.',
+      '',
+      'If you are into electronics, hardware or embedded systems, this is '
+          'the roadmap:',
       widget.shareUrl,
       '',
       '#EmbeddedSystems #IoT #Electronics #AltrobyteLab',
-    ];
-    return lines.join('\n');
+    ].join('\n');
   }
 
   Future<Uint8List> _render() async {
@@ -224,6 +241,7 @@ class _SuccessDialogState extends State<_SuccessDialog> {
                 extraLine: widget.extraLine,
                 affiliation: widget.affiliation,
                 occupation: widget.occupation,
+                branch: widget.branch,
               ),
             ),
             const SizedBox(height: 14),
@@ -343,6 +361,7 @@ class _ShareCard extends StatelessWidget {
   final String? extraLine;
   final String? affiliation;
   final String? occupation;
+  final String? branch;
 
   const _ShareCard({
     required this.typeLabel,
@@ -351,17 +370,25 @@ class _ShareCard extends StatelessWidget {
     this.extraLine,
     this.affiliation,
     this.occupation,
+    this.branch,
   });
 
-  /// "3rd year · IIT Indore" or "Engineer at Bosch" — the line that makes the
-  /// card mean something to the people who see it rather than only its owner.
-  String get _who {
-    final where = (affiliation ?? '').trim();
-    final role = (occupation ?? '').trim().toLowerCase();
-    if (where.isEmpty) {
-      return role == 'professional' ? 'Working professional' : 'Student';
-    }
-    return role == 'professional' ? 'Working at $where' : where;
+  bool get _isPro => (occupation ?? '').trim().toLowerCase() == 'professional';
+
+  /// "Student" or "Working professional" — the badge above the name.
+  String get _role => _isPro ? 'Working professional' : 'Student';
+
+  /// "ECE, 3rd year · DAVV Indore" or "Firmware Engineer · Bosch".
+  ///
+  /// This line is the reason the card is worth posting. A name and a course
+  /// title mean nothing to somebody scrolling past; a college they recognise
+  /// and a branch they are in is what makes them stop and read it.
+  String get _details {
+    final parts = [
+      (branch ?? '').trim(),
+      (affiliation ?? '').trim(),
+    ].where((e) => e.isNotEmpty).toList();
+    return parts.join(' · ');
   }
 
   @override
@@ -471,13 +498,30 @@ class _ShareCard extends StatelessWidget {
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700)),
-              const SizedBox(height: 3),
-              Text(_who,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                      color: Colors.white.withValues(alpha: 0.86),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500)),
+              if (_details.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(_details,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600)),
+              ],
+              const SizedBox(height: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(_role.toUpperCase(),
+                    style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.7)),
+              ),
               const SizedBox(height: 14),
               Text(today,
                   style: GoogleFonts.inter(
