@@ -116,11 +116,17 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
 
   final TransformationController _view = TransformationController();
 
-  /// The map is fitted to the viewport once, on the first frame that knows
-  /// both sizes. Re-fitting on every rebuild would yank the canvas back
-  /// whenever somebody had panned somewhere deliberately.
-  bool _fitted = false;
   Size _canvas = Size.zero;
+
+  /// The canvas the view was last framed against. A tap grows the map, which
+  /// makes the canvas bigger, and leaving the view where it was pushed the
+  /// new branches off the top and bottom of the screen.
+  Size _framed = Size.zero;
+
+  /// Set the moment somebody pans or pinches. After that the view is theirs
+  /// and nothing here moves it — being dragged back to centre while you are
+  /// reading something is worse than having to scroll.
+  bool _moved = false;
 
   @override
   void initState() {
@@ -140,6 +146,12 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
     super.didUpdateWidget(old);
     final before = {for (final n in old.nodes) n.id};
     final now = {for (final n in widget.nodes) n.id};
+    // Backing out to the whole map hands the view back to us; anything else
+    // they did with it stands.
+    if (widget.focusId == null && old.focusId != null) {
+      _moved = false;
+      _framed = Size.zero;
+    }
     if (widget.focusId != old.focusId ||
         before.length != now.length ||
         !before.containsAll(now)) {
@@ -155,16 +167,36 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  /// Scale and centre the whole tree in the space available.
-  void _fit(Size viewport) {
+  /// Frame the map: on the node just tapped if there is one, otherwise the
+  /// whole tree.
+  ///
+  /// Centring on the tapped node matters more than fitting everything once
+  /// the map is large. What somebody wants to see after tapping is what grew
+  /// out of what they tapped, and a whole-tree fit at that point just makes
+  /// every label too small to read.
+  void _frame(Size viewport, Map<String, _Placed> placed) {
     if (_canvas.isEmpty || viewport.isEmpty) return;
-    final scale = math.min(
+
+    final fit = math.min(
         math.min(viewport.width / _canvas.width, viewport.height / _canvas.height),
         1.0);
-    final dx = (viewport.width - _canvas.width * scale) / 2;
-    final dy = (viewport.height - _canvas.height * scale) / 2;
+
+    final target = widget.focusId == null ? null : placed[widget.focusId];
+    if (target == null) {
+      final dx = (viewport.width - _canvas.width * fit) / 2;
+      final dy = (viewport.height - _canvas.height * fit) / 2;
+      _view.value = Matrix4.identity()
+        ..translateByDouble(dx, dy, 0, 1)
+        ..scaleByDouble(fit, fit, 1, 1);
+      return;
+    }
+
+    // Readable rather than complete: never shrink past the point where the
+    // labels stop being words.
+    final scale = math.max(fit, 0.62).clamp(0.25, 1.0);
     _view.value = Matrix4.identity()
-      ..translateByDouble(dx, dy, 0, 1)
+      ..translateByDouble(viewport.width / 2 - target.at.dx * scale,
+          viewport.height / 2 - target.at.dy * scale, 0, 1)
       ..scaleByDouble(scale, scale, 1, 1);
   }
 
@@ -182,16 +214,28 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
           // Painting a 900px map onto a 500px canvas simply cut the rest off,
           // and panning stopped at the canvas edge — so the branches were
           // there, unreachable, which is exactly what it looked like.
-          if (_canvas != size && !_fitted) {
+          // Re-frame whenever the tree changes shape, which is what a tap
+          // does. Left alone the view stayed put and the new branches were
+          // drawn past the top and bottom of the screen.
+          if (_canvas != _framed && !_moved) {
+            final canvas = _canvas;
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || _fitted) return;
-              _fit(size);
-              _fitted = true;
+              if (!mounted || _canvas != canvas) return;
+              _frame(size, placed);
+              _framed = canvas;
             });
           }
 
           return InteractiveViewer(
             constrained: false,
+            // Deliberately not onInteractionStart: that fires on a plain
+            // tap too, so the very first node tap would have switched
+            // following off before it ever worked.
+            onInteractionUpdate: (d) {
+              if (d.scale != 1.0 || d.focalPointDelta.distance > 2) {
+                _moved = true;
+              }
+            },
             minScale: 0.25,
             maxScale: 2.5,
             boundaryMargin: const EdgeInsets.all(120),
