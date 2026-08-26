@@ -1146,6 +1146,8 @@ class ApiService {
     String parent = '',
     String branch = '',
     String year = '',
+    List<String> path = const [],
+    List<String> existing = const [],
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final res = await safePost(
@@ -1157,6 +1159,8 @@ class ApiService {
         'parent': parent,
         'branch': branch,
         'year': year,
+        'path': path,
+        'existing': existing,
       }),
       timeout: const Duration(seconds: 60),
     );

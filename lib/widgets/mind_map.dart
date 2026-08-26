@@ -457,10 +457,13 @@ class _Placed {
 
 // ── Paint ──────────────────────────────────────────────────────────────────
 
-const _navy = Color(0xFF12326B);
-const _sky = Color(0xFF5B9BEA);
-const _green = Color(0xFF4CAF50);
-const _grey = Color(0xFF93A9C9);
+// A light map has to earn its contrast differently. On a dark field a pale
+// node glows and is done; on white, everything is legible, so the weight has
+// to come from saturation and fill rather than from brightness.
+const _navy = Color(0xFF0F2C5C);
+const _sky = Color(0xFF1F6FD0);
+const _green = Color(0xFF1E7A3C);
+const _grey = Color(0xFF8A97AA);
 
 class _MindPainter extends CustomPainter {
   final Map<String, _Placed> placed;
@@ -539,8 +542,8 @@ class _MindPainter extends CustomPainter {
         MindState.current => (_sky, 1.0),
         MindState.shared => (_green, 1.0),
         MindState.grown => (_sky, 1.0),
-        MindState.fading => (_grey, 0.40),
-        MindState.faint => (_grey, 0.72),
+        MindState.fading => (_grey, 0.55),
+        MindState.faint => (_grey, 0.9),
       };
 
   /// Whether this node is inside the focused branch. Focus on a tree is a lit
@@ -606,7 +609,7 @@ class _MindPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..strokeWidth = b.depth == 1 ? (strong ? 2.4 : 1.7) : 1.2
         ..color = colour.withValues(
-            alpha: opacity * grow * (dim ? 0.22 : (strong ? 0.75 : 0.5))),
+            alpha: opacity * grow * (dim ? 0.28 : (strong ? 0.8 : 0.55))),
     );
   }
 
@@ -621,29 +624,36 @@ class _MindPainter extends CustomPainter {
     final selected = selectedId == n.id || focusId == n.id;
     final rect = p.rect;
 
-    if (isYou || selected) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect.inflate(5), const Radius.circular(12)),
-        Paint()
-          ..color = colour.withValues(alpha: 0.22 * grow)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-      );
-    }
+    final radius = Radius.circular(isYou ? 14 : 10);
+
+    // A real shadow rather than a glow. Depth on white comes from the light
+    // being above the page, not from the node emitting any.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.shift(const Offset(0, 2)), radius),
+      Paint()
+        ..color = const Color(0xFF0F2C5C)
+            .withValues(alpha: (selected ? 0.16 : 0.07) * grow)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, selected ? 9 : 5),
+    );
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(isYou ? 12 : 8)),
+      RRect.fromRectAndRadius(rect, radius),
       Paint()
         ..color = isYou
-            ? colour.withValues(alpha: 0.95 * grow)
-            : colour.withValues(alpha: (selected ? 0.16 : 0.07) * opacity * grow),
+            ? colour.withValues(alpha: 0.97 * grow)
+            : (selected
+                ? colour.withValues(alpha: 0.10 * grow)
+                : Colors.white.withValues(alpha: grow)),
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(isYou ? 12 : 8)),
+      RRect.fromRectAndRadius(rect, radius),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = selected ? 1.8 : 1.0
-        ..color = colour.withValues(
-            alpha: opacity * grow * (selected ? 0.95 : 0.45)),
+        ..strokeWidth = selected ? 1.8 : 1.1
+        ..color = isYou
+            ? Colors.transparent
+            : colour.withValues(
+                alpha: opacity * grow * (selected ? 0.95 : 0.34)),
     );
 
     // A short bar under a first-level branch, filled to its signal. The
@@ -658,7 +668,7 @@ class _MindPainter extends CustomPainter {
         Paint()
           ..strokeWidth = 2
           ..strokeCap = StrokeCap.round
-          ..color = colour.withValues(alpha: 0.14 * grow),
+          ..color = const Color(0xFFE1E7F0).withValues(alpha: grow),
       );
       canvas.drawLine(
         Offset(rect.left + 4, y),

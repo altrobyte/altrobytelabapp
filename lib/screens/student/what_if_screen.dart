@@ -226,16 +226,18 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 900;
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1628),
+      backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A1628),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F2C5C),
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
         title: Text('What if?',
             style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white)),
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F2C5C))),
         actions: [
           if (_result != null)
             TextButton(
@@ -247,7 +249,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               }),
               child: Text('Reset',
                   style: GoogleFonts.inter(
-                      fontSize: 12.5, color: Colors.white70)),
+                      fontSize: 12.5, color: const Color(0xFF44546C))),
             ),
         ],
       ),
@@ -261,7 +263,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                       SizedBox(
                         width: 400,
                         child: Container(
-                          color: const Color(0xFF0D1D34),
+                          color: const Color(0xFF0F2C5C),
                           child: _sidePanel(),
                         ),
                       ),
@@ -279,7 +281,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           child: Text(_error,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                  fontSize: 13.5, height: 1.5, color: Colors.white70)),
+                  fontSize: 13.5, height: 1.5, color: const Color(0xFF44546C))),
         ),
       );
 
@@ -292,8 +294,8 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           decoration: BoxDecoration(
             gradient: RadialGradient(
               center: Alignment.center,
-              radius: 0.95,
-              colors: [Color(0xFF12294A), Color(0xFF0A1628)],
+              radius: 1.0,
+              colors: [Colors.white, Color(0xFFEEF2F8)],
             ),
           ),
         ),
@@ -322,7 +324,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// being done rather than that something is happening.
   Widget _thinkingOverlay() => Positioned.fill(
         child: Container(
-          color: const Color(0xFF0A1628).withValues(alpha: 0.72),
+          color: Colors.white.withValues(alpha: 0.82),
           child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -335,7 +337,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white)),
+                        color: const Color(0xFF0F2C5C))),
               ]),
         ),
       );
@@ -380,6 +382,26 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         (e) => '${e?['id']}' == parentId,
         orElse: () => null);
 
+    // The whole way down to this node, and what is drawn beside it. Without
+    // both, asking about "C basics" under Embedded C got the Embedded C
+    // syllabus back — the topics already sitting next to it on the map.
+    final (nodes, edges) = _graph;
+    final labels = {for (final n in nodes) n.id: n.label};
+    final path = <String>[];
+    for (var id = node.id;;) {
+      if (labels[id] != null) path.insert(0, labels[id]!);
+      final up = edges.where((e) => e.to == id).firstOrNull?.from;
+      if (up == null || up == 'you' || path.length > 8) break;
+      id = up;
+    }
+    final siblingsOf = edges.where((e) => e.to == node.id).firstOrNull?.from;
+    final nearby = <String>[
+      for (final e in edges)
+        if (e.from == siblingsOf && e.to != node.id) labels[e.to] ?? '',
+      for (final e in edges)
+        if (e.from == node.id) labels[e.to] ?? '',
+    ]..removeWhere((e) => e.isEmpty);
+
     try {
       final r = await ApiService.whatIfNode(
         node: node.label,
@@ -387,6 +409,8 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         parent: parent == null ? '' : '${parent['label']}',
         branch: _branch,
         year: _year,
+        path: path,
+        existing: nearby,
       );
       if (!mounted) return;
       setState(() {
@@ -419,7 +443,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       backgroundColor: const Color(0xFF12326B),
       duration: const Duration(seconds: 4),
       content: Text(edge.relation,
-          style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white)),
+          style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF0F2C5C))),
     ));
   }
 
@@ -443,14 +467,14 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                   fontSize: 11.5,
                   height: 1.45,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF6FA8F5))),
+                  color: const Color(0xFF1F6FD0))),
         ),
       Text(text,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
               fontSize: 11.5,
               height: 1.5,
-              color: Colors.white.withValues(alpha: 0.42))),
+              color: const Color(0xFF8A97AA))),
     ]);
   }
 
@@ -465,8 +489,11 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.42),
         decoration: const BoxDecoration(
-          color: Color(0xFF0D1D34),
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, -4)),
+          ],
         ),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 26),
@@ -499,7 +526,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               child: CircularProgressIndicator(strokeWidth: 2)),
           const SizedBox(width: 10),
           Text('Working out what this means for you…',
-              style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white70)),
+              style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF44546C))),
         ]),
       ];
 
@@ -512,11 +539,11 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     return [
       Text('${n['node']}',
           style: GoogleFonts.poppins(
-              fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
+              fontSize: 17, fontWeight: FontWeight.w700, color: const Color(0xFF0F2C5C))),
       const SizedBox(height: 5),
       Text('${n['headline'] ?? ''}',
           style: GoogleFonts.inter(
-              fontSize: 12.5, height: 1.55, color: Colors.white70)),
+              fontSize: 12.5, height: 1.55, color: const Color(0xFF44546C))),
       if (sig.isNotEmpty) ...[
         const SizedBox(height: 12),
         _signalRow(sig),
@@ -524,7 +551,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       const SizedBox(height: 16),
       if ('${n['why'] ?? ''}'.trim().isNotEmpty)
         _block('WHY THIS MATTERS FOR YOU', '${n['why']}'),
-      _list('LEADS ON TO', n['leads_to'], const Color(0xFF5B9BEA)),
+      _list('LEADS ON TO', n['leads_to'], const Color(0xFF1F6FD0)),
       if (uncertainty.isNotEmpty)
         _block('WHAT WE STILL CANNOT TELL', uncertainty),
       if (exp.isNotEmpty) _experiment(exp),
@@ -539,7 +566,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           }),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+            side: const BorderSide(color: Color(0xFFD5DEEA)),
             padding: const EdgeInsets.symmetric(vertical: 12),
           ),
           child: Text('Back to the whole map',
@@ -560,20 +587,20 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF5B9BEA).withValues(alpha: 0.10),
+        color: const Color(0xFF1F6FD0).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFF5B9BEA).withValues(alpha: 0.3)),
+        border: Border.all(color: const Color(0xFF1F6FD0).withValues(alpha: 0.3)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Which branch are you in?',
             style: GoogleFonts.poppins(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w700,
-                color: Colors.white)),
+                color: const Color(0xFF0F2C5C))),
         const SizedBox(height: 3),
         Text('One tap. The whole map is generic until it knows.',
             style: GoogleFonts.inter(
-                fontSize: 12, height: 1.5, color: Colors.white60)),
+                fontSize: 12, height: 1.5, color: const Color(0xFF6B7A90))),
         const SizedBox(height: 11),
         Wrap(spacing: 7, runSpacing: 7, children: [
           for (final b in branches)
@@ -620,14 +647,14 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.1,
-              color: Colors.white.withValues(alpha: 0.45))),
+              color: const Color(0xFF8A97AA))),
       const SizedBox(height: 4),
       Text(
           thin
               ? 'Ask one, and the map redraws. It gets sharper once we know your branch.'
               : 'Ask one, and the map redraws around the answer.',
           style: GoogleFonts.inter(
-              fontSize: 12.5, height: 1.5, color: Colors.white60)),
+              fontSize: 12.5, height: 1.5, color: const Color(0xFF6B7A90))),
       const SizedBox(height: 14),
       Wrap(
         spacing: 8,
@@ -647,15 +674,15 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: const Color(0xFFF3F6FB),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            border: Border.all(color: const Color(0xFFE1E7F0)),
           ),
           child: Text('${p['label']}',
               style: GoogleFonts.inter(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.92))),
+                  color: const Color(0xFF0F2C5C))),
         ),
       );
 
@@ -673,7 +700,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               fontSize: 16,
               height: 1.35,
               fontWeight: FontWeight.w700,
-              color: Colors.white)),
+              color: const Color(0xFF0F2C5C))),
       if (sig.isNotEmpty) ...[
         const SizedBox(height: 10),
         _signalRow(sig),
@@ -683,17 +710,17 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         _changed(Map<String, dynamic>.from(r['changed'] as Map)),
       if ('${r['why_emerging'] ?? ''}'.trim().isNotEmpty)
         _block('WHY IS THIS EMERGING?', '${r['why_emerging']}'),
-      _list('YOU GAIN', r['gain'], const Color(0xFF4CAF50)),
-      _list('YOU GIVE UP OR DELAY', r['give_up'], const Color(0xFFE07A1F)),
-      _list('STAYS OPEN EITHER WAY', r['stays_open'], const Color(0xFF3E7BD6)),
-      _list('LIKELY HARDER', r['harder'], const Color(0xFFE07A1F)),
-      _list('LIKELY EASIER', r['easier'], const Color(0xFF4CAF50)),
+      _list('YOU GAIN', r['gain'], const Color(0xFF1E7A3C)),
+      _list('YOU GIVE UP OR DELAY', r['give_up'], const Color(0xFFB55A0B)),
+      _list('STAYS OPEN EITHER WAY', r['stays_open'], const Color(0xFF1F6FD0)),
+      _list('LIKELY HARDER', r['harder'], const Color(0xFFB55A0B)),
+      _list('LIKELY EASIER', r['easier'], const Color(0xFF1E7A3C)),
       if (r['why_original'] != null)
         _list('WHY WE RECOMMENDED THE OTHER ONE', r['why_original'],
-            Colors.white70),
+            const Color(0xFF6B7A90)),
       if (sim.isNotEmpty) _simulation(sim),
       if (futures.isNotEmpty)
-        _list('OPENS ONTO', futures, const Color(0xFF3E7BD6)),
+        _list('OPENS ONTO', futures, const Color(0xFF1F6FD0)),
       // Said before the next action, not after: an admission that arrives
       // after the instruction reads as a disclaimer.
       if (uncertainty.isNotEmpty) _block('WHAT WE STILL DO NOT KNOW', uncertainty),
@@ -705,7 +732,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           onPressed: () => setState(() { _result = null; _selectedId = null; _focusId = null; _node = null; }),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+            side: const BorderSide(color: Color(0xFFD5DEEA)),
             padding: const EdgeInsets.symmetric(vertical: 13),
           ),
           icon: const Icon(Icons.alt_route_rounded, size: 17),
@@ -742,7 +769,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               padding: const EdgeInsets.only(bottom: 2),
               child: Text('$mark  $item',
                   style: GoogleFonts.inter(
-                      fontSize: 12.5, height: 1.5, color: Colors.white70)),
+                      fontSize: 12.5, height: 1.5, color: const Color(0xFF44546C))),
             ),
         ]),
       );
@@ -752,7 +779,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: const Color(0xFFF7F9FC),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -761,11 +788,11 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.9,
-                color: Colors.white.withValues(alpha: 0.45))),
+                color: const Color(0xFF8A97AA))),
         const SizedBox(height: 9),
-        group('+', 'NEW', c['added'], const Color(0xFF6FA8F5)),
-        group('✓', 'STILL COUNTS', c['still_useful'], const Color(0xFF4CAF50)),
-        group('↓', 'LESS DIRECT', c['less_direct'], const Color(0xFFE07A1F)),
+        group('+', 'NEW', c['added'], const Color(0xFF1F6FD0)),
+        group('✓', 'STILL COUNTS', c['still_useful'], const Color(0xFF1E7A3C)),
+        group('↓', 'LESS DIRECT', c['less_direct'], const Color(0xFFB55A0B)),
       ]),
     );
   }
@@ -782,7 +809,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: const Color(0xFFF7F9FC),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -792,7 +819,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                 style: GoogleFonts.poppins(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF6FA8F5))),
+                    color: const Color(0xFF1F6FD0))),
           if (value != null) const SizedBox(width: 9),
           Expanded(
             child: Text(
@@ -801,14 +828,14 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                 style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white70)),
+                    color: const Color(0xFF44546C))),
           ),
         ]),
         if (because.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text('Based on ${because.join(', ')}.',
               style: GoogleFonts.inter(
-                  fontSize: 11.5, height: 1.45, color: Colors.white54)),
+                  fontSize: 11.5, height: 1.45, color: const Color(0xFF8A97AA))),
         ],
       ]),
     );
@@ -822,11 +849,11 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.9,
-                  color: Colors.white.withValues(alpha: 0.4))),
+                  color: const Color(0xFF8A97AA))),
           const SizedBox(height: 6),
           Text(body,
               style: GoogleFonts.inter(
-                  fontSize: 12.5, height: 1.6, color: Colors.white70)),
+                  fontSize: 12.5, height: 1.6, color: const Color(0xFF44546C))),
         ]),
       );
 
@@ -857,7 +884,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
               Expanded(
                 child: Text('$item',
                     style: GoogleFonts.inter(
-                        fontSize: 12.5, height: 1.55, color: Colors.white70)),
+                        fontSize: 12.5, height: 1.55, color: const Color(0xFF44546C))),
               ),
             ]),
           ),
@@ -873,7 +900,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.9,
-                  color: Colors.white.withValues(alpha: 0.4))),
+                  color: const Color(0xFF8A97AA))),
           const SizedBox(height: 9),
           for (final raw in months)
             Builder(builder: (_) {
@@ -885,21 +912,21 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                     width: 22,
                     height: 22,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.07),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF3F6FB),
                       shape: BoxShape.circle,
                     ),
                     child: Text('${m['month']}',
                         style: GoogleFonts.poppins(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white70)),
+                            color: const Color(0xFF44546C))),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text('${m['focus']}',
                         style: GoogleFonts.inter(
-                            fontSize: 12.5, color: Colors.white70)),
+                            fontSize: 12.5, color: const Color(0xFF44546C))),
                   ),
                 ]),
               );
@@ -917,10 +944,10 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFF3E7BD6).withValues(alpha: 0.12),
+          color: const Color(0xFF1F6FD0).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(13),
           border:
-              Border.all(color: const Color(0xFF3E7BD6).withValues(alpha: 0.3)),
+              Border.all(color: const Color(0xFF1F6FD0).withValues(alpha: 0.3)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('TRY THIS NEXT',
@@ -928,19 +955,19 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.9,
-                  color: const Color(0xFF6FA8F5))),
+                  color: const Color(0xFF1F6FD0))),
           const SizedBox(height: 6),
           Text('${exp['what'] ?? ''}',
               style: GoogleFonts.poppins(
                   fontSize: 13.5,
                   height: 1.4,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white)),
+                  color: const Color(0xFF0F2C5C))),
           if ('${exp['why'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('${exp['why']}',
                 style: GoogleFonts.inter(
-                    fontSize: 12, height: 1.5, color: Colors.white60)),
+                    fontSize: 12, height: 1.5, color: const Color(0xFF6B7A90))),
           ],
         ]),
       );
@@ -949,7 +976,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: const Color(0xFFE07A1F).withValues(alpha: 0.12),
+          color: const Color(0xFFB55A0B).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -959,7 +986,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
           Expanded(
             child: Text('${_signal!['message']}',
                 style: GoogleFonts.inter(
-                    fontSize: 12.5, height: 1.5, color: Colors.white70)),
+                    fontSize: 12.5, height: 1.5, color: const Color(0xFF44546C))),
           ),
         ]),
       );
@@ -973,7 +1000,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         ),
         child: Text(_error,
             style: GoogleFonts.inter(
-                fontSize: 12, height: 1.5, color: Colors.white70)),
+                fontSize: 12, height: 1.5, color: const Color(0xFF44546C))),
       );
 
   // ── The one-time ask ──────────────────────────────────────────────────────
@@ -984,15 +1011,15 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
+            color: const Color(0xFFF3F6FB),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            border: Border.all(color: const Color(0xFFE1E7F0)),
           ),
           child: Text(label,
               style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white)),
+                  color: const Color(0xFF0F2C5C))),
         ),
       );
 
