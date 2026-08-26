@@ -350,7 +350,59 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       );
     }
     if (_error != null || _test == null) {
-      return Scaffold(body: Center(child: Text(_error ?? 'Test not found')));
+      // "Test not found" was printed for every failure — a dead network, a
+      // slow one, a server error — so a link that worked perfectly well
+      // looked like a broken link, and there was nothing to do about it.
+      final missing = _error == null;
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          title: Text('Test',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(missing ? Icons.search_off_rounded : Icons.wifi_off_rounded,
+                  size: 40, color: AppColors.textSecondary),
+              const SizedBox(height: 14),
+              Text(
+                  missing
+                      ? 'This test is no longer available.'
+                      : _error!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                      fontSize: 14, height: 1.5,
+                      color: AppColors.textSecondary)),
+              const SizedBox(height: 18),
+              Wrap(spacing: 10, runSpacing: 10, children: [
+                if (!missing)
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 26, vertical: 12)),
+                    onPressed: _load,
+                    child: Text('Try again',
+                        style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600, fontSize: 13.5)),
+                  ),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 26, vertical: 12)),
+                  onPressed: () => context.go('/student/test-series'),
+                  child: Text('See all tests',
+                      style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
+              ]),
+            ]),
+          ),
+        ),
+      );
     }
     if (_result != null) {
       return _ResultScreen(result: _result!, test: _test!, answers: _answers,
