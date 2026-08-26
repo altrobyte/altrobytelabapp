@@ -19,12 +19,26 @@ Future<void> shareTestLink(
   int minutes = 0,
   int questions = 0,
 }) async {
+  final url = 'https://altrobytelab.com/t/$id';
+  final facts = <String>[
+    if (questions > 0) '$questions questions',
+    if (minutes > 0) '$minutes min',
+  ];
+
+  // The whole message, not the bare link. A URL pasted on its own says
+  // nothing until somebody opens it, and most people in a group will not.
+  final message = [
+    title,
+    if (facts.isNotEmpty) facts.join(' · '),
+    '',
+    'Free practice test from Altrobyte Lab:',
+    url,
+  ].join(String.fromCharCode(10));
+
   final messenger = ScaffoldMessenger.of(context);
-  await Clipboard.setData(
-      ClipboardData(text: 'https://altrobytelab.com/t/$id'));
-  messenger.showSnackBar(SnackBar(
-    duration: const Duration(seconds: 2),
-    content: Text('Link copied — paste it anywhere ($title)',
-        maxLines: 2, overflow: TextOverflow.ellipsis),
+  await Clipboard.setData(ClipboardData(text: message));
+  messenger.showSnackBar(const SnackBar(
+    duration: Duration(seconds: 2),
+    content: Text('Message copied — paste it in any chat'),
   ));
 }

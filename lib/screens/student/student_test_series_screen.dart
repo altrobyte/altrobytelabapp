@@ -352,7 +352,9 @@ class _QuizTile extends StatelessWidget {
                       context,
                       id: quiz['id'] as int,
                       title: '${quiz['title'] ?? 'Test'}',
-                      minutes: (quiz['duration_mins'] as num?)?.toInt() ?? 0),
+                      minutes: (quiz['duration_mins'] as num?)?.toInt() ?? 0,
+                      questions:
+                          (quiz['question_count'] as num?)?.toInt() ?? 0),
                   borderRadius: BorderRadius.circular(14),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
