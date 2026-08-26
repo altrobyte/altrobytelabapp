@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../widgets/auth_sheet.dart';
 import '../../widgets/share_test_link.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -100,7 +101,21 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     }
   }
 
-  void _startTest() {
+  /// Ask for the account before the clock starts, not after the answers.
+  ///
+  /// Submitting requires a signed-in student, so an anonymous reader who
+  /// starts anyway spends fifteen minutes and then loses the lot. The test
+  /// stays readable to anyone — that is what a shared link is for — but
+  /// taking it begins here.
+  Future<void> _startTest() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? '';
+    if (token.isEmpty) {
+      if (!mounted) return;
+      final ok = await showAuthSheet(context,
+          reason: 'to take this test and keep your score');
+      if (!ok || !mounted) return;
+    }
     setState(() { _started = true; _qStates[0] = QState.visitedNotAnswered; });
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
