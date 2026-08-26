@@ -54,6 +54,9 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
   /// "3rd year, IIT Indore" means something to a feed where a name alone
   /// does not.
   String _occupation = 'student';
+
+  double get _bookingAmount =>
+      double.tryParse('${_session?['booking_amount'] ?? 0}') ?? 0;
   final _branchCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
@@ -235,7 +238,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     });
   }
 
-  Future<void> _register({bool payLater = false}) async {
+  Future<void> _register({bool payLater = false, bool booking = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() { _submitting = true; _actionError = null; });
     final forceNew = _forceNewOnNextRegister;
@@ -246,7 +249,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           college: _collegeCtrl.text.trim(), branch: _branchCtrl.text.trim(),
           address: _addressCtrl.text.trim(), city: _cityCtrl.text.trim(),
           couponCode: _appliedCouponCode ?? '', forceNew: forceNew,
-          occupation: _occupation, payLater: payLater,
+          occupation: _occupation, payLater: payLater, booking: booking,
           returnUrl: '${Uri.base.origin}/live-sessions/${widget.sessionId}');
       if (!mounted) return;
       _registeredName = _nameCtrl.text.trim();
@@ -929,6 +932,37 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
                     style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14)),
           ),
         ),
+        // A booking amount, where the session has one and it is genuinely
+        // less than the fee. Given the same weight as paying in full rather
+        // than hidden below it: for most students this is the button that
+        // decides whether they join at all.
+        if (total > 0 && _bookingAmount > 0 && _bookingAmount < total) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: _submitting ? null : () => _register(booking: true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                  'Book your seat — ₹${_bookingAmount.toStringAsFixed(0)} now',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700, fontSize: 14)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              'Pay ₹${_bookingAmount.toStringAsFixed(0)} to hold your seat. '
+              'The remaining ₹${(total - _bookingAmount).toStringAsFixed(0)} '
+              'is due before the programme starts.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                  fontSize: 11, height: 1.4, color: AppColors.textSecondary)),
+        ],
         if (total > 0) ...[
           const SizedBox(height: 10),
           SizedBox(

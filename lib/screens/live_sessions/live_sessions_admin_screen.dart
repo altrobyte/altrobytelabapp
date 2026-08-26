@@ -51,6 +51,8 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
     final descCtrl = TextEditingController(text: existing?['description_html'] ?? '');
     final priceCtrl = TextEditingController(text: '${existing?['price'] ?? 0}');
     final taxCtrl = TextEditingController(text: '${existing?['tax_percent'] ?? 0}');
+    final bookingCtrl =
+        TextEditingController(text: '${existing?['booking_amount'] ?? 0}');
     final originalPriceCtrl = TextEditingController(text: '${existing?['original_price'] ?? ''}');
     bool isPaid = ((existing?['price'] as num?) ?? 0) > 0;
     bool featured = existing?['is_featured'] == true;
@@ -190,8 +192,24 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                       ),
                     ),
                   ]),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: bookingCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Booking amount', prefixText: '₹ '),
+                    validator: (v) {
+                      final n = double.tryParse((v ?? '0').trim());
+                      if (n == null || n < 0) return 'Invalid';
+                      return null;
+                    },
+                  ),
                   const SizedBox(height: 4),
-                  Text('Leave tax at 0 if not applicable.',
+                  Text('Leave tax at 0 if not applicable. A booking amount '
+                      'above 0 lets students hold a seat by paying that much '
+                      'now, with the balance due before it starts — set it to '
+                      '0 to require the whole fee at registration.',
                       style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -266,6 +284,8 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                         'is_featured': featured,
                         'price': isPaid ? (double.tryParse(priceCtrl.text.trim()) ?? 0) : 0,
                         'tax_percent': isPaid ? (double.tryParse(taxCtrl.text.trim()) ?? 0) : 0,
+                        'booking_amount':
+                            isPaid ? (double.tryParse(bookingCtrl.text.trim()) ?? 0) : 0,
                         if (isPaid && originalPriceCtrl.text.trim().isNotEmpty)
                           'original_price': double.tryParse(originalPriceCtrl.text.trim()),
                         if (!isPaid || originalPriceCtrl.text.trim().isEmpty) 'clear_original_price': true,
@@ -600,6 +620,11 @@ class _AttendeeCard extends StatelessWidget {
               colour: AppColors.warning),
         if (totalAmount > 0 && (a['status'] ?? '').toString() != 'pay_later')
           _AttendeeRow(icon: Icons.payments_rounded, label: '₹$totalAmount paid'),
+        if ((double.tryParse('${a['balance_due'] ?? 0}') ?? 0) > 0)
+          _AttendeeRow(
+              icon: Icons.account_balance_wallet_rounded,
+              label: 'Balance ₹${a['balance_due']} due',
+              colour: AppColors.warning),
         if ((a['receipt_number'] ?? '').toString().isNotEmpty)
           _AttendeeRow(icon: Icons.receipt_long_rounded, label: 'Receipt ${a['receipt_number']}'),
         if ((a['payment_proof_url'] ?? '').toString().isNotEmpty)

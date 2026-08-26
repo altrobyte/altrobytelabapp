@@ -2417,6 +2417,7 @@ class ApiService {
     String returnUrl = '',
     String occupation = '',
     bool payLater = false,
+    bool booking = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token');
@@ -2428,6 +2429,7 @@ class ApiService {
         'college': college, 'branch': branch, 'address': address, 'city': city,
         'occupation': occupation, 'company': occupation == 'professional' ? college : '',
         'pay_later': payLater,
+        'booking': booking,
         'coupon_code': couponCode,
         'force_new': forceNew,
         'return_url': returnUrl,
