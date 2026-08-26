@@ -51,6 +51,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// re-ask a question we have already paid for.
   Map<String, dynamic>? _node;
   final Map<String, List<dynamic>> _grown = {};
+  final Map<String, Map<String, dynamic>> _answers = {};
   bool _asking = false;
 
   /// Branch and year, remembered locally. A visitor who has not signed in can
@@ -136,59 +137,54 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     if (_result == null) {
       final nodes = <MindNode>[centre];
       final edges = <MindEdge>[];
+
+      // Whatever the model grew out of a node, at whatever depth. This used
+      // to be written out twice by hand, which meant it only ever reached
+      // two levels — tapping anything the model had itself produced asked
+      // the question, got an answer, and drew nothing.
+      void expand(String parentId, String parentLabel) {
+        for (final g in _grown[parentId] ?? const []) {
+          final gm = Map<String, dynamic>.from(g as Map);
+          final id = '$parentId/${gm['label']}';
+          nodes.add(MindNode(
+            id: id,
+            label: '${gm['label']}',
+            note: '${gm['note'] ?? ''}',
+            state: MindState.grown,
+          ));
+          edges.add(MindEdge(parentId, id, relation: 'Grew from $parentLabel'));
+          expand(id, '${gm['label']}');
+        }
+      }
+
       for (var i = 0; i < _directions.length; i++) {
         final d = Map<String, dynamic>.from(_directions[i]);
         final sig = Map<String, dynamic>.from(d['signal'] ?? const {});
         final value = (sig['value'] as num?)?.toInt();
+        final dirId = '${d['id']}';
         nodes.add(MindNode(
-          id: '${d['id']}',
+          id: dirId,
           label: '${d['label']}',
           state: value == null ? MindState.faint : MindState.current,
           signal: value,
           tier: '${sig['tier'] ?? ''}',
         ));
-        edges.add(MindEdge('you', '${d['id']}',
-            relation: '${d['relation'] ?? ''}'));
+        edges.add(MindEdge('you', dirId, relation: '${d['relation'] ?? ''}'));
 
         // What the direction is built out of, hanging off it. Without this
         // the map is seven labels in a fan, which is a menu; with it the
         // shape says these are one body of work that forks.
         for (final c in (d['built_from'] as List?) ?? const []) {
-          final childId = '${d['id']}/$c';
+          final childId = '$dirId/$c';
           nodes.add(MindNode(
             id: childId,
             label: '$c',
             state: value == null ? MindState.faint : MindState.current,
           ));
-          edges.add(MindEdge('${d['id']}', childId,
-              relation: 'Part of ${d['label']}'));
-
-          // Whatever the model grew out of this step, last time it was
-          // asked. Kept on the map so exploring makes the map bigger rather
-          // than replacing it.
-          for (final g in _grown[childId] ?? const []) {
-            final gm = Map<String, dynamic>.from(g as Map);
-            final gid = '$childId/${gm['label']}';
-            nodes.add(MindNode(
-                id: gid,
-                label: '${gm['label']}',
-                note: '${gm['note'] ?? ''}',
-                state: MindState.grown));
-            edges.add(MindEdge(childId, gid, relation: 'Grew from $c'));
-          }
+          edges.add(MindEdge(dirId, childId, relation: 'Part of ${d['label']}'));
+          expand(childId, '$c');
         }
-
-        for (final g in _grown['${d['id']}'] ?? const []) {
-          final gm = Map<String, dynamic>.from(g as Map);
-          final gid = '${d['id']}/ai/${gm['label']}';
-          nodes.add(MindNode(
-              id: gid,
-              label: '${gm['label']}',
-              note: '${gm['note'] ?? ''}',
-              state: MindState.grown));
-          edges.add(MindEdge('${d['id']}', gid,
-              relation: 'Suggested for you'));
-        }
+        expand(dirId, '${d['label']}');
       }
       return (nodes, edges);
     }
@@ -367,13 +363,15 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// put to the model with whatever we honestly know about the student, and
   /// what comes back grows out of the node itself.
   Future<void> _askNode(MindNode node) async {
-    final cached = _grown.containsKey(node.id);
+    // Answered before: show it again rather than paying for the same
+    // question twice, and never leave the panel blank on a second tap.
+    final cached = _answers[node.id];
     setState(() {
-      _asking = !cached;
-      _node = null;
+      _asking = cached == null;
+      _node = cached;
       _error = '';
     });
-    if (cached) return;
+    if (cached != null) return;
 
     // Which direction this node hangs off, so the answer knows whether it is
     // looking at a whole direction or one step inside one.
@@ -394,6 +392,7 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
       setState(() {
         _node = r;
         _asking = false;
+        _answers[node.id] = r;
         _grown[node.id] = (r['children'] as List?) ?? const [];
       });
     } catch (e) {
@@ -406,8 +405,10 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
     }
   }
 
+  /// The direction a node belongs to, however deep it sits. Ids are built by
+  /// appending, so the first segment is always the direction.
   String? _parentOf(String id) {
-    final cut = id.lastIndexOf('/');
+    final cut = id.indexOf('/');
     return cut <= 0 ? null : id.substring(0, cut);
   }
 

@@ -245,60 +245,99 @@ class _MindMapState extends State<MindMap> with TickerProviderStateMixin {
                 : widget.nodes.first)
         .id;
 
-    // Leaves decide height: a branch with four children needs four rows.
-    final leaves = <String, int>{};
-    int countLeaves(String id) {
-      final kids = children[id] ?? const [];
-      if (kids.isEmpty) return leaves[id] = 1;
-      return leaves[id] = kids.fold(0, (a, k) => a + countLeaves(k));
-    }
-    countLeaves(rootId);
+    // Every node is measured, and a branch is as tall as what it holds. The
+    // old version gave each leaf a fixed thirty pixels, which was fine for a
+    // one-line label and nowhere near enough once a node carried a second
+    // line — so siblings were laid out on top of one another.
+    const gapY = 13.0;
+    const gapX = 34.0;
 
-    final rowHeight = widget.present ? 40.0 : 30.0;
-    final columnWidth = widget.present ? 190.0 : 152.0;
+    final sizes = <String, Size>{};
+    for (final n in widget.nodes) {
+      var depth = 0;
+      var cursor = n.id;
+      while (depth < 8) {
+        final parent = widget.edges.where((e) => e.to == cursor).firstOrNull?.from;
+        if (parent == null) break;
+        cursor = parent;
+        depth++;
+      }
+      sizes[n.id] = _MindPainter.measure(n, depth, widget.present);
+    }
+
+    final heights = <String, double>{};
+    double heightOf(String id) {
+      final kids = children[id] ?? const [];
+      final own = (sizes[id]?.height ?? 20) + 10 + gapY;
+      if (kids.isEmpty) return heights[id] = own;
+      final stacked = kids.fold(0.0, (a, k) => a + heightOf(k));
+      return heights[id] = math.max(own, stacked);
+    }
+    heightOf(rootId);
+
+    // Columns are as wide as the widest box in them, so a long label never
+    // reaches into the next level.
+    final columnOf = <int, double>{};
+    void widths(String id, int depth) {
+      final w = (sizes[id]?.width ?? 60) + 14;
+      columnOf[depth] = math.max(columnOf[depth] ?? 0, w);
+      for (final k in children[id] ?? const []) {
+        widths(k, depth + 1);
+      }
+    }
+    widths(rootId, 0);
+
+    double xFor(int depth) {
+      var x = 0.0;
+      for (var d = 0; d < depth; d++) {
+        x += (columnOf[d] ?? 80) / 2 + gapX + (columnOf[d + 1] ?? 80) / 2;
+      }
+      return x;
+    }
+
     final out = <String, _Placed>{};
     final morph = Curves.easeOutCubic.transform(_morph.value);
 
     // Split the root's branches so roughly half the weight goes each way.
     final top = children[rootId] ?? const [];
-    final total = top.fold(0, (a, k) => a + (leaves[k] ?? 1));
+    final total = top.fold(0.0, (a, k) => a + (heights[k] ?? 0));
     final right = <String>[], left = <String>[];
-    var running = 0;
+    var running = 0.0;
     for (final id in top) {
       if (running < total / 2) {
         right.add(id);
       } else {
         left.add(id);
       }
-      running += leaves[id] ?? 1;
+      running += heights[id] ?? 0;
     }
 
     void place(String id, int depth, double side, double slotTop) {
       final n = byId[id];
       if (n == null) return;
-      final span = (leaves[id] ?? 1) * rowHeight;
-      final y = slotTop + span / 2;
-      final x = side * depth * columnWidth;
-
-      final target = Offset(x, y);
-      out[id] = _Placed(n, Offset.lerp(_from[id] ?? Offset.zero, target, morph)!,
-          depth, side, _MindPainter.measure(n, depth, widget.present));
+      final span = heights[id] ?? 30;
+      final target = Offset(side * xFor(depth), slotTop + span / 2);
+      out[id] = _Placed(
+          n,
+          Offset.lerp(_from[id] ?? Offset.zero, target, morph)!,
+          depth,
+          side,
+          sizes[id] ?? const Size(60, 20));
 
       var cursor = slotTop;
       for (final k in children[id] ?? const []) {
         place(k, depth + 1, side, cursor);
-        cursor += (leaves[k] ?? 1) * rowHeight;
+        cursor += heights[k] ?? 30;
       }
     }
 
-    double stack(List<String> ids, double side) {
-      final height = ids.fold(0.0, (a, k) => a + (leaves[k] ?? 1) * rowHeight);
+    void stack(List<String> ids, double side) {
+      final height = ids.fold(0.0, (a, k) => a + (heights[k] ?? 0));
       var cursor = -height / 2;
       for (final id in ids) {
         place(id, 1, side, cursor);
-        cursor += (leaves[id] ?? 1) * rowHeight;
+        cursor += heights[id] ?? 0;
       }
-      return height;
     }
 
     stack(right, 1);
@@ -396,25 +435,60 @@ class _MindPainter extends CustomPainter {
     required this.present,
   });
 
-  static double fontFor(int depth, bool present) =>
-      depth == 0 ? (present ? 16 : 13.5) : (depth == 1 ? (present ? 13 : 11.5) : (present ? 11 : 9.8));
+  static double fontFor(int depth, bool present) => depth == 0
+      ? (present ? 16 : 13.5)
+      : (depth == 1 ? (present ? 13 : 11.5) : (present ? 11 : 9.8));
 
-  /// The box a node needs, measured rather than guessed — the old fixed
-  /// circles turned "Software Engineering" into three cramped lines.
-  static Size measure(MindNode n, int depth, bool present) {
-    final tp = TextPainter(
+  static double _maxWidth(int depth, bool present) =>
+      depth == 0 ? 120 : (present ? 150 : 118);
+
+  /// The label, built once and used for both measuring and painting.
+  ///
+  /// These were two separate pieces of code and they disagreed: the measure
+  /// allowed one line for the second row while the paint wrapped it onto
+  /// two, so every box was shorter than its contents and the children of a
+  /// branch printed straight through each other.
+  static TextPainter _painter(MindNode n, int depth, bool present,
+      {Color colour = Colors.white, double opacity = 1, bool isYou = false}) {
+    final second = n.tier.isNotEmpty
+        // The words first. "Emerging · 81" cannot be misread as a probability
+        // the way a bare 81 can.
+        ? '${n.tier}${n.signal == null ? '' : ' · ${n.signal}'}'
+        : n.note;
+
+    return TextPainter(
+      textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
-      maxLines: 2,
+      maxLines: 3,
       ellipsis: '…',
-      text: TextSpan(text: n.label,
+      text: TextSpan(children: [
+        TextSpan(
+          text: n.label,
           style: GoogleFonts.poppins(
-              fontSize: fontFor(depth, present),
-              height: 1.2,
-              fontWeight: FontWeight.w600)),
-    )..layout(maxWidth: depth == 0 ? 120 : (present ? 150 : 122));
-    final second = n.tier.isNotEmpty || n.note.isNotEmpty;
-    return Size(tp.width, tp.height + (second ? (present ? 14 : 12) : 0));
+            fontSize: fontFor(depth, present),
+            height: 1.2,
+            fontWeight: FontWeight.w600,
+            color: isYou ? Colors.white : colour.withValues(alpha: opacity),
+          ),
+        ),
+        if (second.isNotEmpty)
+          TextSpan(
+            text: '\n$second',
+            style: GoogleFonts.inter(
+              fontSize: present ? 9.5 : 8.5,
+              height: 1.5,
+              fontWeight: FontWeight.w600,
+              color: isYou
+                  ? Colors.white.withValues(alpha: 0.8)
+                  : colour.withValues(alpha: opacity * 0.7),
+            ),
+          ),
+      ]),
+    )..layout(maxWidth: _maxWidth(depth, present));
   }
+
+  static Size measure(MindNode n, int depth, bool present) =>
+      _painter(n, depth, present).size;
 
   (Color, double) _style(MindState s) => switch (s) {
         MindState.you => (_navy, 1.0),
@@ -556,43 +630,8 @@ class _MindPainter extends CustomPainter {
   }
 
   void _text(Canvas canvas, _Placed p, Color colour, double opacity, bool isYou) {
-    final n = p.node;
-    final second = n.tier.isNotEmpty
-        // The words first. "Emerging · 81" cannot be misread as a probability
-        // the way a bare 81 can.
-        ? '${n.tier}${n.signal == null ? '' : ' · ${n.signal}'}'
-        : n.note;
-
-    final painter = TextPainter(
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-      maxLines: 3,
-      ellipsis: '…',
-      text: TextSpan(children: [
-        TextSpan(
-          text: n.label,
-          style: GoogleFonts.poppins(
-            fontSize: fontFor(p.depth, present),
-            height: 1.2,
-            fontWeight: FontWeight.w600,
-            color: isYou ? Colors.white : colour.withValues(alpha: opacity),
-          ),
-        ),
-        if (second.isNotEmpty)
-          TextSpan(
-            text: '\n$second',
-            style: GoogleFonts.inter(
-              fontSize: present ? 9.5 : 8.5,
-              height: 1.5,
-              fontWeight: FontWeight.w600,
-              color: isYou
-                  ? Colors.white.withValues(alpha: 0.8)
-                  : colour.withValues(alpha: opacity * 0.7),
-            ),
-          ),
-      ]),
-    )..layout(maxWidth: p.size.width + 2);
-
+    final painter = _MindPainter._painter(p.node, p.depth, present,
+        colour: colour, opacity: opacity, isYou: isYou);
     painter.paint(canvas, p.at - Offset(painter.width / 2, painter.height / 2));
   }
 
