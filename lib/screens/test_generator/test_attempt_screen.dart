@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../widgets/share_test_link.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -672,6 +673,17 @@ class _InstructionsScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         title: Text('General Instructions', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: 'Share this test',
+            onPressed: () => shareTestLink(context,
+                id: test.id,
+                title: test.title,
+                minutes: test.durationMins,
+                questions: test.questions.length),
+            icon: const Icon(Icons.share_rounded, size: 20, color: Colors.white),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 import '../../widgets/auth_sheet.dart';
+import '../../widgets/share_test_link.dart';
 
 /// Unified Test Series tab — a "Generate a Custom Test Series"
 /// CTA up top, every individual quiz (whether authored inside a course or
@@ -307,6 +308,23 @@ class _QuizTile extends StatelessWidget {
               Positioned(
                 right: -18, top: -18,
                 child: Icon(Icons.fact_check_rounded, size: 90, color: Colors.white.withValues(alpha: 0.14)),
+              ),
+              // Share without opening it first. Sending a test to a class
+              // group is a different job from taking one, and making
+              // somebody start a test to share it is a step for nothing.
+              Positioned(
+                right: 2, top: 2,
+                child: IconButton(
+                  tooltip: 'Share',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => shareTestLink(
+                      context,
+                      id: quiz['id'] as int,
+                      title: '${quiz['title'] ?? 'Test'}',
+                      minutes: (quiz['duration_mins'] as num?)?.toInt() ?? 0),
+                  icon: const Icon(Icons.share_rounded,
+                      size: 16, color: Colors.white),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(12),
