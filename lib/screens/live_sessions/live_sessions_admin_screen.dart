@@ -57,6 +57,7 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
     final originalPriceCtrl = TextEditingController(text: '${existing?['original_price'] ?? ''}');
     bool isPaid = ((existing?['price'] as num?) ?? 0) > 0;
     bool featured = existing?['is_featured'] == true;
+    bool alwaysOpen = existing?['registration_always_open'] == true;
     int? linkedModuleId = existing?['linked_module_id'] as int?;
     List<dynamic> availableModules = [];
     try {
@@ -227,6 +228,17 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                 const SizedBox(height: 6),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
+                  title: const Text('Keep registration open after it starts'),
+                  subtitle: const Text(
+                      'For a programme that runs for months. Off, the form closes on the start date like a workshop.',
+                      style: TextStyle(fontSize: 12)),
+                  value: alwaysOpen,
+                  onChanged: (v) => setSheetState(() => alwaysOpen = v),
+                  activeColor: AppColors.accent,
+                ),
+                const SizedBox(height: 6),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: const Text('Feature on home page'),
                   subtitle: const Text('Spotlights this workshop for every student on the home feed', style: TextStyle(fontSize: 12)),
                   value: featured,
@@ -283,6 +295,7 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                         'recording_url': recordingCtrl.text.trim(),
                         'redirect_link': redirectCtrl.text.trim(),
                         'is_featured': featured,
+                        'registration_always_open': alwaysOpen,
                         'price': isPaid ? (double.tryParse(priceCtrl.text.trim()) ?? 0) : 0,
                         'tax_percent': isPaid ? (double.tryParse(taxCtrl.text.trim()) ?? 0) : 0,
                         'booking_amount':

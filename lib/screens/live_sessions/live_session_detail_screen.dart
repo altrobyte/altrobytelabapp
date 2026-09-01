@@ -386,7 +386,13 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     try {
       date = session['session_date'] != null ? DateTime.parse(session['session_date']) : null;
     } catch (_) {}
-    final isPast = date != null && date.isBefore(DateTime.now());
+    // "Past" decides whether we still ask people to register, and for a
+    // programme that runs for months the start date is not the end of that.
+    // The four-month one began on 1 September and was still taking people
+    // while its own page had stopped asking.
+    final alwaysOpen = session['registration_always_open'] == true;
+    final started = date != null && date.isBefore(DateTime.now());
+    final isPast = started && !alwaysOpen;
     final hasRecording = (session['recording_url'] ?? '').toString().isNotEmpty;
     final price = (session['price'] as num?) ?? 0;
 
