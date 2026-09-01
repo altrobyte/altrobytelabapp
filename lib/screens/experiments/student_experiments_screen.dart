@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../models/experiment_model.dart';
 import '../../services/api_service.dart';
@@ -25,14 +24,11 @@ class _StudentExperimentsScreenState extends State<StudentExperimentsScreen> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final instituteId = prefs.getInt('student_institute_id');
-    if (instituteId == null) {
-      setState(() => _loading = false);
-      return;
-    }
+    // No local institute id: login stores 0 for anybody without a coaching
+    // institute, which is most of this site's students, and asking for
+    // institute 0 returned nothing. The server works it out from the token.
     try {
-      final raw = await ApiService.getExperimentsStudent(instituteId);
+      final raw = await ApiService.getExperimentsForStudent();
       setState(() {
         _experiments = raw.map((e) => Experiment.fromJson(e)).toList();
         _loading = false;

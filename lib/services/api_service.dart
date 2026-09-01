@@ -1858,6 +1858,20 @@ class ApiService {
     return data['modules'] as List? ?? [];
   }
 
+  /// Experiments for the signed-in student. Same reason as the training
+  /// modules variant: the locally stored institute id is 0 for anybody who
+  /// signed up without a coaching institute, so the screen asked for
+  /// institute 0 and got nothing.
+  static Future<List<dynamic>> getExperimentsForStudent() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+      Uri.parse('${ApiConstants.baseUrl}/student/experiments'),
+      headers: _headers(prefs.getString('student_token')),
+    );
+    final data = _parse(res);
+    return data['experiments'] as List? ?? [];
+  }
+
   /// Training modules for the signed-in student, without the caller having
   /// to know an institute id.
   ///

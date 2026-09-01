@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/training_module_provider.dart';
@@ -23,12 +22,13 @@ class _StudentTrainingScreenState extends State<StudentTrainingScreen> {
   }
 
   Future<void> _loadModules() async {
-    final prefs = await SharedPreferences.getInstance();
-    final instituteId = prefs.getInt('student_institute_id');
     if (!mounted) return;
-    if (instituteId == null || instituteId == 0) return; // standalone student
+    // This used to return early for a "standalone student" — which is
+    // everybody who signed up here without a coaching institute, so the tab
+    // was empty for the people it was built for. The server resolves the
+    // institute from the token instead.
     final provider = context.read<TrainingModuleProvider>();
-    await provider.ensureModulesAsStudent(instituteId);
+    await provider.ensureModulesForStudent(force: true);
     if (!mounted) return;
     for (final m in provider.modules) {
       await provider.loadProgress(m.id);
