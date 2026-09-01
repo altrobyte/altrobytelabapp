@@ -435,9 +435,17 @@ class _PricingScreenState extends State<PricingScreen> {
                           ? () => _startTrial(tier)
                           : null,
                       trialDays: _trialDays,
+                      // Where "talk to us" goes depends on who is asking.
+                      // Every unpriced tier used to open the Partner With Us
+                      // form, so a student wanting Student Pro was handed a
+                      // B2B partnership enquiry. Student tiers go to the call
+                      // booking that already exists for exactly this.
                       onTalkToUs: _isSelfServe(p) || tier == 'free'
                           ? null
-                          : () => context.push('/partner'),
+                          : () => context.push(
+                              tier == 'institution' || tier == 'industry'
+                                  ? '/partner'
+                                  : '/book'),
                     );
                   }).toList(),
                 ),

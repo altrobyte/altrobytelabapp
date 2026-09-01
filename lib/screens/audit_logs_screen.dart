@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/session_expired_action.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
@@ -124,10 +125,8 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _loadAudits,
-                          child: const Text('Retry'),
-                        ),
+                        SessionExpiredAction(
+                            error: _error, onRetry: _loadAudits),
                       ],
                     ),
                   ),

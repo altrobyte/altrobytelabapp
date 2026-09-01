@@ -70,11 +70,6 @@
         "type": 302
       },
       {
-        "source": "/sd/:id",
-        "destination": "https://edu.altrobytelab.com/s/demo/:id",
-        "type": 302
-      },
-      {
         "//": "One test, shared. The series link came first and nobody had made a series — the tests exist on their own.",
         "source": "/t/:id",
         "destination": "https://edu.altrobytelab.com/s/test/:id",

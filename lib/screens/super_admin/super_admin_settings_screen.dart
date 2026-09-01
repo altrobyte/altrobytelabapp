@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../widgets/session_expired_action.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -172,7 +173,7 @@ class _SuperAdminSettingsScreenState extends State<SuperAdminSettingsScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                   const SizedBox(height: 12),
-                  ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                  SessionExpiredAction(error: _error, onRetry: _load),
                 ]))
               : ListView(
                   padding: const EdgeInsets.all(16),

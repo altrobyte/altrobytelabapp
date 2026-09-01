@@ -157,10 +157,6 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
                   onRefresh: _load,
                   child: CustomScrollView(
                     slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        sliver: SliverToBoxAdapter(child: const _PracticeCta()),
-                      ),
                       if (quizzes.isNotEmpty)
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
@@ -211,49 +207,6 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
                     ],
                   ),
                 ),
-    );
-  }
-}
-
-/// Beta gate: Custom Test Series are intentionally disabled
-/// on this tab for now — students see only admin Test Series and quizzes
-/// here until this graduates out of beta.
-class _PracticeCta extends StatelessWidget {
-  const _PracticeCta();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(24)),
-          child: Icon(Icons.bolt_rounded, color: Colors.grey.shade500, size: 26),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Generate a Custom Test Series',
-                style: GoogleFonts.poppins(color: Colors.grey.shade600, fontWeight: FontWeight.w700, fontSize: 15)),
-            const SizedBox(height: 2),
-            Text('Coming soon — pick a topic and AI builds it instantly',
-                style: GoogleFonts.inter(color: Colors.grey.shade500, fontSize: 12)),
-          ]),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(20)),
-          child: Text('SOON',
-              style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey.shade700, letterSpacing: 0.4)),
-        ),
-      ]),
     );
   }
 }

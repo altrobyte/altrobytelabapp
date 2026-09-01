@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import '../../widgets/session_expired_action.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -183,12 +184,7 @@ class _SuperAdminDashboardScreenState
                       Text(_error!,
                           style: const TextStyle(color: Colors.white38)),
                       const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent),
-                        onPressed: _load,
-                        child: const Text('Retry'),
-                      ),
+                      SessionExpiredAction(error: _error, onRetry: _load),
                     ],
                   ),
                 )

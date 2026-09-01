@@ -56,8 +56,6 @@ import 'screens/mock_interview/mock_interview_screen.dart';
 import 'screens/pricing/pricing_screen.dart';
 import 'screens/program_page.dart';
 import 'screens/book_call_screen.dart';
-import 'screens/demos_screen.dart';
-import 'screens/admin/demos_admin_screen.dart';
 import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
@@ -185,7 +183,6 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/crm',
           '/wa-messages',
           '/bookings',
-          '/demos-admin',
           '/errors',
           // Platform pages. They were missing here, so a signed-out visitor
           // reached them and got an empty screen instead of a login page —
@@ -339,8 +336,6 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Public and shareable, like the roadmap: the whole point is that a
         // link turns into a time in the diary without anyone signing in.
         GoRoute(path: '/book', builder: (_, __) => const BookCallScreen()),
-        GoRoute(path: '/demo', builder: (_, __) => const DemosScreen()),
-        GoRoute(path: '/demos-admin', builder: (_, __) => const DemosAdminScreen()),
         GoRoute(path: '/bookings', builder: (_, __) => const BookingsScreen()),
         GoRoute(path: '/errors', builder: (_, __) => const ErrorsScreen()),
         // Admin: Top Stories + Lab Setups. Login-protected via the list above.
