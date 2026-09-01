@@ -1858,6 +1858,22 @@ class ApiService {
     return data['modules'] as List? ?? [];
   }
 
+  /// Training modules for the signed-in student, without the caller having
+  /// to know an institute id.
+  ///
+  /// The screen used to read the educator AuthProvider's institute id, which
+  /// is null for a student — so it returned early and the tab was empty
+  /// while modules were published. The server resolves it from the token.
+  static Future<List<dynamic>> getTrainingModulesForStudent() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safeGet(
+      Uri.parse('${ApiConstants.baseUrl}/student/training-modules'),
+      headers: _headers(prefs.getString('student_token')),
+    );
+    final data = _parse(res);
+    return data['modules'] as List? ?? [];
+  }
+
   static Future<Map<String, dynamic>> getStudentTrainingModule(
       int moduleId) async {
     final prefs = await SharedPreferences.getInstance();

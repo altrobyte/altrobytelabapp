@@ -28,10 +28,15 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // A student has no educator institute id, and gating on it meant the
+      // tab returned early and stayed empty while modules were published.
       final instituteId = context.read<AuthProvider>().instituteId;
-      if (instituteId == null) return;
       _instituteId = instituteId;
-      context.read<TrainingModuleProvider>().ensureModules(instituteId);
+      if (instituteId != null) {
+        context.read<TrainingModuleProvider>().ensureModules(instituteId);
+      } else {
+        context.read<TrainingModuleProvider>().ensureModulesForStudent();
+      }
     });
   }
 

@@ -26,6 +26,39 @@ class TrainingModuleProvider extends ChangeNotifier {
   bool _fresh() =>
       _modulesAt != null && DateTime.now().difference(_modulesAt!) < _ttl;
 
+  /// Load for the signed-in student, whoever their institute turns out to
+  /// be. Keyed on a sentinel so it does not fight the institute-scoped
+  /// cache above.
+  Future<void> ensureModulesForStudent({bool force = false}) {
+    const key = -1;
+    if (_loadedInstitute != key) {
+      _loadedInstitute = key;
+      modules = [];
+      _modulesAt = null;
+    }
+    if (!force && _fresh()) return Future.value();
+    return _modulesInFlight ??= _fetchForStudent();
+  }
+
+  Future<void> _fetchForStudent() async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      final raw = await ApiService.getTrainingModulesForStudent();
+      modules = raw
+          .map((m) =>
+              TrainingModule.fromJson(Map<String, dynamic>.from(m as Map)))
+          .toList();
+      _modulesAt = DateTime.now();
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      isLoading = false;
+      _modulesInFlight = null;
+      notifyListeners();
+    }
+  }
+
   Future<void> ensureModules(int instituteId, {bool force = false}) {
     if (_loadedInstitute != instituteId) {
       _loadedInstitute = instituteId;
