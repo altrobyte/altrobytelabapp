@@ -163,7 +163,13 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
 
         // Auto-redirect already-logged-in educator/manager away from root
         if (loc == '/' && loggedIn) {
-          if (auth.isSuperAdmin) return '/super/dashboard';
+          // An account that is both — an institute admin who also owns the
+          // platform — belongs in its own dashboard, with the platform pages
+          // a click away in the sidebar. Only a pure super admin, which has
+          // no institute of its own, lands on the platform dashboard.
+          if (auth.isSuperAdmin && auth.instituteId == null) {
+            return '/super/dashboard';
+          }
           return '/dashboard';
         }
 
@@ -181,8 +187,16 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/bookings',
           '/demos-admin',
           '/errors',
+          // Platform pages. They were missing here, so a signed-out visitor
+          // reached them and got an empty screen instead of a login page —
+          // the backend refuses the data either way, but silence is a worse
+          // answer than being asked to sign in.
+          '/super',
         ];
-        final isProtected = protected.any((p) => loc == p || loc.startsWith('$p/'));
+        // '/super' covers the platform pages, but '/super/login' is the way
+        // in — protecting it would redirect the login page to a login page.
+        final isProtected = loc != '/super/login' &&
+            protected.any((p) => loc == p || loc.startsWith('$p/'));
 
         // Educator / Manager login page
         if (loc == '/login') return loggedIn ? '/dashboard' : null;

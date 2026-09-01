@@ -138,6 +138,18 @@ class _Nav extends StatelessWidget {
       // Last, because it should usually be empty — and first thing you look
       // at when something is wrong.
       _NavItem(Icons.bug_report_rounded, 'Errors', '/errors'),
+
+      // Platform-wide, and only for an account that owns the platform.
+      //
+      // These used to live behind a second login, so reaching plan limits or
+      // prices meant signing out of the account you actually work in. One
+      // person, one session — the gate is which account, not which window.
+      if (auth.isSuperAdmin) ...[
+        _NavItem(Icons.tune_rounded, 'Platform Settings', '/super/settings'),
+        _NavItem(Icons.sell_rounded, 'Platform Pricing', '/super/pricing'),
+        _NavItem(Icons.apartment_rounded, 'All Institutes', '/super/dashboard'),
+        _NavItem(Icons.percent_rounded, 'Commissions', '/super/commissions'),
+      ],
     ];
 
     return ListView(
