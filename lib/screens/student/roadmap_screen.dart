@@ -284,8 +284,6 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                   roadmap: r,
                                   planIndex: _plan,
                                   present: widget.present,
-                                  onPlanChanged: (i) =>
-                                      setState(() => _plan = i),
                                 ),
                                 const SizedBox(height: 16),
                                 // Before the 165 items: why they are in this
@@ -298,10 +296,28 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                               ]);
                             }
                             if (index == stages.length + 1) {
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: _EnrollCta(roadmap: r, planIndex: _plan),
-                              );
+                              final plans = (r['plans'] as List?) ?? const [];
+                              return Column(children: [
+                                // Price last, on purpose. Asked at the top it
+                                // is the first thing anybody weighs, before
+                                // they know what they are weighing it
+                                // against; asked here they have read the 165
+                                // milestones it buys.
+                                if (plans.length > 1 && !widget.present) ...[
+                                  const SizedBox(height: 20),
+                                  _PlanBuilder(
+                                    plans: plans,
+                                    planIndex: _plan,
+                                    onPlanChanged: (i) =>
+                                        setState(() => _plan = i),
+                                  ),
+                                ],
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: _EnrollCta(
+                                      roadmap: r, planIndex: _plan),
+                                ),
+                              ]);
                             }
                             final i = index - 1;
                             final m = stages[i] as Map<String, dynamic>;
@@ -336,12 +352,10 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 class _Header extends StatelessWidget {
   final Map<String, dynamic> roadmap;
   final int planIndex;
-  final ValueChanged<int> onPlanChanged;
   final bool present;
   const _Header({
     required this.roadmap,
     required this.planIndex,
-    required this.onPlanChanged,
     this.present = false,
   });
 
@@ -376,14 +390,6 @@ class _Header extends StatelessWidget {
           Text(roadmap['subtitle'] as String,
               style: GoogleFonts.inter(
                   color: Colors.white.withValues(alpha: 0.9), fontSize: 13.5, height: 1.4)),
-        if (plans.length > 1 && !present) ...[
-          const SizedBox(height: 16),
-          _PlanBuilder(
-            plans: plans,
-            planIndex: planIndex,
-            onPlanChanged: onPlanChanged,
-          ),
-        ],
         const SizedBox(height: 14),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (duration.isNotEmpty) _Chip(icon: Icons.schedule_rounded, label: duration),
@@ -1098,30 +1104,52 @@ class _StickyCta extends StatelessWidget {
                             color: const Color(0xFFC62828))),
                 ]),
               ),
+            // The free demo leads, because it is the smallest thing on this
+            // page anybody can say yes to. A callback asks somebody to be
+            // available for a stranger's phone call; a demo asks them to
+            // turn up and watch.
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.push('/live-sessions'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.play_circle_outline_rounded,
+                    size: 19, color: Colors.white),
+                label: Text('Book a free demo class',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(children: [
               Expanded(
-                child: FilledButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: () =>
                       askForCallback(context, roadmap, planIndex: planIndex),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF12326B),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF12326B),
+                    side: const BorderSide(color: Color(0xFF12326B)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(Icons.phone_in_talk_rounded,
-                      size: 18, color: Colors.white),
+                  icon: const Icon(Icons.phone_in_talk_rounded, size: 17),
                   label: Text('Request a callback',
                       style: GoogleFonts.poppins(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
+                          fontSize: 13.5, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 9),
               SizedBox(
-                width: 52,
-                height: 48,
+                width: 48,
+                height: 44,
                 child: FilledButton(
                   onPressed: () => openRoadmapWhatsApp(context, roadmap,
                       planIndex: planIndex, callback: false),
