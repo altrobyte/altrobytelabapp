@@ -285,19 +285,21 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                   planIndex: _plan,
                                   present: widget.present,
                                 ),
-                                const SizedBox(height: 16),
-                                // Before the 165 items: why they are in this
-                                // order, and a way to find your place in them.
-                                _WhyThisOrder(
-                                    roadmap: r,
-                                    planIndex: _plan,
-                                    present: widget.present),
                                 const SizedBox(height: 18),
                               ]);
                             }
                             if (index == stages.length + 1) {
                               final plans = (r['plans'] as List?) ?? const [];
                               return Column(children: [
+                                // After the stages, not before them. It
+                                // explains why they are in that order, which
+                                // is a question somebody only has once they
+                                // have seen the order.
+                                const SizedBox(height: 18),
+                                _WhyThisOrder(
+                                    roadmap: r,
+                                    planIndex: _plan,
+                                    present: widget.present),
                                 // Price last, on purpose. Asked at the top it
                                 // is the first thing anybody weighs, before
                                 // they know what they are weighing it
