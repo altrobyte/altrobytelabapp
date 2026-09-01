@@ -1185,7 +1185,7 @@ class _StickyCta extends StatelessWidget {
 /// Availability comes first because it is the only hard constraint. Someone
 /// in class on weekdays cannot buy a weekday track at any price, and showing
 /// them one is worse than showing them nothing.
-class _PlanBuilder extends StatelessWidget {
+class _PlanBuilder extends StatefulWidget {
   final List plans;
   final int planIndex;
   final ValueChanged<int> onPlanChanged;
@@ -1194,6 +1194,22 @@ class _PlanBuilder extends StatelessWidget {
     required this.planIndex,
     required this.onPlanChanged,
   });
+
+  @override
+  State<_PlanBuilder> createState() => _PlanBuilderState();
+}
+
+class _PlanBuilderState extends State<_PlanBuilder> {
+  List get plans => widget.plans;
+  int get planIndex => widget.planIndex;
+  ValueChanged<int> get onPlanChanged => widget.onPlanChanged;
+
+  /// Pay it all now, or a bit each month.
+  ///
+  /// Defaults to paying once because that is the cheaper of the two and the
+  /// one that includes the kit — leading with the instalment would be
+  /// showing somebody the worse deal first.
+  bool _monthly = false;
 
   String _avail(int i) => (plans[i] as Map)['availability'] as String? ?? '';
 
@@ -1244,6 +1260,13 @@ class _PlanBuilder extends StatelessWidget {
     final plan = plans[planIndex.clamp(0, plans.length - 1)] as Map;
     final fee = plan['fee'] as int? ?? 0;
     final listFee = plan['list_fee'] as int?;
+    final monthlyFee = plan['monthly_fee'] as int? ?? 0;
+    final months = plan['monthly_months'] as int? ?? 0;
+    final perk = (plan['onetime_perk'] as String? ?? '').trim();
+    // Only offered where it exists and actually spreads something.
+    final canSplit = monthlyFee > 0 && months > 1;
+    final monthly = canSplit && _monthly;
+    final splitTotal = monthlyFee * months;
     final sibs = _siblings;
     final slot = sibs.indexOf(planIndex).clamp(0, sibs.length - 1);
 
@@ -1369,24 +1392,93 @@ class _PlanBuilder extends StatelessWidget {
                     ]),
               ),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                if (listFee != null)
+                if (!monthly && listFee != null)
                   Text('Rs ${_money(listFee)}',
                       style: GoogleFonts.inter(
                           fontSize: 11.5,
                           color: const Color(0xFF9AA5B5),
                           decoration: TextDecoration.lineThrough,
                           decorationColor: const Color(0xFF9AA5B5))),
-                Text('Rs ${_money(fee)}',
+                Text(monthly ? 'Rs ${_money(monthlyFee)}' : 'Rs ${_money(fee)}',
                     style: GoogleFonts.poppins(
                         fontSize: 21,
                         fontWeight: FontWeight.w700,
                         height: 1.1,
                         color: const Color(0xFF0B2450))),
-                Text('+ GST',
+                Text(
+                    monthly
+                        ? 'per month · $months months'
+                        : '+ GST',
                     style: GoogleFonts.inter(
                         fontSize: 10, color: const Color(0xFF9AA5B5))),
               ]),
             ]),
+            if (canSplit) ...[
+              const SizedBox(height: 12),
+              Row(children: [
+                for (final once in [true, false]) ...[
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _monthly = !once),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                          color: (once != monthly)
+                              ? const Color(0xFF0B2450)
+                              : const Color(0xFFEDF1F7),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Text(once ? 'Pay once' : 'Pay monthly',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: (once != monthly)
+                                    ? Colors.white
+                                    : const Color(0xFF5A6B82))),
+                      ),
+                    ),
+                  ),
+                  if (once) const SizedBox(width: 8),
+                ],
+              ]),
+              const SizedBox(height: 9),
+              // What the other choice costs, said as a number rather than
+              // left for somebody to work out with a calculator.
+              Text(
+                  monthly
+                      ? 'Rs ${_money(splitTotal)} in total. Paying once is Rs ${_money(splitTotal - fee)} less.'
+                      : 'Or Rs ${_money(monthlyFee)} a month for $months months (Rs ${_money(splitTotal)} in total).',
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      height: 1.45,
+                      color: const Color(0xFF5A6B82))),
+            ],
+            if (perk.isNotEmpty && !monthly) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.card_giftcard_rounded,
+                      size: 15, color: AppColors.success),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text('Included when you pay once: $perk',
+                        style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.success)),
+                  ),
+                ]),
+              ),
+            ],
             const SizedBox(height: 11),
             Wrap(spacing: 7, runSpacing: 7, children: [
               _Chip(
