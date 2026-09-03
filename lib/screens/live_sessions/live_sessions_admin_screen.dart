@@ -332,18 +332,29 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
   Future<void> _delete(Map<String, dynamic> session) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete session?'),
         content: Text('Delete "${session['title']}"? Registrations will be removed too.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
           FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+              onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
         ],
       ),
     );
     if (ok != true) return;
-    await ApiService.deleteLiveSession(session['id'] as int);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiService.deleteLiveSession(session['id'] as int);
+    } catch (e) {
+      // A delete that fails silently looks exactly like one that worked
+      // until the row is still there after the reload.
+      messenger.showSnackBar(SnackBar(
+        backgroundColor: AppColors.error,
+        content: Text(e is ApiException ? e.message : 'Could not delete. $e'),
+      ));
+      return;
+    }
     _load();
   }
 

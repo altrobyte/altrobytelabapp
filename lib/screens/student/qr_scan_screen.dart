@@ -77,7 +77,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -92,7 +92,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           if (!success)
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 setState(() {
                   _handled = false;
                   _submitting = false;
@@ -103,8 +103,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
             ),
           FilledButton(
             onPressed: () {
-              Navigator.pop(context); // dialog
-              Navigator.pop(context); // scan screen
+              Navigator.pop(dialogContext); // dialog
+              Navigator.pop(dialogContext); // scan screen
             },
             child: const Text('Done'),
           ),

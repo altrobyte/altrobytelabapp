@@ -995,19 +995,19 @@ class _QuestionCardState extends State<_QuestionCard> {
     final provider = context.read<TestProvider>();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Question?'),
         content: Text('Remove Q${widget.index + 1} from this test?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
               provider.deleteQuestion(widget.index);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text('Delete'),
           ),
@@ -1276,7 +1276,7 @@ class _ActionBar extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Share Test on WhatsApp'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1297,13 +1297,13 @@ class _ActionBar extends StatelessWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.whatsapp),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               final encoded = Uri.encodeComponent(message);
               final waUrl = Uri.parse('https://wa.me/?text=$encoded');
               if (await canLaunchUrl(waUrl)) {
@@ -1456,14 +1456,14 @@ class _MyTestsTabState extends State<_MyTestsTab> {
   Future<void> _delete(Map<String, dynamic> test) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Test?'),
         content: Text('Delete "${test['title']}"? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete'),
           ),
         ],

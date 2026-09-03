@@ -603,7 +603,7 @@ class _InstituteCard extends StatelessWidget {
   Future<void> _confirmDelete(BuildContext context, int id, String token) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: Row(children: [
           const Icon(Icons.warning_rounded, color: Colors.red, size: 22),
@@ -616,12 +616,12 @@ class _InstituteCard extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete Permanently'),
           ),
         ],
@@ -654,7 +654,7 @@ class _InstituteCard extends StatelessWidget {
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: Text('Suspension Reason', style: GoogleFonts.poppins(color: Colors.white)),
         content: TextField(
@@ -667,10 +667,10 @@ class _InstituteCard extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            onPressed: () => Navigator.pop(context, ctrl.text.trim().isEmpty ? 'Suspended by admin' : ctrl.text.trim()),
+            onPressed: () => Navigator.pop(dialogContext, ctrl.text.trim().isEmpty ? 'Suspended by admin' : ctrl.text.trim()),
             child: const Text('Suspend'),
           ),
         ],

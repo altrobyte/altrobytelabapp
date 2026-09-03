@@ -501,7 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ctrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(type == 'subject' ? 'Add Subject' : 'Add Exam Pattern',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         content: TextField(
@@ -512,15 +512,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             hintText: type == 'subject' ? 'e.g. Data Structures' : 'e.g. GATE CS',
           ),
           onSubmitted: (v) {
-            if (v.trim().isNotEmpty) Navigator.pop(context, v.trim());
+            if (v.trim().isNotEmpty) Navigator.pop(dialogContext, v.trim());
           },
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               final v = ctrl.text.trim();
-              if (v.isNotEmpty) Navigator.pop(context, v);
+              if (v.isNotEmpty) Navigator.pop(dialogContext, v);
             },
             child: const Text('Add'),
           ),

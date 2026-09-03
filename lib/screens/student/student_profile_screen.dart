@@ -171,7 +171,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
           const Icon(Icons.logout_rounded, color: AppColors.error, size: 22),
@@ -181,12 +181,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(l10n.commonCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               _logout();
             },
             child: Text(l10n.settingsLogout),
@@ -207,7 +207,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final ctrl = TextEditingController(text: _name);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Edit Name', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         content: TextField(
@@ -220,14 +220,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _brand),
             onPressed: () async {
               final newName = ctrl.text.trim();
               if (newName.isEmpty) return;
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('student_name', newName);
               if (!mounted) return;
