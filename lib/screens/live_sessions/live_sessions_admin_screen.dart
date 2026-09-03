@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -571,6 +572,39 @@ class _AttendeeCard extends StatelessWidget {
       this.onDelete,
       this.onMarkPaid});
 
+  /// One person's details, ready to paste into a chat or a sheet.
+  ///
+  /// Blank fields are left out rather than printed as empty labels — a
+  /// pasted block with "College:" and nothing after it is worse than a
+  /// shorter one.
+  void _copyDetails(BuildContext context) {
+    String at(String key) => (attendee[key] ?? '').toString().trim();
+
+    final where = [at('college'), at('company')]
+        .firstWhere((e) => e.isNotEmpty, orElse: () => '');
+    final place = [at('city'), at('address')]
+        .where((e) => e.isNotEmpty)
+        .join(', ');
+    final owed = double.tryParse('${attendee['balance_due'] ?? 0}') ?? 0;
+
+    final lines = <String>[
+      at('name'),
+      at('phone'),
+      at('email'),
+      [where, at('branch')].where((e) => e.isNotEmpty).join(' \u00b7 '),
+      place,
+      if (at('occupation') == 'professional') 'Working professional',
+      if (owed > 0) 'Balance due: Rs ${attendee['balance_due']}',
+      if (sessionTitle.isNotEmpty) 'Registered for: $sessionTitle',
+    ].where((e) => e.isNotEmpty).toList();
+
+    Clipboard.setData(ClipboardData(text: lines.join(String.fromCharCode(10))));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      duration: const Duration(seconds: 2),
+      content: Text('Copied ${at('name')}'),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = attendee;
@@ -607,6 +641,20 @@ class _AttendeeCard extends StatelessWidget {
               child: Text(status.toUpperCase(),
                   style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor, letterSpacing: 0.3)),
             ),
+          // Everything about this person, in one block.
+          //
+          // Export CSV covers the whole list, which is the wrong shape when
+          // you are about to message one person: it means opening a file to
+          // retype a number that is already on screen.
+          IconButton(
+            icon: const Icon(Icons.copy_rounded,
+                size: 17, color: AppColors.textSecondary),
+            tooltip: 'Copy their details',
+            onPressed: () => _copyDetails(context),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 8),
+          ),
           // Their card, made from their own registration.
           //
           // Most people who register never post anything, and the card was
