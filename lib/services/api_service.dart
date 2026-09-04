@@ -1189,6 +1189,43 @@ class ApiService {
 
   /// The map, answered from data we already hold — no model call, so the
   /// page can draw something the instant it opens.
+  // ── Testimonials ────────────────────────────────────────────────────────
+
+  /// Published testimonials for one page. Public: this is the part of the
+  /// site a stranger is here to read.
+  static Future<Map<String, dynamic>> getTestimonials({String place = ''}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/testimonials')
+        .replace(queryParameters: place.isEmpty ? null : {'place': place});
+    final res = await safeGet(uri);
+    return _parse(res);
+  }
+
+  static Future<List<dynamic>> adminGetTestimonials() async {
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/admin/testimonials'),
+        headers: _headers(await _token()));
+    return _parse(res)['testimonials'] as List? ?? [];
+  }
+
+  static Future<void> adminSaveTestimonial(Map<String, dynamic> body,
+      {int? id}) async {
+    final uri = Uri.parse(id == null
+        ? '${ApiConstants.baseUrl}/admin/testimonials'
+        : '${ApiConstants.baseUrl}/admin/testimonials/$id');
+    final token = await _token();
+    final res = id == null
+        ? await safePost(uri, headers: _headers(token), body: jsonEncode(body))
+        : await http.put(uri, headers: _headers(token), body: jsonEncode(body));
+    _parse(res);
+  }
+
+  static Future<void> adminDeleteTestimonial(int id) async {
+    final res = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/admin/testimonials/$id'),
+        headers: _headers(await _token()));
+    _parse(res);
+  }
+
   static Future<Map<String, dynamic>> whatIfUniverse(
       {String branch = '', String year = ''}) async {
     final prefs = await SharedPreferences.getInstance();

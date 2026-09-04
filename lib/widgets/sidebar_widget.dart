@@ -121,6 +121,8 @@ class _Nav extends StatelessWidget {
       // thing to manage, and a separate tab for them was always empty.
       _NavItem(Icons.event_available_rounded, 'Booked Calls', '/bookings'),
       _NavItem(Icons.contact_phone_rounded, 'CRM & Users', '/crm'),
+      // Next to the CRM: a review comes from somebody already in it.
+      _NavItem(Icons.format_quote_rounded, 'Reviews', '/reviews-admin'),
       _NavItem(Icons.forum_rounded, 'WhatsApp', '/wa-messages'),
       _NavItem(Icons.timeline_rounded, 'Activity Feed', '/activity-feed-admin'),
       _NavItem(Icons.event_rounded, 'Events', '/events-admin'),

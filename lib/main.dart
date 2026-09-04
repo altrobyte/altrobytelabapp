@@ -60,6 +60,7 @@ import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
 import 'screens/student/what_if_screen.dart';
+import 'screens/admin/testimonials_admin_screen.dart';
 import 'screens/student/test_series_page.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
@@ -181,6 +182,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/showcase-admin',
           '/curriculum-admin',
           '/crm',
+          '/reviews-admin',
           '/wa-messages',
           '/bookings',
           '/errors',
@@ -346,6 +348,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             path: '/curriculum-admin',
             builder: (_, __) => const RoadmapAdminScreen()),
         GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
+        GoRoute(
+            path: '/reviews-admin',
+            builder: (_, __) => const TestimonialsAdminScreen()),
         GoRoute(
             path: '/wa-messages',
             builder: (_, __) => const WaMessagesScreen()),

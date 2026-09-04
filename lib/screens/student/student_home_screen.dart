@@ -17,6 +17,7 @@ import '../../models/training_module_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/training_module_provider.dart';
 import '../../services/api_service.dart';
+import '../../widgets/testimonials_section.dart';
 import '../../widgets/upgrade_sheet.dart';
 import '../tools/ble_tester_screen.dart';
 import '../tools/http_tester_screen.dart';
@@ -576,6 +577,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: _WhatIfCard(
                                   onTap: () => context.go('/what-if')),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Under the programme, where somebody has just
+                            // read a claim and is deciding whether to believe
+                            // it. Draws nothing when there is nothing
+                            // published.
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: TestimonialsSection(place: 'home'),
                             ),
                             const SizedBox(height: 24),
 

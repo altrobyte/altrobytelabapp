@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import '../../widgets/placement_test_sheet.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../widgets/testimonials_section.dart';
 import '../../widgets/callback_sheet.dart';
 
 class RoadmapScreen extends StatefulWidget {
@@ -300,6 +301,10 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                     roadmap: r,
                                     planIndex: _plan,
                                     present: widget.present),
+                                if (!widget.present) ...[
+                                  const SizedBox(height: 18),
+                                  const TestimonialsSection(place: 'roadmap'),
+                                ],
                                 // Price last, on purpose. Asked at the top it
                                 // is the first thing anybody weighs, before
                                 // they know what they are weighing it
