@@ -63,6 +63,7 @@ import 'screens/student/what_if_screen.dart';
 import 'services/page_seo.dart';
 import 'screens/admin/testimonials_admin_screen.dart';
 import 'screens/admin/company_items_admin_screen.dart';
+import 'screens/admin/scholarship_admin_screen.dart';
 import 'screens/student/test_series_page.dart';
 import 'screens/admin/showcase_admin_screen.dart';
 import 'screens/admin/roadmap_admin_screen.dart';
@@ -192,6 +193,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/crm',
           '/reviews-admin',
           '/company-admin',
+          '/scholarship-admin',
           '/wa-messages',
           '/bookings',
           '/errors',
@@ -363,6 +365,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(
             path: '/company-admin',
             builder: (_, __) => const CompanyItemsAdminScreen()),
+        GoRoute(
+            path: '/scholarship-admin',
+            builder: (_, __) => const ScholarshipAdminScreen()),
         // Public lists that had pages and a backend but no way to fill them.
         GoRoute(
           path: '/colleges',

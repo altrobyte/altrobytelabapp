@@ -1003,6 +1003,7 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
   String? _aiFeedback;
   bool _loadingFeedback = true;
   Map<String, dynamic>? _next;
+  Map<String, dynamic>? _scholarship;
 
   @override
   void initState() {
@@ -1010,6 +1011,7 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
     _tabs = TabController(length: 2, vsync: this);
     _loadAiFeedback();
     _loadNext();
+    _loadScholarship();
   }
 
   @override
@@ -1025,6 +1027,137 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
         setState(() => _next = d);
       }
     } catch (_) {}
+  }
+
+  /// Was this the scholarship test, and what did it earn them?
+  ///
+  /// Asked after the score is on screen rather than before: the number they
+  /// got is the thing they came for, and an offer arriving underneath it
+  /// lands better than one that interrupts it. Silent when this was an
+  /// ordinary test, which is almost always.
+  Future<void> _loadScholarship() async {
+    try {
+      final cfg = await ApiService.getScholarship();
+      if (cfg['enabled'] != true) return;
+      if ((cfg['test']?['id'] as num?)?.toInt() != widget.test.id) return;
+
+      final res = await ApiService.claimScholarship();
+      if (mounted) setState(() => _scholarship = res);
+    } catch (_) {
+      // A scholarship that cannot be worked out is not worth an error on a
+      // page somebody is reading their result on.
+    }
+  }
+
+  Widget _scholarshipCard() {
+    final s = _scholarship!;
+    final awarded = s['awarded'] == true;
+    final percent = (s['percent'] as num?)?.toDouble() ?? 0;
+    final base = (s['base_amount'] as num?)?.toDouble() ?? 0;
+
+    if (!awarded) {
+      return Card(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Scholarship: not this time',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700, fontSize: 15)),
+            const SizedBox(height: 6),
+            Text(
+                'You scored ${percent.toStringAsFixed(0)}%. The lowest '
+                'scholarship band starts at 50%. You can take it again — the '
+                'best score counts.',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5, height: 1.55, color: Colors.black87)),
+          ]),
+        ),
+      );
+    }
+
+    final off = (s['discount_percent'] as num?)?.toInt() ?? 0;
+    final pay = (s['you_pay'] as num?)?.toDouble() ?? base;
+    final code = '${s['coupon_code'] ?? ''}';
+    final days = (s['valid_days'] as num?)?.toInt() ?? 14;
+
+    return Card(
+      color: AppColors.success.withValues(alpha: 0.10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.workspace_premium_rounded,
+                color: AppColors.success, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Scholarship earned — $off% off',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15.5,
+                      color: AppColors.success)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+              'You scored ${percent.toStringAsFixed(0)}%'
+              '${s['label'] == null ? '' : " (${s['label']})"}.',
+              style: GoogleFonts.inter(fontSize: 12.5, color: Colors.black87)),
+          const SizedBox(height: 12),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('Rs ${base.toStringAsFixed(0)}',
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey,
+                    decoration: TextDecoration.lineThrough)),
+            const SizedBox(width: 10),
+            Text('Rs ${pay.toStringAsFixed(0)}',
+                style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary)),
+          ]),
+          const SizedBox(height: 12),
+          // The code, big enough to read off a screen and copyable, because
+          // it is the one thing on this card they have to carry to the form.
+          InkWell(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: code));
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Code copied')));
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Text(code,
+                      style: GoogleFonts.poppins(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.6,
+                          color: AppColors.primary)),
+                ),
+                const Icon(Icons.copy_rounded,
+                    size: 17, color: AppColors.textSecondary),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+              'Yours alone, and valid for $days days. Enter it at '
+              'registration.',
+              style: GoogleFonts.inter(
+                  fontSize: 11.5, height: 1.4, color: AppColors.textSecondary)),
+        ]),
+      ),
+    );
   }
 
   Widget _nextSteps() {
@@ -1221,6 +1354,10 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                 ]),
               ),
             ),
+            if (_scholarship != null) ...[
+              const SizedBox(height: 12),
+              _scholarshipCard(),
+            ],
             if (_next != null) ...[
               const SizedBox(height: 12),
               _nextSteps(),

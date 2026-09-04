@@ -1189,6 +1189,42 @@ class ApiService {
 
   /// The map, answered from data we already hold — no model call, so the
   /// page can draw something the instant it opens.
+  // ── Scholarship ─────────────────────────────────────────────────────────
+
+  /// What the scholarship is: the test, the bands and what each is worth.
+  static Future<Map<String, dynamic>> getScholarship() async {
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/scholarship'));
+    return _parse(res);
+  }
+
+  /// Turn this student's score into a coupon. The server reads the score from
+  /// their own attempt — nothing here can name a discount.
+  static Future<Map<String, dynamic>> claimScholarship() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/scholarship/claim'),
+      headers: _headers(prefs.getString('student_token')),
+      body: jsonEncode(const {}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getScholarshipAdmin() async {
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/scholarship/admin'),
+        headers: _headers(await _token()));
+    return _parse(res);
+  }
+
+  static Future<void> saveScholarshipAdmin(Map<String, dynamic> body) async {
+    final res = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/scholarship/admin'),
+      headers: _headers(await _token()),
+      body: jsonEncode(body),
+    );
+    _parse(res);
+  }
+
   // ── Testimonials ────────────────────────────────────────────────────────
 
   /// Published testimonials for one page. Public: this is the part of the
