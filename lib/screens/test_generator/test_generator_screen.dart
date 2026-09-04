@@ -134,6 +134,10 @@ class _GenerateTabState extends State<_GenerateTab> {
 
   String _language = 'English';
   int _count = 20;
+
+  /// Seconds per question. Zero means the old behaviour — ninety
+  /// seconds each, worked out into whole minutes.
+  int _secondsPerQuestion = 0;
   int? _batchId;
   List<Batch> _batches = [];
   List<Map<String, dynamic>> _subjects = [];
@@ -199,7 +203,12 @@ class _GenerateTabState extends State<_GenerateTab> {
       'exam_type': _examType,
       'language': _language,
       'count': _count,
-      'duration_mins': (_count * 1.5).round(),
+      // Kept for every screen that still reads minutes; the paper is
+      // actually timed by seconds_per_question when that is set.
+      'duration_mins': _secondsPerQuestion > 0
+          ? ((_count * _secondsPerQuestion) / 60).ceil()
+          : (_count * 1.5).round(),
+      'seconds_per_question': _secondsPerQuestion,
       'custom_instructions': _customInstructionsCtrl.text.trim(),
     });
     if (!mounted) return;
@@ -246,6 +255,9 @@ class _GenerateTabState extends State<_GenerateTab> {
               onExamType: (v) => setState(() => _examType = v),
               onLanguage: (v) => setState(() => _language = v),
               onCount: (v) => setState(() => _count = v),
+              secondsPerQuestion: _secondsPerQuestion,
+              onSecondsPerQuestion: (v) =>
+                  setState(() => _secondsPerQuestion = v),
               onBatch: (v) => setState(() => _batchId = v),
               onGenerate: _generate,
             ),
@@ -282,6 +294,9 @@ class _GenerateTabState extends State<_GenerateTab> {
                 onExamType: (v) => setState(() => _examType = v),
                 onLanguage: (v) => setState(() => _language = v),
                 onCount: (v) => setState(() => _count = v),
+                secondsPerQuestion: _secondsPerQuestion,
+                onSecondsPerQuestion: (v) =>
+                    setState(() => _secondsPerQuestion = v),
                 onBatch: (v) => setState(() => _batchId = v),
                 onGenerate: _generate,
               ),
@@ -299,6 +314,13 @@ class _GenerateTabState extends State<_GenerateTab> {
   }
 }
 
+/// "10:00" or "5 min", whichever reads better for the number given.
+String _mmss(int seconds) {
+  if (seconds < 60) return '${seconds}s';
+  final m = seconds ~/ 60, sec = seconds % 60;
+  return sec == 0 ? '$m min' : '$m min ${sec}s';
+}
+
 class _ConfigPanel extends StatelessWidget {
   final TextEditingController titleCtrl, topicCtrl, customInstructionsCtrl;
   final String subject, difficulty, examType, language;
@@ -309,6 +331,8 @@ class _ConfigPanel extends StatelessWidget {
   final List<Map<String, dynamic>> examPatterns;
   final ValueChanged<String> onSubject, onDifficulty, onExamType, onLanguage;
   final ValueChanged<int> onCount;
+  final int secondsPerQuestion;
+  final ValueChanged<int> onSecondsPerQuestion;
   final ValueChanged<int?> onBatch;
   final VoidCallback onGenerate;
 
@@ -330,6 +354,8 @@ class _ConfigPanel extends StatelessWidget {
     required this.onExamType,
     required this.onLanguage,
     required this.onCount,
+    required this.secondsPerQuestion,
+    required this.onSecondsPerQuestion,
     required this.onBatch,
     required this.onGenerate,
   });
@@ -463,6 +489,28 @@ class _ConfigPanel extends StatelessWidget {
                   selected: count,
                   onSelected: onCount,
                 ),
+                const SizedBox(height: 14),
+                const _SectionLabel('Time per question'),
+                const SizedBox(height: 8),
+                _CountSelector(
+                  options: const [0, 30, 45, 60, 90, 120],
+                  selected: secondsPerQuestion,
+                  onSelected: onSecondsPerQuestion,
+                  // 0 is "leave it alone", which is what every test made
+                  // before this had.
+                  labelFor: (v) => v == 0 ? 'Default' : '${v}s',
+                ),
+                const SizedBox(height: 6),
+                Text(
+                    secondsPerQuestion == 0
+                        ? 'Default is 90 seconds a question — $count questions '
+                            'gives about ${(count * 1.5).round()} minutes.'
+                        : '$count questions x ${secondsPerQuestion}s = '
+                            '${_mmss(count * secondsPerQuestion)} in total.',
+                    style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        height: 1.4,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   value: language,
@@ -610,10 +658,15 @@ class _CountSelector extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
 
+  /// How each option reads. Plain numbers by default; the time selector uses
+  /// it to say "30s" and "Default" instead of "30" and "0".
+  final String Function(int)? labelFor;
+
   const _CountSelector(
       {required this.options,
       required this.selected,
-      required this.onSelected});
+      required this.onSelected,
+      this.labelFor});
 
   @override
   Widget build(BuildContext context) {
@@ -1377,6 +1430,29 @@ class _MyTestsTabState extends State<_MyTestsTab> {
     }
   }
 
+  /// Pin one test to the top, or unpin it.
+  ///
+  /// The server clears any other featured test first, so this is a radio
+  /// button spread across a list rather than a set of checkboxes.
+  Future<void> _toggleFeature(Map<String, dynamic> test) async {
+    final was = test['is_featured'] == true;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiService.featureTest(test['id'] as int, !was);
+      _load(force: true);
+      messenger.showSnackBar(SnackBar(
+        content: Text(was
+            ? 'Unpinned'
+            : '"${test['title']}" is now the featured test'),
+        backgroundColor: was ? Colors.orange : AppColors.success,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+          backgroundColor: AppColors.error,
+          content: Text(e is ApiException ? e.message : '$e')));
+    }
+  }
+
   Future<void> _assignSeries(Map<String, dynamic> test) async {
     final auth = context.read<AuthProvider>();
     if (auth.instituteId == null) return;
@@ -1738,6 +1814,23 @@ class _MyTestsTabState extends State<_MyTestsTab> {
                 ]),
                 const SizedBox(height: 6),
                 Row(children: [
+                  // Pin. Only one test can hold it, so it reads as a state
+                  // rather than a setting — filled when this is the one.
+                  IconButton(
+                    tooltip: t['is_featured'] == true
+                        ? 'Featured — tap to unpin'
+                        : 'Feature this test',
+                    onPressed: () => _toggleFeature(t),
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                        t['is_featured'] == true
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        size: 19,
+                        color: t['is_featured'] == true
+                            ? AppColors.accent
+                            : AppColors.textSecondary),
+                  ),
                   // Results button
                   Expanded(child: OutlinedButton.icon(
                     onPressed: () => _showResults(t),

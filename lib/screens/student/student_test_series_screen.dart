@@ -45,6 +45,10 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
         _series = data['series'] as List? ?? [];
         _moduleTests = data['module_tests'] as List? ?? [];
         _standaloneTests = data['standalone_tests'] as List? ?? [];
+        // Featured first. Pinning a test means nothing if it still comes
+        // fourth in the list.
+        _standaloneTests.sort((a, b) => ((b as Map)['is_featured'] == true ? 1 : 0)
+            .compareTo((a as Map)['is_featured'] == true ? 1 : 0));
         _loading = false;
       });
     } catch (e) {
@@ -262,6 +266,25 @@ class _QuizTile extends StatelessWidget {
                 right: -18, top: -18,
                 child: Icon(Icons.fact_check_rounded, size: 90, color: Colors.white.withValues(alpha: 0.14)),
               ),
+              if (quiz['is_featured'] == true)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('FEATURED',
+                        style: GoogleFonts.inter(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                            color: color)),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

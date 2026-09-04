@@ -81,6 +81,10 @@ class AltroTest {
   final String examType;
   List<Question> questions; // Mutable for expert review
   final int durationMins;
+
+  /// Seconds allowed per question. Overrides [durationMins] when set —
+  /// the only way to express a paper shorter than a minute a question.
+  final int secondsPerQuestion;
   final DateTime? createdAt;
   final int? attempts;
   int qualityScore;
@@ -96,6 +100,7 @@ class AltroTest {
     required this.examType,
     required this.questions,
     required this.durationMins,
+    this.secondsPerQuestion = 0,
     this.createdAt,
     this.attempts,
     this.qualityScore = 0,
@@ -118,6 +123,7 @@ class AltroTest {
       examType: j['exam_type'] ?? 'General',
       questions: qs,
       durationMins: j['duration_mins'] ?? 30,
+      secondsPerQuestion: j['seconds_per_question'] ?? 0,
       createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at']) : null,
       attempts: j['attempts'],
       qualityScore: j['quality_score'] ?? 0,

@@ -92,7 +92,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       setState(() {
         _test = test;
         _subscription = sub;
-        _secondsLeft = test.durationMins * 60;
+        _secondsLeft = _allowedSeconds(test);
         _qStates.addAll({for (int i = 0; i < test.questions.length; i++) i: QState.notVisited});
         _loading = false;
       });
@@ -129,6 +129,14 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     });
   }
 
+  /// How long this paper runs, in seconds.
+  ///
+  /// Per-question time wins when it is set: a scholarship test is thirty
+  /// seconds a question, and there is no way to say that in whole minutes.
+  int _allowedSeconds(AltroTest test) => test.secondsPerQuestion > 0
+      ? test.secondsPerQuestion * test.questions.length
+      : test.durationMins * 60;
+
   void _retake() {
     _timer?.cancel();
     setState(() {
@@ -138,7 +146,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
       _qStates.addAll({for (int i = 0; i < _test!.questions.length; i++) i: QState.notVisited});
       _currentQ = 0;
       _secondsTaken = 0;
-      _secondsLeft = _test!.durationMins * 60;
+      _secondsLeft = _allowedSeconds(_test!);
       _started = false;
     });
   }
@@ -769,7 +777,11 @@ class _InstructionsScreen extends StatelessWidget {
                 Row(children: [
                   _InfoBadge(Icons.subject_rounded, test.subject),
                   const SizedBox(width: 8),
-                  _InfoBadge(Icons.timer_rounded, '${test.durationMins} min'),
+                  _InfoBadge(
+                      Icons.timer_rounded,
+                      test.secondsPerQuestion > 0
+                          ? '${test.secondsPerQuestion}s a question'
+                          : '${test.durationMins} min'),
                   const SizedBox(width: 8),
                   _InfoBadge(Icons.quiz_outlined, '${test.questions.length} Qs'),
                 ]),

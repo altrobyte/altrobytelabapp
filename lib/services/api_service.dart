@@ -503,6 +503,15 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Pin one test to the top of the list, or unpin it.
+  static Future<void> featureTest(int testId, bool featured) async {
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/tests/$testId/feature?featured=$featured'),
+      headers: _headers(await _token()),
+    );
+    _parse(res);
+  }
+
   static Future<void> deleteTest(int testId) async {
     final token = await _token();
     final res = await http.delete(
