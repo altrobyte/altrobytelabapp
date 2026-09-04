@@ -61,6 +61,16 @@ class PageSeo {
       'Students who learned embedded systems and IoT here, and the companies '
           'they now build for.'
     ),
+    '/colleges': (
+      'Colleges We Have Taught At',
+      'Workshops, training programmes and faculty development delivered at '
+          'engineering colleges across India.'
+    ),
+    '/projects': (
+      'Projects — Embedded, IoT and Edge AI',
+      'Products and systems built at Altrobyte: telematics, industrial '
+          'automation, connected devices and computer vision on the edge.'
+    ),
     '/clients': (
       'Clients — Industrial Automation and IoT Projects',
       'Companies we have built embedded and IoT products for, and the systems '

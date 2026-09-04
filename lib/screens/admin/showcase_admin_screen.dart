@@ -23,11 +23,10 @@ class ShowcaseAdminScreen extends StatefulWidget {
 
 class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 6, vsync: this);
-  static const _kinds = ['story', 'lab_setup', 'placement', 'client', 'college', 'project'];
+  late final TabController _tabs = TabController(length: 3, vsync: this);
+  static const _kinds = ['story', 'lab_setup', 'placement'];
   final _byKind = <String, List<dynamic>>{
-    'story': [], 'lab_setup': [], 'placement': [],
-    'client': [], 'college': [], 'project': []
+    'story': [], 'lab_setup': [], 'placement': []
   };
   bool _loading = true;
 
@@ -125,11 +124,6 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
             Tab(text: 'Top Stories'),
             Tab(text: 'Lab Setups'),
             Tab(text: 'Placements'),
-            // Same shape, different lists: a client and a college are a name,
-            // a logo and a line, which is what this screen already edits.
-            Tab(text: 'Clients'),
-            Tab(text: 'Colleges'),
-            Tab(text: 'Projects'),
           ],
         ),
       ),
@@ -141,9 +135,6 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
           'story' => 'New story',
           'lab_setup' => 'New lab setup',
           'placement' => 'New placement',
-          'client' => 'New client',
-          'college' => 'New college',
-          'project' => 'New project',
           _ => 'New review',
         }),
       ),
@@ -165,19 +156,10 @@ class _ShowcaseAdminScreenState extends State<ShowcaseAdminScreen>
                           'lab_setup' =>
                             'No lab setups yet. Add each setup as a product with photos '
                                 'and a price.',
-                          'placement' =>
+                          _ =>
                             'No placements yet. Add real ones only — a made-up placement '
                                 'is the one thing that would cost you every real student '
                                 'who checks.',
-                          'client' =>
-                            'No clients yet. Add the company name and its logo — a name '
-                                'a reader recognises does more than a paragraph about us.',
-                          'college' =>
-                            'No colleges yet. Add the ones you have actually taught at. '
-                                'A student reads the list looking for their own.',
-                          _ =>
-                            'No projects yet. Add what was built, with photos. This is '
-                                'the page an employer looks at.',
                         },
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
