@@ -575,16 +575,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               child: _WhatIfCard(
                                   onTap: () => context.go('/what-if')),
                             ),
-                            const SizedBox(height: 20),
-
-                            // Under the programme, where somebody has just
-                            // read a claim and is deciding whether to believe
-                            // it. Draws nothing when there is nothing
-                            // published.
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: TestimonialsSection(place: 'home'),
-                            ),
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -942,6 +932,17 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 ],
                               ),
                             ),
+
+                            // Near the end, after everything the page had to
+                            // show. Somebody who has read this far is the one
+                            // deciding, and this is the last thing they read
+                            // before the footer. Draws nothing when nothing
+                            // is published.
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+                              child: TestimonialsSection(place: 'home'),
+                            ),
+                            const SizedBox(height: 20),
 
                             const _HomeFooter(),
                             const SizedBox(height: 24),
