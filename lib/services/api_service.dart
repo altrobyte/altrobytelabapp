@@ -503,6 +503,16 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Change a test's title or its clock after it has been made.
+  static Future<void> editTest(int testId, Map<String, dynamic> body) async {
+    final res = await http.put(
+      Uri.parse('${ApiConstants.baseUrl}/tests/$testId'),
+      headers: _headers(await _token()),
+      body: jsonEncode(body),
+    );
+    _parse(res);
+  }
+
   /// Pin one test to the top of the list, or unpin it.
   static Future<void> featureTest(int testId, bool featured) async {
     final res = await safePost(

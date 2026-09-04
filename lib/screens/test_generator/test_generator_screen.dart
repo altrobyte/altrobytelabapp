@@ -1430,6 +1430,99 @@ class _MyTestsTabState extends State<_MyTestsTab> {
     }
   }
 
+  /// Change a made test's name or its clock.
+  ///
+  /// Everything here was fixed at creation before, so a published test with
+  /// the wrong timing had to be generated again — which throws away its id
+  /// and every attempt already recorded against it.
+  Future<void> _editTest(Map<String, dynamic> test) async {
+    final title = TextEditingController(text: '${test['title'] ?? ''}');
+    var perQuestion = (test['seconds_per_question'] as num?)?.toInt() ?? 0;
+    final questions = (test['question_count'] as num?)?.toInt() ??
+        (test['questions'] as List?)?.length ??
+        0;
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+              left: 18,
+              right: 18,
+              top: 18,
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 18),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('Edit test',
+                style: GoogleFonts.poppins(
+                    fontSize: 16.5, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
+            TextField(
+                controller: title,
+                decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Time per question',
+                  style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary)),
+            ),
+            const SizedBox(height: 8),
+            _CountSelector(
+              options: const [0, 30, 45, 60, 90, 120],
+              selected: perQuestion,
+              onSelected: (v) => setSheetState(() => perQuestion = v),
+              labelFor: (v) => v == 0 ? 'Default' : '${v}s',
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                  perQuestion == 0
+                      ? 'Default: whatever the test was made with.'
+                      : questions > 0
+                          ? '$questions questions x ${perQuestion}s = '
+                              '${_mmss(questions * perQuestion)} in total.'
+                          : '${perQuestion}s per question.',
+                  style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      height: 1.4,
+                      color: AppColors.textSecondary)),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    padding: const EdgeInsets.symmetric(vertical: 14)),
+                onPressed: () => Navigator.pop(sheetContext, true),
+                child: const Text('Save'),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+
+    if (saved != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiService.editTest(test['id'] as int, {
+        'title': title.text.trim(),
+        'seconds_per_question': perQuestion,
+      });
+      _load(force: true);
+      messenger.showSnackBar(const SnackBar(content: Text('Saved')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+          backgroundColor: AppColors.error,
+          content: Text(e is ApiException ? e.message : '$e')));
+    }
+  }
+
   /// Pin one test to the top, or unpin it.
   ///
   /// The server clears any other featured test first, so this is a radio
@@ -1830,6 +1923,13 @@ class _MyTestsTabState extends State<_MyTestsTab> {
                         color: t['is_featured'] == true
                             ? AppColors.accent
                             : AppColors.textSecondary),
+                  ),
+                  IconButton(
+                    tooltip: 'Edit name and timing',
+                    onPressed: () => _editTest(t),
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.edit_rounded,
+                        size: 18, color: AppColors.primary),
                   ),
                   // Results button
                   Expanded(child: OutlinedButton.icon(
