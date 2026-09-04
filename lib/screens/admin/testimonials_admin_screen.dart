@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
@@ -40,61 +39,6 @@ class _TestimonialsAdminScreenState extends State<TestimonialsAdminScreen> {
       _error = e is ApiException ? e.message : '$e';
     }
     if (mounted) setState(() => _loading = false);
-  }
-
-  /// The message that actually gets a review written.
-  ///
-  /// Short, names what we want, and gives them something to react to rather
-  /// than a blank page — "how was it" gets no reply, three questions get a
-  /// paragraph.
-  static const _ask =
-      'Hi! You did a workshop with Altrobyte Lab.\n\n'
-      'Could you send us two or three lines about it? These help other '
-      'students decide, and we put them on our site with your name and '
-      'college.\n\n'
-      'If it helps, answer any of these:\n'
-      '· What did you build?\n'
-      '· What could you do afterwards that you could not before?\n'
-      '· Who would you tell to join?\n\n'
-      'Thank you.';
-
-  Future<void> _askSomeone() async {
-    final ctrl = TextEditingController();
-    final phone = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Ask for a review'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-            controller: ctrl,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'WhatsApp number',
-              helperText: '10 digits, or with 91',
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(_ask,
-              style: GoogleFonts.inter(
-                  fontSize: 11.5, height: 1.5, color: AppColors.textSecondary)),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, ctrl.text.trim()),
-              child: const Text('Open WhatsApp')),
-        ],
-      ),
-    );
-    if (phone == null || phone.isEmpty) return;
-
-    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    final full = digits.length == 10 ? '91$digits' : digits;
-    await launchUrl(
-        Uri.parse('https://wa.me/$full?text=${Uri.encodeComponent(_ask)}'),
-        mode: LaunchMode.externalApplication);
   }
 
   Future<void> _edit([Map<String, dynamic>? existing]) async {
@@ -278,11 +222,6 @@ class _TestimonialsAdminScreenState extends State<TestimonialsAdminScreen> {
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
-            tooltip: 'Ask someone for a review',
-            onPressed: _askSomeone,
-            icon: const Icon(Icons.forum_rounded),
-          ),
-          IconButton(
               tooltip: 'Add a review',
               onPressed: () => _edit(),
               icon: const Icon(Icons.add)),
@@ -326,12 +265,12 @@ class _TestimonialsAdminScreenState extends State<TestimonialsAdminScreen> {
             const SizedBox(height: 18),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
+                  backgroundColor: AppColors.accent,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 20, vertical: 13)),
-              onPressed: _askSomeone,
-              icon: const Icon(Icons.forum_rounded, size: 17),
-              label: const Text('Ask for a review on WhatsApp'),
+              onPressed: () => _edit(),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add a review'),
             ),
           ]),
         ),
