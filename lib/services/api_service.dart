@@ -513,6 +513,16 @@ class ApiService {
     _parse(res);
   }
 
+  /// Pin a test series to the top, or unpin it.
+  static Future<void> featureTestSeries(int seriesId, bool featured) async {
+    final res = await safePost(
+      Uri.parse(
+          '${ApiConstants.baseUrl}/test-series/$seriesId/feature?featured=$featured'),
+      headers: _headers(await _token()),
+    );
+    _parse(res);
+  }
+
   /// Pin one test to the top of the list, or unpin it.
   static Future<void> featureTest(int testId, bool featured) async {
     final res = await safePost(

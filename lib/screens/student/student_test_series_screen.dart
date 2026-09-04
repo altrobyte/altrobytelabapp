@@ -43,6 +43,10 @@ class _StudentTestSeriesScreenState extends State<StudentTestSeriesScreen> {
       if (!mounted) return;
       setState(() {
         _series = data['series'] as List? ?? [];
+        // Featured series first, same as tests. The server already sorts it,
+        // but the student list merges sources so it re-asserts it here.
+        _series.sort((a, b) => ((b as Map)['is_featured'] == true ? 1 : 0)
+            .compareTo((a as Map)['is_featured'] == true ? 1 : 0));
         _moduleTests = data['module_tests'] as List? ?? [];
         _standaloneTests = data['standalone_tests'] as List? ?? [];
         // Featured first. Pinning a test means nothing if it still comes

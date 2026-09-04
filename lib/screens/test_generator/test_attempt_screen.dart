@@ -131,11 +131,10 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
 
   /// How long this paper runs, in seconds.
   ///
-  /// Per-question time wins when it is set: a scholarship test is thirty
-  /// seconds a question, and there is no way to say that in whole minutes.
-  int _allowedSeconds(AltroTest test) => test.secondsPerQuestion > 0
-      ? test.secondsPerQuestion * test.questions.length
-      : test.durationMins * 60;
+  /// The seconds figure wins when it is set: a scholarship test can be
+  /// thirty seconds long, and whole minutes cannot say that.
+  int _allowedSeconds(AltroTest test) =>
+      test.durationSeconds > 0 ? test.durationSeconds : test.durationMins * 60;
 
   void _retake() {
     _timer?.cancel();
@@ -735,6 +734,13 @@ String _qStateLabel(QState s) {
 
 // ─── Instructions Screen ─────────────────────────────────────────────────────
 
+/// "30s", "2 min", "2 min 30s" — whichever the number actually is.
+String _readableTime(int seconds) {
+  if (seconds < 60) return '${seconds}s';
+  final m = seconds ~/ 60, sec = seconds % 60;
+  return sec == 0 ? '$m min' : '$m min ${sec}s';
+}
+
 class _InstructionsScreen extends StatelessWidget {
   final AltroTest test;
   final VoidCallback onStart;
@@ -779,8 +785,8 @@ class _InstructionsScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   _InfoBadge(
                       Icons.timer_rounded,
-                      test.secondsPerQuestion > 0
-                          ? '${test.secondsPerQuestion}s a question'
+                      test.durationSeconds > 0
+                          ? _readableTime(test.durationSeconds)
                           : '${test.durationMins} min'),
                   const SizedBox(width: 8),
                   _InfoBadge(Icons.quiz_outlined, '${test.questions.length} Qs'),
