@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -58,10 +58,25 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "Person",
+        "@id": "https://altrobytelab.com/#founder",
+        "name": "Pawan Meena",
+        "url": "https://altrobytelab.com/founder",
+        "jobTitle": "Founder, Product Engineer",
+        "worksFor": { "@id": "https://altrobytelab.com/#org" },
+        "alumniOf": "Sagar Institute of Science and Technology, Bhopal",
+        "knowsAbout": [
+          "Embedded Systems", "Internet of Things", "PCB Design",
+          "Firmware Development", "CAN bus", "Telematics", "FreeRTOS",
+          "STM32", "ESP32", "Edge AI", "Industrial Automation"
+        ]
+      },
+      {
         "@type": "EducationalOrganization",
         "@id": "https://altrobytelab.com/#org",
         "name": "Altrobyte Lab",
         "alternateName": "Altrobyte",
+        "founder": { "@id": "https://altrobytelab.com/#founder" },
         "url": "https://altrobytelab.com/",
         "logo": "https://altrobytelab.com/icons/Icon-512.png",
         "image": "https://altrobytelab.com/og-program.jpg",

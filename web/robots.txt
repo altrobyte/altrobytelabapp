@@ -11,9 +11,9 @@ Disallow: /admin-access
 Disallow: /super-access
 Disallow: /crm
 Disallow: /bookings
-Disallow: /demos-admin
 Disallow: /errors
 Disallow: /showcase-admin
+Disallow: /reviews-admin
 Disallow: /curriculum-admin
 Disallow: /wa-messages
 Disallow: /debug

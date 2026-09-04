@@ -60,6 +60,7 @@ import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
 import 'screens/student/what_if_screen.dart';
+import 'services/page_seo.dart';
 import 'screens/admin/testimonials_admin_screen.dart';
 import 'screens/student/test_series_page.dart';
 import 'screens/admin/showcase_admin_screen.dart';
@@ -154,6 +155,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
     _router = GoRouter(
       initialLocation: '/',
       redirect: (ctx, state) {
+        // Every navigation passes through here, which makes it the one place
+        // that always knows the current route. The app is one index.html for
+        // twenty-five sitemap URLs, so without this they all carry the same
+        // title and read as copies of each other to a search engine.
+        PageSeo.apply(state.matchedLocation);
+
         // Wait for SharedPreferences restore before any redirect decision.
         if (!auth.isInitialized) return null;
 
