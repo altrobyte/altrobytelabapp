@@ -72,12 +72,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   List<dynamic> _stories = [];
   List<dynamic> _labSetups = [];
   List<dynamic> _placements = [];
-  List<dynamic> _reviews = [];
 
   /// Placements first, then reviews, then stories: a result outranks a
   /// work-in-progress, and the first two cards are the only ones some people
   /// will ever see.
-  List<dynamic> get _topStrip => [..._placements, ..._reviews, ..._stories];
+  // Reviews are their own section further down, with the college beside
+  // each name — the strip could only ever show a title.
+  List<dynamic> get _topStrip => [..._placements, ..._stories];
   bool _loading = true;
   String? _feedError;
 
@@ -274,10 +275,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     try {
       final p = await ApiService.getShowcase('placement');
       if (mounted) setState(() => _placements = p);
-    } catch (_) {}
-    try {
-      final rv = await ApiService.getShowcase('review');
-      if (mounted) setState(() => _reviews = rv);
     } catch (_) {}
 
     // This only feeds the institute tests/notices/results section — it must

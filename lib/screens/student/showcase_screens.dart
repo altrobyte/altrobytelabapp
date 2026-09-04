@@ -40,7 +40,7 @@ class _ShowcaseAlbumScreenState extends State<ShowcaseAlbumScreen> {
       // placement seen on the homepage vanishes when you tap through to
       // "see all".
       if (widget.kind == 'story') {
-        for (final k in const ['placement', 'review']) {
+        for (final k in const ['placement']) {
           try {
             _items = [...await ApiService.getShowcase(k), ..._items];
           } catch (_) {}

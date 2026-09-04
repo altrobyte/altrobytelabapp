@@ -139,7 +139,7 @@ class _ProgramPageState extends State<ProgramPage> {
   /// The page asks for money four screens down. What it owes a reader before
   /// that is evidence that anyone who paid it got anything back.
   Future<void> _loadResults() async {
-    for (final entry in {'placement': 0, 'review': 1}.entries) {
+    for (final entry in {'placement': 0}.entries) {
       try {
         final items = await ApiService.getShowcase(entry.key);
         if (!mounted) continue;
