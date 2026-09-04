@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
@@ -18,7 +20,13 @@ class ScholarshipAdminScreen extends StatefulWidget {
 }
 
 class _ScholarshipAdminScreenState extends State<ScholarshipAdminScreen> {
-  final _testId = TextEditingController();
+  /// Published tests to choose from, and which one is the scholarship test.
+  ///
+  /// This used to be a text field asking for a numeric id — a number the
+  /// admin has no way to see anywhere in the product. Asking somebody for a
+  /// value the software never shows them is asking them to guess.
+  List<Map<String, dynamic>> _tests = [];
+  int _selectedTestId = 0;
   final _base = TextEditingController();
   final _days = TextEditingController();
   List<Map<String, dynamic>> _slabs = [];
@@ -35,7 +43,6 @@ class _ScholarshipAdminScreenState extends State<ScholarshipAdminScreen> {
 
   @override
   void dispose() {
-    _testId.dispose();
     _base.dispose();
     _days.dispose();
     super.dispose();
@@ -45,7 +52,18 @@ class _ScholarshipAdminScreenState extends State<ScholarshipAdminScreen> {
     setState(() => _loading = true);
     try {
       final d = await ApiService.getScholarshipAdmin();
-      _testId.text = '${d['test_id'] ?? 0}';
+      _selectedTestId = (d['test_id'] as num?)?.toInt() ?? 0;
+
+      // Only published tests: an unpublished one cannot be sat, so offering
+      // it would let somebody point the scholarship at a dead end.
+      final auth = context.read<AuthProvider>();
+      if (auth.instituteId != null) {
+        final rows = await ApiService.getTests(auth.instituteId!);
+        _tests = rows
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((t) => t['is_published'] == true)
+            .toList();
+      }
       _base.text = '${(d['base_amount'] as num?)?.toInt() ?? 10000}';
       _days.text = '${d['valid_days'] ?? 14}';
       _slabs = ((d['slabs'] as List?) ?? [])
@@ -64,7 +82,7 @@ class _ScholarshipAdminScreenState extends State<ScholarshipAdminScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ApiService.saveScholarshipAdmin({
-        'test_id': int.tryParse(_testId.text.trim()) ?? 0,
+        'test_id': _selectedTestId,
         'base_amount': double.tryParse(_base.text.trim()) ?? 10000,
         'valid_days': int.tryParse(_days.text.trim()) ?? 14,
         'slabs': _slabs,
@@ -107,17 +125,42 @@ class _ScholarshipAdminScreenState extends State<ScholarshipAdminScreen> {
                 const SizedBox(height: 12),
               ],
               _card('Which test', [
-                TextField(
-                  controller: _testId,
-                  keyboardType: TextInputType.number,
+                DropdownButtonFormField<int>(
+                  initialValue: _tests.any((t) => t['id'] == _selectedTestId)
+                      ? _selectedTestId
+                      : 0,
+                  isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText: 'Test ID',
-                    helperText:
-                        'The published test students sit. 0 turns the '
-                        'scholarship off entirely.',
+                    labelText: 'Which test',
+                    helperText: 'Only published tests can be chosen. "None" '
+                        'turns the scholarship off entirely.',
                     helperMaxLines: 2,
                   ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: 0, child: Text('None — scholarship off')),
+                    for (final t in _tests)
+                      DropdownMenuItem(
+                        value: t['id'] as int,
+                        child: Text(
+                            '${t['title']}'
+                            '${(t['question_count'] as num?) == null ? '' : ' · ${t['question_count']} Q'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _selectedTestId = v ?? 0),
                 ),
+                if (_tests.isEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                      'No published tests yet. Make one in Test Generator and '
+                      'publish it, then come back.',
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          height: 1.4,
+                          color: AppColors.textSecondary)),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: _base,
