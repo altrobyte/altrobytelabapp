@@ -126,10 +126,14 @@ class _WhatIfScreenState extends State<WhatIfScreen> {
   /// so it reads as the same map rearranged rather than a different page.
   (List<MindNode>, List<MindEdge>) get _graph {
     final you = Map<String, dynamic>.from(_universe?['you'] ?? const {});
-    final name = '${you['name'] ?? ''}'.trim();
     final centre = MindNode(
       id: 'you',
-      label: name.isEmpty ? 'YOU' : name.split(' ').first.toUpperCase(),
+      // Always YOU, never the signed-in name. The centre is the idea the
+      // whole map rests on — "these are your possible futures" — and a
+      // person's own name in that spot reads as a label on a diagram
+      // rather than as the reader. It also made the page unusable in a
+      // demo class, where it showed whoever happened to be logged in.
+      label: 'YOU',
       state: MindState.you,
       note: '${you['subtitle'] ?? ''}',
     );
