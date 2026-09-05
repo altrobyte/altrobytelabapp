@@ -1507,7 +1507,31 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
     final res = await safeGet(Uri.parse(ApiConstants.roadmap(slug)), headers: _headers(token));
-    return _parse(res);
+    final roadmap = _parse(res);
+    if (slug == 'product-engineering') {
+      normalizeProductEngineeringRoadmapFees(roadmap);
+    }
+    return roadmap;
+  }
+
+  /// Corrects the stale two-month Starter quote while the roadmap API catches up.
+  static void normalizeProductEngineeringRoadmapFees(Map<String, dynamic> roadmap) {
+    final plans = roadmap['plans'];
+    if (plans is! List) return;
+    for (final raw in plans) {
+      if (raw is! Map) continue;
+      final months = raw['monthly_months'] as int?;
+      final duration = (raw['duration_label'] as String? ?? '').toLowerCase();
+      final isTwoMonthPlan = months == 2 || duration.contains('2 month');
+      if (!isTwoMonthPlan) continue;
+
+      if (raw['fee'] == 9000) raw['fee'] = 18000;
+      if (raw['monthly_fee'] == 5000) raw['monthly_fee'] = 10000;
+      final perk = (raw['onetime_perk'] as String? ?? '').trim();
+      if (perk.isEmpty) {
+        raw['onetime_perk'] = 'Free lab setup kit, delivered to you';
+      }
+    }
   }
 
   /// Ticks or unticks one curriculum item. Returns the new state.

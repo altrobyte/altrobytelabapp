@@ -11,6 +11,7 @@
 // network, a browser or a pumped widget.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:altrobytelab/services/api_service.dart';
 
 /// Mirrors `_isSelfServe` in pricing_screen.dart: the server sets `price_inr`
 /// only for tiers it will actually charge for.
@@ -105,6 +106,30 @@ void main() {
       for (var i = 1; i < perMonth.length; i++) {
         expect(perMonth[i], lessThan(perMonth[i - 1]));
       }
+    });
+  });
+
+  group('product engineering roadmap fees', () {
+    test('stale two-month starter quote is corrected before display', () {
+      final roadmap = {
+        'plans': [
+          {
+            'name': 'Starter',
+            'duration_label': '2 months',
+            'fee': 9000,
+            'monthly_fee': 5000,
+            'monthly_months': 2,
+          },
+        ],
+      };
+
+      ApiService.normalizeProductEngineeringRoadmapFees(roadmap);
+
+      final plan = (roadmap['plans'] as List).single as Map;
+      expect(plan['fee'], 18000);
+      expect(plan['monthly_fee'], 10000);
+      expect(plan['monthly_months'], 2);
+      expect(plan['onetime_perk'], contains('Free lab setup kit'));
     });
   });
 }
