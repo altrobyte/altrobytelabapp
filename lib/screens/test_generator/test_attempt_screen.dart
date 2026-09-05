@@ -5,6 +5,7 @@ import '../../widgets/auth_sheet.dart';
 import '../../widgets/share_test_link.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -1023,6 +1024,13 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
   Map<String, dynamic>? _next;
   Map<String, dynamic>? _scholarship;
 
+  /// True when this paper was the scholarship test — which is sat once.
+  bool _isScholarship = false;
+
+  /// The bands and the team's number, kept so the card can name the lowest
+  /// band it missed and open a chat that already knows the score.
+  Map<String, dynamic>? _scholarshipCfg;
+
   @override
   void initState() {
     super.initState();
@@ -1058,6 +1066,12 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
       final cfg = await ApiService.getScholarship();
       if (cfg['enabled'] != true) return;
       if ((cfg['test']?['id'] as num?)?.toInt() != widget.test.id) return;
+      if (mounted) {
+        setState(() {
+          _isScholarship = true;
+          _scholarshipCfg = Map<String, dynamic>.from(cfg);
+        });
+      }
 
       final res = await ApiService.claimScholarship();
       if (mounted) setState(() => _scholarship = res);
@@ -1072,6 +1086,10 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
     final awarded = s['awarded'] == true;
     final percent = (s['percent'] as num?)?.toDouble() ?? 0;
     final base = (s['base_amount'] as num?)?.toDouble() ?? 0;
+    final slabs = (_scholarshipCfg?['slabs'] as List?) ?? const [];
+    final lowest = slabs.isEmpty
+        ? 50
+        : (slabs.last as Map)['min_percent'] as int? ?? 50;
 
     if (!awarded) {
       return Card(
@@ -1084,9 +1102,10 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                     fontWeight: FontWeight.w700, fontSize: 15)),
             const SizedBox(height: 6),
             Text(
-                'You scored ${percent.toStringAsFixed(0)}%. The lowest '
-                'scholarship band starts at 50%. You can take it again — the '
-                'best score counts.',
+                'You scored ${percent.toStringAsFixed(0)}%, and the lowest '
+                'scholarship band starts at $lowest%. The test is sat once, '
+                'so this score stands — the programme fee is unchanged at '
+                'Rs ${base.toStringAsFixed(0)}.',
                 style: GoogleFonts.inter(
                     fontSize: 12.5, height: 1.55, color: Colors.black87)),
           ]),
@@ -1173,9 +1192,65 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
               'registration.',
               style: GoogleFonts.inter(
                   fontSize: 11.5, height: 1.4, color: AppColors.textSecondary)),
+          if ('${s['whatsapp_number'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            // A code on a screen is not a seat. This is the step that turns
+            // one into the other, and it is the same message either way, so
+            // nobody has to work out what to say.
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13)),
+                onPressed: () => _redeemOnWhatsApp(s),
+                icon: const Icon(Icons.chat_rounded, size: 18),
+                label: Text('Send my score to the team',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+                'They confirm your scholarship and hold your seat at '
+                'Rs ${pay.toStringAsFixed(0)}.',
+                style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: AppColors.textSecondary)),
+          ],
         ]),
       ),
     );
+  }
+
+  /// Opens WhatsApp with the whole claim already written out — who they
+  /// are, what they scored, what it is worth and the code that proves it.
+  /// The team should not have to ask four questions to honour an offer the
+  /// software already worked out.
+  Future<void> _redeemOnWhatsApp(Map<String, dynamic> s) async {
+    final number = '${s['whatsapp_number'] ?? ''}';
+    if (number.isEmpty) return;
+    final name = '${s['name'] ?? ''}'.trim();
+    final percent = (s['percent'] as num?)?.toDouble() ?? 0;
+    final off = (s['discount_percent'] as num?)?.toInt() ?? 0;
+    final pay = (s['you_pay'] as num?)?.toDouble() ?? 0;
+    final label = '${s['label'] ?? ''}';
+
+    final text = Uri.encodeComponent(
+        "Hi Altrobyte team! ${name.isEmpty ? '' : "I'm $name. "}"
+        "I took the Scholarship Test and scored "
+        "${percent.toStringAsFixed(0)}%"
+        "${label.isEmpty ? '' : ' ($label)'}, "
+        "which earns $off% off — Rs ${pay.toStringAsFixed(0)} for the "
+        "programme.\n\nMy scholarship code is ${s['coupon_code'] ?? ''}.\n\n"
+        "I'd like to claim it and book my seat.");
+    final uri = Uri.parse('https://wa.me/$number?text=$text');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')));
+    }
   }
 
   Widget _nextSteps() {
@@ -1335,19 +1410,22 @@ class _ResultScreenState extends State<_ResultScreen> with SingleTickerProviderS
                     _ScoreStat('Accuracy', '${pct.toStringAsFixed(0)}%', color),
                   ]),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: widget.onRetake,
-                      icon: const Icon(Icons.replay_rounded, size: 18),
-                      label: Text('Retake Test', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: const BorderSide(color: AppColors.primary),
+                  // Not on the scholarship test: it sets a price, and a
+                  // price you can re-roll until you like it is not a price.
+                  if (!_isScholarship)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onRetake,
+                        icon: const Icon(Icons.replay_rounded, size: 18),
+                        label: Text('Retake Test', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.primary),
+                        ),
                       ),
                     ),
-                  ),
                 ]),
               ),
             ),

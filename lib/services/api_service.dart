@@ -1222,7 +1222,14 @@ class ApiService {
 
   /// What the scholarship is: the test, the bands and what each is worth.
   static Future<Map<String, dynamic>> getScholarship() async {
-    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/scholarship'));
+    // Public, but sent with the student token when there is one: the server
+    // uses it only to say whether this reader has already sat the test, and
+    // the page needs that before it offers a Start button.
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token');
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/scholarship'),
+        headers: token == null ? null : _headers(token));
     return _parse(res);
   }
 

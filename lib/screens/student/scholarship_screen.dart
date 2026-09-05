@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
@@ -64,6 +65,17 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
   Future<void> _start() async {
     final test = _config?['test'] as Map?;
     if (test == null) return;
+
+    // Sat once. The server refuses a second attempt anyway; saying so here
+    // means nobody answers twenty questions to be told at the end.
+    if (_config?['attempted'] == true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('You have already taken the scholarship test.')));
+        _load();
+      }
+      return;
+    }
 
     // Taking a test needs an account anyway; asking here rather than at the
     // end means nobody answers twenty questions and then loses them.
@@ -205,6 +217,7 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
           _chip(Icons.timer_outlined,
               secs > 0 ? _readable(secs) : '$mins min'),
           _chip(Icons.bolt_rounded, 'Result instantly'),
+          _chip(Icons.looks_one_rounded, 'One attempt'),
         ]),
       ]),
     );
@@ -230,6 +243,11 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
     final m = _mine!;
     final awarded = m['awarded'] == true;
     final percent = (m['percent'] as num?)?.toDouble() ?? 0;
+    final base = (m['base_amount'] as num?)?.toDouble() ?? 0;
+    final slabs = (_config?['slabs'] as List?) ?? const [];
+    final lowest = slabs.isEmpty
+        ? 50
+        : (slabs.last as Map)['min_percent'] as int? ?? 50;
 
     if (!awarded) {
       return Container(
@@ -244,15 +262,17 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
                   fontSize: 15.5, fontWeight: FontWeight.w700)),
           const SizedBox(height: 5),
           Text(
-              'The lowest band starts at 50%. You can take it again — your '
-              'best score is the one that counts.',
+              'The lowest band starts at $lowest%, and the test is sat once, '
+              'so this score stands. The programme fee is unchanged at '
+              'Rs ${base.toStringAsFixed(0)} — and it is still the same '
+              'programme.',
               style: GoogleFonts.inter(
                   fontSize: 12.5, height: 1.55, color: Colors.black87)),
           const SizedBox(height: 12),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: _start,
-            child: const Text('Take it again'),
+            onPressed: () => context.push('/roadmap/product-engineering'),
+            child: const Text('See the programme'),
           ),
         ]),
       );
@@ -294,20 +314,66 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
                   color: AppColors.primary)),
         ),
         const SizedBox(height: 10),
+        if ('${m['whatsapp_number'] ?? ''}'.isNotEmpty)
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14)),
+              onPressed: _redeemOnWhatsApp,
+              icon: const Icon(Icons.chat_rounded, size: 18),
+              label: Text('Send my score to the team',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
+            ),
+          ),
+        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 14)),
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: 13)),
             onPressed: () => context.push('/roadmap/product-engineering'),
-            child: Text('Use it — see the programme',
+            child: Text('See the programme',
                 style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600, fontSize: 14)),
           ),
         ),
       ]),
     );
+  }
+
+  /// Opens WhatsApp with the claim already written out.
+  ///
+  /// The code alone puts the work on the team: who is this, what did they
+  /// score, is it real. All of that is already known here, so it goes in the
+  /// message and the reply can just be "congratulations, you're booked".
+  Future<void> _redeemOnWhatsApp() async {
+    final m = _mine ?? const {};
+    final number = '${m['whatsapp_number'] ?? ''}';
+    if (number.isEmpty) return;
+    final name = '${m['name'] ?? ''}'.trim();
+    final percent = (m['percent'] as num?)?.toDouble() ?? 0;
+    final off = (m['discount_percent'] as num?)?.toInt() ?? 0;
+    final pay = (m['you_pay'] as num?)?.toDouble() ?? 0;
+
+    final text = Uri.encodeComponent(
+        "Hi Altrobyte team! ${name.isEmpty ? '' : "I'm $name. "}"
+        "I took the Scholarship Test and scored "
+        "${percent.toStringAsFixed(0)}%, which earns $off% off — "
+        "Rs ${pay.toStringAsFixed(0)} for the programme.\n\n"
+        "My scholarship code is ${m['coupon_code'] ?? ''}.\n\n"
+        "I'd like to claim it and book my seat.");
+    final uri = Uri.parse('https://wa.me/$number?text=$text');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')));
+    }
   }
 
   /// The ladder, in rupees rather than percentages.
@@ -366,7 +432,7 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
                   style: TextStyle(
                       fontSize: 13.5, color: AppColors.textSecondary))),
           const Expanded(
-            child: Text('No scholarship — you can take it again',
+            child: Text('No scholarship — full fee',
                 style: TextStyle(
                     fontSize: 13, color: AppColors.textSecondary)),
           ),
@@ -394,11 +460,13 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
         const SizedBox(height: 10),
         for (final line in [
           'Sign in, then take the test. The clock starts when you begin.',
+          'One attempt each. Your score stands, so sit it when you are ready.',
           'You get your score the moment you submit.',
           'A code is issued in your name. It is yours alone and cannot be '
               'passed on.',
           'The code is valid for $days days. Enter it when you register.',
-          'You can retake the test — your best score is the one that counts.',
+          'Send your score to the team on WhatsApp and they confirm your '
+              'scholarship and hold your seat.',
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 7),
