@@ -1290,13 +1290,24 @@ class _PlanBuilderState extends State<_PlanBuilder> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(15, 14, 15, 16),
+      // Its own dark panel, because it no longer sits on one.
+      //
+      // This block was built inside the header's blue gradient and is white
+      // throughout — labels, chips, slider, all of it. Moving the price to
+      // the bottom of the page put white type on a near-white background and
+      // the whole fee structure went invisible: still rendered, still
+      // scrolled past, and impossible to read.
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B2450), Color(0xFF1565C0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('BUILD YOUR PLAN',
+        Text('BUILD YOUR PLAN · FEES',
             style: GoogleFonts.inter(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
