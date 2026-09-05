@@ -125,6 +125,7 @@ class _Nav extends StatelessWidget {
       _NavItem(Icons.format_quote_rounded, 'Reviews', '/reviews-admin'),
       _NavItem(Icons.handshake_rounded, 'Clients & Projects', '/company-admin'),
       _NavItem(Icons.workspace_premium_rounded, 'Scholarship', '/scholarship-admin'),
+      _NavItem(Icons.school_rounded, 'Scholars', '/scholars'),
       _NavItem(Icons.forum_rounded, 'WhatsApp', '/wa-messages'),
       _NavItem(Icons.timeline_rounded, 'Activity Feed', '/activity-feed-admin'),
       _NavItem(Icons.event_rounded, 'Events', '/events-admin'),

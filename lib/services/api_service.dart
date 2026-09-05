@@ -1233,6 +1233,28 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Their details, taken before the test so an award can be verified.
+  static Future<Map<String, dynamic>> registerForScholarship(
+      Map<String, dynamic> body) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await safePost(
+      Uri.parse('${ApiConstants.baseUrl}/scholarship/register'),
+      headers: _headers(prefs.getString('student_token')),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  /// Everybody who sat the scholarship test, with what they gave and got.
+  static Future<Map<String, dynamic>> getScholars(
+      {String q = '', bool awardedOnly = false}) async {
+    final res = await safeGet(
+        Uri.parse('${ApiConstants.baseUrl}/crm/scholars'
+            '?q=${Uri.encodeQueryComponent(q)}&awarded_only=$awardedOnly'),
+        headers: _headers(await _token()));
+    return _parse(res);
+  }
+
   /// Turn this student's score into a coupon. The server reads the score from
   /// their own attempt — nothing here can name a discount.
   static Future<Map<String, dynamic>> claimScholarship() async {

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 import '../../widgets/auth_sheet.dart';
+import '../../widgets/scholarship_form_sheet.dart';
 
 /// The page the poster's QR code points at.
 ///
@@ -77,11 +78,25 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
       return;
     }
 
-    // Taking a test needs an account anyway; asking here rather than at the
-    // end means nobody answers twenty questions and then loses them.
+    // WhatsApp only, no Google. The award has to reach a real person we can
+    // ring, and a Google account arrives with no number at all.
     final ok = await showAuthSheet(context,
+        phoneOnly: true,
         reason: 'to take the scholarship test and keep your result');
     if (!ok || !mounted) return;
+
+    // Details before the paper, never after: a form between somebody and
+    // the score they just earned is a form that does not get filled.
+    await _load();
+    if (!mounted) return;
+    if (_config?['registration'] == null) {
+      final saved = await showScholarshipFormSheet(context);
+      if (!saved || !mounted) return;
+      await _load();
+      if (!mounted) return;
+    }
+    if (_config?['attempted'] == true) return;
+
     await context.push('/test/${test['id']}');
     if (mounted) _load();
   }

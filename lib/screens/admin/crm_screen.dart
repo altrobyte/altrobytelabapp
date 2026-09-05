@@ -8,6 +8,7 @@
 
 import '../../widgets/lead_import_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -95,6 +96,10 @@ class _CrmScreenState extends State<CrmScreen> {
         title: Text('CRM',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         actions: [
+          IconButton(
+              tooltip: 'Scholarship test candidates',
+              onPressed: () => context.push('/scholars'),
+              icon: const Icon(Icons.school_rounded, size: 21)),
           IconButton(
               tooltip: 'Import leads from a CSV',
               onPressed: () => LeadImportSheet.show(context, () {

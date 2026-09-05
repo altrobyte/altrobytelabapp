@@ -22,19 +22,26 @@ import '../services/api_service.dart';
 import '../services/google_auth_service.dart';
 
 /// Opens the sheet. Returns true if the user ended up signed in.
-Future<bool> showAuthSheet(BuildContext context, {String reason = ''}) async {
+///
+/// [phoneOnly] drops Google and goes straight to the number. Used where the
+/// number is not a nice-to-have but the thing being verified — the
+/// scholarship test, where an award has to reach a real person we can ring.
+/// A Google account there would be a name with no way to contact it.
+Future<bool> showAuthSheet(BuildContext context,
+    {String reason = '', bool phoneOnly = false}) async {
   final ok = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _AuthSheet(reason: reason),
+    builder: (_) => _AuthSheet(reason: reason, phoneOnly: phoneOnly),
   );
   return ok == true;
 }
 
 class _AuthSheet extends StatefulWidget {
   final String reason;
-  const _AuthSheet({required this.reason});
+  final bool phoneOnly;
+  const _AuthSheet({required this.reason, this.phoneOnly = false});
 
   @override
   State<_AuthSheet> createState() => _AuthSheetState();
@@ -43,7 +50,8 @@ class _AuthSheet extends StatefulWidget {
 enum _Step { choose, phone, otp }
 
 class _AuthSheetState extends State<_AuthSheet> {
-  _Step _step = _Step.choose;
+  late _Step _step =
+      widget.phoneOnly ? _Step.phone : _Step.choose;
   final _phone = TextEditingController();
   final _otp = TextEditingController();
   final _name = TextEditingController();
@@ -219,14 +227,19 @@ class _AuthSheetState extends State<_AuthSheet> {
             decoration: BoxDecoration(
                 color: Colors.black12, borderRadius: BorderRadius.circular(2)),
           ),
-          if (_step != _Step.choose)
+          if (_step != _Step.choose &&
+              !(widget.phoneOnly && _step == _Step.phone))
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: _busy
                     ? null
                     : () => setState(() {
-                          _step = _step == _Step.otp ? _Step.phone : _Step.choose;
+                          _step = _step == _Step.otp
+                              ? _Step.phone
+                              : (widget.phoneOnly
+                                  ? _Step.phone
+                                  : _Step.choose);
                           _error = '';
                         }),
                 icon: const Icon(Icons.arrow_back_rounded, size: 17),
