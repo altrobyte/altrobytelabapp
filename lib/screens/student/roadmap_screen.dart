@@ -1804,8 +1804,8 @@ class _ScholarshipStrip extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-                'Take the scholarship test and pay less. Your score decides '
-                'how much.',
+                'Scholarship Test — your score decides how much of the fee '
+                'you pay.',
                 style: GoogleFonts.inter(
                     fontSize: 12.5,
                     height: 1.45,

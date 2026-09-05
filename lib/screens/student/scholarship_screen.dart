@@ -185,7 +185,7 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Earn your fee down',
+        Text('Scholarship Test',
             style: GoogleFonts.poppins(
                 fontSize: 24,
                 height: 1.2,
@@ -193,8 +193,8 @@ class _ScholarshipScreenState extends State<ScholarshipScreen> {
                 color: Colors.white)),
         const SizedBox(height: 8),
         Text(
-            'Take one short test. What you score decides what you pay for the '
-            'programme — up to $best% off Rs ${base.toStringAsFixed(0)}.',
+            'One short test. Your score decides your scholarship — up to '
+            '$best% off the Rs ${base.toStringAsFixed(0)} programme fee.',
             style: GoogleFonts.inter(
                 fontSize: 14,
                 height: 1.55,

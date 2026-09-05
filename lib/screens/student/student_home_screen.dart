@@ -575,13 +575,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               child: _WhatIfCard(
                                   onTap: () => context.go('/what-if')),
                             ),
-                            const SizedBox(height: 10),
-                            // Right under the price, where the hesitation is.
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: _ScholarshipCard(
-                                  onTap: () => context.go('/scholarship')),
-                            ),
+
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -1332,6 +1326,13 @@ class _HomeStripState extends State<_HomeStrip> {
 
   Future<void> _openLink(String url) async {
     if (url.isEmpty) return;
+    // A path is a page in this app. Handing "/scholarship" to launchUrl opens
+    // a second browser tab onto our own site, which loses whatever the reader
+    // was in the middle of.
+    if (url.startsWith('/')) {
+      if (mounted) context.go(url);
+      return;
+    }
     final uri = Uri.tryParse(url);
     if (uri != null && await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
@@ -1343,7 +1344,24 @@ class _HomeStripState extends State<_HomeStrip> {
       return Text('Learn. Build. Compete in Deeptech.',
           style: GoogleFonts.inter(color: Colors.white70, fontSize: 13.5));
     }
-    return _RotatingStripSlot(items: _items, onOpenLink: _openLink);
+    // The scholarship is the one item worth money to a reader, so it holds
+    // its place instead of taking a turn in the rotation and disappearing
+    // for twelve seconds.
+    final pinned =
+        _items.where((e) => '${e['icon']}' == 'scholarship').toList();
+    final rest = _items.where((e) => !pinned.contains(e)).toList();
+    if (pinned.isEmpty) {
+      return _RotatingStripSlot(items: _items, onOpenLink: _openLink);
+    }
+    return Wrap(spacing: 8, runSpacing: 8, children: [
+      for (final p in pinned)
+        _StripChip(
+            item: p,
+            highlight: true,
+            onTap: () => _openLink('${p['url'] ?? ''}')),
+      if (rest.isNotEmpty)
+        _RotatingStripSlot(items: rest, onOpenLink: _openLink),
+    ]);
   }
 }
 
@@ -1354,6 +1372,7 @@ IconData _homeStripIconFor(String? key) => switch (key) {
       'youtube' => Icons.play_circle_fill_rounded,
       'telegram' => Icons.send_rounded,
       'discord' => Icons.forum_rounded,
+      'scholarship' => Icons.school_rounded,
       _ => Icons.link_rounded,
     };
 
@@ -1393,32 +1412,70 @@ class _RotatingStripSlotState extends State<_RotatingStripSlot> {
   @override
   Widget build(BuildContext context) {
     final item = widget.items[_index];
-    final isLink = item['item_type'] == 'link';
-    final content = Container(
-      key: ValueKey(_index),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(isLink ? _homeStripIconFor(item['icon']) : Icons.campaign_rounded, color: Colors.white, size: 15),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(item['label'] ?? '',
-              maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600)),
-        ),
-      ]),
-    );
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
-      child: isLink
-          ? InkWell(
-              key: ValueKey('link-$_index'),
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => widget.onOpenLink(item['url'] ?? ''),
-              child: content,
-            )
-          : content,
+      child: _StripChip(
+        key: ValueKey(_index),
+        item: item,
+        onTap: item['item_type'] == 'link'
+            ? () => widget.onOpenLink('${item['url'] ?? ''}')
+            : null,
+      ),
     );
+  }
+}
+
+/// One item in the strip. Pinned and rotating items are the same chip, so
+/// they cannot drift apart in looks.
+class _StripChip extends StatelessWidget {
+  final dynamic item;
+  final VoidCallback? onTap;
+
+  /// Brighter, so the pinned item reads as an offer and not as one more
+  /// link sitting beside the WhatsApp group.
+  final bool highlight;
+
+  const _StripChip(
+      {super.key, required this.item, this.onTap, this.highlight = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLink = item['item_type'] == 'link';
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: highlight ? 0.20 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: highlight
+            ? Border.all(color: Colors.white.withValues(alpha: 0.35))
+            : null,
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(isLink ? _homeStripIconFor(item['icon']) : Icons.campaign_rounded,
+            color: Colors.white, size: 15),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text('${item['label'] ?? ''}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600)),
+        ),
+        if (highlight) ...[
+          const SizedBox(width: 4),
+          const Icon(Icons.chevron_right_rounded,
+              color: Colors.white, size: 16),
+        ],
+      ]),
+    );
+    return onTap == null
+        ? content
+        : InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            child: content);
   }
 }
 
@@ -3244,58 +3301,3 @@ class _WhatIfCard extends StatelessWidget {
 }
 
 
-/// The scholarship, offered where the fee is being weighed up.
-class _ScholarshipCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _ScholarshipCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.workspace_premium_rounded,
-                size: 21, color: AppColors.accent),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Earn your fee down',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary)),
-                  const SizedBox(height: 3),
-                  Text(
-                      'One short test. What you score decides what you pay.',
-                      style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          height: 1.45,
-                          color: AppColors.textSecondary)),
-                ]),
-          ),
-          const Icon(Icons.arrow_forward_rounded,
-              size: 18, color: AppColors.accent),
-        ]),
-      ),
-    );
-  }
-}
