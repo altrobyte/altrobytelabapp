@@ -305,6 +305,13 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                   const SizedBox(height: 18),
                                   const TestimonialsSection(place: 'roadmap'),
                                 ],
+                                // Before the price: somebody about to read a
+                                // number should know it is not fixed.
+                                if (!widget.present) ...[
+                                  const SizedBox(height: 14),
+                                  _ScholarshipStrip(
+                                      onTap: () => context.go('/scholarship')),
+                                ],
                                 // Price last, on purpose. Asked at the top it
                                 // is the first thing anybody weighs, before
                                 // they know what they are weighing it
@@ -1771,4 +1778,44 @@ List<Widget> _stageMeta(Map<String, dynamic> step, bool present) {
       ),
     ],
   ];
+}
+
+
+/// A line above the price saying it can be earned down.
+class _ScholarshipStrip extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ScholarshipStrip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.workspace_premium_rounded,
+              size: 18, color: AppColors.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+                'Take the scholarship test and pay less. Your score decides '
+                'how much.',
+                style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary)),
+          ),
+          const Icon(Icons.arrow_forward_rounded,
+              size: 16, color: AppColors.accent),
+        ]),
+      ),
+    );
+  }
 }

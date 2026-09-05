@@ -60,6 +60,7 @@ import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
 import 'screens/student/roadmap_screen.dart';
 import 'screens/student/what_if_screen.dart';
+import 'screens/student/scholarship_screen.dart';
 import 'services/page_seo.dart';
 import 'screens/admin/testimonials_admin_screen.dart';
 import 'screens/admin/company_items_admin_screen.dart';
@@ -391,6 +392,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Public like the roadmap: the argument for a path is no use behind
         // a login when the people who most need it have not signed up yet.
         GoRoute(path: '/what-if', builder: (_, __) => const WhatIfScreen()),
+        // The page the poster's QR code points at. Public: a candidate who
+        // has never signed in has to be able to read what it is worth before
+        // being asked for anything.
+        GoRoute(
+            path: '/scholarship',
+            builder: (_, __) => const ScholarshipScreen()),
         // Public: the link is posted in class WhatsApp groups, so it has to
         // render for somebody who has never signed in.
         GoRoute(

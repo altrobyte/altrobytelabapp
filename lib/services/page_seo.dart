@@ -86,6 +86,11 @@ class PageSeo {
       'Products built at Altrobyte — telematics, industrial automation, '
           'connected devices and edge AI systems.'
     ),
+    '/scholarship': (
+      'Scholarship Test — Up to 50% Off Embedded & IoT Training',
+      'Take one short test and what you score decides what you pay. Instant '
+          'result, and a code in your name. Altrobyte Lab, Indore.'
+    ),
     '/what-if': (
       'What If? — Explore Your Engineering Futures',
       'A live map of where you are in engineering and what changes if you '

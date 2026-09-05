@@ -575,6 +575,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                               child: _WhatIfCard(
                                   onTap: () => context.go('/what-if')),
                             ),
+                            const SizedBox(height: 10),
+                            // Right under the price, where the hesitation is.
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: _ScholarshipCard(
+                                  onTap: () => context.go('/scholarship')),
+                            ),
                             const SizedBox(height: 24),
 
                             // ── Hero moment: continue an in-progress module, else the
@@ -3230,6 +3237,63 @@ class _WhatIfCard extends StatelessWidget {
           const SizedBox(width: 8),
           Icon(Icons.arrow_forward_rounded,
               size: 18, color: Colors.white.withValues(alpha: 0.85)),
+        ]),
+      ),
+    );
+  }
+}
+
+
+/// The scholarship, offered where the fee is being weighed up.
+class _ScholarshipCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ScholarshipCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.workspace_premium_rounded,
+                size: 21, color: AppColors.accent),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Earn your fee down',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                  const SizedBox(height: 3),
+                  Text(
+                      'One short test. What you score decides what you pay.',
+                      style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          height: 1.45,
+                          color: AppColors.textSecondary)),
+                ]),
+          ),
+          const Icon(Icons.arrow_forward_rounded,
+              size: 18, color: AppColors.accent),
         ]),
       ),
     );
