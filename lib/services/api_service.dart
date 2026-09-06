@@ -1514,7 +1514,7 @@ class ApiService {
     return roadmap;
   }
 
-  /// Corrects the stale two-month Starter quote while the roadmap API catches up.
+  /// Corrects stale Product Engineering quotes while the roadmap API catches up.
   static void normalizeProductEngineeringRoadmapFees(Map<String, dynamic> roadmap) {
     final plans = roadmap['plans'];
     if (plans is! List) return;
@@ -1522,7 +1522,18 @@ class ApiService {
       if (raw is! Map) continue;
       final months = raw['monthly_months'] as int?;
       final duration = (raw['duration_label'] as String? ?? '').toLowerCase();
+      final isOneMonthPlan = months == 1 || duration.contains('1 month');
       final isTwoMonthPlan = months == 2 || duration.contains('2 month');
+
+      if (isOneMonthPlan) {
+        if (raw['fee'] == 19000) raw['fee'] = 10000;
+        final note = (raw['note'] as String? ?? '').trim();
+        const scholarshipNote =
+            'Special discount for scholars. Contact for scholarship.';
+        if (!note.contains(scholarshipNote)) {
+          raw['note'] = note.isEmpty ? scholarshipNote : '$note $scholarshipNote';
+        }
+      }
       if (!isTwoMonthPlan) continue;
 
       if (raw['fee'] == 9000) raw['fee'] = 18000;

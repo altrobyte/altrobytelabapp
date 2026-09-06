@@ -110,6 +110,44 @@ void main() {
   });
 
   group('product engineering roadmap fees', () {
+    test('stale one-month intensive quote is corrected before display', () {
+      final roadmap = {
+        'plans': [
+          {
+            'name': 'Intensive',
+            'duration_label': '1 month',
+            'fee': 19000,
+            'monthly_months': 1,
+          },
+        ],
+      };
+
+      ApiService.normalizeProductEngineeringRoadmapFees(roadmap);
+
+      final plan = (roadmap['plans'] as List).single as Map;
+      expect(plan['fee'], 10000);
+      expect(plan['note'], contains('Special discount for scholars'));
+      expect(plan['note'], contains('Contact for scholarship'));
+    });
+
+    test('an already-correct one-month fee is left alone', () {
+      final roadmap = {
+        'plans': [
+          {
+            'name': 'Intensive',
+            'duration_label': '1 month',
+            'fee': 10000,
+            'monthly_months': 1,
+          },
+        ],
+      };
+
+      ApiService.normalizeProductEngineeringRoadmapFees(roadmap);
+
+      final plan = (roadmap['plans'] as List).single as Map;
+      expect(plan['fee'], 10000);
+    });
+
     test('stale two-month starter quote is corrected before display', () {
       final roadmap = {
         'plans': [

@@ -1431,7 +1431,9 @@ class _PlanBuilderState extends State<_PlanBuilder> {
                 Text(
                     monthly
                         ? 'per month · $months months'
-                        : '+ GST',
+                        : months == 1
+                            ? 'per month + GST'
+                            : '+ GST',
                     style: GoogleFonts.inter(
                         fontSize: 10, color: const Color(0xFF9AA5B5))),
               ]),
