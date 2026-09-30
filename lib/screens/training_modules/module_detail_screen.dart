@@ -330,7 +330,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _ContentTypeCard(
-                    icon: FontAwesomeIcons.github,
+                    icon: FontAwesomeIcons.github.data,
                     label: 'GitHub Project',
                     subtitle: 'Link a repo',
                     color: Colors.black87,
@@ -1151,7 +1151,7 @@ class _SubtopicTile extends StatelessWidget {
       case 'code':
         return Icons.code_rounded;
       case 'github':
-        return FontAwesomeIcons.github;
+        return FontAwesomeIcons.github.data;
       default:
         return Icons.description_rounded;
     }

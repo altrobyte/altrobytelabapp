@@ -593,7 +593,7 @@ class _ContentTile extends StatelessWidget {
       case 'code':
         return Icons.code_rounded;
       case 'github':
-        return FontAwesomeIcons.github;
+        return FontAwesomeIcons.github.data;
       default:
         return Icons.description_rounded;
     }

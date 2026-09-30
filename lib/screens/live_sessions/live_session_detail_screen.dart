@@ -510,14 +510,14 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     }
   }
 
-  Widget _socialIconButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+  Widget _socialIconButton({required Widget icon, required Color color, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Container(
         width: 42, height: 42,
         decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 18),
+        child: icon,
       ),
     );
   }
@@ -622,13 +622,13 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
             Text('Share your journey', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.textSecondary)),
             const SizedBox(height: 10),
             Row(children: [
-              _socialIconButton(icon: FontAwesomeIcons.whatsapp, color: AppColors.whatsapp, onTap: () => _shareToSocial('whatsapp', session)),
+              _socialIconButton(icon: const FaIcon(FontAwesomeIcons.whatsapp, color: AppColors.whatsapp, size: 18), color: AppColors.whatsapp, onTap: () => _shareToSocial('whatsapp', session)),
               const SizedBox(width: 12),
-              _socialIconButton(icon: FontAwesomeIcons.linkedinIn, color: const Color(0xFF0A66C2), onTap: () => _shareToSocial('linkedin', session)),
+              _socialIconButton(icon: const FaIcon(FontAwesomeIcons.linkedinIn, color: Color(0xFF0A66C2), size: 18), color: const Color(0xFF0A66C2), onTap: () => _shareToSocial('linkedin', session)),
               const SizedBox(width: 12),
-              _socialIconButton(icon: FontAwesomeIcons.instagram, color: const Color(0xFFC13584), onTap: () => _shareToSocial('instagram', session)),
+              _socialIconButton(icon: const FaIcon(FontAwesomeIcons.instagram, color: Color(0xFFC13584), size: 18), color: const Color(0xFFC13584), onTap: () => _shareToSocial('instagram', session)),
               const SizedBox(width: 12),
-              _socialIconButton(icon: Icons.link_rounded, color: AppColors.textSecondary, onTap: () => _shareSession(session)),
+              _socialIconButton(icon: const Icon(Icons.link_rounded, color: AppColors.textSecondary, size: 18), color: AppColors.textSecondary, onTap: () => _shareSession(session)),
             ]),
             if ((session['redirect_link'] ?? '').toString().isNotEmpty) ...[
               const SizedBox(height: 16),
