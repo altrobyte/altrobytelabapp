@@ -39,8 +39,16 @@ class _StudentExperimentDetailScreenState extends State<StudentExperimentDetailS
     switch (widget.experiment.toolType) {
       case 'mqtt':
         screen = MqttTesterScreen(
-          initialHost: cfg['broker'] != null ? 'wss://${cfg['broker']}/mqtt' : null,
+          initialHost: cfg['broker'] != null ? MqttTesterScreen.normalizeHost(cfg['broker']) : null,
+          initialPort: cfg['port'] is int ? cfg['port'] as int : int.tryParse('${cfg['port']}'),
+          initialUsername: cfg['username'],
+          initialPassword: cfg['password'],
           initialTopic: cfg['topic'],
+          initialPubTopic: cfg['pub_topic'],
+          initialPayload: cfg['payload'],
+          initialSubQos: cfg['sub_qos'] is int ? cfg['sub_qos'] as int : int.tryParse('${cfg['sub_qos']}'),
+          initialPubQos: cfg['pub_qos'] is int ? cfg['pub_qos'] as int : int.tryParse('${cfg['pub_qos']}'),
+          initialRetain: cfg['retain'] == true,
         );
         break;
       case 'websocket':

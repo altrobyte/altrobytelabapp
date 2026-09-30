@@ -2,9 +2,11 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mqtt_client/mqtt_client.dart';
 import '../../constants/app_colors.dart';
 import '../../models/experiment_model.dart';
 import '../../services/api_service.dart';
+import '../tools/mqtt_tester_screen.dart';
 
 /// Admin editor for a single experiment: objective, step-by-step HTML
 /// guide (with live preview), and tool-specific default config.
@@ -25,7 +27,15 @@ class _ExperimentEditScreenState extends State<ExperimentEditScreen>
 
   // MQTT
   late TextEditingController _brokerCtl;
+  late TextEditingController _portCtl;
+  late TextEditingController _usernameCtl;
+  late TextEditingController _passwordCtl;
   late TextEditingController _topicCtl;
+  late TextEditingController _pubTopicCtl;
+  late TextEditingController _payloadCtl;
+  late MqttQos _subQos;
+  late MqttQos _pubQos;
+  late bool _retain;
   // WebSocket
   late TextEditingController _wsUrlCtl;
   // BLE
@@ -42,8 +52,21 @@ class _ExperimentEditScreenState extends State<ExperimentEditScreen>
     _titleCtl = TextEditingController(text: e.title);
     _objectiveCtl = TextEditingController(text: e.objective);
     _guideCtl = TextEditingController(text: e.guideHtml);
-    _brokerCtl = TextEditingController(text: e.toolConfig['broker'] ?? 'broker.hivemq.com');
+    _brokerCtl = TextEditingController(
+        text: MqttTesterScreen.normalizeHost(e.toolConfig['broker'] ?? 'wss://broker.hivemq.com/mqtt'));
+    _portCtl = TextEditingController(
+        text: '${e.toolConfig['port'] ?? MqttTesterScreen.guessPort(e.toolConfig['broker'] ?? '')}');
+    _usernameCtl = TextEditingController(text: e.toolConfig['username'] ?? '');
+    _passwordCtl = TextEditingController(text: e.toolConfig['password'] ?? '');
     _topicCtl = TextEditingController(text: e.toolConfig['topic'] ?? 'altrobyte/experiments/demo');
+    _pubTopicCtl = TextEditingController(
+        text: e.toolConfig['pub_topic'] ?? e.toolConfig['topic'] ?? 'altrobyte/experiments/demo');
+    _payloadCtl = TextEditingController(text: e.toolConfig['payload'] ?? 'ON');
+    _subQos = MqttTesterScreen.qosFromInt(e.toolConfig['sub_qos']);
+    _pubQos = e.toolConfig['pub_qos'] != null
+        ? MqttTesterScreen.qosFromInt(e.toolConfig['pub_qos'])
+        : MqttQos.atLeastOnce;
+    _retain = e.toolConfig['retain'] == true;
     _wsUrlCtl = TextEditingController(text: e.toolConfig['url'] ?? 'wss://echo.websocket.org');
     _serviceUuidCtl = TextEditingController(text: e.toolConfig['service_uuid'] ?? '');
     _characteristicUuidCtl = TextEditingController(text: e.toolConfig['characteristic_uuid'] ?? '');
@@ -56,7 +79,12 @@ class _ExperimentEditScreenState extends State<ExperimentEditScreen>
     _objectiveCtl.dispose();
     _guideCtl.dispose();
     _brokerCtl.dispose();
+    _portCtl.dispose();
+    _usernameCtl.dispose();
+    _passwordCtl.dispose();
     _topicCtl.dispose();
+    _pubTopicCtl.dispose();
+    _payloadCtl.dispose();
     _wsUrlCtl.dispose();
     _serviceUuidCtl.dispose();
     _characteristicUuidCtl.dispose();
@@ -66,7 +94,18 @@ class _ExperimentEditScreenState extends State<ExperimentEditScreen>
   Map<String, dynamic> _buildToolConfig() {
     switch (widget.experiment.toolType) {
       case 'mqtt':
-        return {'broker': _brokerCtl.text.trim(), 'topic': _topicCtl.text.trim()};
+        return {
+          'broker': _brokerCtl.text.trim(),
+          'port': int.tryParse(_portCtl.text.trim()) ?? 8884,
+          'username': _usernameCtl.text.trim(),
+          'password': _passwordCtl.text,
+          'topic': _topicCtl.text.trim(),
+          'pub_topic': _pubTopicCtl.text.trim(),
+          'payload': _payloadCtl.text,
+          'sub_qos': _subQos.index,
+          'pub_qos': _pubQos.index,
+          'retain': _retain,
+        };
       case 'websocket':
         return {'url': _wsUrlCtl.text.trim()};
       case 'ble':
@@ -102,18 +141,132 @@ class _ExperimentEditScreenState extends State<ExperimentEditScreen>
   Widget _toolConfigFields() {
     switch (widget.experiment.toolType) {
       case 'mqtt':
-        return Column(children: [
-          TextField(
-            controller: _brokerCtl,
-            decoration: InputDecoration(
-                labelText: 'Broker host', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+        const presetBrokers = [
+          ('HiveMQ (public, free)', 'wss://broker.hivemq.com/mqtt', '8884'),
+          ('Mosquitto (public, free)', 'wss://test.mosquitto.org', '8081'),
+          ('EMQX (public, free)', 'wss://broker.emqx.io/mqtt', '8084'),
+        ];
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Ready-made free brokers — tap to fill in host + port:',
+              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: presetBrokers.map((b) => ActionChip(
+              label: Text(b.$1, style: GoogleFonts.inter(fontSize: 11.5)),
+              onPressed: () => setState(() {
+                _brokerCtl.text = b.$2;
+                _portCtl.text = b.$3;
+              }),
+            )).toList(),
           ),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _brokerCtl,
+                decoration: InputDecoration(
+                    labelText: 'Broker WebSocket URL',
+                    hintText: 'wss://broker.hivemq.com/mqtt',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _portCtl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                    labelText: 'Port', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+          ]),
           const SizedBox(height: 12),
-          TextField(
-            controller: _topicCtl,
-            decoration: InputDecoration(
-                labelText: 'Default topic', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-          ),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _usernameCtl,
+                decoration: InputDecoration(
+                    labelText: 'Username (optional)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _passwordCtl,
+                obscureText: true,
+                decoration: InputDecoration(
+                    labelText: 'Password (optional)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          Text('Public free brokers need no credentials — only fill these in for a private/production broker.',
+              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _topicCtl,
+                decoration: InputDecoration(
+                    labelText: 'Subscribe topic',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            DropdownButton<MqttQos>(
+              value: _subQos,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: MqttQos.atMostOnce, child: Text('QoS 0')),
+                DropdownMenuItem(value: MqttQos.atLeastOnce, child: Text('QoS 1')),
+                DropdownMenuItem(value: MqttQos.exactlyOnce, child: Text('QoS 2')),
+              ],
+              onChanged: (v) => setState(() => _subQos = v ?? MqttQos.atMostOnce),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _pubTopicCtl,
+                decoration: InputDecoration(
+                    labelText: 'Publish topic',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            DropdownButton<MqttQos>(
+              value: _pubQos,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: MqttQos.atMostOnce, child: Text('QoS 0')),
+                DropdownMenuItem(value: MqttQos.atLeastOnce, child: Text('QoS 1')),
+                DropdownMenuItem(value: MqttQos.exactlyOnce, child: Text('QoS 2')),
+              ],
+              onChanged: (v) => setState(() => _pubQos = v ?? MqttQos.atLeastOnce),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _payloadCtl,
+                decoration: InputDecoration(
+                    labelText: 'Default publish payload',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Checkbox(value: _retain, onChanged: (v) => setState(() => _retain = v ?? false)),
+              Text('Retain', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+            ]),
+          ]),
         ]);
       case 'websocket':
         return TextField(
