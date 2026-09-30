@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import 'ble_tester_screen.dart';
 import 'http_tester_screen.dart';
 import 'mqtt_tester_screen.dart';
+import 'ota_updater_screen.dart';
 import 'websocket_tester_screen.dart';
 
 /// Hub for the free, no-login dev tools (protocol testers) — previously
@@ -23,6 +24,8 @@ class DevToolsHubScreen extends StatelessWidget {
           AppColors.primary, (_) => const WebSocketTesterScreen()),
       ('BLE Tester', 'Scan and connect to nearby BLE devices', Icons.bluetooth_rounded,
           AppColors.accent, (_) => const BleTesterScreen()),
+      ('OTA Updater', 'Push firmware updates to ESP32 over MQTT', Icons.system_update_alt_rounded,
+          AppColors.primary, (_) => const OtaUpdaterScreen()),
     ];
 
     return Scaffold(

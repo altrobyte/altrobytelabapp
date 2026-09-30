@@ -22,6 +22,7 @@ import '../../widgets/upgrade_sheet.dart';
 import '../tools/ble_tester_screen.dart';
 import '../tools/http_tester_screen.dart';
 import '../tools/mqtt_tester_screen.dart';
+import '../tools/ota_updater_screen.dart';
 import '../tools/websocket_tester_screen.dart';
 import 'student_module_detail_screen.dart';
 import 'student_practice_screen.dart';
@@ -528,12 +529,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       if (isMobile)
                         SliverToBoxAdapter(
                           child: _PrimaryActionRow(
-                            showCustomTest: _customTestEnabled,
-                            onPractice: () => _openPractice(),
-                            onTestSeries: () => context.push('/student/test-series'),
-                            onTraining: _openTrainingScreen,
                             onExperiments: () => context.push('/student/experiments'),
                             onJobs: () => context.push('/jobs'),
+                            onMockInterview: () => context.push('/student/mock-interview'),
+                            onDevTools: () => context.push('/student/dev-tools'),
                             onMore: () => _showMoreActionsSheet(
                               context,
                               onMockInterview: () => context.push('/student/mock-interview'),
@@ -863,6 +862,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     color: AppColors.accent,
                                     onTap: () => Navigator.push(context,
                                         MaterialPageRoute(builder: (_) => const BleTesterScreen())),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _TopicCard(
+                                    label: 'OTA Updater', icon: Icons.system_update_alt_rounded,
+                                    color: AppColors.primary,
+                                    onTap: () => Navigator.push(context,
+                                        MaterialPageRoute(builder: (_) => const OtaUpdaterScreen())),
                                   ),
                                 ],
                               ),
@@ -1499,7 +1505,12 @@ class _ActivityFeedTickerState extends State<_ActivityFeedTicker> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // Don't show this the instant the page paints — on first load the
+    // scroll position is 0 and whatever hero card is above the fold (its
+    // CTA included) sits right where this floats, so the very first thing
+    // a visitor sees would be a toast covering the button they're about
+    // to tap. Give them a few seconds to land on the page first.
+    Future.delayed(const Duration(seconds: 5), _load);
   }
 
   Future<void> _load() async {
@@ -1666,41 +1677,35 @@ class _EmptyFeedCard extends StatelessWidget {
   }
 }
 
-/// Primary action row — capped at the 4 daily-use features (Practice,
-/// Training, Experiments, Jobs) plus a "More" tile for everything else
-/// (Mock Interview, Sessions, Events, Test Series, Pricing, Activity).
-/// Keeping this to 4+1 instead of a wall of 8 icons is what makes the
-/// "what do I do first" decision fast on a small screen.
+/// Primary action row — deliberately does NOT repeat Home/Test Series/
+/// Training/Activity/Profile, since those are already one tap away in the
+/// persistent bottom nav on mobile. Surfacing the same destination in two
+/// navigation elements at once read as redundant, not helpful — so this
+/// row is reserved for the features that live nowhere else above the fold
+/// (Experiments, Jobs, Mock Interview, Dev Tools), plus a "More" tile for
+/// everything else (Sessions, Events, Test Series, Pricing, Activity).
 class _PrimaryActionRow extends StatelessWidget {
-  final bool showCustomTest;
-  final VoidCallback onPractice;
-  final VoidCallback onTestSeries;
-  final VoidCallback onTraining;
   final VoidCallback onExperiments;
   final VoidCallback onJobs;
+  final VoidCallback onMockInterview;
+  final VoidCallback onDevTools;
   final VoidCallback onMore;
 
   const _PrimaryActionRow({
-    required this.showCustomTest,
-    required this.onPractice,
-    required this.onTestSeries,
-    required this.onTraining,
     required this.onExperiments,
     required this.onJobs,
+    required this.onMockInterview,
+    required this.onDevTools,
     required this.onMore,
   });
 
   @override
   Widget build(BuildContext context) {
     final items = <(String, IconData, Color, VoidCallback)>[
-      // Same slot, different destination while Custom Test is admin-only —
-      // Test Series is what a student should reach for instead.
-      showCustomTest
-          ? ('Custom Test', Icons.bolt_rounded, AppColors.accent, onPractice)
-          : ('Test Series', Icons.quiz_rounded, AppColors.accent, onTestSeries),
-      ('Training', Icons.school_rounded, AppColors.primary, onTraining),
       ('Experiments', Icons.science_rounded, AppColors.accent, onExperiments),
       ('Jobs', Icons.work_rounded, AppColors.primary, onJobs),
+      ('Mock Interview', Icons.record_voice_over_rounded, AppColors.accent, onMockInterview),
+      ('Dev Tools', Icons.developer_board_rounded, AppColors.primary, onDevTools),
     ];
     return Container(
       color: Colors.white,
