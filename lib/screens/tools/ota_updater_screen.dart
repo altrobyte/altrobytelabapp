@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mqtt_client/mqtt_browser_client.dart';
@@ -13,7 +15,10 @@ import 'ota_firmware_sketch.dart';
 /// progress from `<base>/ota/status` (`{state, progress, version, msg}`).
 /// The device downloads the .bin itself over HTTPS, so this works from an
 /// https page (a direct browser→device HTTP push would be blocked as mixed
-/// content). Pair it with the sketch from [otaFirmwareSketch].
+/// content). Alternatively the .bin can be uploaded straight from the browser:
+/// it is streamed to the device in acknowledged chunks over MQTT
+/// (`<base>/ota/data` out, `<base>/ota/ack` back), so nothing needs hosting.
+/// Pair it with the sketch from [otaFirmwareSketch].
 class OtaUpdaterScreen extends StatefulWidget {
   const OtaUpdaterScreen({super.key});
 
@@ -50,6 +55,16 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
   bool get _connected => _client?.connectionStatus?.state == MqttConnectionState.connected;
   final List<_OtaLogLine> _log = [];
 
+  // Firmware source: a hosted https URL the device downloads, or a file
+  // picked here and streamed to the device over MQTT.
+  bool _uploadMode = true;
+  String? _fileName;
+  Uint8List? _fileBytes;
+  bool _uploading = false;
+  bool _cancelUpload = false;
+  Completer<String>? _ackWaiter;
+  static const _chunkSize = 8192;
+
   String _state = 'unknown';
   int _progress = 0;
   String _deviceVersion = '—';
@@ -65,6 +80,8 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
   String get _base => _baseCtrl.text.trim().replaceAll(RegExp(r'/+$'), '');
   String get _cmdTopic => '$_base/ota/cmd';
   String get _statusTopic => '$_base/ota/status';
+  String get _dataTopic => '$_base/ota/data';
+  String get _ackTopic => '$_base/ota/ack';
 
   void _addLog(String text, {bool isError = false, bool isOutgoing = false}) {
     if (!mounted) return;
@@ -103,6 +120,7 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
       _client = client;
       client.updates?.listen(_onMessage);
       client.subscribe(_statusTopic, MqttQos.atLeastOnce);
+      client.subscribe(_ackTopic, MqttQos.atLeastOnce);
       _addLog('Connected to $host:$port — listening on $_statusTopic');
     } catch (e) {
       _addLog('Connection failed: $e', isError: true);
@@ -121,6 +139,11 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
     for (final e in events) {
       final pub = e.payload as MqttPublishMessage;
       final raw = MqttPublishPayload.bytesToStringAsString(pub.payload.message);
+      if (e.topic == _ackTopic) {
+        final w = _ackWaiter;
+        if (w != null && !w.isCompleted) w.complete(raw.trim());
+        continue;
+      }
       try {
         final j = jsonDecode(raw) as Map<String, dynamic>;
         setState(() {
@@ -135,6 +158,102 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
         _addLog('${e.topic}  →  $raw');
       }
     }
+  }
+
+  Future<void> _pickFile() async {
+    final res = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['bin'],
+      withData: true,
+    );
+    final f = res?.files.single;
+    if (f == null || f.bytes == null) return;
+    setState(() {
+      _fileName = f.name;
+      _fileBytes = f.bytes;
+    });
+    _addLog('Selected ${f.name} (${(f.bytes!.length / 1024).toStringAsFixed(1)} KB)');
+  }
+
+  /// Waits for the next message on the ack topic; null on timeout.
+  Future<String?> _nextAck(Duration timeout) async {
+    final waiter = _ackWaiter = Completer<String>();
+    try {
+      return await waiter.future.timeout(timeout);
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  void _publishBytes(String topic, Uint8List bytes) {
+    final b = MqttClientPayloadBuilder();
+    for (final v in bytes) {
+      b.addByte(v);
+    }
+    _client!.publishMessage(topic, MqttQos.atLeastOnce, b.payload!);
+  }
+
+  void _failUpload(String msg) {
+    _addLog(msg, isError: true);
+    if (mounted) {
+      setState(() {
+        _uploading = false;
+        _state = 'failed';
+        _deviceMsg = msg;
+      });
+    }
+  }
+
+  Future<void> _sendUpload() async {
+    final bytes = _fileBytes;
+    if (!_connected || bytes == null || _uploading) return;
+    setState(() {
+      _uploading = true;
+      _cancelUpload = false;
+      _state = 'sent';
+      _progress = 0;
+      _deviceMsg = '';
+    });
+    final cmd = jsonEncode({
+      'mode': 'mqtt',
+      'size': bytes.length,
+      'version': _versionCtrl.text.trim(),
+    });
+    final ready = _nextAck(const Duration(seconds: 15));
+    _client!.publishMessage(_cmdTopic, MqttQos.atLeastOnce, (MqttClientPayloadBuilder()..addString(cmd)).payload!);
+    _addLog('$_cmdTopic  ←  $cmd', isOutgoing: true);
+    if (await ready != 'ready') {
+      return _failUpload('Device did not answer — is it online and running the OTA sketch on this topic?');
+    }
+    final total = (bytes.length / _chunkSize).ceil();
+    for (var seq = 0; seq < total; seq++) {
+      if (_cancelUpload) return _failUpload('Cancelled');
+      final start = seq * _chunkSize;
+      final end = (start + _chunkSize).clamp(0, bytes.length);
+      final chunk = Uint8List(4 + end - start)
+        ..[0] = (seq >> 24) & 0xff
+        ..[1] = (seq >> 16) & 0xff
+        ..[2] = (seq >> 8) & 0xff
+        ..[3] = seq & 0xff
+        ..setRange(4, 4 + end - start, bytes, start);
+      var acked = false;
+      for (var attempt = 0; attempt < 5 && !acked; attempt++) {
+        if (!_connected) return _failUpload('Connection lost during upload');
+        final ack = _nextAck(const Duration(seconds: 4));
+        _publishBytes(_dataTopic, chunk);
+        final v = int.tryParse(await ack ?? '');
+        acked = v != null && v >= seq;
+      }
+      if (!acked) return _failUpload('Device stopped acknowledging at chunk ${seq + 1}/$total');
+      if (mounted) {
+        setState(() {
+          _state = 'uploading';
+          _progress = ((seq + 1) * 100 / total).floor();
+        });
+      }
+    }
+    _addLog('All $total chunks sent — device is verifying and flashing');
+    if (mounted) setState(() => _uploading = false);
   }
 
   void _sendUpdate() {
@@ -187,6 +306,7 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
 
   @override
   void dispose() {
+    _cancelUpload = true;
     _client?.disconnect();
     for (final c in [_hostCtrl, _portCtrl, _userCtrl, _passCtrl, _baseCtrl, _urlCtrl, _versionCtrl, _shaCtrl]) {
       c.dispose();
@@ -286,26 +406,60 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _title('Firmware'),
           const SizedBox(height: 12),
-          TextField(
-              controller: _urlCtrl,
-              decoration: _dec('Firmware .bin URL (https)', hint: 'https://example.com/firmware-1.1.0.bin')),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: TextField(controller: _versionCtrl, decoration: _dec('Version', hint: '1.1.0'))),
-            const SizedBox(width: 10),
-            Expanded(flex: 2, child: TextField(controller: _shaCtrl, decoration: _dec('SHA256 (optional)'))),
-          ]),
-          const SizedBox(height: 4),
-          Text('The URL must be https and allow direct download. The device fetches it — this page never uploads the file.',
-              style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Upload .bin'), icon: Icon(Icons.upload_file_rounded, size: 18)),
+              ButtonSegment(value: false, label: Text('From URL'), icon: Icon(Icons.link_rounded, size: 18)),
+            ],
+            selected: {_uploadMode},
+            onSelectionChanged: _uploading ? null : (v) => setState(() => _uploadMode = v.first),
+          ),
+          const SizedBox(height: 12),
+          if (_uploadMode) ...[
+            OutlinedButton.icon(
+              onPressed: _uploading ? null : _pickFile,
+              icon: const Icon(Icons.folder_open_rounded, size: 18),
+              label: Text(_fileName == null
+                  ? 'Choose firmware .bin'
+                  : '$_fileName  (${(_fileBytes!.length / 1024).toStringAsFixed(1)} KB)'),
+            ),
+            const SizedBox(height: 4),
+            Text(
+                'Streamed to the device in ${_chunkSize ~/ 1024} KB chunks over MQTT — no hosting needed. Use the app binary from '
+                '"Export Compiled Binary" (not the bootloader/merged file). Takes about a minute for 1 MB.',
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 10),
+            TextField(controller: _versionCtrl, decoration: _dec('Version', hint: '1.1.0')),
+          ] else ...[
+            TextField(
+                controller: _urlCtrl,
+                decoration: _dec('Firmware .bin URL (https)', hint: 'https://example.com/firmware-1.1.0.bin')),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: TextField(controller: _versionCtrl, decoration: _dec('Version', hint: '1.1.0'))),
+              const SizedBox(width: 10),
+              Expanded(flex: 2, child: TextField(controller: _shaCtrl, decoration: _dec('SHA256 (optional)'))),
+            ]),
+            const SizedBox(height: 4),
+            Text('The URL must be https and allow direct download. The device fetches it — this page never uploads the file.',
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+          ],
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _connected ? _sendUpdate : null,
-                icon: const Icon(Icons.system_update_alt_rounded, size: 18),
-                label: const Text('Send update'),
-              ),
+              child: _uploading
+                  ? OutlinedButton.icon(
+                      onPressed: () => setState(() => _cancelUpload = true),
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      label: const Text('Cancel upload'),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: !_connected || (_uploadMode && _fileBytes == null)
+                          ? null
+                          : (_uploadMode ? _sendUpload : _sendUpdate),
+                      icon: const Icon(Icons.system_update_alt_rounded, size: 18),
+                      label: Text(_uploadMode ? 'Upload & update' : 'Send update'),
+                    ),
             ),
             const SizedBox(width: 10),
             OutlinedButton.icon(
