@@ -12,6 +12,7 @@ const otaFirmwareSketch = r'''
 // it sends an https URL that this board downloads itself.
 // Libraries: PubSubClient, ArduinoJson (install from Library Manager)
 // Tools > Partition Scheme must be an OTA one (e.g. "Default 4MB with spiffs").
+// PlatformIO: add #include <Arduino.h> on top; lib_deps = knolleary/PubSubClient@^2.8, bblanchon/ArduinoJson@^7
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPUpdate.h>
@@ -147,8 +148,29 @@ void reconnect() {
 
 void setup() {
   Serial.begin(115200);
+  delay(500);
+  Serial.printf("
+Booting, firmware %s
+", FW_VERSION);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) delay(300);
+  Serial.printf("Connecting to %s", WIFI_SSID);
+  uint32_t t0 = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print('.');
+    if (millis() - t0 > 20000) {
+      Serial.printf("
+WiFi failed (status %d). Check SSID/password and use 2.4 GHz.
+", WiFi.status());
+      t0 = millis();
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+    }
+  }
+  Serial.printf("
+WiFi OK, IP %s
+", WiFi.localIP().toString().c_str());
   cmdTopic = String(BASE) + "/ota/cmd";
   dataTopic = String(BASE) + "/ota/data";
   ackTopic = String(BASE) + "/ota/ack";
