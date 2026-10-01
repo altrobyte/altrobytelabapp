@@ -61,6 +61,16 @@
             "value": "no-cache, no-store, must-revalidate"
           }
         ]
+      },
+      {
+        "//": "NOT immutable, despite living under /assets/ or ending in .otf. The icon font is rebuilt every release as a subset holding only the icons the app uses, at a fixed URL. Cached for a year, a returning visitor kept the old subset and every icon added since rendered blank (the reorder drag handles). The manifests change the same way. no-cache means revalidate with the ETag (a 304 when unchanged). Last in the list so it overrides the long-cache rules above.",
+        "source": "/assets/@(fonts/**|FontManifest.json|AssetManifest.json|AssetManifest.bin|AssetManifest.bin.json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ],
     "redirects": [
