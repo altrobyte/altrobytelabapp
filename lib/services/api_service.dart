@@ -2084,6 +2084,48 @@ class ApiService {
     _parse(res);
   }
 
+  static Future<Map<String, dynamic>> updateSubtopic(
+      int subtopicId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.trainingModuleSubtopic(subtopicId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  // Reordering — each call sends the complete new id sequence for one parent.
+  static Future<void> reorderModuleTopics(int moduleId, List<int> ids) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.trainingModule(moduleId)}/topics/order'),
+      headers: _headers(token),
+      body: jsonEncode({'ids': ids}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> reorderModuleSubtopics(int topicId, List<int> ids) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.trainingModuleTopic(topicId)}/subtopics/order'),
+      headers: _headers(token),
+      body: jsonEncode({'ids': ids}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> reorderModuleContent(int subtopicId, List<int> ids) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.trainingModuleSubtopic(subtopicId)}/content/order'),
+      headers: _headers(token),
+      body: jsonEncode({'ids': ids}),
+    );
+    _parse(res);
+  }
+
   // Content items
   static Future<Map<String, dynamic>> createContent(
       int subtopicId, Map<String, dynamic> body) async {

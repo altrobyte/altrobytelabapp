@@ -403,6 +403,107 @@ class TrainingModuleProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateSubtopic(int subtopicId, String title) async {
+    try {
+      await ApiService.updateSubtopic(subtopicId, {'title': title});
+      _mapSubtopics((s) => s.id == subtopicId ? s.copyWith(title: title) : s);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── Reordering ─────────────────────────────────────────────────────────
+  // Optimistic: the list moves immediately, and snaps back if the server
+  // refuses (e.g. another admin changed the list meanwhile).
+
+  Future<bool> reorderTopics(int oldIndex, int newIndex) async {
+    final module = currentModule;
+    if (module == null) return false;
+    final before = module.topics;
+    final topics = List<ModuleTopic>.from(before);
+    topics.insert(newIndex, topics.removeAt(oldIndex));
+    currentModule = module.copyWith(topics: topics);
+    notifyListeners();
+    try {
+      await ApiService.reorderModuleTopics(module.id, topics.map((t) => t.id).toList());
+      return true;
+    } catch (e) {
+      error = e.toString();
+      currentModule = module.copyWith(topics: before);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> reorderSubtopics(int topicId, int oldIndex, int newIndex) async {
+    final module = currentModule;
+    if (module == null) return false;
+    final before = module.topics;
+    List<ModuleSubtopic>? reordered;
+    currentModule = module.copyWith(
+      topics: before.map((t) {
+        if (t.id != topicId) return t;
+        final subs = List<ModuleSubtopic>.from(t.subtopics);
+        subs.insert(newIndex, subs.removeAt(oldIndex));
+        reordered = subs;
+        return ModuleTopic(id: t.id, moduleId: t.moduleId, title: t.title, order: t.order, subtopics: subs);
+      }).toList(),
+    );
+    notifyListeners();
+    try {
+      await ApiService.reorderModuleSubtopics(topicId, reordered!.map((s) => s.id).toList());
+      return true;
+    } catch (e) {
+      error = e.toString();
+      currentModule = module.copyWith(topics: before);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> reorderContent(int subtopicId, int oldIndex, int newIndex) async {
+    final module = currentModule;
+    if (module == null) return false;
+    final before = module.topics;
+    List<ContentItem>? reordered;
+    _mapSubtopics((s) {
+      if (s.id != subtopicId) return s;
+      final items = List<ContentItem>.from(s.contentItems);
+      items.insert(newIndex, items.removeAt(oldIndex));
+      reordered = items;
+      return s.copyWith(contentItems: items);
+    });
+    notifyListeners();
+    try {
+      await ApiService.reorderModuleContent(subtopicId, reordered!.map((c) => c.id).toList());
+      return true;
+    } catch (e) {
+      error = e.toString();
+      currentModule = module.copyWith(topics: before);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void _mapSubtopics(ModuleSubtopic Function(ModuleSubtopic) f) {
+    if (currentModule == null) return;
+    currentModule = currentModule!.copyWith(
+      topics: currentModule!.topics
+          .map((t) => ModuleTopic(
+                id: t.id,
+                moduleId: t.moduleId,
+                title: t.title,
+                order: t.order,
+                subtopics: t.subtopics.map(f).toList(),
+              ))
+          .toList(),
+    );
+  }
+
   // ── CRUD: Content Items ────────────────────────────────────────────────
 
   Future<bool> addContentItem(int subtopicId, ContentItem item) async {

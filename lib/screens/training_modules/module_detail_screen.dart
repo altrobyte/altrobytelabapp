@@ -827,6 +827,144 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     }
   }
 
+  // ── Rename / edit ──────────────────────────────────────────────────────
+
+  /// Small multi-field dialog. Returns the trimmed values, or null on cancel.
+  Future<List<String>?> _formDialog(
+    String title,
+    Color color,
+    List<({String label, String value, int lines})> fields,
+  ) {
+    final ctls = [for (final f in fields) TextEditingController(text: f.value)];
+    return showDialog<List<String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: SizedBox(
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              for (var i = 0; i < fields.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                TextField(
+                  controller: ctls[i],
+                  autofocus: i == 0,
+                  minLines: 1,
+                  maxLines: fields[i].lines,
+                  decoration: InputDecoration(
+                    labelText: fields[i].label,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  style: fields[i].lines > 1
+                      ? GoogleFonts.robotoMono(fontSize: 12.5)
+                      : GoogleFonts.inter(fontSize: 14),
+                ),
+              ],
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              if (ctls.first.text.trim().isEmpty) return;
+              Navigator.pop(ctx, [for (final c in ctls) c.text.trim()]);
+            },
+            child: Text('Save', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String? msg, String fallback) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg ?? fallback), backgroundColor: AppColors.error));
+  }
+
+  Future<void> _editModuleTitle(TrainingModule module, Color color) async {
+    final res = await _formDialog('Rename Module', color,
+        [(label: 'Module Title', value: module.title, lines: 1)]);
+    if (res == null || !mounted) return;
+    final provider = context.read<TrainingModuleProvider>();
+    if (!await provider.updateModule(module.id, title: res[0])) {
+      _showError(provider.error, 'Failed to rename module');
+    }
+  }
+
+  Future<void> _editSubtopic(ModuleSubtopic subtopic, Color color) async {
+    final res = await _formDialog('Edit Subtopic', color,
+        [(label: 'Subtopic Title', value: subtopic.title, lines: 1)]);
+    if (res == null || !mounted) return;
+    final provider = context.read<TrainingModuleProvider>();
+    if (!await provider.updateSubtopic(subtopic.id, res[0])) {
+      _showError(provider.error, 'Failed to update subtopic');
+    }
+  }
+
+  /// Notes open the full editor; every other type gets a small form for the
+  /// fields it actually has (title, plus a link or the code text).
+  Future<void> _editContent(int topicId, int subtopicId, ContentItem item, Color color) async {
+    if (item.type == 'notes') {
+      _editNotesContent(topicId, subtopicId, item);
+      return;
+    }
+    final fields = <({String label, String value, int lines})>[
+      (label: 'Title', value: item.title, lines: 1),
+      if (item.type == 'video') (label: 'YouTube URL', value: item.youtubeUrl ?? '', lines: 1),
+      if (item.type == 'resource' || item.type == 'github')
+        (label: item.type == 'github' ? 'Repository URL' : 'Resource URL', value: item.resourceUrl ?? '', lines: 1),
+      if (item.type == 'code') (label: 'Code', value: item.htmlContent ?? '', lines: 14),
+    ];
+    final res = await _formDialog('Edit Content', color, fields);
+    if (res == null || !mounted) return;
+    final updated = item.copyWith(
+      title: res[0],
+      youtubeUrl: item.type == 'video' ? res[1] : null,
+      resourceUrl: (item.type == 'resource' || item.type == 'github') ? res[1] : null,
+      htmlContent: item.type == 'code' ? res[1] : null,
+    );
+    final provider = context.read<TrainingModuleProvider>();
+    if (!await provider.updateContentItem(updated)) {
+      _showError(provider.error, 'Failed to update content');
+    }
+  }
+
+  // ── Reorder ────────────────────────────────────────────────────────────
+  // onReorderItem already hands us the index the row ends up at.
+
+  int _fixIndex(int oldIndex, int newIndex) => newIndex;
+
+  Future<void> _reorder(Future<bool> Function() run) async {
+    final provider = context.read<TrainingModuleProvider>();
+    if (!await run()) _showError(provider.error, 'Could not save the new order');
+  }
+
+  void _reorderTopics(int o, int n) {
+    if (o == _fixIndex(o, n)) return;
+    _reorder(() => context.read<TrainingModuleProvider>().reorderTopics(o, _fixIndex(o, n)));
+  }
+
+  void _reorderSubtopics(int topicId, int o, int n) {
+    if (o == _fixIndex(o, n)) return;
+    _reorder(() => context.read<TrainingModuleProvider>().reorderSubtopics(topicId, o, _fixIndex(o, n)));
+  }
+
+  void _reorderContent(int subtopicId, int o, int n) {
+    if (o == _fixIndex(o, n)) return;
+    _reorder(() => context.read<TrainingModuleProvider>().reorderContent(subtopicId, o, _fixIndex(o, n)));
+  }
+
   Future<void> _deleteContent(
       int topicId, int subtopicId, int contentId) async {
     final provider = context.read<TrainingModuleProvider>();
@@ -870,6 +1008,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Rename module',
+            icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+            onPressed: loading ? null : () => _editModuleTitle(module, color),
+          ),
           Container(
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -919,12 +1062,16 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+              : ReorderableListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                  buildDefaultDragHandles: false,
                   itemCount: module.topics.length,
+                  onReorderItem: _reorderTopics,
                   itemBuilder: (context, index) {
                     final topic = module.topics[index];
                     return _TopicCard(
+                      key: ValueKey('topic-${topic.id}'),
+                      index: index,
                       topic: topic,
                       color: color,
                       isExpanded: _expandedTopics.contains(topic.id),
@@ -950,8 +1097,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                           _deleteSubtopic(topic.id, subtopicId),
                       onAddContent: (subtopic) =>
                           _addContent(topic.id, subtopic),
-                      onEditNotes: (subtopicId, item) =>
-                          _editNotesContent(topic.id, subtopicId, item),
+                      onEditSubtopic: (subtopic) => _editSubtopic(subtopic, color),
+                      onReorderSubtopics: (o, n) => _reorderSubtopics(topic.id, o, n),
+                      onReorderContent: _reorderContent,
+                      onEditContent: (subtopicId, item) =>
+                          _editContent(topic.id, subtopicId, item, color),
                       onDeleteContent: (subtopicId, contentId) =>
                           _deleteContent(topic.id, subtopicId, contentId),
                     );
@@ -964,6 +1114,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 // ── Topic Card ───────────────────────────────────────────────────────────
 
 class _TopicCard extends StatelessWidget {
+  final int index;
   final ModuleTopic topic;
   final Color color;
   final bool isExpanded;
@@ -975,10 +1126,15 @@ class _TopicCard extends StatelessWidget {
   final VoidCallback onAddSubtopic;
   final ValueChanged<int> onDeleteSubtopic;
   final ValueChanged<ModuleSubtopic> onAddContent;
-  final Function(int subtopicId, ContentItem item) onEditNotes;
+  final ValueChanged<ModuleSubtopic> onEditSubtopic;
+  final void Function(int oldIndex, int newIndex) onReorderSubtopics;
+  final void Function(int subtopicId, int oldIndex, int newIndex) onReorderContent;
+  final Function(int subtopicId, ContentItem item) onEditContent;
   final Function(int subtopicId, int contentId) onDeleteContent;
 
   const _TopicCard({
+    super.key,
+    required this.index,
     required this.topic,
     required this.color,
     required this.isExpanded,
@@ -989,7 +1145,10 @@ class _TopicCard extends StatelessWidget {
     required this.onDelete,
     required this.onAddSubtopic,
     required this.onAddContent,
-    required this.onEditNotes,
+    required this.onEditSubtopic,
+    required this.onReorderSubtopics,
+    required this.onReorderContent,
+    required this.onEditContent,
     required this.onDeleteContent,
     required this.onDeleteSubtopic,
   });
@@ -1039,6 +1198,16 @@ class _TopicCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: const MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(Icons.drag_indicator_rounded, size: 20, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.edit_rounded, size: 18),
                     color: AppColors.textSecondary,
@@ -1073,17 +1242,32 @@ class _TopicCard extends StatelessWidget {
               child: Column(
                 children: [
                   const Divider(height: 1),
-                  ...topic.subtopics.map((subtopic) => _SubtopicTile(
-                        subtopic: subtopic,
-                        color: color,
-                        isExpanded: expandedSubtopics.contains(subtopic.id),
-                        onToggle: () => onToggleSubtopic(subtopic.id),
-                        onAddContent: () => onAddContent(subtopic),
-                        onEditNotes: (item) => onEditNotes(subtopic.id, item),
-                        onDeleteContent: (contentId) =>
-                            onDeleteContent(subtopic.id, contentId),
-                        onDelete: () => onDeleteSubtopic(subtopic.id),
-                      )),
+                  ReorderableListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    onReorderItem: onReorderSubtopics,
+                    children: [
+                      for (var i = 0; i < topic.subtopics.length; i++)
+                        _SubtopicTile(
+                          key: ValueKey('subtopic-${topic.subtopics[i].id}'),
+                          index: i,
+                          subtopic: topic.subtopics[i],
+                          color: color,
+                          isExpanded: expandedSubtopics.contains(topic.subtopics[i].id),
+                          onToggle: () => onToggleSubtopic(topic.subtopics[i].id),
+                          onAddContent: () => onAddContent(topic.subtopics[i]),
+                          onEdit: () => onEditSubtopic(topic.subtopics[i]),
+                          onReorderContent: (o, n) =>
+                              onReorderContent(topic.subtopics[i].id, o, n),
+                          onEditContent: (item) =>
+                              onEditContent(topic.subtopics[i].id, item),
+                          onDeleteContent: (contentId) =>
+                              onDeleteContent(topic.subtopics[i].id, contentId),
+                          onDelete: () => onDeleteSubtopic(topic.subtopics[i].id),
+                        ),
+                    ],
+                  ),
                   // Add subtopic button
                   InkWell(
                     onTap: onAddSubtopic,
@@ -1118,25 +1302,51 @@ class _TopicCard extends StatelessWidget {
 // ── Subtopic Tile ────────────────────────────────────────────────────────
 
 class _SubtopicTile extends StatelessWidget {
+  final int index;
   final ModuleSubtopic subtopic;
   final Color color;
   final bool isExpanded;
   final VoidCallback onToggle;
   final VoidCallback onAddContent;
-  final ValueChanged<ContentItem> onEditNotes;
+  final VoidCallback onEdit;
+  final void Function(int oldIndex, int newIndex) onReorderContent;
+  final ValueChanged<ContentItem> onEditContent;
   final ValueChanged<int> onDeleteContent;
   final VoidCallback onDelete;
 
   const _SubtopicTile({
+    super.key,
+    required this.index,
     required this.subtopic,
     required this.color,
     required this.isExpanded,
     required this.onToggle,
     required this.onAddContent,
-    required this.onEditNotes,
+    required this.onEdit,
+    required this.onReorderContent,
+    required this.onEditContent,
     required this.onDeleteContent,
     required this.onDelete,
   });
+
+  String _contentLabel(ContentItem item) {
+    switch (item.type) {
+      case 'notes':
+        return 'HTML Notes';
+      case 'test':
+        return 'Test #${item.testId}';
+      case 'video':
+        return 'YouTube Video';
+      case 'resource':
+        return 'Resource';
+      case 'code':
+        return 'Code';
+      case 'github':
+        return 'GitHub repo';
+      default:
+        return item.type;
+    }
+  }
 
   IconData _contentIcon(String type) {
     switch (type) {
@@ -1174,6 +1384,68 @@ class _SubtopicTile extends StatelessWidget {
       default:
         return Colors.grey;
     }
+  }
+
+  Widget _contentRow(ContentItem item, int idx) {
+    return Padding(
+      key: ValueKey('content-${item.id}'),
+      padding: const EdgeInsets.only(left: 68, right: 16, bottom: 4),
+      child: Material(
+        color: _contentColor(item.type).withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => onEditContent(item),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(_contentIcon(item.type), color: _contentColor(item.type), size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title,
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary)),
+                      Text(_contentLabel(item),
+                          style: GoogleFonts.inter(fontSize: 10, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                ReorderableDragStartListener(
+                  index: idx,
+                  child: const MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.drag_indicator_rounded, size: 18, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, size: 15),
+                  color: Colors.grey,
+                  tooltip: 'Edit',
+                  onPressed: () => onEditContent(item),
+                  visualDensity: VisualDensity.compact,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  color: Colors.grey,
+                  tooltip: 'Delete',
+                  onPressed: () => onDeleteContent(item.id),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1216,6 +1488,22 @@ class _SubtopicTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.drag_indicator_rounded, size: 18, color: Colors.grey[500]),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, size: 16),
+                  color: AppColors.textSecondary,
+                  onPressed: onEdit,
+                  visualDensity: VisualDensity.compact,
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, size: 16),
                   color: AppColors.error.withValues(alpha: 0.7),
@@ -1235,57 +1523,16 @@ class _SubtopicTile extends StatelessWidget {
 
         // Content items
         if (isExpanded) ...[
-          ...subtopic.contentItems.map((item) => Padding(
-                padding: const EdgeInsets.only(left: 68, right: 16, bottom: 4),
-                child: Material(
-                  color: _contentColor(item.type).withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap:
-                        item.type == 'notes' ? () => onEditNotes(item) : null,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(_contentIcon(item.type),
-                              color: _contentColor(item.type), size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item.title,
-                                    style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.textPrimary)),
-                                Text(
-                                  item.type == 'notes'
-                                      ? 'HTML Notes'
-                                      : item.type == 'test'
-                                          ? 'Test #${item.testId}'
-                                          : 'YouTube Video',
-                                  style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      color: AppColors.textSecondary),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 16),
-                            color: Colors.grey,
-                            onPressed: () => onDeleteContent(item.id),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              )),
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            onReorderItem: onReorderContent,
+            children: [
+              for (var idx = 0; idx < subtopic.contentItems.length; idx++)
+                _contentRow(subtopic.contentItems[idx], idx),
+            ],
+          ),
           // Add content button
           Padding(
             padding:
