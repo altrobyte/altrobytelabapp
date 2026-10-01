@@ -360,13 +360,28 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     }
   }
 
+  /// "Module > Topic > Subtopic", so AI-written notes fit where they sit.
+  String _notesHint(int topicId, int subtopicId) {
+    final module = context.read<TrainingModuleProvider>().currentModule ?? widget.module;
+    final parts = <String>[module.title];
+    for (final t in module.topics) {
+      if (t.id != topicId) continue;
+      parts.add(t.title);
+      for (final s in t.subtopics) {
+        if (s.id == subtopicId) parts.add(s.title);
+      }
+    }
+    return parts.join(' > ');
+  }
+
   void _addNotesContent(int topicId, ModuleSubtopic subtopic) async {
     final result = await Navigator.push<Map<String, String>>(
       context,
       MaterialPageRoute(
-        builder: (_) => const NotesEditorScreen(
+        builder: (_) => NotesEditorScreen(
           initialTitle: '',
           initialHtml: '',
+          contextHint: _notesHint(topicId, subtopic.id),
         ),
       ),
     );
@@ -809,6 +824,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
         builder: (_) => NotesEditorScreen(
           initialTitle: item.title,
           initialHtml: item.htmlContent ?? '',
+          contextHint: _notesHint(topicId, subtopicId),
         ),
       ),
     );

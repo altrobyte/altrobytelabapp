@@ -2126,6 +2126,39 @@ class ApiService {
     _parse(res);
   }
 
+  /// Claude-written HTML notes (the backend calls Anthropic, not Groq).
+  /// Slow by nature — a full note can take a minute — so no retry (it is a
+  /// paid call) and a generous timeout.
+  static Future<Map<String, dynamic>> generateNotesWithAi({
+    required String topic,
+    String context = '',
+    String level = 'Beginner',
+    String length = 'Standard',
+    String language = 'English',
+    String instructions = '',
+  }) async {
+    final token = await _token();
+    try {
+      final res = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/training-modules/ai/notes'),
+            headers: _headers(token),
+            body: jsonEncode({
+              'topic': topic,
+              'context': context,
+              'level': level,
+              'length': length,
+              'language': language,
+              'instructions': instructions,
+            }),
+          )
+          .timeout(const Duration(minutes: 4));
+      return _parse(res);
+    } on TimeoutException {
+      throw ApiException('The AI took too long. Try a shorter length and try again.');
+    }
+  }
+
   // Content items
   static Future<Map<String, dynamic>> createContent(
       int subtopicId, Map<String, dynamic> body) async {

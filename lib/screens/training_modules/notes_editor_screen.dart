@@ -3,6 +3,7 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../services/api_service.dart';
 
 /// Admin HTML Notes editor with two tabs:
 /// 1. HTML Code — raw HTML editing
@@ -13,10 +14,15 @@ class NotesEditorScreen extends StatefulWidget {
   final String initialTitle;
   final String initialHtml;
 
+  /// Where this note sits ("Module > Topic > Subtopic"), given to the AI
+  /// writer so the note fits the course instead of being generic.
+  final String contextHint;
+
   const NotesEditorScreen({
     super.key,
     required this.initialTitle,
     required this.initialHtml,
+    this.contextHint = '',
   });
 
   @override
@@ -61,6 +67,28 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
       'title': _titleCtl.text.trim(),
       'html': _htmlCtl.text,
     });
+  }
+
+  Future<void> _writeWithAi() async {
+    final result = await showDialog<_AiNotesResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _AiNotesDialog(
+        initialTopic: _titleCtl.text.trim(),
+        contextHint: widget.contextHint,
+        replacesExisting: _htmlCtl.text.trim().isNotEmpty,
+      ),
+    );
+    if (result == null || !mounted) return;
+    _htmlCtl.text = result.html;
+    if (_titleCtl.text.trim().isEmpty) _titleCtl.text = result.topic;
+    _tabCtl.animateTo(1); // straight to the preview so it can be read
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(result.truncated
+          ? 'Note was cut off at the length limit — review the end, or generate again with a shorter length.'
+          : 'Note written. Read it through before saving.'),
+      backgroundColor: result.truncated ? Colors.orange : AppColors.success,
+    ));
   }
 
   void _insertTemplate(String template) {
@@ -128,6 +156,13 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
                 fontWeight: FontWeight.w600,
                 fontSize: 16)),
         actions: [
+          TextButton.icon(
+            onPressed: _writeWithAi,
+            icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+            label: Text('Write with AI',
+                style: GoogleFonts.inter(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
           TextButton.icon(
             onPressed: _save,
             icon: const Icon(Icons.save_rounded, color: Colors.white, size: 20),
@@ -366,4 +401,178 @@ class _HtmlPreviewState extends State<_HtmlPreview> {
 
   @override
   Widget build(BuildContext context) => HtmlElementView(viewType: _viewId);
+}
+
+
+class _AiNotesResult {
+  final String topic;
+  final String html;
+  final bool truncated;
+  _AiNotesResult(this.topic, this.html, this.truncated);
+}
+
+/// Asks what to write, calls the backend (Claude), and pops the result.
+/// Not dismissible while a request is running — it is a paid call, and
+/// closing the dialog would just throw the answer away.
+class _AiNotesDialog extends StatefulWidget {
+  final String initialTopic;
+  final String contextHint;
+  final bool replacesExisting;
+  const _AiNotesDialog({
+    required this.initialTopic,
+    required this.contextHint,
+    required this.replacesExisting,
+  });
+
+  @override
+  State<_AiNotesDialog> createState() => _AiNotesDialogState();
+}
+
+class _AiNotesDialogState extends State<_AiNotesDialog> {
+  late final _topicCtl = TextEditingController(text: widget.initialTopic);
+  final _instructionsCtl = TextEditingController();
+  String _level = 'Beginner';
+  String _length = 'Standard';
+  String _language = 'English';
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _topicCtl.dispose();
+    _instructionsCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _generate() async {
+    final topic = _topicCtl.text.trim();
+    if (topic.length < 2) {
+      setState(() => _error = 'Enter the topic to write about');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final res = await ApiService.generateNotesWithAi(
+        topic: topic,
+        context: widget.contextHint,
+        level: _level,
+        length: _length,
+        language: _language,
+        instructions: _instructionsCtl.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.pop(context,
+          _AiNotesResult(topic, '${res['html'] ?? ''}', res['truncated'] == true));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  Widget _dropdown(String label, String value, List<String> items, ValueChanged<String> onChanged) {
+    return Expanded(
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        isDense: true,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        items: [for (final i in items) DropdownMenuItem(value: i, child: Text(i))],
+        onChanged: _busy ? null : (v) => onChanged(v ?? value),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: Row(children: [
+        const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 22),
+        const SizedBox(width: 8),
+        Text('Write notes with AI',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+      ]),
+      content: SizedBox(
+        width: 480,
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            TextField(
+              controller: _topicCtl,
+              enabled: !_busy,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Topic',
+                hintText: 'e.g., ESP32 ADC and analogRead',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            if (widget.contextHint.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('Course: ${widget.contextHint}',
+                  style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+            ],
+            const SizedBox(height: 12),
+            Row(children: [
+              _dropdown('Level', _level, const ['Beginner', 'Intermediate', 'Advanced'], (v) => setState(() => _level = v)),
+              const SizedBox(width: 10),
+              _dropdown('Length', _length, const ['Short', 'Standard', 'Detailed'], (v) => setState(() => _length = v)),
+              const SizedBox(width: 10),
+              _dropdown('Language', _language, const ['English', 'Hinglish'], (v) => setState(() => _language = v)),
+            ]),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _instructionsCtl,
+              enabled: !_busy,
+              minLines: 2,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: 'Extra instructions (optional)',
+                hintText: 'e.g., use ESP32 and Arduino IDE, include a wiring table, add 5 MCQs',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            if (widget.replacesExisting) ...[
+              const SizedBox(height: 10),
+              Text('This replaces the HTML currently in the editor.',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.orange.shade800)),
+            ],
+            if (_busy) ...[
+              const SizedBox(height: 14),
+              Row(children: [
+                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Claude is writing — this can take up to a minute…',
+                      style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+                ),
+              ]),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 10),
+              Text(_error!, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.error)),
+            ],
+          ]),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.textSecondary)),
+        ),
+        ElevatedButton.icon(
+          onPressed: _busy ? null : _generate,
+          icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+          label: Text(_busy ? 'Writing…' : 'Generate'),
+        ),
+      ],
+    );
+  }
 }
