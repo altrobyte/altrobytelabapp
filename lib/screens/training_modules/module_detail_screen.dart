@@ -1220,7 +1220,7 @@ class _TopicCard extends StatelessWidget {
                       cursor: SystemMouseCursors.grab,
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.drag_indicator_rounded, size: 20, color: AppColors.textSecondary),
+                        child: _DragGrip(color: AppColors.textSecondary),
                       ),
                     ),
                   ),
@@ -1438,7 +1438,7 @@ class _SubtopicTile extends StatelessWidget {
                     cursor: SystemMouseCursors.grab,
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(Icons.drag_indicator_rounded, size: 18, color: Colors.grey),
+                      child: _DragGrip(color: Colors.grey),
                     ),
                   ),
                 ),
@@ -1510,7 +1510,7 @@ class _SubtopicTile extends StatelessWidget {
                     cursor: SystemMouseCursors.grab,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(Icons.drag_indicator_rounded, size: 18, color: Colors.grey[500]),
+                      child: _DragGrip(color: Colors.grey.shade500),
                     ),
                   ),
                 ),
@@ -1628,6 +1628,38 @@ class _ContentTypeCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                     fontSize: 11, color: AppColors.textSecondary)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Six-dot drag handle, drawn with widgets rather than an icon glyph. The icon
+/// font is a per-build subset that browsers cache; a handle that depends on a
+/// glyph added in a later build renders blank for anyone holding the old font.
+class _DragGrip extends StatelessWidget {
+  final Color color;
+  const _DragGrip({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget dot() => Container(
+          width: 3.5,
+          height: 3.5,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        );
+    Widget column() => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [dot(), const SizedBox(height: 3), dot(), const SizedBox(height: 3), dot()],
+        );
+    return Tooltip(
+      message: 'Drag to reorder',
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [column(), const SizedBox(width: 3), column()],
         ),
       ),
     );
