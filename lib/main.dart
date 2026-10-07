@@ -368,9 +368,6 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             path: '/scholars',
             builder: (_, __) => const ScholarsScreen()),
         GoRoute(
-            path: '/invoices',
-            builder: (_, __) => const InvoicesScreen()),
-        GoRoute(
             path: '/reviews-admin',
             builder: (_, __) => const TestimonialsAdminScreen()),
         GoRoute(
@@ -676,6 +673,15 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/settings',
                 builder: (_, __) => const SettingsScreen(),
+              ),
+            ]),
+            // Last on purpose: MainLayout's bottom nav addresses branches by
+            // index (attendance=12, settings=16), so inserting earlier would
+            // silently repoint those tabs.
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/invoices',
+                builder: (_, __) => const InvoicesScreen(),
               ),
             ]),
           ],
