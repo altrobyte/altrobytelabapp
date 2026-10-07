@@ -24,6 +24,7 @@ import 'screens/test_generator/test_generator_screen.dart';
 import 'screens/test_generator/test_attempt_screen.dart';
 import 'screens/attendance/attendance_screen.dart';
 import 'screens/fees/fee_management_screen.dart';
+import 'screens/invoices/invoices_screen.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/batches/batches_screen.dart';
 import 'screens/broadcast/broadcast_screen.dart';
@@ -194,6 +195,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/curriculum-admin',
           '/crm',
           '/scholars',
+          '/invoices',
           '/reviews-admin',
           '/company-admin',
           '/scholarship-admin',
@@ -365,6 +367,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(
             path: '/scholars',
             builder: (_, __) => const ScholarsScreen()),
+        GoRoute(
+            path: '/invoices',
+            builder: (_, __) => const InvoicesScreen()),
         GoRoute(
             path: '/reviews-admin',
             builder: (_, __) => const TestimonialsAdminScreen()),

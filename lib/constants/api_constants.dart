@@ -67,6 +67,15 @@ class ApiConstants {
   static String markPaid(int id) => '$baseUrl/fees/$id/mark-paid';
   static String feePaymentLink(int id) => '$baseUrl/fees/$id/payment-link';
   static String feeVerifyPayment(int id) => '$baseUrl/fees/$id/verify-payment';
+
+  // invoices
+  static String invoiceSettings(int instituteId) => '$baseUrl/institutes/$instituteId/invoice-settings';
+  static String invoices(int instituteId) => '$baseUrl/institutes/$instituteId/invoices';
+  static String invoice(int id) => '$baseUrl/invoices/$id';
+  static String invoicePayments(int id) => '$baseUrl/invoices/$id/payments';
+  static String invoicePayment(int id, int paymentId) => '$baseUrl/invoices/$id/payments/$paymentId';
+  static String invoiceCancel(int id) => '$baseUrl/invoices/$id/cancel';
+  static String invoicePdf(int id) => '$baseUrl/invoices/$id/pdf';
   static String instituteSubscribe(int id) => '$baseUrl/institutes/$id/subscribe';
 
   // notify

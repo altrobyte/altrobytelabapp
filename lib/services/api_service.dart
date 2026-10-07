@@ -1836,6 +1836,89 @@ class ApiService {
   }
 
   // Fees
+  // ── Invoices ──────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getInvoiceSettings(int instituteId) async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.invoiceSettings(instituteId)), headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> saveInvoiceSettings(int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse(ApiConstants.invoiceSettings(instituteId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  /// {invoices: [...], summary: {...}}
+  static Future<Map<String, dynamic>> listInvoices(int instituteId, {String? status, String q = ''}) async {
+    final token = await _token();
+    final params = <String, String>{if (status != null) 'status': status, if (q.trim().isNotEmpty) 'q': q.trim()};
+    final uri = Uri.parse(ApiConstants.invoices(instituteId)).replace(queryParameters: params.isEmpty ? null : params);
+    final res = await safeGet(uri, headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getInvoice(int id) async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse(ApiConstants.invoice(id)), headers: _headers(token));
+    return _parse(res);
+  }
+
+  /// No retry: creating an invoice consumes a number.
+  static Future<Map<String, dynamic>> createInvoice(int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(
+      Uri.parse(ApiConstants.invoices(instituteId)),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateInvoice(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.put(Uri.parse(ApiConstants.invoice(id)), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> addInvoicePayment(int id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse(ApiConstants.invoicePayments(id)),
+        headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> deleteInvoicePayment(int id, int paymentId) async {
+    final token = await _token();
+    final res = await http.delete(Uri.parse(ApiConstants.invoicePayment(id, paymentId)), headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> cancelInvoice(int id) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse(ApiConstants.invoiceCancel(id)), headers: _headers(token));
+    return _parse(res);
+  }
+
+  /// The PDF bytes; the endpoint needs the staff token, so this cannot be a plain link.
+  static Future<Uint8List> fetchInvoicePdf(int id) async {
+    final token = await _token();
+    final res = await http.get(Uri.parse(ApiConstants.invoicePdf(id)), headers: _headers(token));
+    if (res.statusCode >= 400) {
+      String msg = 'Could not load the PDF';
+      try {
+        msg = (jsonDecode(res.body)['detail'] ?? msg).toString();
+      } catch (_) {}
+      throw ApiException(msg, statusCode: res.statusCode);
+    }
+    return res.bodyBytes;
+  }
+
   static Future<List<dynamic>> getPendingFees(int instituteId) async {
     final token = await _token();
     final res = await safeGet(

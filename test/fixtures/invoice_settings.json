@@ -1,0 +1,23 @@
+{
+ "business_name": "Altrobyte Automation",
+ "address": "",
+ "city": "",
+ "state": "Madhya Pradesh",
+ "pincode": "",
+ "gstin": "23ABCDE1234F1Z5",
+ "pan": "",
+ "phone": "",
+ "email": "",
+ "upi_id": "alt@okaxis",
+ "upi_name": "",
+ "bank_account_name": "",
+ "bank_name": "",
+ "bank_account_no": "",
+ "bank_ifsc": "",
+ "bank_branch": "",
+ "invoice_prefix": "FX",
+ "default_sac": "999293",
+ "terms": "",
+ "signatory": "",
+ "default_gst_rate": 18.0
+}

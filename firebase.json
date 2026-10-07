@@ -110,6 +110,12 @@
         "type": 302
       },
       {
+        "//": "Invoice share links. The short link is what goes into a WhatsApp message; the PDF is served by the backend from an unguessable token.",
+        "source": "/inv/:token",
+        "destination": "https://edu.altrobytelab.com/public/invoices/:token/pdf",
+        "type": 302
+      },
+      {
         "source": "/sr/:slug",
         "destination": "https://edu.altrobytelab.com/s/roadmap/:slug",
         "type": 302

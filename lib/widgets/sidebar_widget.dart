@@ -134,6 +134,7 @@ class _Nav extends StatelessWidget {
       _NavItem(Icons.sell_rounded, 'Pricing', '/pricing-admin'),
       _NavItem(Icons.check_circle_rounded, l10n.navAttendance, '/attendance'),
       _NavItem(Icons.account_balance_wallet_rounded, l10n.navFeeManagement, '/fees'),
+      _NavItem(Icons.receipt_long_rounded, 'Invoices', '/invoices'),
       _NavItem(Icons.bar_chart_rounded, l10n.navAnalytics, '/analytics'),
       if (auth.canBroadcast)
         _NavItem(Icons.campaign_rounded, l10n.navBroadcast, '/broadcast'),
