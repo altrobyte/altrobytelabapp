@@ -76,6 +76,13 @@ class ApiConstants {
   static String invoicePayment(int id, int paymentId) => '$baseUrl/invoices/$id/payments/$paymentId';
   static String invoiceCancel(int id) => '$baseUrl/invoices/$id/cancel';
   static String invoicePdf(int id) => '$baseUrl/invoices/$id/pdf';
+
+  // AI trainer (admin test console)
+  static String trainerMissions() => '$baseUrl/trainer/missions';
+  static String trainerSessions() => '$baseUrl/trainer/sessions';
+  static String trainerSession(String id) => '$baseUrl/trainer/sessions/$id';
+  static String trainerMessage(String id) => '$baseUrl/trainer/sessions/$id/message';
+  static String trainerSim(String id) => '$baseUrl/trainer/sessions/$id/sim';
   static String instituteSubscribe(int id) => '$baseUrl/institutes/$id/subscribe';
 
   // notify

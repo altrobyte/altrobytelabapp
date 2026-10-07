@@ -25,6 +25,7 @@ import 'screens/test_generator/test_attempt_screen.dart';
 import 'screens/attendance/attendance_screen.dart';
 import 'screens/fees/fee_management_screen.dart';
 import 'screens/invoices/invoices_screen.dart';
+import 'screens/trainer/trainer_admin_screen.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/batches/batches_screen.dart';
 import 'screens/broadcast/broadcast_screen.dart';
@@ -196,6 +197,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/crm',
           '/scholars',
           '/invoices',
+          '/trainer-admin',
           '/reviews-admin',
           '/company-admin',
           '/scholarship-admin',
@@ -219,7 +221,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         if (isProtected && !loggedIn) return '/login';
 
         // Manager cannot access broadcast or settings
-        if (loggedIn && auth.isManager && (loc == '/broadcast' || loc == '/settings')) {
+        if (loggedIn && auth.isManager && (loc == '/broadcast' || loc == '/settings' || loc == '/trainer-admin')) {
           return '/dashboard';
         }
 
@@ -682,6 +684,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/invoices',
                 builder: (_, __) => const InvoicesScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/trainer-admin',
+                builder: (_, __) => const TrainerAdminScreen(),
               ),
             ]),
           ],

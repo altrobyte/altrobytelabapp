@@ -1,0 +1,100 @@
+{
+ "missions": [
+  {
+   "id": "esp32_temp_to_cloud",
+   "title": "Read an analog temperature sensor with ESP32, then send it to Altrobyte Cloud",
+   "scenarios": [
+    {
+     "name": "fresh_start",
+     "label": "Start from scratch",
+     "description": "A beginner with a board plugged in and no project yet. You write the files.",
+     "opening": "Hi, I want to read a temperature sensor with my ESP32."
+    },
+    {
+     "name": "bare_pc",
+     "label": "Nothing installed",
+     "description": "A computer with no VS Code or PlatformIO.",
+     "opening": "I've never done this before. Where do I start?"
+    },
+    {
+     "name": "board_missing",
+     "label": "Board missing",
+     "description": "Board is not plugged in.",
+     "opening": "I clicked upload but it just shows an error."
+    },
+    {
+     "name": "driver_missing",
+     "label": "Driver missing",
+     "description": "Board is plugged in but its USB driver is missing.",
+     "opening": "My board is plugged in but upload fails."
+    },
+    {
+     "name": "wrong_chip_board",
+     "label": "Wrong chip board",
+     "description": "platformio.ini names a board for a different chip.",
+     "opening": "Upload fails with some chip error."
+    },
+    {
+     "name": "undeclared_pin",
+     "label": "Undeclared pin",
+     "description": "The code uses TEMP_PIN but never declares it.",
+     "opening": "The build fails and I don't understand why."
+    },
+    {
+     "name": "baud_mismatch",
+     "label": "Baud mismatch",
+     "description": "Serial monitor speed does not match the code: garbage on screen.",
+     "opening": "My serial monitor shows weird characters instead of the temperature."
+    },
+    {
+     "name": "adc2_with_wifi",
+     "label": "Adc2 with wifi",
+     "description": "Sensor is on an ADC2 pin: fine alone, dead once Wi-Fi is on.",
+     "opening": "It worked before, but after I added Wi-Fi the temperature shows minus 50."
+    },
+    {
+     "name": "wrong_formula",
+     "label": "Wrong formula",
+     "description": "Uses the Arduino Uno conversion: absurd temperatures.",
+     "opening": "The temperature shows 400 degrees, that can't be right."
+    },
+    {
+     "name": "reading_stuck_low",
+     "label": "Reading stuck low",
+     "description": "Sensor output wire is shorted to ground: always 0.",
+     "opening": "It always shows minus 50 degrees."
+    },
+    {
+     "name": "reading_stuck_high",
+     "label": "Reading stuck high",
+     "description": "Sensor output wire is on 3.3 V: always at the top.",
+     "opening": "The temperature is always around 280 and never changes."
+    },
+    {
+     "name": "wrong_wifi",
+     "label": "Wrong wifi",
+     "description": "Wrong Wi-Fi password.",
+     "opening": "The Wi-Fi never connects."
+    },
+    {
+     "name": "wrong_mqtt_credentials",
+     "label": "Wrong mqtt credentials",
+     "description": "Wrong MQTT password: Wi-Fi works, nothing reaches the cloud.",
+     "opening": "Wi-Fi is connected but nothing shows up on my Altrobyte dashboard."
+    },
+    {
+     "name": "wrong_topic",
+     "label": "Wrong topic",
+     "description": "Publishes to someone else's topic.",
+     "opening": "Nothing arrives on my dashboard but there are no errors."
+    },
+    {
+     "name": "wrong_payload",
+     "label": "Wrong payload",
+     "description": "Publishes a bare number instead of the JSON the platform expects.",
+     "opening": "Data arrives on my topic but the dashboard stays empty."
+    }
+   ]
+  }
+ ]
+}

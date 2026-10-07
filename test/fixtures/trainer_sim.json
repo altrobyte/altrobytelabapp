@@ -1,0 +1,249 @@
+{
+ "output": "Writing at 0x00010000... (100 %)\nHard resetting via RTS pin...\n[SUCCESS]",
+ "state": {
+  "mission": "esp32_temp_to_cloud",
+  "scenario": "baud_mismatch",
+  "stages": [
+   {
+    "id": "read",
+    "title": "Read the sensor"
+   },
+   {
+    "id": "publish",
+    "title": "Publish to Altrobyte MQTT"
+   }
+  ],
+  "progress": [
+   {
+    "id": "toolchain_ready",
+    "title": "Toolchain ready",
+    "stage": "read",
+    "physical": false,
+    "status": "done",
+    "kind": "verified",
+    "evidence": "Installed: vscode 1.95.0, platformio-ide 3.3.4, platformio-cli 6.1.16",
+    "waiting_for": [],
+    "failed_checks": 0
+   },
+   {
+    "id": "board_connected",
+    "title": "Board connected",
+    "stage": "read",
+    "physical": false,
+    "status": "done",
+    "kind": "verified",
+    "evidence": "Serial device ready: COM5 (Silicon Labs CP210x USB to UART Bridge)",
+    "waiting_for": [],
+    "failed_checks": 0
+   },
+   {
+    "id": "project_setup",
+    "title": "Project set up for an ESP32 board",
+    "stage": "read",
+    "physical": false,
+    "status": "pending",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [],
+    "failed_checks": 0
+   },
+   {
+    "id": "sensor_wired",
+    "title": "Sensor wired",
+    "stage": "read",
+    "physical": true,
+    "status": "pending",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [],
+    "failed_checks": 0
+   },
+   {
+    "id": "code_builds",
+    "title": "Code builds",
+    "stage": "read",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "project_setup"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "firmware_uploaded",
+    "title": "Firmware uploaded",
+    "stage": "read",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "code_builds"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "readings_visible",
+    "title": "Readings visible on the serial monitor",
+    "stage": "read",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "firmware_uploaded"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "readings_plausible",
+    "title": "Readings are plausible indoors (15-45 C)",
+    "stage": "read",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "readings_visible"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "readings_are_live",
+    "title": "Readings respond when the sensor is warmed",
+    "stage": "read",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "readings_plausible"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "wifi_connected",
+    "title": "Wi-Fi connected",
+    "stage": "publish",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "readings_are_live"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "data_reaches_altrobyte",
+    "title": "Data reaches Altrobyte MQTT",
+    "stage": "publish",
+    "physical": false,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "wifi_connected"
+    ],
+    "failed_checks": 0
+   },
+   {
+    "id": "dashboard_shows_it",
+    "title": "Value visible on the Altrobyte dashboard",
+    "stage": "publish",
+    "physical": true,
+    "status": "blocked",
+    "kind": null,
+    "evidence": "",
+    "waiting_for": [
+     "data_reaches_altrobyte"
+    ],
+    "failed_checks": 0
+   }
+  ],
+  "finished": false,
+  "level": "unknown",
+  "hints": {
+   "baud_mismatch": 1
+  },
+  "activity": [
+   {
+    "t": 0.0,
+    "kind": "tool",
+    "label": "check_system(what=ports)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "milestone_done",
+    "label": "milestone done: toolchain_ready (verified)",
+    "ok": true,
+    "detail": "Installed: vscode 1.95.0, platformio-ide 3.3.4, platformio-cli 6.1.16"
+   },
+   {
+    "t": 0.0,
+    "kind": "tool",
+    "label": "verify_milestone(milestone=toolchain_ready)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "milestone_done",
+    "label": "milestone done: board_connected (verified)",
+    "ok": true,
+    "detail": "Serial device ready: COM5 (Silicon Labs CP210x USB to UART Bridge)"
+   },
+   {
+    "t": 0.0,
+    "kind": "tool",
+    "label": "verify_milestone(milestone=board_connected)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "tool",
+    "label": "serial_tail(lines=8)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "hint",
+    "label": "hint 'baud_mismatch': level 1 (asked for 1)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "tool",
+    "label": "give_hint(issue=baud_mismatch, level=1)",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "t": 0.0,
+    "kind": "learner_action",
+    "label": "learner_action",
+    "ok": true,
+    "detail": ""
+   }
+  ],
+  "sim": {
+   "files": {
+    "platformio.ini": "[env:esp32dev]\nplatform = espressif32\nboard = esp32dev\nframework = arduino\nlib_deps = knolleary/PubSubClient\n",
+    "src/main.cpp": "#include <Arduino.h>\n#define TEMP_PIN 34\nvoid setup() { Serial.begin(115200); }\nvoid loop() {\n  int mv = analogReadMilliVolts(TEMP_PIN);\n  float t = (mv - 500) / 10.0;\n  Serial.print(\"Temperature: \"); Serial.print(t); Serial.println(\" C\");\n  delay(1000);\n}\n"
+   },
+   "board_connected": true,
+   "driver_ok": true,
+   "wiring": "ok",
+   "flashed": true,
+   "touching": false,
+   "serial": []
+  }
+ }
+}

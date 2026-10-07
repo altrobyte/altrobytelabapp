@@ -1836,6 +1836,42 @@ class ApiService {
   }
 
   // Fees
+  // ── AI Trainer (admin test console) ───────────────────────────────────
+
+  static Future<Map<String, dynamic>> getTrainerMissions() async {
+    final token = await _token();
+    return _parse(await safeGet(Uri.parse(ApiConstants.trainerMissions()), headers: _headers(token)));
+  }
+
+  /// Slow by nature: the model answers before this returns. Never retried.
+  static Future<Map<String, dynamic>> startTrainerSession(String mission, String scenario) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse(ApiConstants.trainerSessions()),
+            headers: _headers(token), body: jsonEncode({'mission': mission, 'scenario': scenario}))
+        .timeout(const Duration(seconds: 90));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> sendTrainerMessage(String id, String text) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse(ApiConstants.trainerMessage(id)), headers: _headers(token), body: jsonEncode({'text': text}))
+        .timeout(const Duration(seconds: 120));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> trainerSimAction(String id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse(ApiConstants.trainerSim(id)), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> endTrainerSession(String id) async {
+    final token = await _token();
+    return _parse(await http.delete(Uri.parse(ApiConstants.trainerSession(id)), headers: _headers(token)));
+  }
+
   // ── Invoices ──────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getInvoiceSettings(int instituteId) async {
