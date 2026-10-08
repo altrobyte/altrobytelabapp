@@ -7,8 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../models/trainer_model.dart';
 import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import 'dart:io' show Directory, Platform;
 import 'chat_text.dart';
+import 'visual_page.dart';
 import 'connectors.dart';
 import 'desktop_main.dart' show desktopNavKey;
 import 'live_client.dart';
@@ -29,7 +31,8 @@ class _Bubble {
   final String role; // trainer | learner | system
   final String text;
   final String? interactive; // a card the learner can use right in the chat
-  const _Bubble(this.role, this.text, {this.interactive});
+  final Map<String, dynamic>? props;
+  const _Bubble(this.role, this.text, {this.interactive, this.props});
 }
 
 const _connectorInfo = {
@@ -75,6 +78,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     _subs.add(_machine.logChanges.stream.listen((_) => mounted ? setState(() {}) : null));
     _subs.add(_machine.monitor.changes.listen((_) => mounted ? setState(() {}) : null));
     _loadSettings();
+    _loadLabs();
   }
 
   @override
@@ -193,12 +197,30 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     }
     for (final u in t.ui) {
       if (u['type'] == 'pin_map') _chat.add(const _Bubble('ui', '', interactive: 'pin_map'));
+      if (u['type'] == 'wiring_diagram' || u['type'] == 'visual') {
+        final props = Map<String, dynamic>.from((u['props'] as Map?) ?? {});
+        _chat.add(_Bubble('ui', '', interactive: 'picture', props: props));
+        if (u['type'] == 'wiring_diagram') openPicture(props);          // the learner asked to see it: show it now
+      }
     }
     if (t.finished) _chat.add(const _Bubble('system', 'Mission complete: every milestone is proven.'));
     _scrollDown();
   }
 
-  Future<void> _start() async {
+  /// The experiments the learner's teachers switched on (modules with an AI Lab).
+  List<Map<String, dynamic>> _labs = [];
+
+  Future<void> _loadLabs() async {
+    try {
+      final modules = await ApiService.getTrainingModulesForStudent();
+      _labs = [for (final m in modules) if (m is Map && m['ai_lab_enabled'] == true) Map<String, dynamic>.from(m)];
+    } catch (_) {
+      _labs = [];
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _start({int? moduleId}) async {
     if (_busy) return;
     _applyMqtt();
     await _saveSettings();
@@ -208,7 +230,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       _chat.clear();
     });
     try {
-      final t = await _client.start();
+      final t = await _client.start(moduleId: moduleId);
       if (!mounted) return;
       setState(() {
         _apply(t);
@@ -271,6 +293,24 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       );
 
   Widget _bubble(_Bubble b) {
+    if (b.interactive == 'picture') {
+      final title = '${b.props?['title'] ?? 'Picture'}';
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black.withValues(alpha: 0.1))),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.image_rounded, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Flexible(child: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600))),
+            const SizedBox(width: 10),
+            OutlinedButton(onPressed: () => openPicture(b.props ?? {}), child: const Text('Open picture')),
+          ]),
+        ),
+      );
+    }
     if (b.interactive == 'pin_map') {
       return Align(alignment: Alignment.centerLeft, child: _PinMapCard(enabled: !_busy, onSend: (t) { _input.text = t; _send(); }));
     }
@@ -312,9 +352,22 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                           'Choose on the right what the trainer may look at, and pick your project folder. It teaches; you do the work.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5)),
+                      if (_labs.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text('Experiments from your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                          for (final m in _labs)
+                            ActionChip(
+                              avatar: const Icon(Icons.science_rounded, size: 18),
+                              label: Text('${m['title']}'),
+                              onPressed: _ready && !_busy ? () => _start(moduleId: (m['id'] as num).toInt()) : null,
+                            ),
+                        ]),
+                      ],
                       const SizedBox(height: 18),
                       ElevatedButton.icon(
-                        onPressed: _ready && !_busy ? _start : null,
+                        onPressed: _ready && !_busy ? () => _start() : null,
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: const Text('Start the session'),
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14)),

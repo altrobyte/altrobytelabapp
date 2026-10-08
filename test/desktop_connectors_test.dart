@@ -143,7 +143,7 @@ void main() {
     test('every operation the server can ask for belongs to a connector', () {
       expect(connectorOfOp.keys.toSet(), {
         'os_info', 'software_version', 'serial_ports', 'list_files', 'read_file', 'diagnostics', 'run_build',
-        'run_upload', 'serial_tail', 'mqtt_messages'
+        'run_upload', 'serial_tail', 'mqtt_messages', 'create_file', 'open_in_editor'
       });
       expect(connectorOfOp.values.toSet().difference(allConnectors.toSet()), isEmpty);
     });
@@ -362,6 +362,17 @@ void main() {
       expect(api.posted.single, {'id': 'r1', 'error': 'user_declined'});
     });
 
+    test('a lab of a module is started by its id, and a plain session by none', () async {
+      final api = _FakeApi([
+        {'status': 'done', 'messages': ['hi'], 'ui': [], 'state': _state()},
+        {'status': 'done', 'messages': ['hi'], 'ui': [], 'state': _state()},
+      ]);
+      final c = LiveTrainerClient(api, machine(grants: {connectorSystem}));
+      await c.start(moduleId: 9);
+      await c.start();
+      expect(api.modules, [9, null]);
+    });
+
     test('changing what the trainer may see is sent to the server', () async {
       final api = _FakeApi([{'status': 'done', 'messages': ['hi'], 'ui': [], 'state': _state()}]);
       final m = machine(grants: {connectorSystem});
@@ -388,14 +399,16 @@ class _FakeApi implements TrainerApi {
   final List<Map<String, dynamic>> script;
   final List<Map<String, dynamic>> posted = [];
   final List<List<String>> grants = [];
+  final List<int?> modules = [];
   int polls = 0;
   _FakeApi(this.script);
 
   Map<String, dynamic> _next() => script.removeAt(0);
 
   @override
-  Future<Map<String, dynamic>> start(List<String> g) async {
+  Future<Map<String, dynamic>> start(List<String> g, {int? moduleId}) async {
     grants.add(g);
+    modules.add(moduleId);
     return {'id': 'sid', ..._next()};
   }
 

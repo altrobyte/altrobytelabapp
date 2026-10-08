@@ -28,6 +28,8 @@ const connectorOfOp = {
   'list_files': connectorWorkspace,
   'read_file': connectorWorkspace,
   'diagnostics': connectorWorkspace,
+  'create_file': connectorWorkspace,
+  'open_in_editor': connectorWorkspace,
   'run_build': connectorToolchain,
   'run_upload': connectorToolchain,
   'serial_tail': connectorSerial,
@@ -379,6 +381,10 @@ class LocalMachine {
         return readFile('${args['path']}');
       case 'diagnostics':
         return parseDiagnostics(_lastBuildOutput).map((d) => d.toJson()).toList();
+      case 'create_file':
+        return createFile('${args['path']}', '${args['content']}', overwrite: args['overwrite'] == true);
+      case 'open_in_editor':
+        return openInEditor('${args['path']}', (args['line'] as num?)?.toInt() ?? 1);
       case 'run_build':
         return build();
       case 'run_upload':
@@ -508,6 +514,65 @@ class LocalMachine {
     }
     if (f.lengthSync() > maxFileBytes) return '[file too large to read: ${f.lengthSync()} bytes]';
     return utf8.decode(f.readAsBytesSync(), allowMalformed: true);
+  }
+
+  /// Where a path inside the project folder really is, or a refusal. `..`, absolute paths and links out cannot escape.
+  File _inside(String relPath, String what) {
+    final norm = relPath.replaceAll('\\', '/');
+    if (norm.isEmpty || norm.startsWith('/') || RegExp(r'^[A-Za-z]:').hasMatch(norm) || norm.split('/').contains('..')) {
+      throw NotAllowed('Only paths inside the project folder can be $what.');
+    }
+    return File('${_root().resolveSymbolicLinksSync()}${Platform.pathSeparator}${norm.replaceAll('/', Platform.pathSeparator)}');
+  }
+
+  static const _starterExt = ['.cpp', '.c', '.h', '.ino'];
+  static const maxStarterBytes = 20000;
+
+  /// Adds a starter file inside `src/`. Asks the learner first; an old file is kept next to it as a backup.
+  Future<Map<String, dynamic>> createFile(String relPath, String content, {bool overwrite = false}) async {
+    final norm = relPath.replaceAll('\\', '/');
+    if (!norm.startsWith('src/') || !_starterExt.any(norm.toLowerCase().endsWith) || utf8.encode(content).length > maxStarterBytes) {
+      throw const NotAllowed("A starter file must be a source file inside the project's src folder.");
+    }
+    final f = _inside(norm, 'written');
+    final base = _root().resolveSymbolicLinksSync();
+    final parent = f.parent;
+    if (FileSystemEntity.isLinkSync(f.path) ||
+        (parent.existsSync() && parent.resolveSymbolicLinksSync() != base && !parent.resolveSymbolicLinksSync().startsWith('$base${Platform.pathSeparator}'))) {
+      throw const NotAllowed('That location is outside the project folder.');
+    }
+    final exists = f.existsSync();
+    if (exists && !overwrite) return {'ok': false, 'reason': 'That file already exists.'};
+    final preview = content.split('\n').take(14).join('\n');
+    final action = exists
+        ? 'Replace $norm with the starter file (your current file is kept as a backup next to it)'
+        : 'Add the starter file $norm to your project';
+    if (!await approve('Add a starter file', '$action.\n\nIt starts like this:\n\n$preview')) throw const UserDeclined();
+    var backup = '';
+    if (exists) {
+      backup = '$norm.bak';
+      var n = 2;
+      while (_inside(backup, 'written').existsSync()) {
+        backup = '$norm.bak$n';
+        n++;
+      }
+      f.copySync(_inside(backup, 'written').path);
+    }
+    f.parent.createSync(recursive: true);
+    f.writeAsStringSync(content.replaceAll('\r\n', '\n'));
+    return {'ok': true, 'path': norm, 'backup': backup};
+  }
+
+  /// Brings a file to a line in the learner's editor (VS Code), if it is installed.
+  Future<Map<String, dynamic>> openInEditor(String relPath, int line) async {
+    final f = _inside(relPath, 'opened');
+    if (!f.existsSync()) return {'ok': false, 'reason': 'No such file.'};
+    final base = _root().resolveSymbolicLinksSync();
+    final real = f.resolveSymbolicLinksSync();
+    if (!real.startsWith('$base${Platform.pathSeparator}')) throw const NotAllowed('That file is outside the project folder.');
+    final at = line < 1 ? 1 : line;
+    final out = await _firstWorking(codeCandidates(), ['-g', '$real:$at'], shell: true);
+    return out != null ? {'ok': true} : {'ok': false, 'reason': 'VS Code could not be reached.'};
   }
 
   // ── toolchain ──

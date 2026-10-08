@@ -10,7 +10,7 @@ import '../services/api_service.dart';
 import 'connectors.dart';
 
 abstract class TrainerApi {
-  Future<Map<String, dynamic>> start(List<String> grants);
+  Future<Map<String, dynamic>> start(List<String> grants, {int? moduleId});
   Future<Map<String, dynamic>> send(String sessionId, String text);
   Future<Map<String, dynamic>> envResult(String sessionId, Map<String, dynamic> body);
   Future<Map<String, dynamic>> poll(String sessionId);
@@ -20,7 +20,7 @@ abstract class TrainerApi {
 
 class RealTrainerApi implements TrainerApi {
   @override
-  Future<Map<String, dynamic>> start(List<String> grants) => ApiService.startLiveTrainerSession(grants);
+  Future<Map<String, dynamic>> start(List<String> grants, {int? moduleId}) => ApiService.startLiveTrainerSession(grants, moduleId: moduleId);
   @override
   Future<Map<String, dynamic>> send(String id, String text) => ApiService.sendTrainerMessage(id, text);
   @override
@@ -47,8 +47,8 @@ class LiveTrainerClient {
 
   LiveTrainerClient(this.api, this.machine);
 
-  Future<TrainerTurn> start() async {
-    final ev = await api.start(machine.grants.toList());
+  Future<TrainerTurn> start({int? moduleId}) async {
+    final ev = await api.start(machine.grants.toList(), moduleId: moduleId);
     sessionId = ev['id'] as String?;
     return _drive(ev);
   }
@@ -86,6 +86,10 @@ class LiveTrainerClient {
         return 'reading ${args['path']}';
       case 'diagnostics':
         return 'checking for errors in your code';
+      case 'create_file':
+        return 'preparing your starter file';
+      case 'open_in_editor':
+        return 'opening ${args['path']} in your editor';
       case 'run_build':
         return 'building your project';
       case 'run_upload':

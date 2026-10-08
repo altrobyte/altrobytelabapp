@@ -1854,11 +1854,12 @@ class ApiService {
   }
 
   /// A session on the learner's own computer (desktop app). The server then asks the app to look at it.
-  static Future<Map<String, dynamic>> startLiveTrainerSession(List<String> grants) async {
+  static Future<Map<String, dynamic>> startLiveTrainerSession(List<String> grants, {int? moduleId}) async {
     final token = await _token();
     final res = await http
         .post(Uri.parse(ApiConstants.trainerSessions()),
-            headers: _headers(token), body: jsonEncode({'mission': 'esp32_temp_to_cloud', 'mode': 'live', 'grants': grants}))
+            headers: _headers(token),
+            body: jsonEncode({'mission': 'esp32_temp_to_cloud', 'mode': 'live', 'grants': grants, if (moduleId != null) 'module_id': moduleId}))
         .timeout(const Duration(seconds: 90));
     return _parse(res);
   }
