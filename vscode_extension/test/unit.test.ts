@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, relativeTo, starterFolderPath, visualPage } from '../src/logic';
 import { panelHtml } from '../src/panelHtml';
 import { SseParser } from '../src/sse';
 
@@ -118,4 +118,17 @@ test('the helper uses the Python carried inside the extension unless the learner
   assert.equal(choosePython('  ', bundled), bundled);
   assert.equal(choosePython('C:\Python311\python.exe', bundled), 'C:\Python311\python.exe');
   assert.equal(choosePython('python', null), 'python');
+});
+
+
+test('the starter folder is under Documents, in the style of the computer', () => {
+  assert.equal(starterFolderPath('C:\\Users\\asha'), 'C:\\Users\\asha\\Documents\\Altrobyte\\esp32-temperature');
+  assert.equal(starterFolderPath('C:\\Users\\asha\\'), 'C:\\Users\\asha\\Documents\\Altrobyte\\esp32-temperature');
+  assert.equal(starterFolderPath('/home/asha'), '/home/asha/Documents/Altrobyte/esp32-temperature');
+});
+
+test('PlatformIO is suggested only when it is not there in any form', () => {
+  assert.equal(needsPlatformIO(false, false), true);
+  assert.equal(needsPlatformIO(true, false), false); // the extension is installed
+  assert.equal(needsPlatformIO(false, true), false); // installed another way: leave the learner alone
 });

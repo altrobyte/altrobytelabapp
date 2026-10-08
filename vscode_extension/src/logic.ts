@@ -142,6 +142,19 @@ export function labLink(pathname: string, query: string): { lab?: number; module
   return mod ? { module: Number(mod[1]) } : null;
 }
 
+/** The folder a learner starts in when they have not opened or chosen one: under Documents, the same place the desktop app uses,
+ * so both start in the same folder. */
+export function starterFolderPath(home: string): string {
+  const sep = home.includes('\\') ? '\\' : '/';
+  return [home.replace(/[\\/]+$/, ''), 'Documents', 'Altrobyte', 'esp32-temperature'].join(sep);
+}
+
+/** Whether to suggest installing PlatformIO: only when neither the editor extension nor PlatformIO itself is on this computer
+ * (a learner who installed it another way is left alone). */
+export function needsPlatformIO(extensionInstalled: boolean, coreFolderExists: boolean): boolean {
+  return !extensionInstalled && !coreFolderExists;
+}
+
 export const CONNECTORS: { id: string; label: string; help: string }[] = [
   { id: 'system', label: 'Installed tools and USB', help: 'Whether VS Code / PlatformIO are installed, and which USB board is plugged in.' },
   { id: 'workspace', label: 'Your project files', help: 'Reads files inside your project folder. With your OK each time, it can add a starter file there.' },

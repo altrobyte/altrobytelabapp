@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, connectHelper, helperHome, shutdownHelper } from './helper';
-import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, visualPage } from './logic';
+import * as os from 'node:os';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, starterFolderPath, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -158,6 +159,40 @@ export class Controller implements vscode.WebviewViewProvider {
     }
   }
 
+  /** A ready folder under Documents, so a learner never has to find or pick one to begin. */
+  private makeStarterFolder(): string | undefined {
+    try {
+      const dir = starterFolderPath(process.env.USERPROFILE || os.homedir());
+      fs.mkdirSync(dir, { recursive: true });
+      return dir;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private pioAsked = false;
+
+  /** Building and uploading go through PlatformIO. If it is not on this computer, offer to install it once, in one click. */
+  private async offerPlatformIO(): Promise<void> {
+    if (this.pioAsked) {
+      return;
+    }
+    const extension = !!vscode.extensions.getExtension('platformio.platformio-ide');
+    const core = fs.existsSync(path.join(os.homedir(), '.platformio'));
+    if (!needsPlatformIO(extension, core)) {
+      return;
+    }
+    this.pioAsked = true;
+    const pick = await vscode.window.showInformationMessage(
+      'Building and uploading to your board needs the PlatformIO IDE extension. Install it now? It takes a few minutes the first time.',
+      'Install PlatformIO',
+      'Not now',
+    );
+    if (pick === 'Install PlatformIO') {
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', 'platformio.platformio-ide');
+    }
+  }
+
   async stopHelper() {
     this.events?.abort();
     this.events = null;
@@ -179,8 +214,11 @@ export class Controller implements vscode.WebviewViewProvider {
     const patch: any = { api_base: cfg.get<string>('apiBase') };
     this.settings = await c.get('/settings');
     const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (folder && !this.settings.project_dir) {
-      patch.project_dir = folder;
+    // A learner needs a folder to work in. Use the one they opened, else make the starter folder (the desktop app starts in the
+    // same one). A folder chosen earlier that has since been deleted is replaced too, instead of failing later.
+    const current = this.settings.project_dir as string | undefined;
+    if (!current || !fs.existsSync(current)) {
+      patch.project_dir = folder ?? this.makeStarterFolder();
     }
     this.settings = await c.put('/settings', patch);
     await this.pushEnvironment();
@@ -452,6 +490,7 @@ export class Controller implements vscode.WebviewViewProvider {
     }
     await this.client.post('/session/auth', { token: await this.ctx.secrets.get(TOKEN_KEY) });
     this.voiceWarned = false;
+    void this.offerPlatformIO(); // does not hold the session back: the learner can answer while the trainer says hello
     try {
       const body = what.labId !== undefined ? { lab_id: what.labId } : what.moduleId !== undefined ? { module_id: what.moduleId } : undefined;
       await this.client.post('/session/start', body);
