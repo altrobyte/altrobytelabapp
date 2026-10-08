@@ -10,6 +10,7 @@ import '../../providers/training_module_provider.dart';
 import '../training_modules/module_purchase_section.dart';
 import 'code_viewer_screen.dart';
 import 'student_notes_viewer_screen.dart';
+import 'ai_lab_visuals_screen.dart';
 
 /// Student module detail — expandable tree of Topics → Subtopics → Content
 /// with completion tracking.
@@ -349,6 +350,10 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
                     context.read<TrainingModuleProvider>().loadModuleDetailAsStudent(widget.module.id),
               ),
             ),
+
+          // AI Lab: shown only when the teacher switched it on for this module
+          if (!loading && !module.locked && module.aiLabEnabled)
+            SliverToBoxAdapter(child: _AiLabCard(module: module)),
 
           // Content tree
           if (!loading && !module.locked)
@@ -716,6 +721,66 @@ class _ContentTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// "Start experimenting with Altrobyte AI Lab assistant": opens the editor on the learner's own computer, where the
+/// assistant runs this module's experiment, and shows the pictures drawn from the notes.
+class _AiLabCard extends StatelessWidget {
+  final TrainingModule module;
+  const _AiLabCard({required this.module});
+
+  Future<void> _openInVsCode(BuildContext context) async {
+    final uri = Uri.parse('vscode://altrobyte.altrobyte-trainer/lab?module=${module.id}');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not open VS Code. Install the Altrobyte AI Trainer extension in VS Code, or use the Altrobyte desktop app.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      elevation: 0,
+      color: const Color(0xFF14213D),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.science_rounded, color: Colors.amberAccent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('Start experimenting with Altrobyte AI Lab assistant',
+                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Text(
+              'Do this module\'s experiment on your own computer and board. The assistant has read the notes: it shows you the wiring, '
+              'tells you exactly where to write code, and checks every step for real.',
+              style: GoogleFonts.inter(color: Colors.white70, height: 1.5, fontSize: 13)),
+          const SizedBox(height: 14),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            ElevatedButton.icon(
+              onPressed: () => _openInVsCode(context),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Start in VS Code'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black87),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabVisualsScreen(moduleId: module.id, title: module.title))),
+              icon: const Icon(Icons.image_rounded, color: Colors.white),
+              label: const Text('See the pictures', style: TextStyle(color: Colors.white)),
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
+            ),
+          ]),
+        ]),
       ),
     );
   }

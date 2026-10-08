@@ -6,6 +6,7 @@ import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/training_module_provider.dart';
 import '../../services/api_service.dart';
+import 'ai_lab_screen.dart';
 import 'notes_editor_screen.dart';
 
 /// Admin screen — hierarchical editor for a single training module.
@@ -1024,6 +1025,16 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'AI Lab: let learners experiment with an AI assistant',
+            icon: Icon(Icons.science_rounded, color: module.aiLabEnabled ? Colors.amberAccent : Colors.white, size: 20),
+            onPressed: loading
+                ? null
+                : () async {
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabScreen(moduleId: module.id, title: module.title)));
+                    if (mounted) context.read<TrainingModuleProvider>().loadModuleDetail(module.id);
+                  },
+          ),
           IconButton(
             tooltip: 'Rename module',
             icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),

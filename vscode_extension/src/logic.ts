@@ -118,6 +118,15 @@ export function editorLine(line: unknown): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) - 1 : 0;
 }
 
+/** The module id in a link like vscode://altrobyte.altrobyte-trainer/lab?module=9, or null if it is not one. */
+export function labLink(pathname: string, query: string): number | null {
+  if (pathname !== '/lab') {
+    return null;
+  }
+  const m = /(?:^|&)module=(\d{1,9})(?:&|$)/.exec(query);
+  return m ? Number(m[1]) : null;
+}
+
 export const CONNECTORS: { id: string; label: string; help: string }[] = [
   { id: 'system', label: 'Installed tools and USB', help: 'Whether VS Code / PlatformIO are installed, and which USB board is plugged in.' },
   { id: 'workspace', label: 'Your project files', help: 'Reads files inside your project folder. With your OK each time, it can add a starter file there.' },

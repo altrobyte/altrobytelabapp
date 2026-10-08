@@ -216,6 +216,7 @@ class TrainingModule {
   final double? originalPrice;
   final bool locked;
   final bool loginRequired;
+  final bool aiLabEnabled; // the teacher switched the AI Lab on for this module
   final LinkedSessionInfo? linkedSession;
   final DateTime? createdAt;
   final List<ModuleTopic> topics;
@@ -235,6 +236,7 @@ class TrainingModule {
     this.originalPrice,
     this.locked = false,
     this.loginRequired = false,
+    this.aiLabEnabled = false,
     this.linkedSession,
     this.createdAt,
     this.topics = const [],
@@ -255,6 +257,7 @@ class TrainingModule {
         originalPrice: (j['original_price'] as num?)?.toDouble(),
         locked: j['locked'] ?? false,
         loginRequired: j['login_required'] ?? false,
+        aiLabEnabled: j['ai_lab_enabled'] == true,
         linkedSession: j['linked_session'] != null
             ? LinkedSessionInfo.fromJson(Map<String, dynamic>.from(j['linked_session']))
             : null,

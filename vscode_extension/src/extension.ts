@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, launchHelper } from './helper';
-import { describeError, editorLine, formatAudit, mapDiagnostics, visualPage } from './logic';
+import { describeError, editorLine, formatAudit, labLink, mapDiagnostics, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -418,6 +418,19 @@ export class Controller implements vscode.WebviewViewProvider {
     }
   }
 
+  /** A link from the Altrobyte app ("Start in VS Code"). Anything on the web can open a link, so the learner confirms first. */
+  async handleLink(uri: vscode.Uri): Promise<void> {
+    const id = labLink(uri.path, uri.query);
+    if (id === null) {
+      return;
+    }
+    const ok = await vscode.window.showInformationMessage('Start the AI Lab experiment from your Altrobyte module?', { modal: true }, 'Start');
+    if (ok === 'Start') {
+      await vscode.commands.executeCommand('altrobyte.trainer.focus');
+      await this.startSession(id);
+    }
+  }
+
   async startSession(moduleId?: number): Promise<void> {
     if (!this.client) {
       await this.startHelper();
@@ -560,6 +573,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     output,
     vscode.window.registerWebviewViewProvider('altrobyte.trainer', controller, { webviewOptions: { retainContextWhenHidden: true } }),
     controller.watchDiagnostics(),
+    vscode.window.registerUriHandler({ handleUri: (uri) => controller.handleLink(uri) }),
     vscode.commands.registerCommand('altrobyte.signIn', () => controller.signIn()),
     vscode.commands.registerCommand('altrobyte.signOut', () => controller.signOut()),
     vscode.commands.registerCommand('altrobyte.startSession', async () => {

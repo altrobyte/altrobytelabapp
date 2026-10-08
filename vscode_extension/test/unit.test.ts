@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeError, editorLine, formatAudit, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
+import { describeError, editorLine, formatAudit, labLink, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
 import { panelHtml } from '../src/panelHtml';
 import { SseParser } from '../src/sse';
 
@@ -96,4 +96,14 @@ test('the panel script is valid JavaScript and renders markdown without innerHTM
   assert.doesNotThrow(() => new Function('acquireVsCodeApi', 'document', 'window', script.replace(/vscode\.postMessage\(\{ type: 'ready' \}\);/, '')));
   assert.match(script, /renderMd\(d, text\)/);
   assert.ok(script.includes("split('\\n')"), 'lines must be split on a newline character, not on a literal line break');
+});
+
+
+test('only a well-formed lab link starts anything', () => {
+  assert.equal(labLink('/lab', 'module=9'), 9);
+  assert.equal(labLink('/lab', 'x=1&module=123&y=2'), 123);
+  assert.equal(labLink('/lab', 'module=abc'), null);
+  assert.equal(labLink('/lab', ''), null);
+  assert.equal(labLink('/other', 'module=9'), null);
+  assert.equal(labLink('/lab', 'module=1234567890123'), null);
 });

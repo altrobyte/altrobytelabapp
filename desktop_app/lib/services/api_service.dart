@@ -1864,6 +1864,43 @@ class ApiService {
     return _parse(res);
   }
 
+  // ── AI Lab for training modules ─────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> aiLabStatus(int moduleId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse(ApiConstants.aiLab(moduleId)), headers: _headers(token)));
+  }
+
+  /// Drafts a lab from the module's notes: a model call, so it can take a minute.
+  static Future<Map<String, dynamic>> aiLabGenerate(int moduleId) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/generate'), headers: _headers(token)).timeout(const Duration(seconds: 240));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> aiLabSaveDraft(int moduleId, Map<String, dynamic> package) async {
+    final token = await _token();
+    final res = await http.put(Uri.parse('${ApiConstants.aiLab(moduleId)}/draft'), headers: _headers(token), body: jsonEncode({'package': package}));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> aiLabPublish(int moduleId) async {
+    final token = await _token();
+    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/publish'), headers: _headers(token)));
+  }
+
+  static Future<Map<String, dynamic>> aiLabDisable(int moduleId) async {
+    final token = await _token();
+    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/disable'), headers: _headers(token)));
+  }
+
+  /// The pictures of a live lab, for a learner who can open the module.
+  static Future<Map<String, dynamic>> aiLabVisuals(int moduleId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('student_token') ?? prefs.getString('token');
+    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/visuals'), headers: _headers(token)));
+  }
+
   static Future<Map<String, dynamic>> trainerEnvResult(String id, Map<String, dynamic> body) async {
     final token = await _token();
     final res = await http
