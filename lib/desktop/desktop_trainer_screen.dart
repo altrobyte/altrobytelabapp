@@ -42,6 +42,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   bool _mqttTls = true;
   List<Map<String, dynamic>> _labs = [];
   List<Map<String, dynamic>> _courses = [];
+  bool _coursesFailed = false;
   int _shown = 0;
 
   @override
@@ -124,8 +125,10 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   Future<void> _loadCourses() async {
     try {
       _courses = await ApiService.trainerCourses();
+      _coursesFailed = false;
     } catch (_) {
       _courses = [];
+      _coursesFailed = true;
     }
     if (mounted) setState(() {});
   }
@@ -250,7 +253,15 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         Text('Start at the top. Your trainer talks with you, asks small questions and never does the work for you. Nothing to install by hand: this app helps you with every step.',
             style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5, fontSize: 13)),
         const SizedBox(height: 16),
-        if (_courses.isEmpty)
+        if (_courses.isEmpty && _coursesFailed)
+          Row(children: [
+            Expanded(child: Text('Could not load your courses. Check your internet and try again.', style: GoogleFonts.inter(color: AppColors.warning))),
+            TextButton(onPressed: () => setState(() {
+                  _coursesFailed = false;
+                  _loadCourses();
+                }), child: const Text('Retry')),
+          ])
+        else if (_courses.isEmpty)
           Text('Loading your courses…', style: GoogleFonts.inter(color: AppColors.textSecondary))
         else
           for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),

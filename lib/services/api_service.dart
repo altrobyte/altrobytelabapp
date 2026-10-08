@@ -1972,7 +1972,7 @@ class ApiService {
 
   /// The ready-made courses (welcome, set-up, first program) and where this learner is in each.
   static Future<List<Map<String, dynamic>>> trainerCourses() async {
-    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/courses'), headers: _headers()));
+    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/courses'), headers: _headers(await _token())));
     return [for (final c in (r['courses'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)];
   }
 
