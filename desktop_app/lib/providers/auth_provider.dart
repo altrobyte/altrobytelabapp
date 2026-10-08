@@ -14,7 +14,7 @@ class AuthProvider extends ChangeNotifier {
 
   bool isInitialized = false; // true after tryAutoLogin completes
 
-  bool get isLoggedIn => token != null && (instituteId != null || role == 'super_admin');
+  bool get isLoggedIn => token != null && (instituteId != null || role == 'super_admin' || role == 'student');
   bool get isAdmin => role == 'admin';
   bool get isManager => role == 'manager';
   bool get isSuperAdmin => role == 'super_admin';

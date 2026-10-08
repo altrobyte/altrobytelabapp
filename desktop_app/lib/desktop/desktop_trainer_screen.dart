@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../models/trainer_model.dart';
 import '../providers/auth_provider.dart';
+import 'dart:io' show Directory, Platform;
+import 'chat_text.dart';
 import 'connectors.dart';
 import 'desktop_main.dart' show desktopNavKey;
 import 'live_client.dart';
@@ -26,7 +28,8 @@ class DesktopTrainerScreen extends StatefulWidget {
 class _Bubble {
   final String role; // trainer | learner | system
   final String text;
-  const _Bubble(this.role, this.text);
+  final String? interactive; // a card the learner can use right in the chat
+  const _Bubble(this.role, this.text, {this.interactive});
 }
 
 const _connectorInfo = {
@@ -91,7 +94,8 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
 
   Future<void> _loadSettings() async {
     final p = await SharedPreferences.getInstance();
-    _machine.projectDir = p.getString('desk_project');
+    _machine.projectDir = p.getString('desk_project') ?? _makeStarterFolder();
+    if (p.getString('desk_project') == null && _machine.projectDir != null) await p.setString('desk_project', _machine.projectDir!);
     final saved = p.getStringList('desk_grants');
     _machine.grants
       ..clear()
@@ -103,6 +107,19 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     _mqttTls = p.getBool('desk_mqtt_tls') ?? true;
     _applyMqtt();
     if (mounted) setState(() => _ready = true);
+  }
+
+  /// A ready folder under Documents, so a learner never has to find or pick one to begin.
+  String? _makeStarterFolder() {
+    try {
+      final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+      if (home == null) return null;
+      final dir = Directory('$home${Platform.pathSeparator}Documents${Platform.pathSeparator}Altrobyte${Platform.pathSeparator}esp32-temperature');
+      dir.createSync(recursive: true);
+      return dir.path;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -175,7 +192,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       _chat.add(_Bubble('trainer', m));
     }
     for (final u in t.ui) {
-      _chat.add(_Bubble('system', 'The trainer opened an interactive: ${u['type']}'));
+      if (u['type'] == 'pin_map') _chat.add(const _Bubble('ui', '', interactive: 'pin_map'));
     }
     if (t.finished) _chat.add(const _Bubble('system', 'Mission complete: every milestone is proven.'));
     _scrollDown();
@@ -254,6 +271,9 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       );
 
   Widget _bubble(_Bubble b) {
+    if (b.interactive == 'pin_map') {
+      return Align(alignment: Alignment.centerLeft, child: _PinMapCard(enabled: !_busy, onSend: (t) { _input.text = t; _send(); }));
+    }
     final trainer = b.role == 'trainer', system = b.role == 'system';
     return Align(
       alignment: trainer || system ? Alignment.centerLeft : Alignment.centerRight,
@@ -266,9 +286,10 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           borderRadius: BorderRadius.circular(14),
           border: trainer ? Border.all(color: Colors.black.withValues(alpha: 0.08)) : null,
         ),
-        child: SelectableText(b.text,
-            style: GoogleFonts.inter(fontSize: 13.5, height: 1.45, fontStyle: system ? FontStyle.italic : null,
-                color: system ? AppColors.textSecondary : (trainer ? AppColors.textPrimary : Colors.white))),
+        child: system
+            ? SelectableText(b.text,
+                style: GoogleFonts.inter(fontSize: 13.5, height: 1.45, fontStyle: FontStyle.italic, color: AppColors.textSecondary))
+            : ChatText(b.text, color: trainer ? AppColors.textPrimary : Colors.white),
       ),
     );
   }
@@ -444,6 +465,22 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               ),
       );
 
+  Widget _advancedCard() => Card(
+        elevation: 0,
+        color: AppColors.cardBg,
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.black.withValues(alpha: 0.06))),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            title: Text('Advanced: cloud check settings', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+            subtitle: Text('Only if your trainer asks you to', style: GoogleFonts.inter(fontSize: 11.5)),
+            childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            children: [_mqttCard()],
+          ),
+        ),
+      );
+
   Widget _mqttCard() => _card(
         'MQTT broker (for the cloud check)',
         Column(children: [
@@ -483,6 +520,12 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         title: Text('Altrobyte AI Trainer', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+        bottom: _state == null || _state!.progress.isEmpty
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(4),
+                child: LinearProgressIndicator(value: _state!.doneCount / _state!.progress.length, minHeight: 4, backgroundColor: Colors.white24, color: AppColors.accent),
+              ),
         actions: [
           if (_started)
             TextButton.icon(
@@ -505,10 +548,80 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           const SizedBox(width: 14),
           Expanded(
             flex: 4,
-            child: ListView(children: [_connectorsCard(), _folderCard(), _progressCard(), _monitorCard(), _logCard(), _mqttCard()]),
+            child: ListView(children: [_progressCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
           ),
         ]),
       ),
+    );
+  }
+}
+
+
+/// The pin_map interactive: the learner states which pin each wire goes to, in a form instead of free text.
+class _PinMapCard extends StatefulWidget {
+  const _PinMapCard({required this.enabled, required this.onSend});
+  final bool enabled;
+  final void Function(String text) onSend;
+
+  @override
+  State<_PinMapCard> createState() => _PinMapCardState();
+}
+
+class _PinMapCardState extends State<_PinMapCard> {
+  final _vcc = TextEditingController(text: '3V3');
+  final _gnd = TextEditingController(text: 'GND');
+  final _sig = TextEditingController();
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _vcc.dispose();
+    _gnd.dispose();
+    _sig.dispose();
+    super.dispose();
+  }
+
+  Widget _row(String label, TextEditingController c, String hint) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(children: [
+          SizedBox(width: 70, child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600))),
+          Expanded(
+            child: TextField(
+              controller: c,
+              enabled: !_sent,
+              decoration: InputDecoration(hintText: hint, isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            ),
+          ),
+        ]),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 360),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black.withValues(alpha: 0.1))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Which ESP32 pin is each sensor wire on?', style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        _row('VCC', _vcc, '3V3'),
+        _row('GND', _gnd, 'GND'),
+        _row('Signal', _sig, 'e.g. GPIO34'),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: !widget.enabled || _sent
+                ? null
+                : () {
+                    if (_sig.text.trim().isEmpty) return;
+                    setState(() => _sent = true);
+                    widget.onSend('Wiring: VCC to ${_vcc.text.trim()}, GND to ${_gnd.text.trim()}, signal to ${_sig.text.trim()}');
+                  },
+            child: Text(_sent ? 'Sent' : 'Send to trainer'),
+          ),
+        ),
+      ]),
     );
   }
 }
