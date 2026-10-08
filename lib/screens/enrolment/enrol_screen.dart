@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
@@ -142,7 +143,14 @@ class _EnrolScreenState extends State<EnrolScreen> {
         Text('${done['message']}', textAlign: TextAlign.center, style: GoogleFonts.inter(height: 1.5)),
         const SizedBox(height: 6),
         Text('${done['email']}', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: () => context.go('/download'),
+          icon: const Icon(Icons.download_rounded),
+          label: const Text('Next: get the Altrobyte app'),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+        ),
+        const SizedBox(height: 8),
         TextButton(onPressed: () => setState(() => _done = null), child: const Text('Change my answers')),
       ]);
     }

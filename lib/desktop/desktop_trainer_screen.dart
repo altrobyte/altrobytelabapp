@@ -41,6 +41,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   final _mqttPass = TextEditingController();
   bool _mqttTls = true;
   List<Map<String, dynamic>> _labs = [];
+  List<Map<String, dynamic>> _courses = [];
   int _shown = 0;
 
   @override
@@ -50,6 +51,8 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     c.addListener(_onChange);
     _fillMqtt();
     _loadLabs();
+    _loadCourses();
+    c.checkSetup();
   }
 
   @override
@@ -117,12 +120,22 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _start({int? labId}) async {
+  /// The ready-made courses, with where this learner is in each. Light: a few lines of text.
+  Future<void> _loadCourses() async {
+    try {
+      _courses = await ApiService.trainerCourses();
+    } catch (_) {
+      _courses = [];
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _start({int? labId, String? course}) async {
     final auth = context.read<AuthProvider>();
     final token = auth.token ?? auth.jwtToken;
     if (token == null) return;
     await c.signIn(token);
-    await c.start(labId: labId);
+    await c.start(labId: labId, course: course);
   }
 
   Future<void> _send([String? text]) async {
@@ -171,6 +184,9 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         ),
       );
     }
+    if (b.interactive == 'quiz') {
+      return Align(alignment: Alignment.centerLeft, child: _QuizCard(props: b.props ?? const {}, enabled: !c.busy, onAnswer: c.answerQuiz));
+    }
     if (b.interactive == 'pin_map') {
       return Align(alignment: Alignment.centerLeft, child: _PinMapCard(enabled: !c.busy, onSend: _send));
     }
@@ -193,6 +209,202 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     );
   }
 
+  Widget _stepBanner() {
+    final st = c.state!;
+    final left = st.progress.where((m) => !m.done).length;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: const BorderRadius.vertical(top: Radius.circular(14))),
+      child: Row(children: [
+        const Icon(Icons.flag_rounded, size: 18, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('Now: ${currentStepTitle(st)}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+        Text('$left step${left == 1 ? '' : 's'} left', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+      ]),
+    );
+  }
+
+  /// What a learner sees before a lesson: the ready-made course first, then the experiments of their modules.
+  /// Nothing here is downloaded until it is chosen; each lesson loads by itself when it starts.
+  Widget _courseHome() {
+    Map<String, dynamic>? next;
+    for (final k in _courses) {
+      final p = k['progress'] as Map?;
+      if (p == null || p['finished'] != true) {
+        next = k;
+        break;
+      }
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(22),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.school_rounded, size: 30, color: AppColors.primary),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Your learning path', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600))),
+        ]),
+        const SizedBox(height: 6),
+        Text('Start at the top. Your trainer talks with you, asks small questions and never does the work for you. Nothing to install by hand: this app helps you with every step.',
+            style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5, fontSize: 13)),
+        const SizedBox(height: 16),
+        if (_courses.isEmpty)
+          Text('Loading your courses…', style: GoogleFonts.inter(color: AppColors.textSecondary))
+        else
+          for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),
+        if (_labs.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          Text('Experiments from your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+          const SizedBox(height: 2),
+          Text('Each one loads only when you start it.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+          for (final m in _labs)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.science_rounded, color: AppColors.primary),
+              title: Text('${m['title']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
+              subtitle: Text('${m['module_title'] ?? ''}', style: GoogleFonts.inter(fontSize: 11.5)),
+              trailing: OutlinedButton(onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null, child: const Text('Start')),
+            ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _courseTile(Map<String, dynamic> k, int number, bool isNext) {
+    final p = k['progress'] as Map?;
+    final done = (p?['done'] as num?)?.toInt() ?? 0;
+    final total = (p?['total'] as num?)?.toInt() ?? (k['steps'] as num?)?.toInt() ?? 0;
+    final finished = p?['finished'] == true;
+    final label = finished ? 'Do it again' : (done > 0 ? 'Continue' : (isNext ? 'Start here' : 'Start'));
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isNext ? AppColors.accent : Colors.black.withValues(alpha: 0.08), width: isNext ? 2 : 1),
+      ),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 15,
+          backgroundColor: finished ? AppColors.success : AppColors.primary,
+          child: finished ? const Icon(Icons.check_rounded, size: 18, color: Colors.white) : Text('$number', style: const TextStyle(color: Colors.white, fontSize: 13)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${k['title']}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
+            const SizedBox(height: 2),
+            Text('${k['blurb']}', style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: AppColors.textSecondary)),
+            if (done > 0 && total > 0 && !finished) ...[
+              const SizedBox(height: 6),
+              LinearProgressIndicator(value: (done / total).clamp(0.0, 1.0), minHeight: 4),
+            ],
+          ]),
+        ),
+        const SizedBox(width: 10),
+        ElevatedButton(
+          onPressed: c.ready && !c.busy ? () => _start(course: '${k['id']}') : null,
+          style: isNext ? ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white) : null,
+          child: Text(label),
+        ),
+      ]),
+    );
+  }
+
+  /// "Is this computer ready?": each tool in plain words, with what is missing, why it matters, and a button or steps.
+  Widget _setupCard() {
+    final r = c.setupReport;
+    final items = [for (final i in (r?['items'] as List? ?? const [])) Map<String, dynamic>.from(i as Map)];
+    final ready = r?['ready'] == true;
+    return _card(
+      'Is my computer ready?',
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (r == null)
+          Text('Checking your computer…', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary))
+        else if ((r['error'] ?? '').toString().isNotEmpty)
+          Text('${r['error']}', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.warning))
+        else ...[
+          Text(ready ? 'Everything is ready. You can do the experiments.' : 'A few things are missing. The app can do most of them for you.',
+              style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: ready ? AppColors.success : AppColors.textPrimary)),
+          const SizedBox(height: 6),
+          for (final i in items) _setupItem(i),
+        ],
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: c.settingUp && c.setupProgress.isNotEmpty ? null : c.checkSetup,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Check again'),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _setupItem(Map<String, dynamic> i) {
+    final id = '${i['id']}';
+    final state = '${i['state']}';
+    final prog = c.setupProgress[id] ?? (i['progress'] as Map?)?.cast<String, dynamic>();
+    final how = [for (final h in (i['how'] as List? ?? const [])) '$h'];
+    final ok = state == 'ok', working = state == 'working' || c.setupProgress.containsKey(id);
+    final icon = ok ? Icons.check_circle_rounded : (working ? Icons.downloading_rounded : Icons.error_outline_rounded);
+    final color = ok ? AppColors.success : (working ? AppColors.primary : AppColors.warning);
+    final canInstall = i['can_install'] == true && !working;
+    final pct = (prog?['percent'] as num?)?.toDouble();
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.fromLTRB(26, 0, 0, 8),
+        initiallyExpanded: !ok,
+        dense: true,
+        leading: Icon(icon, color: color, size: 20),
+        title: Text('${i['label']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          working ? '${prog?['line'] ?? 'Working…'}' : ('${i['detail'] ?? ''}'.isEmpty ? (ok ? 'Ready' : 'Not ready') : '${i['detail']}'),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(fontSize: 11.5, color: color),
+        ),
+        children: [
+          Align(alignment: Alignment.centerLeft, child: Text('${i['why']}', style: GoogleFonts.inter(fontSize: 12, height: 1.4, color: AppColors.textSecondary))),
+          if (working) ...[
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: pct == null ? null : (pct / 100).clamp(0.0, 1.0)),
+          ],
+          if (!ok && !working)
+            for (var n = 0; n < how.length; n++)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Align(alignment: Alignment.centerLeft, child: Text('${n + 1}. ${how[n]}', style: GoogleFonts.inter(fontSize: 12, height: 1.4))),
+              ),
+          if (canInstall)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final err = await c.installSetup(id);
+                    if (err != null && mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+                  },
+                  child: Text(const {'esp32_support': 'Download now', 'editor': 'Install VS Code', 'project': 'Create my project'}[id] ?? 'Do it for me'),
+                ),
+              ),
+            ),
+          if (!ok && !working && '${i['url']}'.isNotEmpty)
+            Align(alignment: Alignment.centerLeft, child: SelectableText('${i['url']}', style: GoogleFonts.robotoMono(fontSize: 11, color: AppColors.primary))),
+        ],
+      ),
+    );
+  }
+
   Widget _chatPanel() {
     return Container(
       decoration: BoxDecoration(color: const Color(0xFFF1F3F7), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.black.withValues(alpha: 0.06))),
@@ -209,46 +421,10 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               TextButton(onPressed: widget.onReconnect, child: const Text('Reconnect')),
             ]),
           ),
+        if (c.started && currentStepTitle(c.state) != null) _stepBanner(),
         Expanded(
           child: !c.started
-              ? Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.smart_toy_rounded, size: 46, color: AppColors.primary),
-                      const SizedBox(height: 12),
-                      Text('Your hands-on lab instructor', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      Text('Choose on the right what the trainer may look at. It teaches; you do the work.',
-                          textAlign: TextAlign.center, style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5)),
-                      if (_labs.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text('Experiments from your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                        const SizedBox(height: 2),
-                        Text('Pick one, or start the general session below.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
-                        const SizedBox(height: 8),
-                        Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
-                          for (final m in _labs)
-                            Tooltip(
-                              message: '${m['module_title'] ?? ''}',
-                              child: ActionChip(
-                                avatar: const Icon(Icons.science_rounded, size: 18),
-                                label: Text('${m['title']}'),
-                                onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null,
-                              ),
-                            ),
-                        ]),
-                      ],
-                      const SizedBox(height: 18),
-                      ElevatedButton.icon(
-                        onPressed: c.ready && !c.busy ? () => _start() : null,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Start the session'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14)),
-                      ),
-                    ]),
-                  ),
-                )
+              ? _courseHome()
               : ListView(controller: _scroll, padding: const EdgeInsets.all(14), children: [
                   for (final b in c.chat) _bubble(b),
                   if (c.busy)
@@ -477,7 +653,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               const SizedBox(width: 14),
               Expanded(
                 flex: 4,
-                child: ListView(children: [_progressCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
+                child: ListView(children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
               ),
             ]),
           ),
@@ -545,6 +721,65 @@ class _PinMapCardState extends State<_PinMapCard> {
             child: Text(_sent ? 'Sent' : 'Send to trainer'),
           ),
         ),
+      ]),
+    );
+  }
+}
+
+
+/// A multiple-choice question from the trainer. The card only shows the question and the options; whether the choice is
+/// right is decided by the lesson itself, never here.
+class _QuizCard extends StatefulWidget {
+  const _QuizCard({required this.props, required this.enabled, required this.onAnswer});
+  final Map<String, dynamic> props;
+  final bool enabled;
+  final Future<void> Function(String milestone, int choice, String text) onAnswer;
+
+  @override
+  State<_QuizCard> createState() => _QuizCardState();
+}
+
+class _QuizCardState extends State<_QuizCard> {
+  int? _picked;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [for (final o in (widget.props['options'] as List? ?? const [])) '$o'];
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 460),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1.5)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.quiz_rounded, size: 18, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text('Quick question', style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
+        ]),
+        const SizedBox(height: 6),
+        Text('${widget.props['question'] ?? ''}', style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.4)),
+        const SizedBox(height: 8),
+        for (var i = 0; i < options.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  backgroundColor: _picked == i ? AppColors.primary.withValues(alpha: 0.1) : null,
+                ),
+                onPressed: !widget.enabled || _picked != null
+                    ? null
+                    : () {
+                        setState(() => _picked = i);
+                        widget.onAnswer('${widget.props['milestone']}', i, options[i]);
+                      },
+                child: Text(options[i], style: GoogleFonts.inter(fontSize: 13)),
+              ),
+            ),
+          ),
       ]),
     );
   }

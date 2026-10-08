@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, connectHelper, helperHome, shutdownHelper } from './helper';
 import * as os from 'node:os';
-import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, starterFolderPath, visualPage } from './logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, quizAnswerText, starterFolderPath, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -294,6 +294,9 @@ export class Controller implements vscode.WebviewViewProvider {
     if (ui.type === 'pin_map') {
       return this.post({ type: 'pinmap' });
     }
+    if (ui.type === 'quiz') {
+      return this.askQuiz(ui.props ?? {});
+    }
     const props = ui.props ?? {};
     const body = ui.type === 'wiring_diagram' ? String(props.svg ?? '') : ui.type === 'visual' ? String(props.html ?? '') : '';
     if (!body) {
@@ -308,6 +311,20 @@ export class Controller implements vscode.WebviewViewProvider {
     this.visualPanel.webview.html = visualPage(title, body);
     this.visualPanel.reveal(vscode.ViewColumn.Beside, true);
     this.post({ type: 'system', text: `Opened a picture beside your editor: ${title}` });
+  }
+
+  /** A quick question from the trainer, as VS Code's own picker. The lesson, not the model, decides if the choice is right. */
+  private async askQuiz(props: { milestone?: string; question?: string; options?: string[] }) {
+    const options = Array.isArray(props.options) ? props.options.map(String) : [];
+    if (!props.milestone || options.length < 2) {
+      return;
+    }
+    const picked = await vscode.window.showQuickPick(options, { title: 'Quick question', placeHolder: String(props.question ?? ''), ignoreFocusOut: true });
+    if (picked === undefined) {
+      return;                                                  // dismissed: the trainer will ask again in the chat
+    }
+    this.post({ type: 'system', text: `You chose: ${picked}` });
+    await this.send(quizAnswerText(String(props.milestone), options.indexOf(picked)));
   }
 
   /** The learner is asked, every time, before anything is built or uploaded. */

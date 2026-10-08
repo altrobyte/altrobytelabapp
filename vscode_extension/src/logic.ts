@@ -113,6 +113,11 @@ export function visualPage(title: string, body: string): string {
 }
 
 /** A 0-based line for the editor from the 1-based line the assistant talks about. */
+/** What a quiz answer looks like to the trainer. Its instructions name this exact shape; the lesson reads the two values. */
+export function quizAnswerText(milestone: string, choice: number): string {
+  return `[quiz answer] milestone=${milestone} choice=${choice}`;
+}
+
 export function editorLine(line: unknown): number {
   const n = Number(line);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) - 1 : 0;

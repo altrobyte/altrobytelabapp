@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:altrobytelab/desktop/helper_client.dart';
 import 'package:altrobytelab/desktop/helper_controller.dart';
+import 'package:altrobytelab/models/trainer_model.dart';
 import 'package:altrobytelab/desktop/local_tools.dart';
 import 'package:altrobytelab/desktop/sse.dart';
 import 'package:altrobytelab/desktop/visual_page.dart';
@@ -26,6 +27,8 @@ class FakeHelper {
   };
   Map<String, dynamic> monitor = {'running': false, 'port': '', 'baud': 0, 'lines': []};
   List<dynamic> audit = [];
+  Map<String, dynamic> setupReport = {'items': [], 'ready': false, 'busy': false};
+  int installStatus = 202;
   int startStatus = 202;
   String startDetail = '';
 
@@ -51,6 +54,11 @@ class FakeHelper {
       out = {'entries': audit};
     } else if (path == '/monitor/start') {
       out = {'status': 'Monitoring COM6 at 115200 baud'};
+    } else if (path == '/setup/check') {
+      out = setupReport;
+    } else if (path == '/setup/install') {
+      status = installStatus;
+      if (installStatus != 202) out = {'detail': 'Another download is still running. Wait for it to finish.'};
     } else if (path == '/session/start') {
       status = startStatus;
       if (startDetail.isNotEmpty) out = {'detail': startDetail};
@@ -372,6 +380,82 @@ void main() {
       expect(h.calls, containsAll(['POST /session/end', 'POST /monitor/stop']));
       expect(c.started, isFalse);
       expect(c.chat, isEmpty);
+      c.dispose();
+    });
+  });
+
+  group('courses, quizzes and getting the computer ready', () {
+    test('a built-in course is started by name, and a module experiment still by number', () async {
+      final h = FakeHelper();
+      final c = h.controller();
+      await c.init();
+      await c.start(course: 'intro_welcome');
+      expect(h.bodies.last, {'course': 'intro_welcome'});
+      expect(c.courseId, 'intro_welcome');
+      await c.newSession();
+      expect(c.courseId, isNull);
+      await c.start(labId: 4);
+      expect(h.bodies.last, {'lab_id': 4});
+      c.dispose();
+    });
+
+    test('a quiz card appears in the chat, and a tap sends the exact tagged answer the trainer expects', () async {
+      final h = FakeHelper();
+      final c = h.controller();
+      await c.init();
+      await c.start(course: 'intro_welcome');
+      h.emit('ui', {'type': 'quiz', 'props': {'milestone': 'what_is_current', 'question': 'Which part is a thin pipe?', 'options': ['A resistor', 'A battery']}});
+      h.emit('turn_done', {'finished': false});
+      await settle();
+      expect(c.chat.last.interactive, 'quiz');
+      expect(c.chat.last.props!['options'], ['A resistor', 'A battery']);
+      expect(c.chat.last.props!.containsKey('answer'), isFalse);
+      await c.answerQuiz('what_is_current', 0, 'A resistor');
+      expect(h.bodies.last, {'text': '[quiz answer] milestone=what_is_current choice=0'});
+      expect(c.chat.where((b) => b.role == 'learner').last.text, 'A resistor'); // the learner sees their own words, not the tag
+      expect(quizAnswerText('x', 2), '[quiz answer] milestone=x choice=2');
+      c.dispose();
+    });
+
+    test('the banner names the first step that is neither done nor locked', () {
+      TrainerState st(List<Map<String, dynamic>> p) => TrainerState.fromJson({'mission': 'm', 'scenario': '', 'progress': p});
+      Map<String, dynamic> m(String id, String status) => {'id': id, 'title': 'Step $id', 'stage': 's', 'status': status};
+      expect(currentStepTitle(st([m('a', 'done'), m('b', 'blocked'), m('c', 'pending')])), 'Step c');
+      expect(currentStepTitle(st([m('a', 'done')])), isNull);
+      expect(currentStepTitle(null), isNull);
+    });
+
+    test('the computer check is read from the helper, and a download shows progress then looks again', () async {
+      final h = FakeHelper()
+        ..setupReport = {
+          'items': [
+            {'id': 'esp32_support', 'label': 'ESP32 support', 'state': 'missing', 'can_install': true, 'how': [], 'why': 'x', 'detail': ''},
+          ],
+          'ready': false,
+        };
+      final c = h.controller();
+      await c.init();
+      await c.checkSetup();
+      expect((c.setupReport!['items'] as List).length, 1);
+      expect(await c.installSetup('esp32_support'), isNull);
+      expect(h.bodies.last, {'item': 'esp32_support'});
+      h.emit('setup', {'item': 'esp32_support', 'state': 'working', 'line': 'Downloading 40%', 'percent': 40});
+      await settle();
+      expect(c.setupProgress['esp32_support']!['percent'], 40);
+      h.setupReport = {'items': [], 'ready': true};
+      h.emit('setup', {'item': 'esp32_support', 'state': 'done', 'line': 'ESP32 support is ready.', 'percent': 100});
+      await settle();
+      expect(c.setupProgress, isEmpty);
+      expect(c.setupReport!['ready'], isTrue); // it looked again by itself
+      c.dispose();
+    });
+
+    test('a second download while one runs is refused with the helper own words', () async {
+      final h = FakeHelper()..installStatus = 409;
+      final c = h.controller();
+      await c.init();
+      expect(await c.installSetup('editor'), contains('still running'));
+      expect(c.setupProgress, isEmpty);
       c.dispose();
     });
   });

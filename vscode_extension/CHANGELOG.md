@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+- Beginner-friendly lessons: the trainer asks quick questions (you pick an answer from a list) and checks your understanding as you go.
+- Build tools come inside the extension (PlatformIO Core), so building and uploading work without installing anything else.
+- Built-in courses (welcome, set-up, first program) work from the same helper as the desktop app.
+
 ## 0.1.3
 - First run is easier: if you have not opened a folder, a starter folder is made for you (the same one the desktop app uses), and a folder that no longer exists is replaced instead of causing an error.
 - If PlatformIO is not on your computer, you are offered a one-click install (it is needed to build and upload to your board).

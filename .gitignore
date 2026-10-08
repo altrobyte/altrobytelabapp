@@ -47,3 +47,4 @@ metal_detector/
 
 # Firebase deploy cache
 .firebase/
+dist/

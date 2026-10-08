@@ -26,6 +26,17 @@ OUT = HERE / "runtime"
 CACHE = HERE / ".runtime-cache"
 
 
+SITECUSTOMIZE = """# The bundle's own packages, found from where this Python lives, so it works from any folder.
+import os
+import sys
+
+_root = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable)))
+for _p in (os.path.join(_root, "site-packages"), os.path.join(_root, "helper"), _root):
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.append(_p)
+"""
+
+
 def fetch() -> bytes:
     CACHE.mkdir(exist_ok=True)
     f = CACHE / f"python-{PY}-embed-amd64.zip"
@@ -49,14 +60,20 @@ def main() -> None:
         shutil.rmtree(OUT)
     (OUT / "python").mkdir(parents=True)
     zipfile.ZipFile(io.BytesIO(fetch())).extractall(OUT / "python")
+    (OUT / "python" / f"python{PY_TAG}._pth").unlink()
 
-    # An embeddable Python ignores PYTHONPATH and the current folder; everything it may import is listed here.
-    (OUT / "python" / f"python{PY_TAG}._pth").write_text(
-        "\n".join([f"python{PY_TAG}.zip", ".", "..\\site-packages", "..\\helper", "..", "import site", ""]), encoding="utf-8")
+    # The embeddable Python normally runs isolated (a ._pth file). PlatformIO starts tools of its own and needs a normal
+    # sys.path, so the file is removed and a sitecustomize finds the bundle from where this python.exe lives.
+    (OUT / "python" / "sitecustomize.py").write_text(SITECUSTOMIZE, encoding="utf-8")
 
     subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-compile", "--target", str(OUT / "site-packages"),
                     "--platform", "win_amd64", "--python-version", "3.12", "--implementation", "cp", "--only-binary=:all:",
                     "-r", str(BACKEND / "helper" / "requirements.txt")], check=True)
+
+    # PlatformIO Core: builds and uploads ESP32 code with no Python, pip or PlatformIO on the learner's computer.
+    subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-compile", "--target", str(OUT / "site-packages"),
+                    "--platform", "win_amd64", "--python-version", "3.12", "--implementation", "cp", "--only-binary=:all:",
+                    "platformio==6.2.0"], check=True)
 
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "tests")
     shutil.copytree(BACKEND / "helper" / "altrobyte_helper", OUT / "helper" / "altrobyte_helper", ignore=ignore)
@@ -64,9 +81,9 @@ def main() -> None:
     shutil.copy(BACKEND / "helper" / "README.md", OUT / "helper" / "README.md")
 
     # Prove the bundle starts with its own Python and nothing else.
-    check = ("import fastapi, uvicorn, httpx, pydantic, serial, paho.mqtt.client, yaml, altrobyte_helper, trainer.tools;"
+    check = ("import platformio, fastapi, uvicorn, httpx, pydantic, serial, paho.mqtt.client, yaml, altrobyte_helper, trainer.tools;"
              "print('runtime ok', __import__('sys').version.split()[0])")
-    r = subprocess.run([str(OUT / "python" / "python.exe"), "-I", "-c", check], capture_output=True, text=True, cwd=str(OUT))
+    r = subprocess.run([str(OUT / "python" / "python.exe"), "-c", check], capture_output=True, text=True, cwd=str(OUT))
     print(r.stdout.strip() or r.stderr.strip())
     if r.returncode != 0:
         sys.exit("the runtime does not start")

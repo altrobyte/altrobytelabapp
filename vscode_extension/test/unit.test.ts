@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, relativeTo, starterFolderPath, visualPage } from '../src/logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, quizAnswerText, relativeTo, starterFolderPath, visualPage } from '../src/logic';
 import { panelHtml } from '../src/panelHtml';
 import { SseParser } from '../src/sse';
 
@@ -131,4 +131,8 @@ test('PlatformIO is suggested only when it is not there in any form', () => {
   assert.equal(needsPlatformIO(false, false), true);
   assert.equal(needsPlatformIO(true, false), false); // the extension is installed
   assert.equal(needsPlatformIO(false, true), false); // installed another way: leave the learner alone
+});
+
+test('a quiz answer reaches the trainer in the exact tagged shape its instructions name', () => {
+  assert.equal(quizAnswerText('what_is_pin', 1), '[quiz answer] milestone=what_is_pin choice=1');
 });

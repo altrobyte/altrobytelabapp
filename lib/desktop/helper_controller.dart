@@ -12,7 +12,7 @@ const allConnectors = ['system', 'workspace', 'toolchain', 'serial', 'mqtt'];
 class ChatBubble {
   final String role; // trainer | learner | system | ui
   final String text;
-  final String? interactive; // pin_map | picture: a card the learner can use right in the chat
+  final String? interactive; // pin_map | picture | quiz: a card the learner can use right in the chat
   final Map<String, dynamic>? props;
   const ChatBubble(this.role, this.text, {this.interactive, this.props});
 }
@@ -74,6 +74,18 @@ List<String> formatAudit(List<dynamic> entries) {
   return lines;
 }
 
+/// The message a quiz card sends. The trainer's instructions name this exact shape, and the engine reads the two values.
+String quizAnswerText(String milestone, int choice) => '[quiz answer] milestone=$milestone choice=$choice';
+
+/// The step the learner is on now: the first one not done and not blocked (what the banner above the chat shows).
+String? currentStepTitle(TrainerState? st) {
+  if (st == null) return null;
+  for (final m in st.progress) {
+    if (!m.done && m.status != 'blocked') return m.title;
+  }
+  return null;
+}
+
 class HelperController extends ChangeNotifier {
   final HelperClient client;
   final OpenInEditor? openInEditor;
@@ -93,6 +105,10 @@ class HelperController extends ChangeNotifier {
   bool started = false;
   bool ready = false;
   bool lost = false; // the helper went away (restarted from another app, or ended)
+  String? courseId; // the built-in course being taken, if any
+  Map<String, dynamic>? setupReport; // what the helper found on this computer (null until checked)
+  bool settingUp = false; // a check or a download is in progress
+  final Map<String, Map<String, dynamic>> setupProgress = {}; // item id -> {line, percent}
   Map<String, dynamic> settings = {};
 
   bool monitorRunning = false;
@@ -198,6 +214,9 @@ class HelperController extends ChangeNotifier {
       case 'open_file':
         openInEditor?.call('${e.data['path']}', (e.data['line'] as num?)?.toInt() ?? 1);
         break;
+      case 'setup':
+        _onSetup(e.data);
+        break;
     }
     _notify();
   }
@@ -207,6 +226,8 @@ class HelperController extends ChangeNotifier {
     final props = Map<String, dynamic>.from((ui['props'] as Map?) ?? const {});
     if (type == 'pin_map') {
       _add('ui', '', interactive: 'pin_map');
+    } else if (type == 'quiz') {
+      _add('ui', '', interactive: 'quiz', props: props);
     } else if (type == 'wiring_diagram' || type == 'visual') {
       _add('ui', '', interactive: 'picture', props: props);
       if (type == 'wiring_diagram') openPicture?.call(props); // the learner asked to see it: show it now
@@ -224,15 +245,16 @@ class HelperController extends ChangeNotifier {
 
   // ── the conversation ───────────────────────────────────────────────────────
 
-  Future<void> start({int? labId}) async {
+  Future<void> start({int? labId, String? course}) async {
     if (busy) return;
     busy = true;
     started = true;
+    courseId = course;
     chat.clear();
     state = null;
     _notify();
     try {
-      await client.post('/session/start', labId == null ? null : {'lab_id': labId});
+      await client.post('/session/start', course != null ? {'course': course} : (labId == null ? null : {'lab_id': labId}));
     } on HelperError catch (e) {
       busy = false;
       started = false;
@@ -256,6 +278,61 @@ class HelperController extends ChangeNotifier {
     }
   }
 
+  /// A tap on a quiz card. The learner sees their own choice in the chat; the trainer gets the tagged answer and the engine,
+  /// not the model, decides if it is right.
+  Future<void> answerQuiz(String milestone, int choice, String optionText) async {
+    if (busy || !started) return;
+    _add('learner', optionText);
+    busy = true;
+    _notify();
+    try {
+      await client.post('/session/chat', {'text': quizAnswerText(milestone, choice)});
+    } on HelperError catch (e) {
+      busy = false;
+      _add('system', e.message);
+      _notify();
+    }
+  }
+
+  // ── getting this computer ready ────────────────────────────────────────────
+
+  Future<void> checkSetup() async {
+    if (settingUp && setupProgress.isNotEmpty) return; // a download is running: its own events keep the screen current
+    settingUp = true;
+    _notify();
+    try {
+      setupReport = await client.get('/setup/check');
+    } on HelperError catch (e) {
+      setupReport = {'items': [], 'ready': false, 'error': e.message};
+    } finally {
+      settingUp = false;
+      _notify();
+    }
+  }
+
+  Future<String?> installSetup(String item) async {
+    try {
+      await client.post('/setup/install', {'item': item});
+      setupProgress[item] = {'line': 'Starting…', 'percent': null};
+      settingUp = true;
+      _notify();
+      return null;
+    } on HelperError catch (e) {
+      return e.message;
+    }
+  }
+
+  void _onSetup(Map<String, dynamic> d) {
+    final item = '${d['item']}';
+    if (d['state'] == 'working') {
+      setupProgress[item] = {'line': '${d['line'] ?? ''}', 'percent': d['percent']};
+    } else {
+      setupProgress.remove(item);
+      settingUp = setupProgress.isNotEmpty;
+      unawaited(checkSetup()); // a download ended: look again, so the list shows what is true now
+    }
+  }
+
   Future<void> newSession() async {
     try {
       await client.post('/session/end');
@@ -263,6 +340,7 @@ class HelperController extends ChangeNotifier {
     } catch (_) {}
     started = false;
     busy = false;
+    courseId = null;
     chat.clear();
     state = null;
     _notify();
