@@ -737,8 +737,7 @@ class _AiLabCard extends StatelessWidget {
     final uri = Uri.parse('vscode://altrobyte.altrobyte-trainer/lab?module=${module.id}');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Could not open VS Code. Install the Altrobyte AI Trainer extension in VS Code, or use the Altrobyte desktop app.')));
+      context.push('/connect-vscode');           // VS Code or the extension is not there yet: show how to set it up
     }
   }
 
@@ -772,6 +771,11 @@ class _AiLabCard extends StatelessWidget {
               icon: const Icon(Icons.play_arrow_rounded),
               label: const Text('Start in VS Code'),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black87),
+            ),
+            TextButton.icon(
+              onPressed: () => context.push('/connect-vscode'),
+              icon: const Icon(Icons.extension_rounded, color: Colors.white70, size: 18),
+              label: const Text('First time? Connect VS Code', style: TextStyle(color: Colors.white70)),
             ),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabVisualsScreen(moduleId: module.id, title: module.title))),

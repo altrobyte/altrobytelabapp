@@ -4,31 +4,67 @@
   "description": "A hands-on lab instructor inside VS Code: it watches your real setup (PlatformIO, board, serial, MQTT), teaches without doing the work for you, and verifies every milestone with real checks.",
   "version": "0.1.0",
   "publisher": "altrobyte",
-  "license": "UNLICENSED",
-  "private": true,
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["Education", "Other"],
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
   "main": "./out/extension.js",
-  "activationEvents": ["onStartupFinished", "onUri"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
-        { "id": "altrobyte", "title": "Altrobyte Trainer", "icon": "media/icon.svg" }
+        {
+          "id": "altrobyte",
+          "title": "Altrobyte Trainer",
+          "icon": "media/icon.svg"
+        }
       ]
     },
     "views": {
       "altrobyte": [
-        { "type": "webview", "id": "altrobyte.trainer", "name": "Trainer" }
+        {
+          "type": "webview",
+          "id": "altrobyte.trainer",
+          "name": "Trainer"
+        }
       ]
     },
     "commands": [
-      { "command": "altrobyte.signIn", "title": "Altrobyte: Sign in" },
-      { "command": "altrobyte.signOut", "title": "Altrobyte: Sign out" },
-      { "command": "altrobyte.startSession", "title": "Altrobyte: Start a trainer session" },
-      { "command": "altrobyte.startModuleLab", "title": "Altrobyte: Start an AI Lab experiment from a module" },
-      { "command": "altrobyte.chooseProject", "title": "Altrobyte: Choose the project folder the trainer may read" },
-      { "command": "altrobyte.showAudit", "title": "Altrobyte: Show what the trainer did and what was sent" },
-      { "command": "altrobyte.restartHelper", "title": "Altrobyte: Restart the helper" }
+      {
+        "command": "altrobyte.signIn",
+        "title": "Altrobyte: Sign in"
+      },
+      {
+        "command": "altrobyte.signOut",
+        "title": "Altrobyte: Sign out"
+      },
+      {
+        "command": "altrobyte.startSession",
+        "title": "Altrobyte: Start a trainer session"
+      },
+      {
+        "command": "altrobyte.startModuleLab",
+        "title": "Altrobyte: Start an AI Lab experiment from a module"
+      },
+      {
+        "command": "altrobyte.chooseProject",
+        "title": "Altrobyte: Choose the project folder the trainer may read"
+      },
+      {
+        "command": "altrobyte.showAudit",
+        "title": "Altrobyte: Show what the trainer did and what was sent"
+      },
+      {
+        "command": "altrobyte.restartHelper",
+        "title": "Altrobyte: Restart the helper"
+      }
     ],
     "configuration": {
       "title": "Altrobyte Trainer",
@@ -65,5 +101,29 @@
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.5.0"
+  },
+  "icon": "media/icon.png",
+  "homepage": "https://altrobytelab.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/altrobyte/altrobytelabapp.git",
+    "directory": "vscode_extension"
+  },
+  "bugs": {
+    "url": "https://altrobytelab.com"
+  },
+  "keywords": [
+    "esp32",
+    "iot",
+    "embedded",
+    "platformio",
+    "arduino",
+    "education",
+    "altrobyte",
+    "ai tutor"
+  ],
+  "galleryBanner": {
+    "color": "#1A3C5E",
+    "theme": "dark"
   }
 }

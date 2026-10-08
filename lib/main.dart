@@ -26,6 +26,7 @@ import 'screens/attendance/attendance_screen.dart';
 import 'screens/fees/fee_management_screen.dart';
 import 'screens/invoices/invoices_screen.dart';
 import 'screens/enrolment/enrol_screen.dart';
+import 'screens/connect/connect_vscode_screen.dart';
 import 'screens/enrolment/enrolment_forms_screen.dart';
 import 'screens/trainer/trainer_admin_screen.dart';
 import 'screens/analytics/analytics_screen.dart';
@@ -334,6 +335,8 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (context, state) => JobDetailScreen(
               jobId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0),
         ),
+        // How a learner connects VS Code to Altrobyte, once. Shared by link, so public.
+        GoRoute(path: '/connect-vscode', builder: (_, __) => const ConnectVsCodeScreen()),
         // An enrolment form shared by link — public; the person signs in with Google on the page itself.
         GoRoute(
           path: '/enroll/:slug',

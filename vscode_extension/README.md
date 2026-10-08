@@ -1,38 +1,35 @@
-# Altrobyte AI Trainer (VS Code extension)
+# Altrobyte AI Trainer
 
-A hands-on lab instructor inside VS Code. It looks at your real setup (PlatformIO, your board on USB, your
-serial output, your files), teaches without doing the work for you, and marks a milestone done only when a
-real check passes.
+A hands-on lab instructor inside VS Code, for Altrobyte Lab learners. It looks at your **real** setup (PlatformIO, your
+ESP32 board on USB, your serial output, your project files), teaches without doing the work for you, shows you the
+wiring as a picture, opens your file at the exact line where you should type, and marks a step done **only when a real
+check passes**.
 
-The extension is the UI. Everything that needs your computer runs in the **Altrobyte Helper**
-(`altrocoach-backend/helper`), a small local service that only listens on `127.0.0.1`.
+*Hinglish: ye aapke asli board aur code ko dekhkar sikhata hai. Code aapko khud likhna hai, ye batata hai kahan aur kya.*
 
-## Try it (development)
+## Get started (2 minutes)
 
-1. `pip install -r ../../altrocoach-backend/helper/requirements.txt` (Python 3.10+).
-2. `npm install` then `npm run build` in this folder.
-3. In VS Code: open this folder and press **F5** (or run `code --extensionDevelopmentPath .`).
-4. Click the robot icon in the activity bar, **Sign in**, **Start session**.
+1. Click the **Altrobyte** robot icon in the activity bar.
+2. **Sign in**: learners use the WhatsApp number and OTP; educators use email and password.
+3. Press **Experiments** and choose the experiment your teacher switched on, or press **Start session**.
+4. Allow only what you are comfortable with in **What the trainer may look at**.
 
-If the helper is not next to this repo, set `altrobyte.helperDir` to the folder containing `altrobyte_helper`.
+You can also start from your module page on altrobytelab.com with **Start in VS Code**.
 
-## Install a build
+There is nothing else to install: the extension carries its own Python. For building and uploading firmware you need the
+**PlatformIO IDE** extension; the trainer will tell you if it is missing.
 
-`npm run package` makes `altrobyte-trainer-0.1.0.vsix`; install it with
-`code --install-extension altrobyte-trainer-0.1.0.vsix`.
+## You stay in control
 
-## What you control
+- **Your code stays on your computer.** Only short facts about your setup are sent to answer you, and Wi-Fi and MQTT
+  passwords are hidden first.
+- **Build and upload always ask** before anything runs. Adding a starter file asks too, and never replaces your work
+  (your old file is kept as a backup).
+- **See everything**: "Show what the trainer did and what was sent" lists every request and what left your computer.
+- **No internet?** "Check my progress" runs the same checks on your computer with no AI.
 
-- **Connectors** (Installed tools and USB, Project files, Build and upload, Serial monitor, MQTT) are switches in the
-  panel. Off means the trainer never uses it. **Build and upload always ask first.**
-- **What was sent**: "Show what the trainer did and what was sent" lists every request made of your computer and a
-  preview of everything sent to the cloud. Passwords and keys are hidden before anything is sent.
-- No internet? **Check my progress** runs the same checks on your computer with no AI and no connection.
+## Windows
 
-## Tests
+This first version supports Windows 10 and 11 (64-bit).
 
-- `npm test`: unit tests plus the real helper started from Node (settings, offline checks, events, speech).
-- `npm run test:vscode`: starts the installed VS Code with this extension (clean profile, no other extensions,
-  a window opens for a few seconds) and checks it from inside the editor.
-
-Not covered by automated tests: the sign-in prompts and the build/upload approval dialogs (they need a person).
+Questions or problems: https://altrobytelab.com
