@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +8,7 @@ import '../../constants/app_colors.dart';
 
 /// Flip to true once the extension is published on the VS Code Marketplace. The page then leads with one click
 /// ("Install from Marketplace") and keeps the file download as the fallback.
-const marketplaceLive = false;
+const marketplaceLive = true;
 const extensionId = 'altrobytelab.altrobyte-trainer';
 const vsixName = 'altrobyte-trainer-win32-x64.vsix';
 
@@ -98,7 +98,7 @@ class _ConnectVsCodeScreenState extends State<ConnectVsCodeScreen> {
                 label: Text(mb == null ? 'Download the extension file' : 'Download the extension file ($mb MB)'),
               ),
               const SizedBox(height: 10),
-              _p('Then in VS Code: open Extensions (Ctrl+Shift+X), click the "⋯" menu at the top of that panel, choose "Install from VSIX…" and pick the file you downloaded.'),
+              _p('Then in VS Code: open Extensions (Ctrl+Shift+X), click the "â‹¯" menu at the top of that panel, choose "Install from VSIXâ€¦" and pick the file you downloaded.'),
               if (!marketplaceLive) ...[
                 _p('Or from a terminal, in the folder where you saved it:'),
                 Container(
