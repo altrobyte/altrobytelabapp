@@ -247,8 +247,83 @@ export class Controller implements vscode.WebviewViewProvider {
 
   // ── actions ──────────────────────────────────────────────────────────────
 
+  private apiBase(): string {
+    return vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
+  }
+
+  private async callApi(path: string, payload: object): Promise<{ ok: boolean; status: number; body: any } | undefined> {
+    try {
+      const res = await fetch(`${this.apiBase()}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      return { ok: res.ok, status: res.status, body: await res.json().catch(() => ({})) };
+    } catch {
+      this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
+      return undefined;
+    }
+  }
+
+  private async finishSignIn(token: string, who: string): Promise<void> {
+    await this.ctx.secrets.store(TOKEN_KEY, token);
+    await this.ctx.globalState.update(EMAIL_KEY, who);
+    await this.client?.post('/session/auth', { token });
+    await this.publishStatus();
+  }
+
   async signIn(): Promise<void> {
-    const email = await vscode.window.showInputBox({ prompt: 'Your Altrobyte email', ignoreFocusOut: true, value: this.ctx.globalState.get<string>(EMAIL_KEY) });
+    const pick = await vscode.window.showQuickPick(
+      [
+        { label: 'I am a learner', description: 'Sign in with your WhatsApp number (OTP)', learner: true },
+        { label: 'I am an educator', description: 'Sign in with email and password', learner: false },
+      ],
+      { placeHolder: 'How do you sign in to Altrobyte?', ignoreFocusOut: true },
+    );
+    if (!pick) {
+      return;
+    }
+    return pick.learner ? this.signInLearner() : this.signInEducator();
+  }
+
+  private async signInLearner(): Promise<void> {
+    const phone = await vscode.window.showInputBox({ prompt: 'Your WhatsApp number (with country code, e.g. 919876543210)', ignoreFocusOut: true, value: this.ctx.globalState.get<string>(EMAIL_KEY) });
+    if (!phone) {
+      return;
+    }
+    let name: string | undefined;
+    let sent = await this.callApi('/student/standalone/request-otp', { phone });
+    if (!sent) {
+      return;
+    }
+    if (sent.status === 422 || sent.status === 404) {
+      name = await vscode.window.showInputBox({ prompt: 'New here! Your name', ignoreFocusOut: true });
+      if (!name) {
+        return;
+      }
+      sent = await this.callApi('/student/standalone/request-otp', { phone, name });
+      if (!sent) {
+        return;
+      }
+    }
+    if (!sent.ok) {
+      this.post({ type: 'error', text: typeof sent.body.detail === 'string' ? sent.body.detail : 'Could not send the OTP. Check the number.' });
+      return;
+    }
+    const otp = await vscode.window.showInputBox({ prompt: 'Enter the OTP sent on WhatsApp', ignoreFocusOut: true });
+    if (!otp) {
+      return;
+    }
+    const done = await this.callApi('/student/standalone/verify-otp', name ? { phone, otp, name } : { phone, otp });
+    const token = done?.body.token ?? done?.body.jwt_token;
+    if (!done) {
+      return;
+    }
+    if (!done.ok || !token) {
+      this.post({ type: 'error', text: typeof done.body.detail === 'string' ? done.body.detail : 'That OTP did not work. Try again.' });
+      return;
+    }
+    await this.finishSignIn(token, phone);
+  }
+
+  private async signInEducator(): Promise<void> {
+    const email = await vscode.window.showInputBox({ prompt: 'Your Altrobyte email', ignoreFocusOut: true });
     if (!email) {
       return;
     }
@@ -256,24 +331,16 @@ export class Controller implements vscode.WebviewViewProvider {
     if (!password) {
       return;
     }
-    const base = vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
-    let res: Response;
-    try {
-      res = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-    } catch {
-      this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
+    const res = await this.callApi('/auth/login', { email, password });
+    if (!res) {
       return;
     }
-    const body: any = await res.json().catch(() => ({}));
-    const token = body.token ?? body.jwt_token;
+    const token = res.body.token ?? res.body.jwt_token;
     if (!res.ok || !token) {
-      this.post({ type: 'error', text: typeof body.detail === 'string' ? body.detail : 'Sign-in failed. Check your email and password.' });
+      this.post({ type: 'error', text: typeof res.body.detail === 'string' ? res.body.detail : 'Sign-in failed. Check your email and password.' });
       return;
     }
-    await this.ctx.secrets.store(TOKEN_KEY, token);
-    await this.ctx.globalState.update(EMAIL_KEY, email);
-    await this.client?.post('/session/auth', { token });
-    await this.publishStatus();
+    await this.finishSignIn(token, email);
   }
 
   async signOut(): Promise<void> {
