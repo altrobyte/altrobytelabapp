@@ -734,7 +734,7 @@ class _AiLabCard extends StatelessWidget {
   const _AiLabCard({required this.module});
 
   Future<void> _openInVsCode(BuildContext context) async {
-    final uri = Uri.parse('vscode://altrobyte.altrobyte-trainer/lab?module=${module.id}');
+    final uri = Uri.parse('vscode://altrobytelab.altrobyte-trainer/lab?module=${module.id}');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
     if (!ok && context.mounted) {
       context.push('/connect-vscode');           // VS Code or the extension is not there yet: show how to set it up

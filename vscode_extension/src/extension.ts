@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { HelperClient, HelperError, RunningHelper, launchHelper } from './helper';
+import { HelperClient, HelperError, RunningHelper, connectHelper, helperHome, shutdownHelper } from './helper';
 import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
@@ -103,13 +103,19 @@ export class Controller implements vscode.WebviewViewProvider {
     return candidates.find((d) => fs.existsSync(path.join(d, 'altrobyte_helper', '__main__.py'))) ?? null;
   }
 
-  async startHelper(): Promise<void> {
+  /** Joins the helper running on this computer (the desktop app may have started it) or starts one.
+   *  `restart` ends the running one first. */
+  async startHelper(restart = false): Promise<void> {
     if (this.starting) {
       return;
     }
     this.starting = true;
     this.helperError = null;
+    const before = this.running;
     await this.stopHelper();
+    if (restart && before) {
+      await shutdownHelper(before.info, helperHome());
+    }
     await this.publishStatus();
     try {
       const dir = this.findHelperDir();
@@ -119,8 +125,8 @@ export class Controller implements vscode.WebviewViewProvider {
       const bundledPython = path.join(this.ctx.extensionPath, 'runtime', 'python', 'python.exe');
       const python = choosePython(vscode.workspace.getConfiguration('altrobyte').get<string>('helperPython', 'python'),
         fs.existsSync(bundledPython) ? bundledPython : null);
-      this.running = await launchHelper({ python, helperDir: dir, onLog: (l) => this.output.appendLine(`[helper] ${l}`) });
-      this.running.proc.on('exit', (code) => {
+      this.running = await connectHelper({ python, helperDir: dir, onLog: (l) => this.output.appendLine(`[helper] ${l}`) });
+      this.running.proc?.on('exit', (code) => {
         if (this.running) {
           this.running = null;
           this.client = null;
@@ -129,11 +135,16 @@ export class Controller implements vscode.WebviewViewProvider {
         }
       });
       this.client = new HelperClient(this.running.info);
-      this.output.appendLine(`helper ${this.running.info.version} listening on 127.0.0.1:${this.running.info.port}`);
+      this.output.appendLine(`helper ${this.running.info.version} on 127.0.0.1:${this.running.info.port} (${this.running.attached ? 'joined the one already running' : 'started by this window'})`);
       await this.configureHelper();
       const sub = this.client.events((k, d) => this.onHelperEvent(k, d).catch((e) => this.fail(e)), (why) => {
         if (why !== 'aborted') {
           this.output.appendLine(`event stream ended: ${why}`);
+          // The helper ended (it was restarted from another app, or it timed out while this window was idle).
+          // Join or start the one that is running now, once, instead of leaving a dead panel.
+          if (this.running && !this.starting) {
+            setTimeout(() => void this.startHelper(), 800);
+          }
         }
       });
       this.events = sub;
@@ -154,7 +165,7 @@ export class Controller implements vscode.WebviewViewProvider {
     const r = this.running;
     this.running = null;
     this.client = null;
-    await r?.stop();
+    r?.detach(); // never end a helper other apps may be using; it ends itself when nobody is connected
   }
 
   /** Tell a freshly started helper everything the editor knows. */
@@ -589,7 +600,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('altrobyte.chooseProject', () => controller.chooseProject()),
     vscode.commands.registerCommand('altrobyte.showAudit', () => controller.showAudit()),
-    vscode.commands.registerCommand('altrobyte.restartHelper', () => controller.startHelper()),
+    vscode.commands.registerCommand('altrobyte.restartHelper', () => controller.startHelper(true)),
     { dispose: () => void controller.dispose() },
   );
   return { controller }; // exposed so the tests that run inside VS Code can reach it

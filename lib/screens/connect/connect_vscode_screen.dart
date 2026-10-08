@@ -9,7 +9,7 @@ import '../../constants/app_colors.dart';
 /// Flip to true once the extension is published on the VS Code Marketplace. The page then leads with one click
 /// ("Install from Marketplace") and keeps the file download as the fallback.
 const marketplaceLive = false;
-const extensionId = 'altrobyte.altrobyte-trainer';
+const extensionId = 'altrobytelab.altrobyte-trainer';
 const vsixName = 'altrobyte-trainer-win32-x64.vsix';
 
 /// Public page: how a learner connects VS Code to Altrobyte, once. Shared by a link, so it needs no sign-in.

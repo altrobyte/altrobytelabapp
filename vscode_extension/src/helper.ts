@@ -2,6 +2,9 @@
 // started and exercised from plain Node tests.
 
 import { ChildProcess, spawn } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { SseParser } from './sse';
 
 export interface HelperInfo {
@@ -21,8 +24,14 @@ export interface LaunchOptions {
 
 export interface RunningHelper {
   info: HelperInfo;
-  proc: ChildProcess;
+  /** The process this window started, or null when it joined a helper another app had already started. */
+  proc: ChildProcess | null;
+  /** True when this joined a helper that was already running (the desktop app's, or another window's). */
+  attached: boolean;
+  /** Ends the helper this started. A helper that was only joined is left alone: someone else is using it. */
   stop(): Promise<void>;
+  /** Lets go without ending anything: the helper ends itself when nobody is connected any more. */
+  detach(): void;
 }
 
 export class HelperError extends Error {
@@ -39,6 +48,7 @@ export function launchHelper(opts: LaunchOptions): Promise<RunningHelper> {
       proc = spawn(opts.python, ['-u', '-m', 'altrobyte_helper'], {
         cwd: opts.helperDir,
         windowsHide: true,
+        detached: true, // outlives this window: it is shared with other apps and ends itself when nobody uses it
         env: { ...process.env, ...opts.env },
       });
     } catch (e) {
@@ -81,10 +91,22 @@ export function launchHelper(opts: LaunchOptions): Promise<RunningHelper> {
             settled = true;
             clearTimeout(timer);
             proc.removeAllListeners('exit');
+            const info = { port: msg.port, token: msg.token, version: msg.version, pid: msg.pid };
+            if (msg.reused) {
+              // Another helper was already running; the process we started has nothing to do and ends by itself.
+              resolve({ info, proc: null, attached: true, stop: async () => undefined, detach: () => undefined });
+              return;
+            }
             resolve({
-              info: { port: msg.port, token: msg.token, version: msg.version, pid: msg.pid },
+              info,
               proc,
+              attached: false,
               stop: () => stopProcess(proc),
+              detach: () => {
+                proc.unref();
+                proc.stdout?.destroy();
+                proc.stderr?.destroy();
+              },
             });
           }
         } catch {
@@ -93,6 +115,62 @@ export function launchHelper(opts: LaunchOptions): Promise<RunningHelper> {
       }
     });
   });
+}
+
+/** Where the shared helper records itself: the same folder the helper itself uses. */
+export function helperHome(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.ALTROBYTE_HOME) {
+    return env.ALTROBYTE_HOME;
+  }
+  return env.LOCALAPPDATA ? path.join(env.LOCALAPPDATA, 'Altrobyte') : path.join(os.homedir(), '.altrobyte');
+}
+
+/** The helper that is already running, if its record is readable and it really answers with its token. */
+export async function findRunningHelper(home: string, timeoutMs = 1500): Promise<HelperInfo | null> {
+  let info: HelperInfo;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(home, 'helper.json'), 'utf-8'));
+    if (typeof raw.port !== 'number' || typeof raw.token !== 'string') {
+      return null;
+    }
+    info = { port: raw.port, token: raw.token, version: String(raw.version ?? ''), pid: Number(raw.pid ?? 0) };
+  } catch {
+    return null;
+  }
+  try {
+    const res = await fetch(`http://127.0.0.1:${info.port}/health`, {
+      headers: { Authorization: `Bearer ${info.token}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return res.ok ? info : null;
+  } catch {
+    return null; // a record of a helper that is gone
+  }
+}
+
+/** Joins the helper that is running on this computer, or starts one. There is only ever one. */
+export async function connectHelper(opts: LaunchOptions & { home?: string }): Promise<RunningHelper> {
+  const home = opts.home ?? helperHome({ ...process.env, ...opts.env });
+  const found = await findRunningHelper(home);
+  if (found) {
+    return { info: found, proc: null, attached: true, stop: async () => undefined, detach: () => undefined };
+  }
+  return launchHelper(opts); // if another app starts one at the same moment, the helper itself sees it and reuses it
+}
+
+/** Asks a running helper to end, and waits until it has. Used by "restart the helper". */
+export async function shutdownHelper(info: HelperInfo, home: string): Promise<void> {
+  try {
+    await fetch(`http://127.0.0.1:${info.port}/shutdown`, { method: 'POST', headers: { Authorization: `Bearer ${info.token}` } });
+  } catch {
+    return;
+  }
+  for (let i = 0; i < 40; i++) {
+    if (!(await findRunningHelper(home, 500))) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
 }
 
 function stopProcess(proc: ChildProcess): Promise<void> {

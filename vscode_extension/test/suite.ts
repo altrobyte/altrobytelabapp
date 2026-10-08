@@ -29,12 +29,12 @@ export async function run(): Promise<void> {
     }
   };
 
-  const ext = vscode.extensions.getExtension('altrobyte.altrobyte-trainer');
+  const ext = vscode.extensions.getExtension('altrobytelab.altrobyte-trainer');
   let controller: any;
   const project = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
 
   await t('the extension is found and activates', async () => {
-    assert.ok(ext, 'extension altrobyte.altrobyte-trainer not found');
+    assert.ok(ext, 'extension altrobytelab.altrobyte-trainer not found');
     const api = await ext.activate();
     controller = api.controller;
     assert.ok(controller, 'activate() should hand back its controller');

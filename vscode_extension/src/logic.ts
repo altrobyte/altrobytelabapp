@@ -128,7 +128,7 @@ export function choosePython(setting: string, bundled: string | null): string {
   return bundled ?? 'python';
 }
 
-/** The module id in a link like vscode://altrobyte.altrobyte-trainer/lab?module=9, or null if it is not one. */
+/** The module id in a link like vscode://altrobytelab.altrobyte-trainer/lab?module=9, or null if it is not one. */
 export function labLink(pathname: string, query: string): number | null {
   if (pathname !== '/lab') {
     return null;
