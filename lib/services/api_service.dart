@@ -1853,6 +1853,39 @@ class ApiService {
     return _parse(res);
   }
 
+  /// A session on the learner's own computer (desktop app). The server then asks the app to look at it.
+  static Future<Map<String, dynamic>> startLiveTrainerSession(List<String> grants) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse(ApiConstants.trainerSessions()),
+            headers: _headers(token), body: jsonEncode({'mission': 'esp32_temp_to_cloud', 'mode': 'live', 'grants': grants}))
+        .timeout(const Duration(seconds: 90));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> trainerEnvResult(String id, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse('${ApiConstants.trainerSession(id)}/env_result'), headers: _headers(token), body: jsonEncode(body))
+        .timeout(const Duration(seconds: 120));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> trainerPoll(String id) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse('${ApiConstants.trainerSession(id)}/poll'), headers: _headers(token))
+        .timeout(const Duration(seconds: 120));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> trainerSetGrants(String id, List<String> connectors) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.trainerSession(id)}/grants'),
+        headers: _headers(token), body: jsonEncode({'connectors': connectors}));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> sendTrainerMessage(String id, String text) async {
     final token = await _token();
     final res = await http

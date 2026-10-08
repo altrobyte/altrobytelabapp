@@ -1,0 +1,29 @@
+name: altrobyte_trainer
+description: "Altrobyte AI Trainer - a hands-on lab instructor on your own computer (Windows)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.4
+
+# Deliberately lean. A Windows build compiles a native plugin for EVERY package listed here, so this app lists only
+# what the desktop trainer uses and none of the web app's heavier packages (Firebase, scanner, ...). The code
+# comes from the main project's lib/ by tools/sync_desktop_app.py: never edit desktop_app/lib by hand.
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  http_parser: ^4.0.2
+  shared_preferences: ^2.2.2
+  provider: ^6.1.1
+  google_fonts: ^6.1.0
+  file_picker: ^11.0.2
+  mqtt_client: ^10.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
