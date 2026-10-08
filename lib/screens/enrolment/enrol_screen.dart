@@ -21,6 +21,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
   final _phone = TextEditingController();
   final Map<String, TextEditingController> _text = {};
   final Map<String, String?> _choice = {};
+  final Map<String, Set<String>> _multi = {};
   bool _busy = false;
   String? _error;
   Map<String, dynamic>? _done;
@@ -35,6 +36,8 @@ class _EnrolScreenState extends State<EnrolScreen> {
         for (final q in (f['fields'] as List)) {
           if (q['type'] == 'choice') {
             _choice['${q['id']}'] = null;
+          } else if (q['type'] == 'multi') {
+            _multi['${q['id']}'] = <String>{};
           } else {
             _text['${q['id']}'] = TextEditingController();
           }
@@ -78,9 +81,10 @@ class _EnrolScreenState extends State<EnrolScreen> {
     });
     try {
       final token = await user.getIdToken(true);
-      final answers = <String, String>{
+      final answers = <String, dynamic>{
         for (final e in _text.entries) e.key: e.value.text.trim(),
         for (final e in _choice.entries) e.key: e.value ?? '',
+        for (final e in _multi.entries) e.key: e.value.toList(),
       };
       _done = await ApiService.submitEnrolment(widget.slug, token ?? '', _phone.text.trim(), answers);
     } catch (e) {
@@ -187,22 +191,15 @@ class _EnrolScreenState extends State<EnrolScreen> {
           ]),
         ),
         const SizedBox(height: 14),
-        TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: _dec('WhatsApp number *', hint: 'e.g. 919876543210')),
-        for (final q in fields) ...[
+        TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: _dec('Mobile / WhatsApp number *', hint: 'e.g. 9876543210')),
+        for (var i = 0; i < fields.length; i++) ...[
+          if ('${fields[i]['section'] ?? ''}'.isNotEmpty && (i == 0 || '${fields[i - 1]['section'] ?? ''}' != '${fields[i]['section']}')) ...[
+            const SizedBox(height: 22),
+            Text('${fields[i]['section']}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.primary)),
+            const Divider(height: 14),
+          ],
           const SizedBox(height: 12),
-          if (q['type'] == 'choice')
-            DropdownButtonFormField<String>(
-              initialValue: _choice['${q['id']}'],
-              decoration: _dec('${q['label']}${q['required'] == true ? ' *' : ''}'),
-              items: [for (final o in (q['options'] as List)) DropdownMenuItem(value: '$o', child: Text('$o'))],
-              onChanged: (v) => setState(() => _choice['${q['id']}'] = v),
-            )
-          else
-            TextField(
-              controller: _text['${q['id']}'],
-              maxLines: q['type'] == 'long' ? 4 : 1,
-              decoration: _dec('${q['label']}${q['required'] == true ? ' *' : ''}'),
-            ),
+          _question(fields[i]),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13))),
         const SizedBox(height: 18),
@@ -218,6 +215,36 @@ class _EnrolScreenState extends State<EnrolScreen> {
       ],
       if (_user == null && _error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13))),
     ]);
+  }
+
+  Widget _question(Map q) {
+    final id = '${q['id']}';
+    final label = '${q['label']}${q['required'] == true ? ' *' : ''}';
+    switch (q['type']) {
+      case 'choice':
+        return DropdownButtonFormField<String>(
+          initialValue: _choice[id],
+          isExpanded: true,
+          decoration: _dec(label),
+          items: [for (final o in (q['options'] as List)) DropdownMenuItem(value: '$o', child: Text('$o'))],
+          onChanged: (v) => setState(() => _choice[id] = v),
+        );
+      case 'multi':
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final o in (q['options'] as List))
+              FilterChip(
+                label: Text('$o'),
+                selected: _multi[id]?.contains('$o') == true,
+                onSelected: (on) => setState(() => on ? _multi[id]!.add('$o') : _multi[id]!.remove('$o')),
+              ),
+          ]),
+        ]);
+      default:
+        return TextField(controller: _text[id], maxLines: q['type'] == 'long' ? 4 : 1, decoration: _dec(label));
+    }
   }
 
   InputDecoration _dec(String label, {String? hint}) =>

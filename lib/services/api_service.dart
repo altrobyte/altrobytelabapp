@@ -1897,7 +1897,7 @@ class ApiService {
   }
 
   /// Sends a filled form with the person's Google ID token; the server checks the token itself.
-  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, String> answers) async {
+  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, dynamic> answers) async {
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/submit'),
       headers: _headers(),

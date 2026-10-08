@@ -10,6 +10,7 @@ import '../../constants/api_constants.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import 'enrolment_template.dart';
 
 const publicBase = 'https://altrobytelab.com';
 
@@ -180,8 +181,21 @@ class _QuestionRow {
   String? id;
   final label = TextEditingController();
   final options = TextEditingController();
+  final section = TextEditingController();
   String type = 'text';
   bool required = false;
+
+  _QuestionRow();
+
+  /// A question as the server stores it (also the shape of the built-in template).
+  _QuestionRow.from(Map q) {
+    id = q['id'] as String?;
+    label.text = '${q['label']}';
+    type = '${q['type']}';
+    required = q['required'] == true;
+    section.text = '${q['section'] ?? ''}';
+    options.text = ((q['options'] as List?) ?? const []).join(', ');
+  }
 }
 
 class _FormEditorState extends State<_FormEditor> {
@@ -198,25 +212,43 @@ class _FormEditorState extends State<_FormEditor> {
     final f = widget.form;
     if (f == null) {
       _title.text = 'Altrobyte enrolment';
-      _desc.text = 'Fill this form to enrol. Sign in with Google first.';
-      for (final (label, req) in [('City', true), ('College / company', false)]) {
-        _rows.add(_QuestionRow()
-          ..label.text = label
-          ..required = req);
-      }
+      _desc.text = 'Fill this form to enrol in an Altrobyte program. Your Google sign-in confirms who you are.';
+      _thanks.text = 'Thank you! Our team will call you on WhatsApp shortly with the next steps.';
+      _rows.addAll([for (final q in enrolmentTemplate) _QuestionRow.from(q)]);
     } else {
       _title.text = '${f['title']}';
       _desc.text = '${f['description'] ?? ''}';
       _thanks.text = '${f['success_message'] ?? ''}';
       for (final q in (f['fields'] as List? ?? const [])) {
-        _rows.add(_QuestionRow()
-          ..id = q['id'] as String?
-          ..label.text = '${q['label']}'
-          ..type = '${q['type']}'
-          ..required = q['required'] == true
-          ..options.text = ((q['options'] as List?) ?? const []).join(', '));
+        _rows.add(_QuestionRow.from(q as Map));
       }
     }
+  }
+
+  /// Replaces the questions with the standard Altrobyte set. Asks first when there are answers that would no longer match.
+  Future<void> _useTemplate() async {
+    final hasResponses = (widget.form?['submissions'] ?? 0) != 0;
+    if (_rows.isNotEmpty) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Replace the questions?'),
+          content: Text(hasResponses
+              ? 'This replaces all current questions with the standard Altrobyte set. Answers already received to the old questions stay in the CSV only for questions that keep the same id.'
+              : 'This replaces all current questions with the standard Altrobyte set: education, address, interests, duration.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep mine')),
+            ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Replace')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    setState(() {
+      _rows
+        ..clear()
+        ..addAll([for (final q in enrolmentTemplate) _QuestionRow.from(q)]);
+    });
   }
 
   Future<void> _save() async {
@@ -233,7 +265,8 @@ class _FormEditorState extends State<_FormEditor> {
               'label': r.label.text.trim(),
               'type': r.type,
               'required': r.required,
-              'options': r.type == 'choice' ? r.options.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() : [],
+              'section': r.section.text.trim(),
+              'options': (r.type == 'choice' || r.type == 'multi') ? r.options.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() : [],
             }
       ],
     };
@@ -270,9 +303,16 @@ class _FormEditorState extends State<_FormEditor> {
             const SizedBox(height: 10),
             TextField(controller: _thanks, maxLines: 2, decoration: const InputDecoration(labelText: 'Message after submitting (optional)')),
             const SizedBox(height: 16),
-            Text('Always asked: name and email (from Google) and WhatsApp number.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+            Text('Always asked: name and email (from Google) and mobile / WhatsApp number.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
-            Text('Your questions', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            Row(children: [
+              Expanded(child: Text('Your questions (${_rows.length})', style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
+              OutlinedButton.icon(
+                onPressed: _useTemplate,
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                label: const Text('Use the Altrobyte template'),
+              ),
+            ]),
             for (var i = 0; i < _rows.length; i++) _row(i),
             TextButton.icon(onPressed: () => setState(() => _rows.add(_QuestionRow())), icon: const Icon(Icons.add_rounded), label: const Text('Add a question')),
             if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(color: AppColors.error))),
@@ -300,6 +340,7 @@ class _FormEditorState extends State<_FormEditor> {
               DropdownMenuItem(value: 'text', child: Text('Short answer')),
               DropdownMenuItem(value: 'long', child: Text('Long answer')),
               DropdownMenuItem(value: 'choice', child: Text('Choose one')),
+              DropdownMenuItem(value: 'multi', child: Text('Choose several')),
             ],
             onChanged: (v) => setState(() => r.type = v ?? 'text'),
           ),
@@ -308,11 +349,15 @@ class _FormEditorState extends State<_FormEditor> {
           const Text('Required'),
           IconButton(tooltip: 'Remove', icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _rows.removeAt(i))),
         ]),
-        if (r.type == 'choice')
+        if (r.type == 'choice' || r.type == 'multi')
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: TextField(controller: r.options, decoration: const InputDecoration(labelText: 'Choices, separated by commas', isDense: true)),
           ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: TextField(controller: r.section, decoration: const InputDecoration(labelText: 'Heading above this question (optional, e.g. Education)', isDense: true)),
+        ),
       ]),
     );
   }
