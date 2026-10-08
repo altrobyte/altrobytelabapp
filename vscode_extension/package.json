@@ -25,6 +25,7 @@
       { "command": "altrobyte.signIn", "title": "Altrobyte: Sign in" },
       { "command": "altrobyte.signOut", "title": "Altrobyte: Sign out" },
       { "command": "altrobyte.startSession", "title": "Altrobyte: Start a trainer session" },
+      { "command": "altrobyte.startModuleLab", "title": "Altrobyte: Start an AI Lab experiment from a module" },
       { "command": "altrobyte.chooseProject", "title": "Altrobyte: Choose the project folder the trainer may read" },
       { "command": "altrobyte.showAudit", "title": "Altrobyte: Show what the trainer did and what was sent" },
       { "command": "altrobyte.restartHelper", "title": "Altrobyte: Restart the helper" }

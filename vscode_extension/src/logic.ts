@@ -99,9 +99,28 @@ export function describeError(e: { kind?: string; message?: string }): string {
   }
 }
 
+/** The page shown beside the editor for a picture the assistant drew. The picture is already cleaned by the server; the
+ * page still allows no script and no network, so the worst a picture can do is look wrong. */
+export function visualPage(title: string, body: string): string {
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:;">
+<style>
+  body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 16px; line-height: 1.5; }
+  .card { background: #fff; color: #212121; border-radius: 10px; padding: 14px; max-width: 900px; }
+  svg { max-width: 100%; height: auto; } table { border-collapse: collapse; } td, th { border: 1px solid #ccc; padding: 4px 8px; }
+</style></head><body><h2>${esc(title)}</h2><div class="card">${body}</div></body></html>`;
+}
+
+/** A 0-based line for the editor from the 1-based line the assistant talks about. */
+export function editorLine(line: unknown): number {
+  const n = Number(line);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) - 1 : 0;
+}
+
 export const CONNECTORS: { id: string; label: string; help: string }[] = [
   { id: 'system', label: 'Installed tools and USB', help: 'Whether VS Code / PlatformIO are installed, and which USB board is plugged in.' },
-  { id: 'workspace', label: 'Your project files', help: 'Read-only, only inside your project folder.' },
+  { id: 'workspace', label: 'Your project files', help: 'Reads files inside your project folder. With your OK each time, it can add a starter file there.' },
   { id: 'toolchain', label: 'Build and upload', help: 'Compile and flash. It asks you every single time.' },
   { id: 'serial', label: 'Serial monitor', help: 'What your board prints. The helper owns the port while this is on.' },
   { id: 'mqtt', label: 'MQTT check', help: 'Listens on your topic to confirm your data arrives. Needs a broker set up.' },

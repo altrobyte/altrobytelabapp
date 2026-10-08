@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, launchHelper } from './helper';
-import { describeError, formatAudit, mapDiagnostics } from './logic';
+import { describeError, editorLine, formatAudit, mapDiagnostics, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -20,6 +20,7 @@ export class Controller implements vscode.WebviewViewProvider {
   private monitorTimer: NodeJS.Timeout | undefined;
   private diagTimer: NodeJS.Timeout | undefined;
   private voiceWarned = false;
+  private visualPanel: vscode.WebviewPanel | undefined;
 
   constructor(private ctx: vscode.ExtensionContext, private output: vscode.OutputChannel) {}
 
@@ -70,6 +71,8 @@ export class Controller implements vscode.WebviewViewProvider {
         return this.signIn();
       case 'start':
         return this.startSession();
+      case 'chooseModule':
+        return this.startModuleLab();
       case 'send':
         return this.send(String(m.text ?? ''));
       case 'connector':
@@ -216,8 +219,43 @@ export class Controller implements vscode.WebviewViewProvider {
       case 'activity':
         return this.post({ type: kind, ...(kind === 'state' ? { state: data } : { text: data.text }) });
       case 'ui':
-        return this.post({ type: 'system', text: `The trainer opened an interactive: ${data.type}` });
+        return this.showInteractive(data);
+      case 'open_file':
+        return this.openFile(String(data.path), data.line);
     }
+  }
+
+  /** The assistant points at a line: show it, so the learner never has to hunt for where to type. */
+  private async openFile(file: string, line: unknown) {
+    const root = this.settings?.project_dir as string | undefined;
+    if (!root || !fs.existsSync(file) || !path.resolve(file).toLowerCase().startsWith(path.resolve(root).toLowerCase())) {
+      return;                                                  // only ever files inside the project the learner chose
+    }
+    const at = new vscode.Position(editorLine(line), 0);
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+    await vscode.window.showTextDocument(doc, { selection: new vscode.Range(at, at), preview: false, viewColumn: vscode.ViewColumn.One });
+    await vscode.commands.executeCommand('revealLine', { lineNumber: at.line, at: 'center' });
+  }
+
+  /** Pictures open beside the editor; the pin form lives in the chat. */
+  private async showInteractive(ui: { type: string; props?: any }) {
+    if (ui.type === 'pin_map') {
+      return this.post({ type: 'pinmap' });
+    }
+    const props = ui.props ?? {};
+    const body = ui.type === 'wiring_diagram' ? String(props.svg ?? '') : ui.type === 'visual' ? String(props.html ?? '') : '';
+    if (!body) {
+      return;
+    }
+    const title = String(props.title || (ui.type === 'wiring_diagram' ? 'How to connect it' : 'Picture'));
+    if (!this.visualPanel) {
+      this.visualPanel = vscode.window.createWebviewPanel('altrobyteVisual', title, { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true }, { enableScripts: false });
+      this.visualPanel.onDidDispose(() => (this.visualPanel = undefined));
+    }
+    this.visualPanel.title = title;
+    this.visualPanel.webview.html = visualPage(title, body);
+    this.visualPanel.reveal(vscode.ViewColumn.Beside, true);
+    this.post({ type: 'system', text: `Opened a picture beside your editor: ${title}` });
   }
 
   /** The learner is asked, every time, before anything is built or uploaded. */
@@ -350,7 +388,37 @@ export class Controller implements vscode.WebviewViewProvider {
     await this.publishStatus();
   }
 
-  async startSession(): Promise<void> {
+  /** Pick one of the modules whose teacher switched the AI Lab on, and run its experiment. */
+  async startModuleLab(): Promise<void> {
+    const token = await this.ctx.secrets.get(TOKEN_KEY);
+    if (!token) {
+      await this.signIn();
+    }
+    const t = await this.ctx.secrets.get(TOKEN_KEY);
+    if (!t) {
+      return;
+    }
+    const base = vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
+    let modules: { id: number; title: string; ai_lab_enabled?: boolean }[] = [];
+    try {
+      const res = await fetch(`${base}/student/training-modules`, { headers: { Authorization: `Bearer ${t}` } });
+      modules = ((await res.json()) as any).modules ?? [];
+    } catch {
+      this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
+      return;
+    }
+    const labs = modules.filter((m) => m.ai_lab_enabled);
+    if (!labs.length) {
+      this.post({ type: 'system', text: 'None of your modules has an AI Lab experiment yet.' });
+      return;
+    }
+    const pick = await vscode.window.showQuickPick(labs.map((m) => ({ label: m.title, id: m.id })), { placeHolder: 'Which experiment do you want to do?' });
+    if (pick) {
+      await this.startSession(pick.id);
+    }
+  }
+
+  async startSession(moduleId?: number): Promise<void> {
     if (!this.client) {
       await this.startHelper();
     }
@@ -364,7 +432,7 @@ export class Controller implements vscode.WebviewViewProvider {
     await this.client.post('/session/auth', { token: await this.ctx.secrets.get(TOKEN_KEY) });
     this.voiceWarned = false;
     try {
-      await this.client.post('/session/start');
+      await this.client.post('/session/start', moduleId === undefined ? undefined : { module_id: moduleId });
     } catch (e) {
       this.fail(e);
     }
@@ -497,6 +565,10 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('altrobyte.startSession', async () => {
       await vscode.commands.executeCommand('altrobyte.trainer.focus');
       await controller.startSession();
+    }),
+    vscode.commands.registerCommand('altrobyte.startModuleLab', async () => {
+      await vscode.commands.executeCommand('altrobyte.trainer.focus');
+      await controller.startModuleLab();
     }),
     vscode.commands.registerCommand('altrobyte.chooseProject', () => controller.chooseProject()),
     vscode.commands.registerCommand('altrobyte.showAudit', () => controller.showAudit()),

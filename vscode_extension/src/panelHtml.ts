@@ -32,12 +32,16 @@ export function panelHtml(nonce: string, cspSource: string): string {
   .ms { margin: 3px 0; font-size: 12px; } .ms .done { color: var(--vscode-testing-iconPassed); } .ms .lock { opacity: .55; }
   pre { margin: 4px 0; padding: 6px; background: var(--vscode-textCodeBlock-background); font-size: 11px; max-height: 140px; overflow: auto; white-space: pre-wrap; }
   .tiny { font-size: 11px; opacity: .7; }
+  .msg code { background: var(--vscode-textCodeBlock-background); padding: 0 3px; border-radius: 3px; font-family: var(--vscode-editor-font-family); }
+  .msg { white-space: normal; } .msg p { margin: 4px 0; } .msg ul, .msg ol { margin: 4px 0; padding-left: 20px; }
+  .pins { display: grid; grid-template-columns: 70px 1fr; gap: 6px; align-items: center; }
 </style></head>
 <body>
   <div id="top">
     <div id="status">Starting…</div>
     <button id="signIn" class="secondary" style="display:none">Sign in</button>
     <button id="start" disabled>Start session</button>
+    <button id="chooseModule" class="secondary" disabled title="Do the experiment of a module your teacher switched on">Experiments</button>
     <label class="tiny" title="Read the trainer's replies aloud"><input type="checkbox" id="speak"> 🔊</label>
   </div>
   <div id="banner"></div>
@@ -58,9 +62,49 @@ export function panelHtml(nonce: string, cspSource: string): string {
   const chat = $('chat');
   let settings = null, session = false, busy = false, signedIn = false, helperUp = false;
 
-  function add(role, text) { const d = document.createElement('div'); d.className = 'msg ' + role; d.textContent = text; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
+  // The trainer writes light markdown: bold, inline code and lists. Built from elements and textContent only, never innerHTML.
+  function inline(parent, line) {
+    const re = /\\*\\*(.+?)\\*\\*|\`([^\`]+)\`/g; let at = 0, m;
+    while ((m = re.exec(line))) {
+      if (m.index > at) parent.append(line.slice(at, m.index));
+      const el = document.createElement(m[1] ? 'b' : 'code'); el.textContent = m[1] || m[2]; parent.append(el); at = m.index + m[0].length;
+    }
+    if (at < line.length) parent.append(line.slice(at));
+  }
+  function renderMd(el, text) {
+    let list = null;
+    for (const raw of text.trim().split('\\n')) {
+      const line = raw.replace(/^#{1,6}\\s+/, '');
+      if (!line.trim()) { list = null; continue; }
+      const b = /^\\s*(?:([-*•])|(\\d+)[.)])\\s+(.*)$/.exec(line);
+      if (b) {
+        const kind = b[1] ? 'UL' : 'OL';
+        if (!list || list.tagName !== kind) { list = document.createElement(kind); el.appendChild(list); }
+        const li = document.createElement('li'); inline(li, b[3]); list.appendChild(li);
+      } else { list = null; const p = document.createElement('p'); inline(p, line); el.appendChild(p); }
+    }
+  }
+  function add(role, text) {
+    const d = document.createElement('div'); d.className = 'msg ' + role;
+    if (role === 'trainer') renderMd(d, text); else d.textContent = text;
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  }
+  function pinForm() {
+    const d = document.createElement('div'); d.className = 'msg trainer';
+    d.innerHTML = '<b>Which pin is each sensor wire on?</b><div class="pins"></div>';
+    const grid = d.querySelector('.pins'), vals = {};
+    for (const [k, v, ph] of [['VCC', '3V3', '3V3 or 5V'], ['GND', 'GND', 'GND'], ['Signal', '', 'e.g. GPIO34']]) {
+      const l = document.createElement('span'); l.textContent = k; const i = document.createElement('input'); i.type = 'text'; i.value = v; i.placeholder = ph; vals[k] = i; grid.append(l, i);
+    }
+    const go = document.createElement('button'); go.textContent = 'Send to trainer'; go.style.marginTop = '6px';
+    go.onclick = () => { if (!vals.Signal.value.trim() || busy) return; go.disabled = true; Object.values(vals).forEach(i => i.disabled = true);
+      const t = 'Wiring: VCC to ' + vals.VCC.value.trim() + ', GND to ' + vals.GND.value.trim() + ', signal to ' + vals.Signal.value.trim();
+      add('learner', t); busy = true; refreshControls(); vscode.postMessage({ type: 'send', text: t }); };
+    d.appendChild(go); chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  }
   function refreshControls() {
     $('start').disabled = !helperUp || !signedIn || busy;
+    $('chooseModule').disabled = !helperUp || busy;
     $('start').textContent = session ? 'Restart session' : 'Start session';
     $('input').disabled = !session || busy; $('send').disabled = !session || busy;
     $('signIn').style.display = helperUp && !signedIn ? '' : 'none';
@@ -93,6 +137,7 @@ export function panelHtml(nonce: string, cspSource: string): string {
   $('send').onclick = send;
   $('input').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
   $('start').onclick = () => { chat.innerHTML = ''; busy = true; session = true; refreshControls(); vscode.postMessage({ type: 'start' }); };
+  $('chooseModule').onclick = () => { chat.innerHTML = ''; session = true; busy = true; refreshControls(); vscode.postMessage({ type: 'chooseModule' }); };
   $('signIn').onclick = () => vscode.postMessage({ type: 'signIn' });
   $('chooseProject').onclick = () => vscode.postMessage({ type: 'chooseProject' });
   $('audit').onclick = () => vscode.postMessage({ type: 'audit' });
@@ -112,6 +157,7 @@ export function panelHtml(nonce: string, cspSource: string): string {
         renderConnectors(); refreshControls(); break;
       case 'message': add('trainer', m.text); break;
       case 'system': add('system', m.text); break;
+      case 'pinmap': pinForm(); break;
       case 'state': renderProgress(m.state); break;
       case 'activity': $('activity').textContent = m.text ? 'The trainer is ' + m.text + '…' : ''; break;
       case 'turn': busy = false; $('activity').textContent = ''; if (m.finished) add('system', 'Mission complete: every milestone is proven.'); refreshControls(); if (!$('input').disabled) $('input').focus(); break;

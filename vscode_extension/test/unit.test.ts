@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeError, formatAudit, mapDiagnostics, relativeTo } from '../src/logic';
+import { describeError, editorLine, formatAudit, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
+import { panelHtml } from '../src/panelHtml';
 import { SseParser } from '../src/sse';
 
 test('SSE: events split across chunks, CRLF, comments and multi-line data', () => {
@@ -71,4 +72,28 @@ test('failures are explained in terms the learner can act on', () => {
   assert.equal(describeError({ kind: 'quota', message: 'Daily limit reached' }), 'Daily limit reached');
   assert.equal(describeError({ kind: 'server', message: 'boom' }), 'boom');
   assert.match(describeError({}), /went wrong/);
+});
+
+
+test('the assistant talks in 1-based lines, the editor counts from 0', () => {
+  assert.equal(editorLine(1), 0);
+  assert.equal(editorLine(12), 11);
+  assert.equal(editorLine(0), 0);
+  assert.equal(editorLine('7'), 6);
+  assert.equal(editorLine(undefined), 0);
+});
+
+test('a picture page allows no script and no network and escapes its title', () => {
+  const page = visualPage('<b>x</b>', '<svg></svg>');
+  assert.match(page, /default-src 'none'/);
+  assert.doesNotMatch(page, /script-src/);
+  assert.ok(page.includes('&lt;b>x&lt;/b>') && page.includes('<svg></svg>'));
+});
+
+test('the panel script is valid JavaScript and renders markdown without innerHTML on trainer text', () => {
+  const html = panelHtml('nonce123', 'vscode-resource:');
+  const script = html.slice(html.indexOf('<script nonce="nonce123">') + 25, html.lastIndexOf('</script>'));
+  assert.doesNotThrow(() => new Function('acquireVsCodeApi', 'document', 'window', script.replace(/vscode\.postMessage\(\{ type: 'ready' \}\);/, '')));
+  assert.match(script, /renderMd\(d, text\)/);
+  assert.ok(script.includes("split('\\n')"), 'lines must be split on a newline character, not on a literal line break');
 });
