@@ -5,9 +5,10 @@ import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 import '../../widgets/html_frame.dart';
 
-/// Where an educator switches the AI Lab on for a module: the assistant reads the module's notes and drafts a lab
-/// (milestones checked by real checks, a wiring picture, a starter file, visuals); the educator reads it, edits it if
-/// needed and publishes. Learners see the button only after that.
+/// Where an educator makes the hands-on experiments of a module. A module can have several (the Industrial IoT module has
+/// Wi-Fi, BLE, OTA, AWS...), so each experiment is made from the note(s) the educator picks: the assistant reads only those,
+/// drafts a lab (milestones checked by real checks, a wiring picture, a starter file, visuals), the educator reads it,
+/// changes what they want, and turns it on. Learners then see it inside the module.
 class AiLabScreen extends StatefulWidget {
   final int moduleId;
   final String title;
@@ -18,7 +19,10 @@ class AiLabScreen extends StatefulWidget {
 }
 
 class _AiLabScreenState extends State<AiLabScreen> {
-  Map<String, dynamic>? _lab;
+  List<Map<String, dynamic>> _notes = [];
+  List<Map<String, dynamic>> _labs = [];
+  final Set<int> _picked = {};
+  Map<String, dynamic>? _open; // one lab in full, fetched only when asked for
   List<Map<String, dynamic>> _learners = [];
   String? _error;
   bool _busy = false;
@@ -27,8 +31,20 @@ class _AiLabScreenState extends State<AiLabScreen> {
   @override
   void initState() {
     super.initState();
-    _run('Loading', () => ApiService.aiLabStatus(widget.moduleId));
+    _load(first: true);
     _loadProgress();
+  }
+
+  Future<void> _load({bool first = false}) async {
+    await _run('Loading', () async {
+      final r = await ApiService.aiLabStatus(widget.moduleId);
+      _notes = [for (final n in (r['notes'] as List? ?? const [])) Map<String, dynamic>.from(n as Map)];
+      _labs = [for (final l in (r['labs'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
+      if (first && _picked.isEmpty) {
+        final s = _notes.where((n) => n['suggested'] == true);
+        if (s.isNotEmpty) _picked.add((s.first['id'] as num).toInt());
+      }
+    });
   }
 
   Future<void> _loadProgress() async {
@@ -41,29 +57,71 @@ class _AiLabScreenState extends State<AiLabScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _run(String what, Future<Map<String, dynamic>> Function() call) async {
+  Future<void> _run(String what, Future<void> Function() call) async {
     setState(() {
       _busy = true;
       _busyWhat = what;
       _error = null;
     });
     try {
-      final r = await call();
-      if (!mounted) return;
-      setState(() => _lab = r);
-      final problems = (r['problems'] as List?) ?? const [];
-      if (problems.isNotEmpty && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Check: ${problems.take(3).join('; ')}')));
-      }
+      await call();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     }
     if (mounted) setState(() => _busy = false);
   }
 
+  void _warn(Map<String, dynamic> r) {
+    final problems = (r['problems'] as List?) ?? const [];
+    if (problems.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Check: ${problems.take(3).join('; ')}')));
+    }
+  }
+
+  Future<void> _generate() => _run('Reading the notes and drafting the lab (about a minute)', () async {
+        final r = await ApiService.aiLabGenerate(widget.moduleId, _picked.toList());
+        _warn(r);
+        _open = r;
+        final status = await ApiService.aiLabStatus(widget.moduleId);
+        _labs = [for (final l in (status['labs'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
+      });
+
+  Future<void> _openLab(int labId) => _run('Opening', () async {
+        _open = await ApiService.aiLabDetail(widget.moduleId, labId);
+      });
+
+  Future<void> _act(String what, Future<Map<String, dynamic>> Function() call) => _run(what, () async {
+        final r = await call();
+        if (_open != null && _open!['id'] == r['id']) _open = r;
+        final status = await ApiService.aiLabStatus(widget.moduleId);
+        _labs = [for (final l in (status['labs'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
+      });
+
+  Future<void> _delete(Map<String, dynamic> l) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Delete this experiment?'),
+        content: Text('"${l['title']}" will be removed for learners and its draft is lost.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white), onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _run('Deleting', () async {
+      await ApiService.aiLabDelete(widget.moduleId, (l['id'] as num).toInt());
+      if (_open != null && _open!['id'] == l['id']) _open = null;
+      final status = await ApiService.aiLabStatus(widget.moduleId);
+      _labs = [for (final x in (status['labs'] as List? ?? const [])) Map<String, dynamic>.from(x as Map)];
+    });
+  }
+
   Future<void> _editDraft() async {
-    final draft = _lab?['draft'];
-    if (draft == null) return;
+    final lab = _open;
+    final draft = lab?['draft'];
+    if (lab == null || draft == null) return;
     final ctl = TextEditingController(text: const JsonEncoder.withIndent('  ').convert(draft));
     final saved = await showDialog<bool>(
       context: context,
@@ -82,11 +140,17 @@ class _AiLabScreenState extends State<AiLabScreen> {
     if (saved != true) return;
     try {
       final pkg = jsonDecode(ctl.text) as Map<String, dynamic>;
-      await _run('Saving', () => ApiService.aiLabSaveDraft(widget.moduleId, pkg));
+      await _act('Saving', () async {
+        final r = await ApiService.aiLabSaveDraft(widget.moduleId, (lab['id'] as num).toInt(), pkg);
+        _warn(r);
+        return r;
+      });
     } on FormatException {
       if (mounted) setState(() => _error = 'That is not valid JSON.');
     }
   }
+
+  // ── widgets ────────────────────────────────────────────────────────────────
 
   Widget _card(String title, Widget child) => Card(
         elevation: 0,
@@ -102,7 +166,84 @@ class _AiLabScreenState extends State<AiLabScreen> {
         ),
       );
 
-  Widget _preview(Map<String, dynamic> p) {
+  Widget _chip(String text, Color color) => Container(
+        margin: const EdgeInsets.only(left: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(20)),
+        child: Text(text, style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: color)),
+      );
+
+  Widget _notesPicker() {
+    if (_notes.isEmpty) return Text('This module has no notes yet. Add the notes first.', style: GoogleFonts.inter(color: AppColors.textSecondary));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(
+          'Pick the note this experiment is about (up to 3 that belong together). The assistant reads only these, so a module with many '
+          'notes gets a separate experiment for each hands-on one.',
+          style: GoogleFonts.inter(height: 1.5, color: AppColors.textSecondary, fontSize: 12.5)),
+      const SizedBox(height: 6),
+      for (final n in _notes)
+        CheckboxListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _picked.contains((n['id'] as num).toInt()),
+          onChanged: _busy
+              ? null
+              : (v) => setState(() {
+                    final id = (n['id'] as num).toInt();
+                    v == true ? _picked.add(id) : _picked.remove(id);
+                  }),
+          title: Row(children: [
+            Flexible(child: Text('${n['title']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600))),
+            if ((n['hands_on'] as num) > 0) _chip(n['suggested'] == true ? 'HANDS-ON · SUGGESTED' : 'HANDS-ON', AppColors.success),
+          ]),
+          subtitle: Text('${n['topic']} · ${((n['chars'] as num) / 1000).toStringAsFixed(1)}k characters', style: GoogleFonts.inter(fontSize: 11.5)),
+        ),
+      const SizedBox(height: 10),
+      ElevatedButton.icon(
+        onPressed: _busy || _picked.isEmpty || _picked.length > 3 ? null : _generate,
+        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+        label: Text(_picked.length > 3 ? 'Pick at most 3 notes' : 'Draft a lab from the selected note${_picked.length == 1 ? '' : 's'}'),
+      ),
+    ]);
+  }
+
+  Widget _labList() {
+    return Column(children: [
+      for (final l in _labs)
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _open != null && _open!['id'] == l['id'] ? const Color(0xFFF1F5FF) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+          ),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Flexible(child: Text('${l['title']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5))),
+                  if (l['enabled'] == true) _chip('ON FOR LEARNERS', AppColors.success) else if (l['has_live'] == true) _chip('OFF', AppColors.textSecondary) else _chip('DRAFT', AppColors.warning),
+                ]),
+                if ((l['source_notes'] as List? ?? const []).isNotEmpty)
+                  Text('From: ${(l['source_notes'] as List).join(', ')}', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+              ]),
+            ),
+            TextButton(onPressed: _busy ? null : () => _openLab((l['id'] as num).toInt()), child: const Text('Open')),
+            if (l['enabled'] == true)
+              TextButton(onPressed: _busy ? null : () => _act('Turning off', () => ApiService.aiLabDisable(widget.moduleId, (l['id'] as num).toInt())), child: const Text('Turn off'))
+            else if (l['has_live'] == true)
+              TextButton(onPressed: _busy ? null : () => _act('Turning on', () => ApiService.aiLabPublish(widget.moduleId, (l['id'] as num).toInt())), child: const Text('Turn on')),
+            IconButton(tooltip: 'Delete', onPressed: _busy ? null : () => _delete(l), icon: const Icon(Icons.delete_outline_rounded, size: 20)),
+          ]),
+        ),
+    ]);
+  }
+
+  Widget _preview(Map<String, dynamic> lab) {
+    final p = Map<String, dynamic>.from((lab['draft_preview'] as Map?) ?? const {});
+    if (p.isEmpty) return Text('No draft yet.', style: GoogleFonts.inter(color: AppColors.textSecondary));
     final milestones = (p['milestones'] as List? ?? const []).cast<Map>();
     final visuals = (p['visuals'] as List? ?? const []).cast<Map>();
     final starter = p['starter'] as Map?;
@@ -148,6 +289,15 @@ class _AiLabScreenState extends State<AiLabScreen> {
           HtmlFrame(body: '${v['html']}', height: 280),
         ],
       ],
+      const SizedBox(height: 14),
+      Row(children: [
+        OutlinedButton(onPressed: _busy ? null : _editDraft, child: const Text('Edit draft')),
+        const SizedBox(width: 10),
+        ElevatedButton(
+          onPressed: _busy ? null : () => _act('Publishing', () => ApiService.aiLabPublish(widget.moduleId, (lab['id'] as num).toInt())),
+          child: Text(lab['enabled'] == true ? 'Publish this draft (replaces the live one)' : 'Publish and turn on'),
+        ),
+      ]),
     ]);
   }
 
@@ -161,7 +311,8 @@ class _AiLabScreenState extends State<AiLabScreen> {
               flex: 3,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${l['learner']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-                if ('${l['phone']}'.isNotEmpty) Text('${l['phone']}', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+                Text([if ('${l['lab'] ?? ''}'.isNotEmpty) '${l['lab']}', if ('${l['phone']}'.isNotEmpty) '${l['phone']}'].join(' · '),
+                    style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
               ]),
             ),
             Expanded(
@@ -177,10 +328,7 @@ class _AiLabScreenState extends State<AiLabScreen> {
             SizedBox(width: 56, child: Text('${l['done']}/${l['total']}', textAlign: TextAlign.end, style: GoogleFonts.robotoMono(fontSize: 12))),
             SizedBox(
               width: 92,
-              child: Text(
-                  '${l['updated_at'] ?? ''}'.split('.').first.replaceFirst('T', ' ').split(' ').first,
-                  textAlign: TextAlign.end,
-                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+              child: Text('${l['updated_at'] ?? ''}'.split('T').first, textAlign: TextAlign.end, style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
             ),
           ]),
         ),
@@ -189,9 +337,7 @@ class _AiLabScreenState extends State<AiLabScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lab = _lab;
-    final enabled = lab?['enabled'] == true;
-    final preview = lab?['draft_preview'] as Map?;
+    final open = _open;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('AI Lab: ${widget.title}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16))),
@@ -199,47 +345,16 @@ class _AiLabScreenState extends State<AiLabScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 860),
           child: ListView(padding: const EdgeInsets.all(16), children: [
-            _card(
-              'Experiment with the AI Lab assistant',
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(
-                    'The assistant reads this module\'s notes and drafts a hands-on lab from them. You read it, change what you want, and publish. '
-                    'Learners then see "Start experimenting with Altrobyte AI Lab assistant" inside this module. The module itself is not changed.',
-                    style: GoogleFonts.inter(height: 1.5, color: AppColors.textSecondary)),
-                const SizedBox(height: 12),
-                Row(children: [
-                  ElevatedButton.icon(
-                    onPressed: _busy ? null : () => _run('Reading the notes and drafting the lab (about a minute)', () => ApiService.aiLabGenerate(widget.moduleId)),
-                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
-                    label: Text(lab?['draft'] == null ? 'Draft the lab from the notes' : 'Draft it again'),
-                  ),
-                  const SizedBox(width: 10),
-                  if (lab?['draft'] != null) OutlinedButton(onPressed: _busy ? null : _editDraft, child: const Text('Edit draft')),
-                ]),
-                if (_busy) Padding(padding: const EdgeInsets.only(top: 12), child: Row(children: [const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Flexible(child: Text('$_busyWhat…'))])),
-                if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: const TextStyle(color: AppColors.error))),
-              ]),
-            ),
-            if (lab != null)
-              _card(
-                'For learners',
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                        enabled ? 'On: learners can start the experiment from this module.' : (lab['has_live'] == true ? 'Off. The last published lab is kept.' : 'Off. Publish a draft to turn it on.'),
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: enabled ? AppColors.success : AppColors.textSecondary)),
-                  ),
-                  if (enabled)
-                    OutlinedButton(onPressed: _busy ? null : () => _run('Turning off', () => ApiService.aiLabDisable(widget.moduleId)), child: const Text('Turn off'))
-                  else
-                    ElevatedButton(
-                      onPressed: _busy || lab['draft'] == null ? null : () => _run('Publishing', () => ApiService.aiLabPublish(widget.moduleId)),
-                      child: Text(lab['has_live'] == true ? 'Publish this draft and turn on' : 'Publish and turn on'),
-                    ),
-                ]),
+            if (_busy)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(children: [const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: 10), Flexible(child: Text('$_busyWhat…'))]),
               ),
+            if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: AppColors.error))),
+            _card('Make an experiment from a note', _notesPicker()),
+            if (_labs.isNotEmpty) _card('Experiments in this module (${_labs.length})', _labList()),
+            if (open != null) _card('Draft: ${open['title']}', _preview(open)),
             if (_learners.isNotEmpty) _card('Learners (${_learners.length})', _progressList()),
-            if (preview != null) _card('Draft preview', _preview(Map<String, dynamic>.from(preview))),
           ]),
         ),
       ),

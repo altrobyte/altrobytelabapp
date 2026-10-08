@@ -128,13 +128,18 @@ export function choosePython(setting: string, bundled: string | null): string {
   return bundled ?? 'python';
 }
 
-/** The module id in a link like vscode://altrobytelab.altrobyte-trainer/lab?module=9, or null if it is not one. */
-export function labLink(pathname: string, query: string): number | null {
+/** What a link like vscode://altrobytelab.altrobyte-trainer/lab?lab=4 asks for: one experiment (lab=), or, from an older page,
+ * a module's first experiment (module=). Null if it is neither. */
+export function labLink(pathname: string, query: string): { lab?: number; module?: number } | null {
   if (pathname !== '/lab') {
     return null;
   }
-  const m = /(?:^|&)module=(\d{1,9})(?:&|$)/.exec(query);
-  return m ? Number(m[1]) : null;
+  const lab = /(?:^|&)lab=(\d{1,9})(?:&|$)/.exec(query);
+  if (lab) {
+    return { lab: Number(lab[1]) };
+  }
+  const mod = /(?:^|&)module=(\d{1,9})(?:&|$)/.exec(query);
+  return mod ? { module: Number(mod[1]) } : null;
 }
 
 export const CONNECTORS: { id: string; label: string; help: string }[] = [

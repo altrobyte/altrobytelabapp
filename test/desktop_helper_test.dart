@@ -167,14 +167,14 @@ void main() {
       c.dispose();
     });
 
-    test('starting asks for the module\'s lab; the trainer\'s messages, progress and finish arrive as events', () async {
+    test('starting asks for the experiment; the trainer\'s messages, progress and finish arrive as events', () async {
       final h = FakeHelper();
       final c = h.controller();
       await c.init();
       await c.signIn('tok-cloud');
-      await c.start(moduleId: 9);
+      await c.start(labId: 4);
       expect(h.calls.last, 'POST /session/start');
-      expect(h.bodies.last, {'module_id': 9});
+      expect(h.bodies.last, {'lab_id': 4});
       expect(c.busy, isTrue);
       h.emit('activity', {'text': 'reading platformio.ini'});
       h.emit('message', {'text': 'Hi! Is your board plugged in?'});

@@ -727,22 +727,24 @@ class _ContentTile extends StatelessWidget {
 }
 
 
-/// "Start experimenting with Altrobyte AI Lab assistant": opens the editor on the learner's own computer, where the
-/// assistant runs this module's experiment, and shows the pictures drawn from the notes.
+/// "Start experimenting with Altrobyte AI Lab assistant": the experiments of this module (each made from one of its notes).
+/// Starting one opens the editor on the learner's own computer, where the assistant runs it.
 class _AiLabCard extends StatelessWidget {
   final TrainingModule module;
   const _AiLabCard({required this.module});
 
-  Future<void> _openInVsCode(BuildContext context) async {
-    final uri = Uri.parse('vscode://altrobytelab.altrobyte-trainer/lab?module=${module.id}');
+  Future<void> _openInVsCode(BuildContext context, AiLabInfo lab) async {
+    final uri = Uri.parse('vscode://altrobytelab.altrobyte-trainer/lab?lab=${lab.id}&module=${module.id}');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
     if (!ok && context.mounted) {
-      context.push('/connect-vscode');           // VS Code or the extension is not there yet: show how to set it up
+      context.push('/connect-vscode'); // VS Code or the extension is not there yet: show how to set it up
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final labs = module.aiLabs;
+    if (labs.isEmpty) return const SizedBox.shrink();
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       elevation: 0,
@@ -761,29 +763,36 @@ class _AiLabCard extends StatelessWidget {
           ]),
           const SizedBox(height: 8),
           Text(
-              'Do this module\'s experiment on your own computer and board. The assistant has read the notes: it shows you the wiring, '
+              'Do the experiment on your own computer and board. The assistant has read the notes: it shows you the wiring, '
               'tells you exactly where to write code, and checks every step for real.',
               style: GoogleFonts.inter(color: Colors.white70, height: 1.5, fontSize: 13)),
-          const SizedBox(height: 14),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            ElevatedButton.icon(
-              onPressed: () => _openInVsCode(context),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Start in VS Code'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black87),
+          const SizedBox(height: 12),
+          for (final lab in labs)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                Expanded(child: Text(lab.title, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5))),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabVisualsScreen(moduleId: module.id, labId: lab.id, title: lab.title))),
+                  icon: const Icon(Icons.image_rounded, color: Colors.white70, size: 18),
+                  label: const Text('Pictures', style: TextStyle(color: Colors.white70)),
+                ),
+                const SizedBox(width: 4),
+                ElevatedButton.icon(
+                  onPressed: () => _openInVsCode(context, lab),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: const Text('Start in VS Code'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black87),
+                ),
+              ]),
             ),
-            TextButton.icon(
-              onPressed: () => context.push('/connect-vscode'),
-              icon: const Icon(Icons.extension_rounded, color: Colors.white70, size: 18),
-              label: const Text('First time? Connect VS Code', style: TextStyle(color: Colors.white70)),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabVisualsScreen(moduleId: module.id, title: module.title))),
-              icon: const Icon(Icons.image_rounded, color: Colors.white),
-              label: const Text('See the pictures', style: TextStyle(color: Colors.white)),
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
-            ),
-          ]),
+          TextButton.icon(
+            onPressed: () => context.push('/connect-vscode'),
+            icon: const Icon(Icons.extension_rounded, color: Colors.white70, size: 18),
+            label: const Text('First time? Connect VS Code', style: TextStyle(color: Colors.white70)),
+          ),
         ]),
       ),
     );

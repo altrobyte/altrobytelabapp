@@ -8,8 +8,9 @@ import '../../widgets/html_frame.dart';
 /// They are the same pictures the assistant shows beside the editor while it guides the experiment.
 class AiLabVisualsScreen extends StatefulWidget {
   final int moduleId;
+  final int labId;
   final String title;
-  const AiLabVisualsScreen({super.key, required this.moduleId, required this.title});
+  const AiLabVisualsScreen({super.key, required this.moduleId, required this.labId, required this.title});
 
   @override
   State<AiLabVisualsScreen> createState() => _AiLabVisualsScreenState();
@@ -25,7 +26,7 @@ class _AiLabVisualsScreenState extends State<AiLabVisualsScreen> {
     super.initState();
     () async {
       try {
-        final r = await ApiService.aiLabVisuals(widget.moduleId);
+        final r = await ApiService.aiLabVisuals(widget.moduleId, widget.labId);
         _visuals = [for (final v in (r['visuals'] as List? ?? const [])) Map<String, dynamic>.from(v as Map)];
       } catch (e) {
         _error = e.toString().replaceFirst('Exception: ', '');

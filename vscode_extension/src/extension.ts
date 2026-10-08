@@ -402,50 +402,44 @@ export class Controller implements vscode.WebviewViewProvider {
     await this.publishStatus();
   }
 
-  /** Pick one of the modules whose teacher switched the AI Lab on, and run its experiment. */
+  /** Pick one of the experiments the teachers have switched on (each made from a note of a module), and run it. */
   async startModuleLab(): Promise<void> {
-    const token = await this.ctx.secrets.get(TOKEN_KEY);
-    if (!token) {
-      await this.signIn();
-    }
-    const t = await this.ctx.secrets.get(TOKEN_KEY);
-    if (!t) {
-      return;
-    }
     const base = vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
-    let modules: { id: number; title: string; ai_lab_enabled?: boolean }[] = [];
+    let labs: { id: number; title: string; module_title: string }[] = [];
     try {
-      const res = await fetch(`${base}/student/training-modules`, { headers: { Authorization: `Bearer ${t}` } });
-      modules = ((await res.json()) as any).modules ?? [];
+      const res = await fetch(`${base}/ai-labs`);
+      labs = ((await res.json()) as any).labs ?? [];
     } catch {
       this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
       return;
     }
-    const labs = modules.filter((m) => m.ai_lab_enabled);
     if (!labs.length) {
       this.post({ type: 'system', text: 'None of your modules has an AI Lab experiment yet.' });
       return;
     }
-    const pick = await vscode.window.showQuickPick(labs.map((m) => ({ label: m.title, id: m.id })), { placeHolder: 'Which experiment do you want to do?' });
+    const pick = await vscode.window.showQuickPick(
+      labs.map((l) => ({ label: l.title, description: l.module_title, id: l.id })),
+      { placeHolder: 'Which experiment do you want to do?', matchOnDescription: true },
+    );
     if (pick) {
-      await this.startSession(pick.id);
+      await this.startSession({ labId: pick.id });
     }
   }
 
   /** A link from the Altrobyte app ("Start in VS Code"). Anything on the web can open a link, so the learner confirms first. */
   async handleLink(uri: vscode.Uri): Promise<void> {
-    const id = labLink(uri.path, uri.query);
-    if (id === null) {
+    const link = labLink(uri.path, uri.query);
+    if (link === null) {
       return;
     }
     const ok = await vscode.window.showInformationMessage('Start the AI Lab experiment from your Altrobyte module?', { modal: true }, 'Start');
     if (ok === 'Start') {
       await vscode.commands.executeCommand('altrobyte.trainer.focus');
-      await this.startSession(id);
+      await this.startSession({ labId: link.lab, moduleId: link.module });
     }
   }
 
-  async startSession(moduleId?: number): Promise<void> {
+  async startSession(what: { labId?: number; moduleId?: number } = {}): Promise<void> {
     if (!this.client) {
       await this.startHelper();
     }
@@ -459,7 +453,8 @@ export class Controller implements vscode.WebviewViewProvider {
     await this.client.post('/session/auth', { token: await this.ctx.secrets.get(TOKEN_KEY) });
     this.voiceWarned = false;
     try {
-      await this.client.post('/session/start', moduleId === undefined ? undefined : { module_id: moduleId });
+      const body = what.labId !== undefined ? { lab_id: what.labId } : what.moduleId !== undefined ? { module_id: what.moduleId } : undefined;
+      await this.client.post('/session/start', body);
     } catch (e) {
       this.fail(e);
     }

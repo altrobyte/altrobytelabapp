@@ -131,7 +131,7 @@ class HelperController extends ChangeNotifier {
     _events = client.events().listen(_onEvent, onError: (_) => _gone(), onDone: _gone);
     // Wait until the helper says the stream is live, so nothing it says right after we start is missed.
     await _streamLive.future.timeout(const Duration(seconds: 5), onTimeout: () {});
-    _poll = Timer.periodic(pollEvery, (_) => refreshSide());
+    _poll = Timer.periodic(pollEvery, (_) => _tick());
     ready = true;
     _notify();
   }
@@ -224,7 +224,7 @@ class HelperController extends ChangeNotifier {
 
   // ── the conversation ───────────────────────────────────────────────────────
 
-  Future<void> start({int? moduleId}) async {
+  Future<void> start({int? labId}) async {
     if (busy) return;
     busy = true;
     started = true;
@@ -232,7 +232,7 @@ class HelperController extends ChangeNotifier {
     state = null;
     _notify();
     try {
-      await client.post('/session/start', moduleId == null ? null : {'module_id': moduleId});
+      await client.post('/session/start', labId == null ? null : {'lab_id': labId});
     } on HelperError catch (e) {
       busy = false;
       started = false;
@@ -307,6 +307,16 @@ class HelperController extends ChangeNotifier {
       await client.post('/monitor/stop');
     } catch (_) {}
     await refreshSide();
+  }
+
+  int _idleTicks = 0;
+
+  /// The side panels refresh often while something is happening, and rarely while the app just sits open: a window left
+  /// open all day should cost the computer (and the helper) next to nothing.
+  void _tick() {
+    if (started || monitorRunning || ++_idleTicks % 5 == 0) {
+      unawaited(refreshSide());
+    }
   }
 
   /// The serial monitor and the audit trail, read from the helper.

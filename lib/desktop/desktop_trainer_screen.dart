@@ -107,23 +107,22 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     if (dir != null) await c.setProjectDir(dir);
   }
 
-  /// The experiments the learner's teachers switched on (modules with an AI Lab).
+  /// The experiments the learner's teachers switched on (each made from a note of a module).
   Future<void> _loadLabs() async {
     try {
-      final modules = await ApiService.getTrainingModulesForStudent();
-      _labs = [for (final m in modules) if (m is Map && m['ai_lab_enabled'] == true) Map<String, dynamic>.from(m)];
+      _labs = await ApiService.liveAiLabs();
     } catch (_) {
       _labs = [];
     }
     if (mounted) setState(() {});
   }
 
-  Future<void> _start({int? moduleId}) async {
+  Future<void> _start({int? labId}) async {
     final auth = context.read<AuthProvider>();
     final token = auth.token ?? auth.jwtToken;
     if (token == null) return;
     await c.signIn(token);
-    await c.start(moduleId: moduleId);
+    await c.start(labId: labId);
   }
 
   Future<void> _send([String? text]) async {
@@ -225,13 +224,18 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                       if (_labs.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Text('Experiments from your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                        const SizedBox(height: 2),
+                        Text('Pick one, or start the general session below.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
                         const SizedBox(height: 8),
                         Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
                           for (final m in _labs)
-                            ActionChip(
-                              avatar: const Icon(Icons.science_rounded, size: 18),
-                              label: Text('${m['title']}'),
-                              onPressed: c.ready && !c.busy ? () => _start(moduleId: (m['id'] as num).toInt()) : null,
+                            Tooltip(
+                              message: '${m['module_title'] ?? ''}',
+                              child: ActionChip(
+                                avatar: const Icon(Icons.science_rounded, size: 18),
+                                label: Text('${m['title']}'),
+                                onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null,
+                              ),
                             ),
                         ]),
                       ],

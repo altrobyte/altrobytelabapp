@@ -1907,46 +1907,67 @@ class ApiService {
   }
 
   // ── AI Lab for training modules ─────────────────────────────────────────────
+  // A module has several experiments (labs), each made from a note the educator picks.
 
+  /// The module's notes (the hands-on ones marked) and its labs, listed lightly.
   static Future<Map<String, dynamic>> aiLabStatus(int moduleId) async {
     final token = await _token();
     return _parse(await http.get(Uri.parse(ApiConstants.aiLab(moduleId)), headers: _headers(token)));
   }
 
-  /// Drafts a lab from the module's notes: a model call, so it can take a minute.
-  static Future<Map<String, dynamic>> aiLabGenerate(int moduleId) async {
+  /// One lab in full (draft, live copy, preview), fetched only when an educator opens it.
+  static Future<Map<String, dynamic>> aiLabDetail(int moduleId, int labId) async {
     final token = await _token();
-    final res = await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/generate'), headers: _headers(token)).timeout(const Duration(seconds: 240));
+    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId'), headers: _headers(token)));
+  }
+
+  /// Drafts a lab from the chosen notes: a model call, so it can take a minute.
+  static Future<Map<String, dynamic>> aiLabGenerate(int moduleId, List<int> noteIds) async {
+    final token = await _token();
+    final res = await http
+        .post(Uri.parse('${ApiConstants.aiLab(moduleId)}/generate'), headers: _headers(token), body: jsonEncode({'note_ids': noteIds}))
+        .timeout(const Duration(seconds: 240));
     return _parse(res);
   }
 
-  static Future<Map<String, dynamic>> aiLabSaveDraft(int moduleId, Map<String, dynamic> package) async {
+  static Future<Map<String, dynamic>> aiLabSaveDraft(int moduleId, int labId, Map<String, dynamic> package) async {
     final token = await _token();
-    final res = await http.put(Uri.parse('${ApiConstants.aiLab(moduleId)}/draft'), headers: _headers(token), body: jsonEncode({'package': package}));
+    final res = await http.put(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId/draft'), headers: _headers(token), body: jsonEncode({'package': package}));
     return _parse(res);
   }
 
-  static Future<Map<String, dynamic>> aiLabPublish(int moduleId) async {
+  static Future<Map<String, dynamic>> aiLabPublish(int moduleId, int labId) async {
     final token = await _token();
-    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/publish'), headers: _headers(token)));
+    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId/publish'), headers: _headers(token)));
   }
 
-  static Future<Map<String, dynamic>> aiLabDisable(int moduleId) async {
+  static Future<Map<String, dynamic>> aiLabDisable(int moduleId, int labId) async {
     final token = await _token();
-    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/disable'), headers: _headers(token)));
+    return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId/disable'), headers: _headers(token)));
   }
 
-  /// Where each learner got to in this module's lab (progress only; staff).
+  static Future<void> aiLabDelete(int moduleId, int labId) async {
+    final token = await _token();
+    _parse(await http.delete(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId'), headers: _headers(token)));
+  }
+
+  /// Where each learner got to in this module's labs (progress only; staff).
   static Future<Map<String, dynamic>> aiLabProgress(int moduleId) async {
     final token = await _token();
     return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/progress'), headers: _headers(token)));
   }
 
-  /// The pictures of a live lab, for a learner who can open the module.
-  static Future<Map<String, dynamic>> aiLabVisuals(int moduleId) async {
+  /// The pictures of a live experiment, for a learner who can open the module.
+  static Future<Map<String, dynamic>> aiLabVisuals(int moduleId, int labId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token') ?? prefs.getString('token');
-    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/visuals'), headers: _headers(token)));
+    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/$labId/visuals'), headers: _headers(token)));
+  }
+
+  /// The experiments that are live, with their module: what the desktop app and VS Code offer to start.
+  static Future<List<Map<String, dynamic>>> liveAiLabs() async {
+    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/ai-labs'), headers: _headers()));
+    return [for (final l in (r['labs'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
   }
 
   static Future<Map<String, dynamic>> trainerEnvResult(String id, Map<String, dynamic> body) async {

@@ -100,12 +100,14 @@ test('the panel script is valid JavaScript and renders markdown without innerHTM
 
 
 test('only a well-formed lab link starts anything', () => {
-  assert.equal(labLink('/lab', 'module=9'), 9);
-  assert.equal(labLink('/lab', 'x=1&module=123&y=2'), 123);
-  assert.equal(labLink('/lab', 'module=abc'), null);
+  assert.deepEqual(labLink('/lab', 'lab=4'), { lab: 4 });
+  assert.deepEqual(labLink('/lab', 'x=1&lab=123&y=2'), { lab: 123 });
+  assert.deepEqual(labLink('/lab', 'module=9'), { module: 9 }); // an older page: the module's first experiment
+  assert.deepEqual(labLink('/lab', 'module=9&lab=4'), { lab: 4 }); // the experiment wins
+  assert.equal(labLink('/lab', 'lab=abc'), null);
   assert.equal(labLink('/lab', ''), null);
-  assert.equal(labLink('/other', 'module=9'), null);
-  assert.equal(labLink('/lab', 'module=1234567890123'), null);
+  assert.equal(labLink('/other', 'lab=4'), null);
+  assert.equal(labLink('/lab', 'lab=1234567890123'), null);
 });
 
 
