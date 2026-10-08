@@ -1864,6 +1864,48 @@ class ApiService {
     return _parse(res);
   }
 
+  // ── Enrolment forms ─────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> listEnrolmentForms(int instituteId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/institutes/$instituteId/enrolment-forms'), headers: _headers(token)));
+  }
+
+  static Future<Map<String, dynamic>> createEnrolmentForm(int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/institutes/$instituteId/enrolment-forms'), headers: _headers(token), body: jsonEncode(body)));
+  }
+
+  static Future<Map<String, dynamic>> updateEnrolmentForm(int formId, Map<String, dynamic> body) async {
+    final token = await _token();
+    return _parse(await http.put(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId'), headers: _headers(token), body: jsonEncode(body)));
+  }
+
+  static Future<void> deleteEnrolmentForm(int formId) async {
+    final token = await _token();
+    _parse(await http.delete(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId'), headers: _headers(token)));
+  }
+
+  static Future<Map<String, dynamic>> enrolmentSubmissions(int formId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId/submissions'), headers: _headers(token)));
+  }
+
+  /// The form behind a public link. No sign-in needed to read it.
+  static Future<Map<String, dynamic>> publicEnrolmentForm(String slug) async {
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}'), headers: _headers()));
+  }
+
+  /// Sends a filled form with the person's Google ID token; the server checks the token itself.
+  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, String> answers) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/submit'),
+      headers: _headers(),
+      body: jsonEncode({'id_token': idToken, 'phone': phone, 'answers': answers}),
+    );
+    return _parse(res);
+  }
+
   // ── AI Lab for training modules ─────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> aiLabStatus(int moduleId) async {

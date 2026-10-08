@@ -25,6 +25,8 @@ import 'screens/test_generator/test_attempt_screen.dart';
 import 'screens/attendance/attendance_screen.dart';
 import 'screens/fees/fee_management_screen.dart';
 import 'screens/invoices/invoices_screen.dart';
+import 'screens/enrolment/enrol_screen.dart';
+import 'screens/enrolment/enrolment_forms_screen.dart';
 import 'screens/trainer/trainer_admin_screen.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/batches/batches_screen.dart';
@@ -197,6 +199,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/crm',
           '/scholars',
           '/invoices',
+          '/enrolment-forms',
           '/trainer-admin',
           '/reviews-admin',
           '/company-admin',
@@ -330,6 +333,11 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           path: '/jobs/:id',
           builder: (context, state) => JobDetailScreen(
               jobId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0),
+        ),
+        // An enrolment form shared by link — public; the person signs in with Google on the page itself.
+        GoRoute(
+          path: '/enroll/:slug',
+          builder: (context, state) => EnrolScreen(slug: state.pathParameters['slug'] ?? ''),
         ),
         // Events — public, no login.
         GoRoute(path: '/events', builder: (_, __) => const EventsScreen()),
@@ -690,6 +698,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/trainer-admin',
                 builder: (_, __) => const TrainerAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/enrolment-forms',
+                builder: (_, __) => const EnrolmentFormsScreen(),
               ),
             ]),
           ],
