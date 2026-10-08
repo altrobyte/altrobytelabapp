@@ -1,0 +1,444 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import { HelperClient, HelperError, RunningHelper, launchHelper } from './helper';
+import { describeError, formatAudit, mapDiagnostics } from './logic';
+import { panelHtml } from './panelHtml';
+
+const TOKEN_KEY = 'altrobyte.cloudToken';
+const EMAIL_KEY = 'altrobyte.email';
+
+/** Everything the extension does, in one place so it can be started, stopped and tested. */
+export class Controller implements vscode.WebviewViewProvider {
+  running: RunningHelper | null = null;
+  client: HelperClient | null = null;
+  helperError: string | null = null;
+  starting = false;
+  private view: vscode.WebviewView | undefined;
+  private events: { abort: () => void } | null = null;
+  private settings: any = null;
+  private monitorTimer: NodeJS.Timeout | undefined;
+  private diagTimer: NodeJS.Timeout | undefined;
+  private voiceWarned = false;
+
+  constructor(private ctx: vscode.ExtensionContext, private output: vscode.OutputChannel) {}
+
+  // ── the webview ──────────────────────────────────────────────────────────
+
+  resolveWebviewView(view: vscode.WebviewView): void {
+    this.view = view;
+    view.webview.options = { enableScripts: true };
+    const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    view.webview.html = panelHtml(nonce, view.webview.cspSource);
+    view.webview.onDidReceiveMessage((m) => this.onWebviewMessage(m).catch((e) => this.fail(e)));
+    view.onDidDispose(() => {
+      this.view = undefined;
+      this.stopMonitorPolling();
+    });
+  }
+
+  private post(message: unknown) {
+    void this.view?.webview.postMessage(message);
+  }
+
+  private fail(e: unknown) {
+    const msg = e instanceof HelperError ? e.message : (e as Error).message ?? String(e);
+    this.output.appendLine(`error: ${msg}`);
+    this.post({ type: 'error', text: msg });
+  }
+
+  async publishStatus() {
+    const email = this.ctx.globalState.get<string>(EMAIL_KEY);
+    const token = await this.ctx.secrets.get(TOKEN_KEY);
+    this.post({
+      type: 'status',
+      helper: this.running ? 'running' : this.starting ? 'starting' : 'down',
+      error: this.helperError,
+      signedIn: token ? email ?? 'your account' : null,
+      settings: this.settings,
+    });
+  }
+
+  private async onWebviewMessage(m: any) {
+    switch (m.type) {
+      case 'ready':
+        if (!this.running && !this.starting) {
+          void this.startHelper();
+        }
+        return this.publishStatus();
+      case 'signIn':
+        return this.signIn();
+      case 'start':
+        return this.startSession();
+      case 'send':
+        return this.send(String(m.text ?? ''));
+      case 'connector':
+        return this.setConnector(String(m.id), !!m.on);
+      case 'chooseProject':
+        return this.chooseProject();
+      case 'speak':
+        return this.updateSettings({ speak: { enabled: !!m.on } });
+      case 'audit':
+        return this.showAudit();
+      case 'checkOffline':
+        return this.checkOffline();
+      case 'monitor':
+        return this.monitor(m.action === 'start' ? 'start' : 'stop');
+    }
+  }
+
+  // ── the helper ───────────────────────────────────────────────────────────
+
+  private findHelperDir(): string | null {
+    const cfg = vscode.workspace.getConfiguration('altrobyte').get<string>('helperDir', '').trim();
+    const candidates = [
+      cfg,
+      path.join(this.ctx.globalStorageUri.fsPath, 'runtime', 'helper'), // where the bundled runtime will live
+      path.join(this.ctx.extensionPath, '..', '..', 'altrocoach-backend', 'helper'), // a development checkout next to this repo
+    ].filter(Boolean);
+    return candidates.find((d) => fs.existsSync(path.join(d, 'altrobyte_helper', '__main__.py'))) ?? null;
+  }
+
+  async startHelper(): Promise<void> {
+    if (this.starting) {
+      return;
+    }
+    this.starting = true;
+    this.helperError = null;
+    await this.stopHelper();
+    await this.publishStatus();
+    try {
+      const dir = this.findHelperDir();
+      if (!dir) {
+        throw new Error('The Altrobyte helper was not found. Set "altrobyte.helperDir" to the folder that contains altrobyte_helper (see the helper README).');
+      }
+      const python = vscode.workspace.getConfiguration('altrobyte').get<string>('helperPython', 'python') || 'python';
+      this.running = await launchHelper({ python, helperDir: dir, onLog: (l) => this.output.appendLine(`[helper] ${l}`) });
+      this.running.proc.on('exit', (code) => {
+        if (this.running) {
+          this.running = null;
+          this.client = null;
+          this.helperError = `The helper stopped (exit ${code}). Use "Altrobyte: Restart the helper".`;
+          void this.publishStatus();
+        }
+      });
+      this.client = new HelperClient(this.running.info);
+      this.output.appendLine(`helper ${this.running.info.version} listening on 127.0.0.1:${this.running.info.port}`);
+      await this.configureHelper();
+      const sub = this.client.events((k, d) => this.onHelperEvent(k, d).catch((e) => this.fail(e)), (why) => {
+        if (why !== 'aborted') {
+          this.output.appendLine(`event stream ended: ${why}`);
+        }
+      });
+      this.events = sub;
+      await sub.ready;
+    } catch (e) {
+      this.helperError = (e as Error).message;
+      this.output.appendLine(`could not start the helper: ${this.helperError}`);
+    } finally {
+      this.starting = false;
+      await this.publishStatus();
+    }
+  }
+
+  async stopHelper() {
+    this.events?.abort();
+    this.events = null;
+    this.stopMonitorPolling();
+    const r = this.running;
+    this.running = null;
+    this.client = null;
+    await r?.stop();
+  }
+
+  /** Tell a freshly started helper everything the editor knows. */
+  private async configureHelper() {
+    const c = this.client!;
+    const cfg = vscode.workspace.getConfiguration('altrobyte');
+    const token = await this.ctx.secrets.get(TOKEN_KEY);
+    if (token) {
+      await c.post('/session/auth', { token });
+    }
+    const patch: any = { api_base: cfg.get<string>('apiBase') };
+    this.settings = await c.get('/settings');
+    const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (folder && !this.settings.project_dir) {
+      patch.project_dir = folder;
+    }
+    this.settings = await c.put('/settings', patch);
+    await this.pushEnvironment();
+  }
+
+  private async pushEnvironment() {
+    if (!this.client) {
+      return;
+    }
+    const pio = vscode.extensions.getExtension('platformio.platformio-ide');
+    const software: Record<string, string> = { vscode: vscode.version };
+    if (pio?.packageJSON?.version) {
+      software['platformio-ide'] = String(pio.packageJSON.version);
+    }
+    const root = this.settings?.project_dir as string | undefined;
+    const diagnostics = root
+      ? mapDiagnostics(
+          vscode.languages.getDiagnostics().map(([uri, ds]) => ({
+            file: uri.fsPath,
+            diagnostics: ds.map((d) => ({ line: d.range.start.line, severity: d.severity, message: d.message })),
+          })),
+          root,
+        )
+      : [];
+    await this.client.post('/environment', { software, diagnostics }).catch(() => undefined);
+  }
+
+  /** The editor's own errors go to the helper, so the trainer sees exactly what the learner sees. */
+  watchDiagnostics(): vscode.Disposable {
+    return vscode.languages.onDidChangeDiagnostics(() => {
+      clearTimeout(this.diagTimer);
+      this.diagTimer = setTimeout(() => void this.pushEnvironment(), 800);
+    });
+  }
+
+  // ── events from the helper ───────────────────────────────────────────────
+
+  private async onHelperEvent(kind: string, data: any) {
+    switch (kind) {
+      case 'approval_request':
+        return this.askApproval(data);
+      case 'message':
+        this.post({ type: 'message', text: data.text });
+        return this.speak(data.text);
+      case 'error':
+        return this.post({ type: 'error', text: describeError(data), kind: data.kind });
+      case 'turn_done':
+        return this.post({ type: 'turn', waiting: data.waiting, finished: data.finished });
+      case 'state':
+      case 'activity':
+        return this.post({ type: kind, ...(kind === 'state' ? { state: data } : { text: data.text }) });
+      case 'ui':
+        return this.post({ type: 'system', text: `The trainer opened an interactive: ${data.type}` });
+    }
+  }
+
+  /** The learner is asked, every time, before anything is built or uploaded. */
+  private async askApproval(req: { id: string; title: string; detail: string }) {
+    const choice = await vscode.window.showWarningMessage(req.title, { modal: true, detail: req.detail }, 'Allow');
+    try {
+      await this.client?.post(`/approvals/${req.id}`, { allow: choice === 'Allow' });
+    } catch {
+      /* the question had already timed out; the answer was "no" */
+    }
+  }
+
+  private async speak(text: string) {
+    if (!this.client || !this.settings?.speak?.enabled) {
+      return;
+    }
+    try {
+      const wav = await this.client.audio(text);
+      this.post({ type: 'audio', data: 'data:audio/wav;base64,' + wav.toString('base64') });
+    } catch (e) {
+      if (!this.voiceWarned) {
+        this.voiceWarned = true;
+        this.post({ type: 'system', text: `Voice is not available: ${(e as Error).message}` });
+      }
+    }
+  }
+
+  // ── actions ──────────────────────────────────────────────────────────────
+
+  async signIn(): Promise<void> {
+    const email = await vscode.window.showInputBox({ prompt: 'Your Altrobyte email', ignoreFocusOut: true, value: this.ctx.globalState.get<string>(EMAIL_KEY) });
+    if (!email) {
+      return;
+    }
+    const password = await vscode.window.showInputBox({ prompt: 'Your Altrobyte password', password: true, ignoreFocusOut: true });
+    if (!password) {
+      return;
+    }
+    const base = vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
+    let res: Response;
+    try {
+      res = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    } catch {
+      this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
+      return;
+    }
+    const body: any = await res.json().catch(() => ({}));
+    const token = body.token ?? body.jwt_token;
+    if (!res.ok || !token) {
+      this.post({ type: 'error', text: typeof body.detail === 'string' ? body.detail : 'Sign-in failed. Check your email and password.' });
+      return;
+    }
+    await this.ctx.secrets.store(TOKEN_KEY, token);
+    await this.ctx.globalState.update(EMAIL_KEY, email);
+    await this.client?.post('/session/auth', { token });
+    await this.publishStatus();
+  }
+
+  async signOut(): Promise<void> {
+    await this.client?.post('/session/end').catch(() => undefined);
+    await this.client?.post('/session/auth', { token: '' }).catch(() => undefined);
+    await this.ctx.secrets.delete(TOKEN_KEY);
+    await this.publishStatus();
+  }
+
+  async startSession(): Promise<void> {
+    if (!this.client) {
+      await this.startHelper();
+    }
+    if (!(await this.ctx.secrets.get(TOKEN_KEY))) {
+      await this.signIn();
+    }
+    if (!(await this.ctx.secrets.get(TOKEN_KEY)) || !this.client) {
+      this.post({ type: 'error', text: 'Sign in first, then start the session.' });
+      return;
+    }
+    await this.client.post('/session/auth', { token: await this.ctx.secrets.get(TOKEN_KEY) });
+    this.voiceWarned = false;
+    try {
+      await this.client.post('/session/start');
+    } catch (e) {
+      this.fail(e);
+    }
+  }
+
+  private async send(text: string) {
+    try {
+      await this.client?.post('/session/chat', { text });
+    } catch (e) {
+      this.fail(e);
+    }
+  }
+
+  private async updateSettings(patch: any) {
+    if (!this.client) {
+      return;
+    }
+    this.settings = await this.client.put('/settings', patch);
+    this.post({ type: 'settings', settings: this.settings });
+  }
+
+  private async setConnector(id: string, on: boolean) {
+    const grants = new Set<string>(this.settings?.grants ?? []);
+    on ? grants.add(id) : grants.delete(id);
+    await this.updateSettings({ grants: [...grants] });
+  }
+
+  async chooseProject(): Promise<void> {
+    const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, canSelectMany: false, openLabel: 'Use this project folder' });
+    if (picked?.[0]) {
+      await this.updateSettings({ project_dir: picked[0].fsPath });
+      await this.pushEnvironment();
+    }
+  }
+
+  async showAudit(): Promise<void> {
+    if (!this.client) {
+      vscode.window.showInformationMessage('The helper is not running.');
+      return;
+    }
+    const { entries } = await this.client.get('/audit?limit=200');
+    const doc = await vscode.workspace.openTextDocument({ content: formatAudit(entries), language: 'plaintext' });
+    await vscode.window.showTextDocument(doc, { preview: true });
+  }
+
+  /** The checks that run on this computer, with no internet and no AI, in mission order, stopping at the first that fails. */
+  private async checkOffline() {
+    if (!this.client) {
+      return;
+    }
+    await this.pushEnvironment();
+    const results: { title: string; passed: boolean; evidence: string }[] = [];
+    let ids: string[] | null = null;
+    let titles: Record<string, string> = {};
+    let done: Record<string, boolean> = {};
+    const first = await this.client.post('/verify', { milestone: 'toolchain_ready' });
+    done = first.done;
+    titles = first.titles ?? {};
+    ids = Object.keys(done);
+    for (const id of ids) {
+      if (done[id]) {
+        results.push({ title: titles[id] ?? id, passed: true, evidence: '' });
+        continue;
+      }
+      const r = id === 'toolchain_ready' ? first : await this.client.post('/verify', { milestone: id });
+      if (r.error === 'needs_learner_confirmation') {
+        continue; // wiring and dashboards are confirmed by you, not by a program
+      }
+      if (r.error) {
+        results.push({ title: titles[id] ?? id, passed: false, evidence: r.error === 'prerequisites_not_met' ? 'needs an earlier step first' : r.say ?? r.error });
+        break;
+      }
+      const passed = !!r.passed;
+      results.push({ title: titles[id] ?? id, passed, evidence: passed ? '' : r.untrusted?.evidence ?? '' });
+      if (!passed) {
+        break;
+      }
+    }
+    this.post({ type: 'verify', results });
+  }
+
+  private async monitor(action: 'start' | 'stop') {
+    if (!this.client) {
+      return;
+    }
+    if (action === 'start') {
+      const { status } = await this.client.post('/monitor/start');
+      this.post({ type: 'monitor', running: false, lines: [], status });
+      this.startMonitorPolling();
+    } else {
+      await this.client.post('/monitor/stop');
+      this.stopMonitorPolling();
+      this.post({ type: 'monitor', running: false, lines: [], status: 'stopped' });
+    }
+  }
+
+  private startMonitorPolling() {
+    this.stopMonitorPolling();
+    this.monitorTimer = setInterval(async () => {
+      try {
+        const m = await this.client!.get('/monitor?n=40');
+        this.post({ type: 'monitor', ...m });
+      } catch {
+        /* helper gone: the status line will say so */
+      }
+    }, 1500);
+  }
+
+  private stopMonitorPolling() {
+    clearInterval(this.monitorTimer);
+    this.monitorTimer = undefined;
+  }
+
+  dispose() {
+    clearTimeout(this.diagTimer);
+    this.stopMonitorPolling();
+    return this.stopHelper();
+  }
+}
+
+export function activate(ctx: vscode.ExtensionContext) {
+  const output = vscode.window.createOutputChannel('Altrobyte Trainer');
+  const controller = new Controller(ctx, output);
+  ctx.subscriptions.push(
+    output,
+    vscode.window.registerWebviewViewProvider('altrobyte.trainer', controller, { webviewOptions: { retainContextWhenHidden: true } }),
+    controller.watchDiagnostics(),
+    vscode.commands.registerCommand('altrobyte.signIn', () => controller.signIn()),
+    vscode.commands.registerCommand('altrobyte.signOut', () => controller.signOut()),
+    vscode.commands.registerCommand('altrobyte.startSession', async () => {
+      await vscode.commands.executeCommand('altrobyte.trainer.focus');
+      await controller.startSession();
+    }),
+    vscode.commands.registerCommand('altrobyte.chooseProject', () => controller.chooseProject()),
+    vscode.commands.registerCommand('altrobyte.showAudit', () => controller.showAudit()),
+    vscode.commands.registerCommand('altrobyte.restartHelper', () => controller.startHelper()),
+    { dispose: () => void controller.dispose() },
+  );
+  return { controller }; // exposed so the tests that run inside VS Code can reach it
+}
+
+export async function deactivate() {
+  /* disposal of the helper happens through ctx.subscriptions */
+}

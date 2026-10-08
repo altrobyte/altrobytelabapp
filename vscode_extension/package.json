@@ -1,0 +1,68 @@
+{
+  "name": "altrobyte-trainer",
+  "displayName": "Altrobyte AI Trainer",
+  "description": "A hands-on lab instructor inside VS Code: it watches your real setup (PlatformIO, board, serial, MQTT), teaches without doing the work for you, and verifies every milestone with real checks.",
+  "version": "0.1.0",
+  "publisher": "altrobyte",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Education", "Other"],
+  "main": "./out/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "altrobyte", "title": "Altrobyte Trainer", "icon": "media/icon.svg" }
+      ]
+    },
+    "views": {
+      "altrobyte": [
+        { "type": "webview", "id": "altrobyte.trainer", "name": "Trainer" }
+      ]
+    },
+    "commands": [
+      { "command": "altrobyte.signIn", "title": "Altrobyte: Sign in" },
+      { "command": "altrobyte.signOut", "title": "Altrobyte: Sign out" },
+      { "command": "altrobyte.startSession", "title": "Altrobyte: Start a trainer session" },
+      { "command": "altrobyte.chooseProject", "title": "Altrobyte: Choose the project folder the trainer may read" },
+      { "command": "altrobyte.showAudit", "title": "Altrobyte: Show what the trainer did and what was sent" },
+      { "command": "altrobyte.restartHelper", "title": "Altrobyte: Restart the helper" }
+    ],
+    "configuration": {
+      "title": "Altrobyte Trainer",
+      "properties": {
+        "altrobyte.apiBase": {
+          "type": "string",
+          "default": "https://edu.altrobytelab.com",
+          "description": "The Altrobyte server the trainer talks to."
+        },
+        "altrobyte.helperPython": {
+          "type": "string",
+          "default": "python",
+          "description": "Python used to run the helper (until the bundled runtime ships)."
+        },
+        "altrobyte.helperDir": {
+          "type": "string",
+          "default": "",
+          "description": "Folder that contains the altrobyte_helper package (development)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "node build.mjs --tests && node --test \"out/test/*.test.js\"",
+    "test:vscode": "node build.mjs --tests && node out/test/runInVscode.js",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.5.0"
+  }
+}
