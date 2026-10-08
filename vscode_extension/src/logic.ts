@@ -118,6 +118,16 @@ export function editorLine(line: unknown): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) - 1 : 0;
 }
 
+/** Which Python starts the helper: one the learner chose on purpose, else the one carried inside the extension, else the
+ * system's. The setting's default is the word "python", which means "nobody chose". */
+export function choosePython(setting: string, bundled: string | null): string {
+  const s = (setting || '').trim();
+  if (s && s !== 'python') {
+    return s;
+  }
+  return bundled ?? 'python';
+}
+
 /** The module id in a link like vscode://altrobyte.altrobyte-trainer/lab?module=9, or null if it is not one. */
 export function labLink(pathname: string, query: string): number | null {
   if (pathname !== '/lab') {

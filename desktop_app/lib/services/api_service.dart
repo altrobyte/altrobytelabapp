@@ -1864,6 +1864,48 @@ class ApiService {
     return _parse(res);
   }
 
+  // ── Enrolment forms ─────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> listEnrolmentForms(int instituteId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/institutes/$instituteId/enrolment-forms'), headers: _headers(token)));
+  }
+
+  static Future<Map<String, dynamic>> createEnrolmentForm(int instituteId, Map<String, dynamic> body) async {
+    final token = await _token();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/institutes/$instituteId/enrolment-forms'), headers: _headers(token), body: jsonEncode(body)));
+  }
+
+  static Future<Map<String, dynamic>> updateEnrolmentForm(int formId, Map<String, dynamic> body) async {
+    final token = await _token();
+    return _parse(await http.put(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId'), headers: _headers(token), body: jsonEncode(body)));
+  }
+
+  static Future<void> deleteEnrolmentForm(int formId) async {
+    final token = await _token();
+    _parse(await http.delete(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId'), headers: _headers(token)));
+  }
+
+  static Future<Map<String, dynamic>> enrolmentSubmissions(int formId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/enrolment-forms/$formId/submissions'), headers: _headers(token)));
+  }
+
+  /// The form behind a public link. No sign-in needed to read it.
+  static Future<Map<String, dynamic>> publicEnrolmentForm(String slug) async {
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}'), headers: _headers()));
+  }
+
+  /// Sends a filled form with the person's Google ID token; the server checks the token itself.
+  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, dynamic> answers) async {
+    final res = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/submit'),
+      headers: _headers(),
+      body: jsonEncode({'id_token': idToken, 'phone': phone, 'answers': answers}),
+    );
+    return _parse(res);
+  }
+
   // ── AI Lab for training modules ─────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> aiLabStatus(int moduleId) async {
@@ -1892,6 +1934,12 @@ class ApiService {
   static Future<Map<String, dynamic>> aiLabDisable(int moduleId) async {
     final token = await _token();
     return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/disable'), headers: _headers(token)));
+  }
+
+  /// Where each learner got to in this module's lab (progress only; staff).
+  static Future<Map<String, dynamic>> aiLabProgress(int moduleId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/progress'), headers: _headers(token)));
   }
 
   /// The pictures of a live lab, for a learner who can open the module.
@@ -2867,7 +2915,7 @@ class ApiService {
     bool forceNew = false,
     String returnUrl = '',
     String occupation = '',
-    bool payLater = false,
+    String paymentRef = '', // set when the person says they have already paid
     bool booking = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -2879,7 +2927,7 @@ class ApiService {
         'name': name, 'phone': phone, 'email': email,
         'college': college, 'branch': branch, 'address': address, 'city': city,
         'occupation': occupation, 'company': occupation == 'professional' ? college : '',
-        'pay_later': payLater,
+        if (paymentRef.isNotEmpty) ...{'already_paid': true, 'payment_ref': paymentRef},
         'booking': booking,
         'coupon_code': couponCode,
         'force_new': forceNew,

@@ -1936,6 +1936,12 @@ class ApiService {
     return _parse(await http.post(Uri.parse('${ApiConstants.aiLab(moduleId)}/disable'), headers: _headers(token)));
   }
 
+  /// Where each learner got to in this module's lab (progress only; staff).
+  static Future<Map<String, dynamic>> aiLabProgress(int moduleId) async {
+    final token = await _token();
+    return _parse(await http.get(Uri.parse('${ApiConstants.aiLab(moduleId)}/progress'), headers: _headers(token)));
+  }
+
   /// The pictures of a live lab, for a learner who can open the module.
   static Future<Map<String, dynamic>> aiLabVisuals(int moduleId) async {
     final prefs = await SharedPreferences.getInstance();

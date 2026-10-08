@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeError, editorLine, formatAudit, labLink, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, relativeTo, visualPage } from '../src/logic';
 import { panelHtml } from '../src/panelHtml';
 import { SseParser } from '../src/sse';
 
@@ -106,4 +106,14 @@ test('only a well-formed lab link starts anything', () => {
   assert.equal(labLink('/lab', ''), null);
   assert.equal(labLink('/other', 'module=9'), null);
   assert.equal(labLink('/lab', 'module=1234567890123'), null);
+});
+
+
+test('the helper uses the Python carried inside the extension unless the learner chose another', () => {
+  const bundled = 'C:\ext\runtime\python\python.exe';
+  assert.equal(choosePython('python', bundled), bundled);
+  assert.equal(choosePython('', bundled), bundled);
+  assert.equal(choosePython('  ', bundled), bundled);
+  assert.equal(choosePython('C:\Python311\python.exe', bundled), 'C:\Python311\python.exe');
+  assert.equal(choosePython('python', null), 'python');
 });

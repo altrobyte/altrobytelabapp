@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, launchHelper } from './helper';
-import { describeError, editorLine, formatAudit, labLink, mapDiagnostics, visualPage } from './logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -96,7 +96,8 @@ export class Controller implements vscode.WebviewViewProvider {
     const cfg = vscode.workspace.getConfiguration('altrobyte').get<string>('helperDir', '').trim();
     const candidates = [
       cfg,
-      path.join(this.ctx.globalStorageUri.fsPath, 'runtime', 'helper'), // where the bundled runtime will live
+      path.join(this.ctx.extensionPath, 'runtime', 'helper'), // carried inside the extension: nothing for the learner to install
+      path.join(this.ctx.globalStorageUri.fsPath, 'runtime', 'helper'),
       path.join(this.ctx.extensionPath, '..', '..', 'altrocoach-backend', 'helper'), // a development checkout next to this repo
     ].filter(Boolean);
     return candidates.find((d) => fs.existsSync(path.join(d, 'altrobyte_helper', '__main__.py'))) ?? null;
@@ -115,7 +116,9 @@ export class Controller implements vscode.WebviewViewProvider {
       if (!dir) {
         throw new Error('The Altrobyte helper was not found. Set "altrobyte.helperDir" to the folder that contains altrobyte_helper (see the helper README).');
       }
-      const python = vscode.workspace.getConfiguration('altrobyte').get<string>('helperPython', 'python') || 'python';
+      const bundledPython = path.join(this.ctx.extensionPath, 'runtime', 'python', 'python.exe');
+      const python = choosePython(vscode.workspace.getConfiguration('altrobyte').get<string>('helperPython', 'python'),
+        fs.existsSync(bundledPython) ? bundledPython : null);
       this.running = await launchHelper({ python, helperDir: dir, onLog: (l) => this.output.appendLine(`[helper] ${l}`) });
       this.running.proc.on('exit', (code) => {
         if (this.running) {

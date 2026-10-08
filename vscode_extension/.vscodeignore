@@ -7,3 +7,6 @@ build.mjs
 tsconfig.json
 .gitignore
 *.vsix
+tools/**
+.runtime-cache/**
+**/__pycache__/**

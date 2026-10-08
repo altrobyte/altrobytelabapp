@@ -19,6 +19,7 @@ class AiLabScreen extends StatefulWidget {
 
 class _AiLabScreenState extends State<AiLabScreen> {
   Map<String, dynamic>? _lab;
+  List<Map<String, dynamic>> _learners = [];
   String? _error;
   bool _busy = false;
   String _busyWhat = '';
@@ -27,6 +28,17 @@ class _AiLabScreenState extends State<AiLabScreen> {
   void initState() {
     super.initState();
     _run('Loading', () => ApiService.aiLabStatus(widget.moduleId));
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    try {
+      final r = await ApiService.aiLabProgress(widget.moduleId);
+      _learners = [for (final l in (r['learners'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
+    } catch (_) {
+      _learners = [];
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _run(String what, Future<Map<String, dynamic>> Function() call) async {
@@ -139,6 +151,42 @@ class _AiLabScreenState extends State<AiLabScreen> {
     ]);
   }
 
+  Widget _progressList() {
+    return Column(children: [
+      for (final l in _learners)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Expanded(
+              flex: 3,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${l['learner']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                if ('${l['phone']}'.isNotEmpty) Text('${l['phone']}', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+              ]),
+            ),
+            Expanded(
+              flex: 3,
+              child: LinearProgressIndicator(
+                value: (l['total'] as num) > 0 ? (l['done'] as num) / (l['total'] as num) : 0,
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(4),
+                color: l['finished'] == true ? AppColors.success : AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(width: 56, child: Text('${l['done']}/${l['total']}', textAlign: TextAlign.end, style: GoogleFonts.robotoMono(fontSize: 12))),
+            SizedBox(
+              width: 92,
+              child: Text(
+                  '${l['updated_at'] ?? ''}'.split('.').first.replaceFirst('T', ' ').split(' ').first,
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+            ),
+          ]),
+        ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final lab = _lab;
@@ -190,6 +238,7 @@ class _AiLabScreenState extends State<AiLabScreen> {
                     ),
                 ]),
               ),
+            if (_learners.isNotEmpty) _card('Learners (${_learners.length})', _progressList()),
             if (preview != null) _card('Draft preview', _preview(Map<String, dynamic>.from(preview))),
           ]),
         ),
