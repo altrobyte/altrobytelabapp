@@ -12,7 +12,7 @@ const allConnectors = ['system', 'workspace', 'toolchain', 'serial', 'mqtt'];
 class ChatBubble {
   final String role; // trainer | learner | system | ui
   final String text;
-  final String? interactive; // pin_map | picture | quiz: a card the learner can use right in the chat
+  final String? interactive; // pin_map | picture | quiz | replies: a card the learner can use right in the chat
   final Map<String, dynamic>? props;
   const ChatBubble(this.role, this.text, {this.interactive, this.props});
 }
@@ -226,6 +226,8 @@ class HelperController extends ChangeNotifier {
     final props = Map<String, dynamic>.from((ui['props'] as Map?) ?? const {});
     if (type == 'pin_map') {
       _add('ui', '', interactive: 'pin_map');
+    } else if (type == 'replies') {
+      _add('ui', '', interactive: 'replies', props: props);
     } else if (type == 'quiz') {
       _add('ui', '', interactive: 'quiz', props: props);
     } else if (type == 'wiring_diagram' || type == 'visual') {

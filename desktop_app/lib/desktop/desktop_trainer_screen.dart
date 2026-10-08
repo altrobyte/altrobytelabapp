@@ -187,6 +187,30 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         ),
       );
     }
+    if (b.interactive == 'replies') {
+      // Suggested answers belong to the question just asked: they go away once anything else is said.
+      if (!identical(b, c.chat.last) || c.busy) return const SizedBox.shrink();
+      final options = [for (final o in (b.props?['options'] as List? ?? const [])) '$o'];
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final o in options)
+              ActionChip(
+                label: Text(o, style: GoogleFonts.inter(fontSize: 13)),
+                backgroundColor: Colors.white,
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.45)),
+                onPressed: () => _send(o),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('or type your own below', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+            ),
+          ]),
+        ),
+      );
+    }
     if (b.interactive == 'quiz') {
       return Align(alignment: Alignment.centerLeft, child: _QuizCard(props: b.props ?? const {}, enabled: !c.busy, onAnswer: c.answerQuiz));
     }

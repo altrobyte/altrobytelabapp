@@ -417,6 +417,23 @@ void main() {
       c.dispose();
     });
 
+    test('suggested replies arrive as a chip row after the question, and a tap is an ordinary message', () async {
+      final h = FakeHelper();
+      final c = h.controller();
+      await c.init();
+      await c.start(course: 'intro_welcome');
+      h.emit('message', {'text': 'Have you used electronics before?'});
+      h.emit('ui', {'type': 'replies', 'props': {'options': ['Yes, I have', 'No, never']}});
+      h.emit('turn_done', {'finished': false});
+      await settle();
+      expect(c.chat.last.interactive, 'replies');
+      expect(c.chat.last.props!['options'], ['Yes, I have', 'No, never']);
+      await c.send('No, never');
+      expect(h.bodies.last, {'text': 'No, never'});
+      expect(identical(c.chat.where((b) => b.interactive == 'replies').last, c.chat.last), isFalse); // no longer the live question
+      c.dispose();
+    });
+
     test('the banner names the first step that is neither done nor locked', () {
       TrainerState st(List<Map<String, dynamic>> p) => TrainerState.fromJson({'mission': 'm', 'scenario': '', 'progress': p});
       Map<String, dynamic> m(String id, String status) => {'id': id, 'title': 'Step $id', 'stage': 's', 'status': status};
