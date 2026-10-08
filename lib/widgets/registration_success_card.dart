@@ -34,8 +34,8 @@ Future<void> showRegistrationSuccessDialog(
   String? occupation,
   /// Branch and year, or role — whatever they gave.
   String? branch,
-  /// Registered, but the fee is still owed.
-  bool payLater = false,
+  /// The person says they have paid; the team is checking the payment reference.
+  bool claimedPaid = false,
   /// Where the card points the people who see it.
   String shareUrl = 'https://altrobytelab.com',
 }) {
@@ -49,7 +49,7 @@ Future<void> showRegistrationSuccessDialog(
       affiliation: affiliation,
       occupation: occupation,
       branch: branch,
-      payLater: payLater,
+      claimedPaid: claimedPaid,
       shareUrl: shareUrl,
     ),
   );
@@ -63,7 +63,7 @@ class _SuccessDialog extends StatefulWidget {
   final String? affiliation;
   final String? occupation;
   final String? branch;
-  final bool payLater;
+  final bool claimedPaid;
   final String shareUrl;
 
   const _SuccessDialog({
@@ -74,7 +74,7 @@ class _SuccessDialog extends StatefulWidget {
     this.affiliation,
     this.occupation,
     this.branch,
-    this.payLater = false,
+    this.claimedPaid = false,
     required this.shareUrl,
   });
 
@@ -245,7 +245,7 @@ class _SuccessDialogState extends State<_SuccessDialog> {
               ),
             ),
             const SizedBox(height: 14),
-            if (widget.payLater) _payLaterNote(),
+            if (widget.claimedPaid) _claimedPaidNote(),
             _shareRow(),
             const SizedBox(height: 10),
             Row(children: [
@@ -291,7 +291,7 @@ class _SuccessDialogState extends State<_SuccessDialog> {
     );
   }
 
-  Widget _payLaterNote() => Container(
+  Widget _claimedPaidNote() => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -299,13 +299,13 @@ class _SuccessDialogState extends State<_SuccessDialog> {
           borderRadius: BorderRadius.circular(11),
         ),
         child: Row(children: [
-          const Icon(Icons.schedule_rounded,
+          const Icon(Icons.hourglass_top_rounded,
               size: 17, color: AppColors.warning),
           const SizedBox(width: 9),
           Expanded(
             child: Text(
-                'Your seat is held. Pay before the session starts and the '
-                'joining link comes to you on WhatsApp.',
+                'We have your payment reference. Once we have checked it, your '
+                'seat is confirmed and the joining link comes to you on WhatsApp.',
                 style: GoogleFonts.inter(
                     fontSize: 11.5, height: 1.45, color: Colors.white)),
           ),

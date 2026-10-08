@@ -2909,7 +2909,7 @@ class ApiService {
     bool forceNew = false,
     String returnUrl = '',
     String occupation = '',
-    bool payLater = false,
+    String paymentRef = '', // set when the person says they have already paid
     bool booking = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -2921,7 +2921,7 @@ class ApiService {
         'name': name, 'phone': phone, 'email': email,
         'college': college, 'branch': branch, 'address': address, 'city': city,
         'occupation': occupation, 'company': occupation == 'professional' ? college : '',
-        'pay_later': payLater,
+        if (paymentRef.isNotEmpty) ...{'already_paid': true, 'payment_ref': paymentRef},
         'booking': booking,
         'coupon_code': couponCode,
         'force_new': forceNew,

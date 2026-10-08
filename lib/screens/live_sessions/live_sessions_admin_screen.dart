@@ -611,7 +611,7 @@ class _AttendeeCard extends StatelessWidget {
     final status = (a['status'] ?? '').toString();
     final statusColor = switch (status) {
       'paid' || 'registered' => AppColors.success,
-      'pending' => AppColors.warning,
+      'pending' || 'claimed_paid' => AppColors.warning,
       _ => AppColors.textSecondary,
     };
     final totalAmount = (a['total_amount'] as num?) ?? 0;
@@ -721,12 +721,17 @@ class _AttendeeCard extends StatelessWidget {
           _AttendeeRow(icon: Icons.work_rounded, label: 'Working professional'),
         // A held seat that still owes money. Said loudly, because it is the
         // only row on this list somebody has to act on.
+        if ((a['status'] ?? '').toString() == 'claimed_paid')
+          _AttendeeRow(
+              icon: Icons.fact_check_rounded,
+              label: 'SAYS ALREADY PAID — check ₹${(a['amount'] ?? 0)}, ref ${(a['payment_ref'] ?? '')}',
+              colour: AppColors.warning),
         if ((a['status'] ?? '').toString() == 'pay_later')
           _AttendeeRow(
               icon: Icons.schedule_rounded,
-              label: 'PAY LATER — ₹${(a['amount'] ?? 0)} still owed',
+              label: 'PAY LATER (old) — ₹${(a['amount'] ?? 0)} still owed',
               colour: AppColors.warning),
-        if (totalAmount > 0 && (a['status'] ?? '').toString() != 'pay_later')
+        if (totalAmount > 0 && !{'pay_later', 'claimed_paid'}.contains((a['status'] ?? '').toString()))
           _AttendeeRow(icon: Icons.payments_rounded, label: '₹$totalAmount paid'),
         if ((double.tryParse('${a['balance_due'] ?? 0}') ?? 0) > 0)
           _AttendeeRow(

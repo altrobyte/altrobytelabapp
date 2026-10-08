@@ -238,7 +238,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     });
   }
 
-  Future<void> _register({bool payLater = false, bool booking = false}) async {
+  Future<void> _register({String paymentRef = '', bool booking = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() { _submitting = true; _actionError = null; });
     final forceNew = _forceNewOnNextRegister;
@@ -249,7 +249,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           college: _collegeCtrl.text.trim(), branch: _branchCtrl.text.trim(),
           address: _addressCtrl.text.trim(), city: _cityCtrl.text.trim(),
           couponCode: _appliedCouponCode ?? '', forceNew: forceNew,
-          occupation: _occupation, payLater: payLater, booking: booking,
+          occupation: _occupation, paymentRef: paymentRef, booking: booking,
           returnUrl: '${Uri.base.origin}/live-sessions/${widget.sessionId}');
       if (!mounted) return;
       _registeredName = _nameCtrl.text.trim();
@@ -265,7 +265,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
         _openPaymentPage();
       } else {
         setState(() { _regState = _RegState.registered; _submitting = false; });
-        _showSuccessCard(payLater: result['status'] == 'pay_later');
+        _showSuccessCard(claimedPaid: result['status'] == 'claimed_paid');
       }
     } catch (e) {
       if (!mounted) return;
@@ -276,6 +276,48 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
       }
       setState(() { _submitting = false; _actionError = e.toString(); });
     }
+  }
+
+  /// "Already paid": the payment reference (UTR / transaction ID) from the receipt, then the usual registration.
+  Future<void> _alreadyPaid() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final ctl = TextEditingController();
+    String? problem;
+    final ref = await showDialog<String>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setLocal) => AlertDialog(
+          title: const Text('Already paid'),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Enter the payment reference from your payment receipt: the UPI reference (UTR) or the bank transaction ID.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctl,
+              autofocus: true,
+              decoration: InputDecoration(labelText: 'Payment reference (UTR / transaction ID)', errorText: problem, border: const OutlineInputBorder()),
+            ),
+            const SizedBox(height: 10),
+            const Text('We check it against our bank account, then your seat is confirmed and the joining link comes to you on WhatsApp.',
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final v = ctl.text.trim();
+                if (!RegExp(r'^[A-Za-z0-9][A-Za-z0-9\-_/ ]{4,38}[A-Za-z0-9]$').hasMatch(v)) {
+                  setLocal(() => problem = 'Enter the reference from your receipt (6 to 40 letters or digits).');
+                  return;
+                }
+                Navigator.pop(c, v);
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ref != null && mounted) await _register(paymentRef: ref);
   }
 
   // Registration is tied to one real person — anonymous browsing is fine,
@@ -294,7 +336,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     await _register();
   }
 
-  void _showSuccessCard({bool payLater = false}) {
+  void _showSuccessCard({bool claimedPaid = false}) {
     showRegistrationSuccessDialog(context,
         typeLabel: 'WORKSHOP',
         title: _session!['title'] ?? '',
@@ -302,7 +344,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
         affiliation: _collegeCtrl.text.trim(),
         occupation: _occupation,
         branch: _branchCtrl.text.trim(),
-        payLater: payLater,
+        claimedPaid: claimedPaid,
         // The roadmap, not this session. A shared link lands on somebody who
         // has never heard of us, and one session's registration page asks
         // them to buy before it has told them anything — the roadmap is the
@@ -978,22 +1020,22 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
             width: double.infinity,
             height: 44,
             child: OutlinedButton(
-              onPressed: _submitting ? null : () => _register(payLater: true),
+              onPressed: _submitting ? null : _alreadyPaid,
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
-              child: Text("I'll pay later — hold my seat",
+              child: Text('Already paid',
                   style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600, fontSize: 13.5)),
             ),
           ),
           const SizedBox(height: 6),
           Text(
-              'Your seat is held. Pay before the session starts and the '
-              'joining link comes to you on WhatsApp.',
+              'Paid already by UPI or bank transfer? Give us the payment '
+              'reference and we will confirm your seat after checking it.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                   fontSize: 11, height: 1.4, color: AppColors.textSecondary)),
