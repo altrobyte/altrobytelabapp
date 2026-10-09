@@ -162,6 +162,35 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 80));
     expect(t.guideReady, isTrue);
     expect(t.items.where((i) => i.kind == 'quiz').single.text, 'Q?');
+    expect(t.items.where((i) => i.text == 'Better words.'), isEmpty); // English: the note's own words were already said
+    t.dispose();
+  });
+
+  test('in Hindi the plain line only names the section, so the real explanation is said when the guide arrives', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    await t.load();
+    s.guideLater = {
+      'guide_ready': false,
+      'guide': {
+        's0': {'say': 'अब हम What is IoT वाले हिस्से पर हैं।', 'quiz': null},
+        's1': {'say': 'यह हिस्सा Cloud vs Edge के बारे में है।', 'quiz': null},
+      },
+    };
+    await t.setLanguage('hi');
+    expect(s.spoken.last, 'अब हम What is IoT वाले हिस्से पर हैं।'); // Hindi at once, never the note's English
+    s.guideLater = {
+      'guide_ready': true,
+      'guide': {
+        's0': {'say': 'सोचिए कि चीज़ें आपस में बात करना सीख गईं।', 'quiz': {'question': 'Bulb को IoT क्या बनाता है?', 'options': ['connected', 'bright']}},
+        's1': {'say': 'Toggle बदलकर देखिए।', 'quiz': null},
+      },
+    };
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+    expect(t.guideReady, isTrue);
+    expect(s.spoken.last, 'सोचिए कि चीज़ें आपस में बात करना सीख गईं।');
+    expect(t.items.last.kind, 'quiz');
+    expect(t.items.where((i) => i.text.startsWith('सोचिए')).length, 1);
     t.dispose();
   });
 

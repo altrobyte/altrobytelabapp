@@ -223,6 +223,11 @@ class NoteTutor extends ChangeNotifier {
           _guide = Map<String, dynamic>.from((r['guide'] as Map?) ?? const {});
           guideReady = true;
           // Sections already introduced with the plain text keep it; their question, now that there is one, is offered.
+          // In Hindi the plain line only named the section, so where the learner is now gets its real explanation.
+          final real = _sayOf(current);
+          if (lang != 'en' && _introduced.contains('$lang:$current') && real.isNotEmpty && !items.any((i) => i.text == real)) {
+            _tutor(real, section: current, heading: titleOf(current));
+          }
           for (final key in _introduced.where((k) => k.startsWith('$lang:')).toList()) {
             _offerQuiz(key.substring(lang.length + 1));
           }

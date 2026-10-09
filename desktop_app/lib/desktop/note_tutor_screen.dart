@@ -223,7 +223,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
             Row(children: [
               const Icon(Icons.smart_toy_rounded, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
-              Text('Your tutor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+              Text('Altron', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
               const Spacer(),
               // English or Hindi: the tutor's words, questions, answers and voice all follow.
               SegmentedButton<String>(
