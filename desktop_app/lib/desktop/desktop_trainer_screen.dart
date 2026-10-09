@@ -513,7 +513,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                     final err = await c.installSetup(id);
                     if (err != null && mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
                   },
-                  child: Text(const {'esp32_support': 'Download now', 'editor': 'Install VS Code', 'project': 'Create my project'}[id] ?? 'Do it for me'),
+                  child: Text(const {'esp32_support': 'Download now', 'editor': 'Install VS Code', 'project': 'Create my project', 'voice': 'Get the natural voice'}[id] ?? 'Do it for me'),
                 ),
               ),
             ),

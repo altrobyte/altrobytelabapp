@@ -1897,14 +1897,29 @@ class ApiService {
   }
 
   /// Sends a filled form with the person's Google ID token; the server checks the token itself.
-  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, dynamic> answers) async {
+  static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, dynamic> answers, {String? plan}) async {
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/submit'),
       headers: _headers(),
-      body: jsonEncode({'id_token': idToken, 'phone': phone, 'answers': answers}),
+      body: jsonEncode({'id_token': idToken, 'phone': phone, 'answers': answers, if (plan != null) 'plan': plan}),
     );
     return _parse(res);
   }
+
+  /// The programme's plans as the server prices them today, with where to enrol.
+  static Future<Map<String, dynamic>> programPlans() async =>
+      _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/program/plans'), headers: _headers()).timeout(const Duration(seconds: 20)));
+
+  /// What to pay for one plan right now (fee, GST, total) and the UPI details to pay to.
+  static Future<Map<String, dynamic>> programCheckout(String plan) async => _parse(
+      await http.get(Uri.parse('${ApiConstants.baseUrl}/program/checkout/${Uri.encodeComponent(plan)}'), headers: _headers()).timeout(const Duration(seconds: 20)));
+
+  /// "I have paid": the reference from the receipt, kept with the enrolment for the team to check.
+  static Future<Map<String, dynamic>> enrolPaid(String slug, String idToken, String reference) async => _parse(await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/paid'),
+        headers: _headers(),
+        body: jsonEncode({'id_token': idToken, 'payment_ref': reference}),
+      ));
 
   // ── AI Lab for training modules ─────────────────────────────────────────────
   // A module has several experiments (labs), each made from a note the educator picks.

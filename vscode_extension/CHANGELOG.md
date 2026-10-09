@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.10
+- The tutor can speak with a natural voice: a one-time download from the Altrobyte app's "Is my computer ready?" card, then it works offline.
+
 ## 0.1.9
 - Brings the newest helper (the tutor's voice, and builds in the tools' own folder), and replaces an older one left running.
 
