@@ -351,9 +351,21 @@ class _AiLabScreenState extends State<AiLabScreen> {
         return '$name\n  plain question: ${one('plain')}\n  with the trainer\'s tools: ${one('with_tools')}';
       }
 
+      // The tutor's natural voice (made in the cloud once per sentence, then reused).
+      String speech() {
+        final sp = (r['speech'] as Map?) ?? const {};
+        if (sp['error'] != null) return 'natural voice\n  FAILED: ${sp['error']}';
+        String one(String lang, String label) {
+          final x = (sp[lang] as Map?) ?? const {};
+          return x['ok'] == true ? '$label: OK (voice ${x['voice']}, model ${x['model']})' : '$label: FAILED: ${x['error'] ?? 'no answer'}';
+        }
+
+        return 'natural voice\n  ${one('en', 'Indian English')}\n  ${one('hi', 'Hindi')}';
+      }
+
       text = 'Trainer uses: ${r['provider']} (backup: ${r['fallback']})\n'
           'Groq key: ${r['groq_key'] == true ? 'set' : 'MISSING'}   Gemini key: ${r['gemini_key'] == true ? 'set' : 'MISSING'}\n'
-          'Gemini model: ${r['gemini_model']}   Groq model: ${r['trainer_model']}\n\n${line('groq')}\n\n${line('gemini')}';
+          'Gemini model: ${r['gemini_model']}   Groq model: ${r['trainer_model']}\n\n${line('groq')}\n\n${line('gemini')}\n\n${speech()}';
     } catch (e) {
       text = 'Could not run the check: $e';
     }
