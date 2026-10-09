@@ -62,11 +62,44 @@ const noteBridgeScript = r"""
       el = el.parentElement;
     }
   }, true);
+  // The part the tutor is talking about glows, so the learner's eyes land where the voice is. The glow is on the block
+  // that holds the heading (a card, a section) when the note is built that way, otherwise on the heading itself.
+  var style = document.createElement('style');
+  style.textContent =
+    '.altro-now{position:relative;border-radius:12px;outline:2px solid rgba(255,193,7,.9);outline-offset:6px;' +
+    'box-shadow:0 0 0 0 rgba(255,193,7,.55);animation:altroGlow 1.6s ease-out 4;transition:outline-color .4s}' +
+    '@keyframes altroGlow{0%{box-shadow:0 0 0 0 rgba(255,193,7,.55)}70%{box-shadow:0 0 0 18px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}';
+  (document.head || document.documentElement).appendChild(style);
+  function blockOf(h) {
+    var el = h.parentElement;
+    for (var up = 0; el && el !== document.body && up < 4; up++, el = el.parentElement) {
+      var inside = el.querySelectorAll('h1,h2,h3').length;
+      if (inside > 1) break;                      // this box holds other sections too: too big
+      if (el.matches('section,article,details,.card,[class*="card"],[class*="section"]')) return el;
+    }
+    return h;
+  }
+  var glowing = null;
+  window.__altroShow = function (i, bring) {
+    collect();
+    var h = heads[i];
+    if (!h) return;
+    var b = blockOf(h);
+    if (glowing && glowing !== b) glowing.classList.remove('altro-now');
+    b.classList.remove('altro-now');
+    void b.offsetWidth;                           // restart the pulse when the same block is pointed at again
+    b.classList.add('altro-now');
+    glowing = b;
+    if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  };
   function start() { collect(); inView(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
 """;
+
+/// The script that makes one section of the note glow ([bring] also scrolls it into view).
+String showSectionScript(int index, {bool bring = false}) => 'window.__altroShow && window.__altroShow($index, $bring)';
 
 /// A note for the tutor view: the same closed page as [lessonPage], plus the small script that reports where the learner is.
 String tutorPage(String html) {

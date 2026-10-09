@@ -44,6 +44,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   void initState() {
     super.initState();
     t.addListener(_onTutor);
+    t.onFocus = _show;
     _start();
   }
 
@@ -60,12 +61,22 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _messages = _web.webMessage.listen(_onPageMessage);
       await _web.loadStringContent(tutorPage(t.html));
       if (mounted) setState(() => _webReady = true);
+      // The first section was introduced while the page was still loading: point at it now.
+      Future<void>.delayed(const Duration(milliseconds: 700), () {
+        if (mounted && t.current.isNotEmpty) _show(t.current, false);
+      });
     } catch (_) {
       if (mounted) {
         setState(() => _webProblem = 'This computer cannot show the note inside the app (the Windows web view is missing). '
             'Open it in your browser and keep the tutor here.');
       }
     }
+  }
+
+  // The tutor moved to a section: make it glow in the note.
+  void _show(String sectionId, bool bring) {
+    final index = int.tryParse(sectionId.replaceFirst('s', ''));
+    if (index != null && _webReady) _web.executeScript(showSectionScript(index, bring: bring));
   }
 
   // What the note reports: which section is in view, or a link the learner clicked.
@@ -212,7 +223,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                       DropdownMenuItem(value: s['id'], child: Text('Reading: ${s['title']}', overflow: TextOverflow.ellipsis)),
                   ],
                   onChanged: (v) {
-                    if (v != null) t.reading(v);
+                    if (v != null) t.reading(v, bring: true); // picked from the list: take the note there too
                   },
                 ),
               ),

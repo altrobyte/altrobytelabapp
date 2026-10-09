@@ -180,6 +180,23 @@ void main() {
     expect(hushed, 2); // leaving the note stops the voice
   });
 
+  test('the note is told which section the tutor is on, and to go there when it was picked from the list', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    final shown = <String>[];
+    t.onFocus = (id, bring) => shown.add('$id $bring');
+    await t.load();
+    expect(shown, ['s0 false']); // where it opened
+    t.readingIndex(1); // the learner scrolled
+    t.reading('s0', bring: true); // the learner chose it in the list
+    t.reading('s0', bring: true); // already there: nothing more
+    expect(shown, ['s0 false', 's1 false', 's0 true']);
+    expect(showSectionScript(3), 'window.__altroShow && window.__altroShow(3, false)');
+    expect(showSectionScript(0, bring: true), contains('(0, true)'));
+    expect(tutorPage('<p>x</p>'), contains('__altroShow'));
+    t.dispose();
+  });
+
   test('a note that cannot be loaded says why in plain words', () async {
     final t = NoteTutor(1,
         loadNote: (id) async => throw Exception('Unlock this module first to read its notes.'),

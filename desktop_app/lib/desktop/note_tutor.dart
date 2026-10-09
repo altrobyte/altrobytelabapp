@@ -49,6 +49,9 @@ class NoteTutor extends ChangeNotifier {
   final void Function()? hush;
   bool voice = true; // the learner can switch the tutor's voice off
 
+  /// The tutor is now on this section: the note shows it (glows; and scrolls to it when the learner picked it from the list).
+  void Function(String sectionId, bool bring)? onFocus;
+
   NoteTutor(this.contentId,
       {required this.loadNote,
       required this.loadGuide,
@@ -161,9 +164,10 @@ class NoteTutor extends ChangeNotifier {
   }
 
   /// The learner is now on this section (they scrolled to it, opened it, or picked it).
-  void reading(String id) {
+  void reading(String id, {bool bring = false}) {
     if (id.isEmpty || id == current && _introduced.contains(id) || !sections.any((s) => s['id'] == id)) return;
     current = id;
+    onFocus?.call(id, bring);
     if (_introduced.add(id)) {
       final g = _guide[id];
       final say = g is Map ? '${g['say'] ?? ''}' : '';
