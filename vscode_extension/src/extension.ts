@@ -461,6 +461,7 @@ export class Controller implements vscode.WebviewViewProvider {
   async startModuleLab(): Promise<void> {
     const base = vscode.workspace.getConfiguration('altrobyte').get<string>('apiBase', '').replace(/\/+$/, '');
     let labs: { id: number; title: string; module_title: string }[] = [];
+    let courses: { id: string; title: string; blurb: string }[] = [];
     try {
       const res = await fetch(`${base}/ai-labs`);
       labs = ((await res.json()) as any).labs ?? [];
@@ -468,15 +469,32 @@ export class Controller implements vscode.WebviewViewProvider {
       this.post({ type: 'error', text: describeError({ kind: 'offline' }) });
       return;
     }
-    if (!labs.length) {
+    try {
+      // The ready-made courses (welcome, set-up, first program) are the same for everyone and need the learner's sign-in.
+      const token = await this.ctx.secrets.get(TOKEN_KEY);
+      if (token) {
+        const res = await fetch(`${base}/trainer/courses`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          courses = ((await res.json()) as any).courses ?? [];
+        }
+      }
+    } catch {
+      /* the experiments still work without the course list */
+    }
+    if (!labs.length && !courses.length) {
       this.post({ type: 'system', text: 'None of your modules has an AI Lab experiment yet.' });
       return;
     }
-    const pick = await vscode.window.showQuickPick(
-      labs.map((l) => ({ label: l.title, description: l.module_title, id: l.id })),
-      { placeHolder: 'Which experiment do you want to do?', matchOnDescription: true },
-    );
-    if (pick) {
+    const items: (vscode.QuickPickItem & { id?: number; course?: string })[] = [
+      ...(courses.length ? [{ label: 'Start here: ready-made courses', kind: vscode.QuickPickItemKind.Separator }] : []),
+      ...courses.map((c) => ({ label: `$(book) ${c.title}`, description: c.blurb, course: c.id })),
+      ...(labs.length ? [{ label: 'Experiments from your modules', kind: vscode.QuickPickItemKind.Separator }] : []),
+      ...labs.map((l) => ({ label: l.title, description: l.module_title, id: l.id })),
+    ];
+    const pick = await vscode.window.showQuickPick(items, { placeHolder: 'What do you want to do?', matchOnDescription: true });
+    if (pick?.course) {
+      await this.startSession({ course: pick.course });
+    } else if (pick?.id !== undefined) {
       await this.startSession({ labId: pick.id });
     }
   }
@@ -494,7 +512,7 @@ export class Controller implements vscode.WebviewViewProvider {
     }
   }
 
-  async startSession(what: { labId?: number; moduleId?: number } = {}): Promise<void> {
+  async startSession(what: { labId?: number; moduleId?: number; course?: string } = {}): Promise<void> {
     if (!this.client) {
       await this.startHelper();
     }
@@ -509,7 +527,7 @@ export class Controller implements vscode.WebviewViewProvider {
     this.voiceWarned = false;
     void this.offerPlatformIO(); // does not hold the session back: the learner can answer while the trainer says hello
     try {
-      const body = what.labId !== undefined ? { lab_id: what.labId } : what.moduleId !== undefined ? { module_id: what.moduleId } : undefined;
+      const body = what.course ? { course: what.course } : what.labId !== undefined ? { lab_id: what.labId } : what.moduleId !== undefined ? { module_id: what.moduleId } : undefined;
       await this.client.post('/session/start', body);
     } catch (e) {
       this.fail(e);
