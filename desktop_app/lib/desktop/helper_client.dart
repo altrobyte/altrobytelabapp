@@ -132,10 +132,47 @@ Future<HelperInfo> launchHelper(HelperRuntime runtime, {Map<String, String>? env
   }
 }
 
+/// The oldest helper this app works with: before it, courses and the setup check do not exist.
+const minHelperVersion = '0.2.0';
+
+/// True when [have] ("0.1.0") is the same as or newer than [need]. An unreadable version counts as too old.
+bool versionAtLeast(String have, String need) {
+  final a = have.split('.').map(int.tryParse).toList();
+  final b = need.split('.').map(int.tryParse).toList();
+  if (a.any((n) => n == null)) return false;
+  for (var i = 0; i < (a.length > b.length ? a.length : b.length); i++) {
+    final x = i < a.length ? a[i]! : 0;
+    final y = i < b.length ? (b[i] ?? 0) : 0;
+    if (x != y) return x > y;
+  }
+  return true;
+}
+
+/// Asks a running helper to end, and waits until it has.
+Future<void> retireHelper(HelperInfo info, String home, {http.Client? client}) async {
+  final c = client ?? http.Client();
+  try {
+    await c.post(Uri.parse('http://127.0.0.1:${info.port}/shutdown'), headers: {'Authorization': 'Bearer ${info.token}'}).timeout(const Duration(seconds: 3));
+  } catch (_) {
+    return;
+  } finally {
+    if (client == null) c.close();
+  }
+  for (var i = 0; i < 40; i++) {
+    if (await findRunningHelper(home, timeout: const Duration(milliseconds: 500)) == null) return;
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+  }
+}
+
 /// Joins the helper that is running on this computer, or starts one. There is only ever one.
+/// A helper left running by an older app or extension is replaced by this app's own, so every window has the same abilities.
 Future<HelperInfo> connectHelper({HelperRuntime? runtime, String? home, Map<String, String>? env}) async {
-  final found = await findRunningHelper(home ?? helperHome(env));
-  if (found != null) return found;
+  final where = home ?? helperHome(env);
+  final found = await findRunningHelper(where);
+  if (found != null) {
+    if (versionAtLeast(found.version, minHelperVersion) || runtime == null) return found;
+    await retireHelper(found, where);
+  }
   if (runtime == null) {
     throw const HelperError(0, 'The Altrobyte helper was not found. Reinstall the app, or install the Altrobyte extension in VS Code.');
   }
