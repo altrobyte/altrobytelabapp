@@ -1976,6 +1976,18 @@ class ApiService {
     return [for (final c in (r['courses'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)];
   }
 
+  /// The module note an experiment was made from, as its author wrote it.
+  static Future<String> trainerLabNote(int labId) async {
+    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/labs/$labId/note'), headers: _headers(await _token())));
+    return '${r['html'] ?? ''}';
+  }
+
+  /// The interactive lesson page of a built-in course.
+  static Future<String> trainerLesson(String courseId) async {
+    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/courses/$courseId/lesson'), headers: _headers(await _token())));
+    return '${r['html'] ?? ''}';
+  }
+
   static Future<Map<String, dynamic>> trainerEnvResult(String id, Map<String, dynamic> body) async {
     final token = await _token();
     final res = await http

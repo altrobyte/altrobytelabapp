@@ -133,7 +133,22 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Fetches a course's interactive page and opens it in the browser.
+  Future<void> _openLesson(String courseId, {int? labId}) async {
+    try {
+      final html = labId != null ? await ApiService.trainerLabNote(labId) : await ApiService.trainerLesson(courseId);
+      if (!await openLessonHtml(html) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the lesson page.')));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not load the lesson. Check your internet.')));
+    }
+  }
+
   Future<void> _start({int? labId, String? course}) async {
+    if (course != null) {
+      c.hasLesson = _courses.any((k) => k['id'] == course && k['lesson'] == true);
+    }
     final auth = context.read<AuthProvider>();
     final token = auth.token ?? auth.jwtToken;
     if (token == null) return;
@@ -183,6 +198,29 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
             Flexible(child: Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w600))),
             const SizedBox(width: 10),
             OutlinedButton(onPressed: () => openPicture(b.props ?? {}), child: const Text('Open picture')),
+          ]),
+        ),
+      );
+    }
+    if (b.interactive == 'lesson') {
+      final id = '${b.props?['course'] ?? ''}';
+      final labId = (b.props?['lab'] as num?)?.toInt();
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.accent, width: 1.5)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.auto_stories_rounded, color: AppColors.accent),
+            const SizedBox(width: 10),
+            Flexible(child: Text(labId != null ? 'The note for this experiment: read and play with it first' : 'Interactive lesson: play with it, then tell your trainer what you saw', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13))),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: () => _openLesson(id, labId: labId),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+              child: Text(labId != null ? 'Open note' : 'Open lesson'),
+            ),
           ]),
         ),
       );
@@ -302,7 +340,10 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               leading: const Icon(Icons.science_rounded, color: AppColors.primary),
               title: Text('${m['title']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
               subtitle: Text('${m['module_title'] ?? ''}', style: GoogleFonts.inter(fontSize: 11.5)),
-              trailing: OutlinedButton(onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null, child: const Text('Start')),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'Open the note', onPressed: () => _openLesson('', labId: (m['id'] as num).toInt()), icon: const Icon(Icons.auto_stories_rounded, color: AppColors.accent)),
+                OutlinedButton(onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null, child: const Text('Start')),
+              ]),
             ),
         ],
       ]),
@@ -342,6 +383,9 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           ]),
         ),
         const SizedBox(width: 10),
+        if (k['lesson'] == true) ...[
+          IconButton(tooltip: 'Open the interactive lesson', onPressed: () => _openLesson('${k['id']}'), icon: const Icon(Icons.auto_stories_rounded, color: AppColors.accent)),
+        ],
         ElevatedButton(
           onPressed: c.ready && !c.busy ? () => _start(course: '${k['id']}') : null,
           style: isNext ? ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white) : null,

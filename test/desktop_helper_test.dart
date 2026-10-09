@@ -195,7 +195,9 @@ void main() {
       });
       await settle();
       expect(c.activity, 'reading platformio.ini');
-      expect(c.chat.single.text, 'Hi! Is your board plugged in?');
+      expect(c.chat.first.interactive, 'lesson'); // the experiment's note is offered before the trainer speaks
+      expect(c.chat.first.props!['lab'], 4);
+      expect(c.chat.where((b) => b.role == 'trainer').single.text, 'Hi! Is your board plugged in?');
       expect(c.state!.doneCount, 1);
       h.emit('turn_done', {'waiting': true, 'finished': false});
       await settle();
@@ -478,6 +480,15 @@ void main() {
   });
 
   group('small things', () {
+    test('a lesson page may run its own script but can reach nothing', () {
+      final page = lessonPage('<!DOCTYPE html><html><head><title>t</title></head><body><script>1</script></body></html>');
+      expect(page, contains("default-src 'none'"));
+      expect(page, contains("script-src 'unsafe-inline'"));
+      expect(page, isNot(contains('connect-src')));
+      expect(page.indexOf('Content-Security-Policy') < page.indexOf('<script>'), isTrue); // the rule comes before any script
+      expect(lessonPage('<p>bare</p>'), contains('Content-Security-Policy'));
+    });
+
     test('the picture page allows no script and no network and escapes its title', () {
       final page = visualPage('<b>x</b>', '<svg></svg>');
       expect(page, contains("default-src 'none'"));

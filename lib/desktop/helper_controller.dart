@@ -12,7 +12,7 @@ const allConnectors = ['system', 'workspace', 'toolchain', 'serial', 'mqtt'];
 class ChatBubble {
   final String role; // trainer | learner | system | ui
   final String text;
-  final String? interactive; // pin_map | picture | quiz | replies: a card the learner can use right in the chat
+  final String? interactive; // pin_map | picture | quiz | replies | lesson: a card the learner can use right in the chat
   final Map<String, dynamic>? props;
   const ChatBubble(this.role, this.text, {this.interactive, this.props});
 }
@@ -106,6 +106,7 @@ class HelperController extends ChangeNotifier {
   bool ready = false;
   bool lost = false; // the helper went away (restarted from another app, or ended)
   String? courseId; // the built-in course being taken, if any
+  bool hasLesson = true; // set by the screen from the course list
   Map<String, dynamic>? setupReport; // what the helper found on this computer (null until checked)
   bool settingUp = false; // a check or a download is in progress
   final Map<String, Map<String, dynamic>> setupProgress = {}; // item id -> {line, percent}
@@ -254,6 +255,9 @@ class HelperController extends ChangeNotifier {
     courseId = course;
     chat.clear();
     state = null;
+    // A course comes with an interactive page: offer it before the trainer says anything, so the learner can play with it.
+    if (course != null && hasLesson) _add('ui', '', interactive: 'lesson', props: {'course': course});
+    if (labId != null) _add('ui', '', interactive: 'lesson', props: {'lab': labId});
     _notify();
     try {
       await client.post('/session/start', course != null ? {'course': course} : (labId == null ? null : {'lab_id': labId}));
