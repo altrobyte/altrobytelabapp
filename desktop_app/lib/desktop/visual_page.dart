@@ -28,6 +28,53 @@ String lessonPage(String html) {
   return at < 0 ? '<!DOCTYPE html><html><head>$csp</head><body>$html</body></html>' : html.replaceRange(at + 6, at + 6, csp);
 }
 
+/// What is added to a note shown inside the app: it tells the app which section is in view (its position among the page's
+/// headings) and hands links to the app instead of leaving the note. It reads nothing else and sends nothing anywhere else.
+const noteBridgeScript = r"""
+<script>
+(function () {
+  function post(m) { try { window.chrome.webview.postMessage(m); } catch (e) {} }
+  var heads = [], last = -1;
+  function collect() { heads = Array.prototype.slice.call(document.querySelectorAll('h1,h2,h3')); }
+  function report(i) { if (i >= 0 && i !== last) { last = i; post({ section: i }); } }
+  function inView() {
+    var line = window.innerHeight * 0.35, best = -1;
+    for (var i = 0; i < heads.length; i++) {
+      var r = heads[i].getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) continue;
+      if (r.top <= line) best = i;
+    }
+    if (best < 0 && heads.length) best = 0;
+    report(best);
+  }
+  var waiting = false;
+  function later() { if (!waiting) { waiting = true; setTimeout(function () { waiting = false; inView(); }, 250); } }
+  window.addEventListener('scroll', later, true);
+  window.addEventListener('resize', later);
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (a && /^https?:/i.test(a.href)) { e.preventDefault(); post({ open: a.href }); return; }
+    // A note built from cards that open: the heading of the card that was clicked is the section being read.
+    var el = e.target;
+    while (el && el !== document.body) {
+      var h = el.matches && el.matches('h1,h2,h3') ? el : (el.querySelector ? el.querySelector(':scope > h1, :scope > h2, :scope > h3, :scope > * > h1, :scope > * > h2, :scope > * > h3') : null);
+      if (h) { collect(); report(heads.indexOf(h)); break; }
+      el = el.parentElement;
+    }
+  }, true);
+  function start() { collect(); inView(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+""";
+
+/// A note for the tutor view: the same closed page as [lessonPage], plus the small script that reports where the learner is.
+String tutorPage(String html) {
+  final page = lessonPage(html);
+  final at = page.toLowerCase().lastIndexOf('</body>');
+  return at < 0 ? '$page$noteBridgeScript' : page.replaceRange(at, at, noteBridgeScript);
+}
+
 /// Opens a lesson page in the default browser. False when there is nothing to show or it could not be opened.
 Future<bool> openLessonHtml(String html) async {
   if (html.trim().isEmpty) return false;

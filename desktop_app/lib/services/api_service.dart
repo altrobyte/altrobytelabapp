@@ -1996,6 +1996,29 @@ class ApiService {
     return _parse(res);
   }
 
+  /// A note to read with the tutor: the page as written, its sections, and the tutor's guide for each.
+  static Future<Map<String, dynamic>> noteTutor(int contentId) async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId'), headers: _headers(await _learnerToken()))
+      .timeout(const Duration(seconds: 45)));
+
+  static Future<Map<String, dynamic>> noteGuide(int contentId) async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/guide'), headers: _headers(await _learnerToken()))
+      .timeout(const Duration(seconds: 30)));
+
+  /// The server decides whether the option is right; the answer is never sent ahead of time.
+  static Future<Map<String, dynamic>> noteQuiz(int contentId, String section, int choice, int tries) async => _parse(await http
+      .post(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/quiz'),
+          headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'choice': choice, 'tries': tries}))
+      .timeout(const Duration(seconds: 30)));
+
+  static Future<String> noteAsk(int contentId, String section, String question, List<Map<String, String>> history) async {
+    final r = _parse(await http
+        .post(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/ask'),
+            headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'question': question, 'history': history}))
+        .timeout(const Duration(seconds: 90)));
+    return '${r['answer'] ?? ''}';
+  }
+
   /// The module note an experiment was made from, as its author wrote it.
   static Future<String> trainerLabNote(int labId) async {
     final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/labs/$labId/note'), headers: _headers(await _token())));

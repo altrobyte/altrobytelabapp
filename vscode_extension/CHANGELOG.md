@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.7
+- "Start session" now lets you choose: the ready-made courses first, then the experiments of your modules.
+
 ## 0.1.6
 - The ready-made courses are now written lessons that run on their own: instant, the same for everyone, and they keep working even when the AI is busy. The AI only answers your own questions.
 - Suggested answers appear as a picker; press Esc to type your own.

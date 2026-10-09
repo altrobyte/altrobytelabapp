@@ -71,7 +71,7 @@ export class Controller implements vscode.WebviewViewProvider {
       case 'signIn':
         return this.signIn();
       case 'start':
-        return this.startSession();
+        return this.startModuleLab(); // courses first, then the experiments of the learner's modules
       case 'chooseModule':
         return this.startModuleLab();
       case 'send':

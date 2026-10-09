@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../models/training_module_model.dart';
 import '../services/api_service.dart';
+import 'note_tutor_screen.dart';
 import 'visual_page.dart';
 
 class ModulesPanel extends StatefulWidget {
@@ -70,9 +71,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
     if (mounted) setState(() {});
   }
 
+  /// A note opens inside the app, with the tutor beside it.
   Future<void> _note(ContentItem item) async {
-    final ok = await openLessonHtml(item.htmlContent ?? '');
-    if (!ok && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open this note.')));
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: item.id, title: item.title)));
   }
 
   Future<void> _link(String? url) async {
@@ -90,7 +91,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
 
   Widget _item(ContentItem it) {
     final locked = it.locked;
-    final String action = it.type == 'notes' ? 'Open note' : it.type == 'video' ? 'Watch' : it.type == 'resource' ? 'Download' : 'Open on the website';
+    final String action = it.type == 'notes' ? 'Read with tutor' : it.type == 'video' ? 'Watch' : it.type == 'resource' ? 'Download' : 'Open on the website';
     VoidCallback? onTap;
     if (!locked) {
       if (it.type == 'notes' && (it.htmlContent ?? '').isNotEmpty) onTap = () => _note(it);
