@@ -503,6 +503,14 @@ void main() {
       expect(versionAtLeast(appVersion, '1.0.1'), isFalse); // a published 1.0.1 means this app is out of date
     });
 
+    test('the project a file belongs to is the folder above it that has a platformio.ini', () {
+      bool has(String p) => p == r'C:\Users\me\Documents\Altrobyte\blink\platformio.ini' || p == '/home/me/blink/platformio.ini';
+      expect(projectRootOf(r'C:\Users\me\Documents\Altrobyte\blink\src\main.cpp', exists: has), r'C:\Users\me\Documents\Altrobyte\blink');
+      expect(projectRootOf('/home/me/blink/src/deep/a.cpp', exists: has), '/home/me/blink');
+      expect(projectRootOf(r'C:\other\src\main.cpp', exists: has), isNull);
+      expect(projectRootOf('main.cpp', exists: has), isNull);
+    });
+
     test('a lesson page may run its own script but can reach nothing', () {
       final page = lessonPage('<!DOCTYPE html><html><head><title>t</title></head><body><script>1</script></body></html>');
       expect(page, contains("default-src 'none'"));

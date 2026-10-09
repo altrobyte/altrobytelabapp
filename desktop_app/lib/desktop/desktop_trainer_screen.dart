@@ -14,6 +14,7 @@ import 'app_version.dart';
 import 'helper_client.dart' show versionAtLeast;
 import 'helper_controller.dart';
 import 'local_tools.dart' show openFolderInVsCode;
+import 'lesson_screen.dart';
 import 'modules_panel.dart';
 import 'visual_page.dart';
 
@@ -146,16 +147,13 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Fetches a course's interactive page and opens it in the browser.
+  /// Opens a course's interactive page (or the note of an experiment) inside the app.
   Future<void> _openLesson(String courseId, {int? labId}) async {
-    try {
-      final html = labId != null ? await ApiService.trainerLabNote(labId) : await ApiService.trainerLesson(courseId);
-      if (!await openLessonHtml(html) && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the lesson page.')));
-      }
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not load the lesson. Check your internet.')));
-    }
+    final title = labId != null
+        ? 'The note for this experiment'
+        : '${_courses.firstWhere((k) => k['id'] == courseId, orElse: () => const {'title': 'Lesson'})['title']}';
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => LessonScreen(title: title, load: () => labId != null ? ApiService.trainerLabNote(labId) : ApiService.trainerLesson(courseId))));
   }
 
   Future<void> _start({int? labId, String? course}) async {
