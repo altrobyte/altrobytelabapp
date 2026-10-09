@@ -154,6 +154,32 @@ void main() {
     t.dispose();
   });
 
+  test('the tutor says each new thing out loud, and muting silences it at once', () async {
+    final s = FakeServer();
+    final spoken = <String>[];
+    var hushed = 0;
+    final t = NoteTutor(41,
+        loadNote: (id) async => s.note,
+        loadGuide: (id) async => s.guideLater,
+        checkQuiz: (a, b, c, d) async => s.quizReply,
+        askTutor: (a, b, c, d) async => 'Because it is nearby.',
+        speak: spoken.add,
+        hush: () => hushed++);
+    await t.load();
+    expect(spoken, ['Think of things that learned to talk.']); // the section it opened on, not the written note
+    t.readingIndex(1);
+    expect(spoken.last, 'Flip the toggle and watch the time.');
+    await t.ask('why?');
+    expect(spoken.last, 'Because it is nearby.');
+    t.setVoice(false);
+    expect(hushed, 1);
+    final n = spoken.length;
+    await t.answer(t.items.firstWhere((i) => i.kind == 'quiz'), 0);
+    expect(spoken.length, n); // muted: shown, not spoken
+    t.dispose();
+    expect(hushed, 2); // leaving the note stops the voice
+  });
+
   test('a note that cannot be loaded says why in plain words', () async {
     final t = NoteTutor(1,
         loadNote: (id) async => throw Exception('Unlock this module first to read its notes.'),

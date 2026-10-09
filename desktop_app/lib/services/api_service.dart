@@ -1996,6 +1996,11 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Staff only: does each AI model answer right now, and if not, why.
+  static Future<Map<String, dynamic>> trainerDiagnose() async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/diagnose'), headers: _headers(await _token()))
+      .timeout(const Duration(seconds: 120)));
+
   /// A note to read with the tutor: the page as written, its sections, and the tutor's guide for each.
   static Future<Map<String, dynamic>> noteTutor(int contentId) async => _parse(await http
       .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId'), headers: _headers(await _learnerToken()))

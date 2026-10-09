@@ -353,7 +353,13 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         else
           for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),
         const SizedBox(height: 20),
-        ModulesPanel(onStartLab: (id) => _start(labId: id), canStart: c.ready && !c.busy),
+        ModulesPanel(
+          onStartLab: (id) => _start(labId: id),
+          canStart: c.ready && !c.busy,
+          // A voice problem must never disturb reading: failures are swallowed.
+          speak: (text) => c.client.post('/say', {'text': text}).then((_) {}, onError: (_) {}),
+          hush: () => c.client.post('/say/stop').then((_) {}, onError: (_) {}),
+        ),
         const SizedBox(height: 14),
         _howItFits(),
       ]),

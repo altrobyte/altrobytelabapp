@@ -30,6 +30,20 @@ List<String> codeCandidates({Map<String, String>? env}) {
   ];
 }
 
+/// The project a file belongs to: the nearest folder above it that holds a platformio.ini (looked for a few levels up).
+String? projectRootOf(String file, {bool Function(String path)? exists}) {
+  final has = exists ?? (p) => File(p).existsSync();
+  final sep = file.contains('\\') ? '\\' : '/';
+  var dir = file;
+  for (var i = 0; i < 5; i++) {
+    final cut = dir.lastIndexOf(sep);
+    if (cut <= 0) return null;
+    dir = dir.substring(0, cut);
+    if (has('$dir${sep}platformio.ini')) return dir;
+  }
+  return null;
+}
+
 /// Opens a whole project folder in VS Code. False when VS Code could not be started.
 Future<bool> openFolderInVsCode(String folder) async {
   for (final exe in codeCandidates()) {
@@ -47,9 +61,11 @@ Future<bool> openFolderInVsCode(String folder) async {
 /// to it, which is the normal case while this app is the only one open.
 Future<void> openInVsCode(String path, int line) async {
   final at = line < 1 ? 1 : line;
+  // Open the project folder too, not just the file: without it VS Code cannot find the libraries and underlines the code in red.
+  final root = projectRootOf(path);
   for (final exe in codeCandidates()) {
     try {
-      final r = await Process.run(exe, ['-g', '$path:$at'], runInShell: true).timeout(const Duration(seconds: 20));
+      final r = await Process.run(exe, [if (root != null) root, '-g', '$path:$at'], runInShell: true).timeout(const Duration(seconds: 20));
       if (r.exitCode == 0) return;
     } catch (_) {
       // not there, try the next

@@ -64,7 +64,7 @@ test('settings round-trip and the project folder is remembered', opts, async () 
 });
 
 test('offline checks run on the real machine with no internet', opts, async () => {
-  await client.post('/environment', { software: { vscode: '1.140.0', 'platformio-ide': '3.3.4' } });
+  await client.post('/environment', { software: { vscode: '1.140.0', 'platformio-ide': '3.3.4', 'platformio-cli': '6.2.0' } });
   const first = await client.post('/verify', { milestone: 'toolchain_ready' });
   assert.equal(first.passed, true);
   assert.equal(first.done.toolchain_ready, true);

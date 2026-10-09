@@ -17,7 +17,11 @@ import 'visual_page.dart';
 class NoteTutorScreen extends StatefulWidget {
   final int contentId;
   final String title;
-  const NoteTutorScreen({super.key, required this.contentId, required this.title});
+
+  /// Speaks through the computer (the helper), and stops speaking. Null when no helper is connected.
+  final void Function(String text)? speak;
+  final void Function()? hush;
+  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -25,7 +29,7 @@ class NoteTutorScreen extends StatefulWidget {
 
 class _NoteTutorScreenState extends State<NoteTutorScreen> {
   late final NoteTutor t = NoteTutor(widget.contentId,
-      loadNote: ApiService.noteTutor, loadGuide: ApiService.noteGuide, checkQuiz: ApiService.noteQuiz, askTutor: ApiService.noteAsk);
+      loadNote: ApiService.noteTutor, loadGuide: ApiService.noteGuide, checkQuiz: ApiService.noteQuiz, askTutor: ApiService.noteAsk, speak: widget.speak, hush: widget.hush);
   final _web = WebviewController();
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -174,6 +178,13 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
               const SizedBox(width: 8),
               Text('Your tutor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
               const Spacer(),
+              if (widget.speak != null)
+                IconButton(
+                  tooltip: t.voice ? 'The tutor is speaking. Tap to mute.' : 'The tutor is muted. Tap to hear it.',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => t.setVoice(!t.voice),
+                  icon: Icon(t.voice ? Icons.volume_up_rounded : Icons.volume_off_rounded, size: 20, color: t.voice ? AppColors.primary : Colors.grey),
+                ),
               if (!t.guideReady && t.sections.isNotEmpty)
                 Tooltip(
                   message: 'Preparing questions for this note. It takes a moment the first time anyone opens it.',
@@ -258,7 +269,14 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       );
     }
     if (!_webReady) return const Center(child: CircularProgressIndicator());
-    return Webview(_web);
+    // A two-finger swipe on a touchpad reaches Flutter, not the web view, so it is handed on as a scroll of the page.
+    return Listener(
+      onPointerPanZoomUpdate: (e) {
+        final dx = (-e.panDelta.dx).toStringAsFixed(1), dy = (-e.panDelta.dy).toStringAsFixed(1);
+        _web.executeScript('window.scrollBy($dx, $dy)');
+      },
+      child: Webview(_web),
+    );
   }
 
   @override

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8
+- Builds no longer clash with a PlatformIO you already have: the extension's own build tools keep their downloads in their own folder.
+- New projects name the ESP32 platform version the tools were tested with.
+
 ## 0.1.7
 - "Start session" now lets you choose: the ready-made courses first, then the experiments of your modules.
 

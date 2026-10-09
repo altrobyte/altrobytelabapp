@@ -44,11 +44,18 @@ class NoteTutor extends ChangeNotifier {
   final Duration guideRetry;
   final int guideRetries;
 
+  /// Says a sentence out loud on this computer (the helper does it). Null when there is no voice here.
+  final void Function(String text)? speak;
+  final void Function()? hush;
+  bool voice = true; // the learner can switch the tutor's voice off
+
   NoteTutor(this.contentId,
       {required this.loadNote,
       required this.loadGuide,
       required this.checkQuiz,
       required this.askTutor,
+      this.speak,
+      this.hush,
       this.guideRetry = const Duration(seconds: 5),
       this.guideRetries = 12});
 
@@ -71,9 +78,23 @@ class NoteTutor extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  // The tutor talks: its line goes on the screen and, when the voice is on, out of the speakers. A newer line interrupts an
+  // older one, so scrolling on makes it talk about the new section instead of finishing the old one.
+  void _tutor(String text, {String section = '', String heading = ''}) {
+    items.add(TutorItem('tutor', text, section: section, heading: heading));
+    if (voice && text.isNotEmpty) speak?.call(text);
+  }
+
+  void setVoice(bool on) {
+    voice = on;
+    if (!on) hush?.call();
+    _notify();
+  }
+
   @override
   void dispose() {
     _disposed = true;
+    hush?.call();
     _retry?.cancel();
     super.dispose();
   }
@@ -146,7 +167,7 @@ class NoteTutor extends ChangeNotifier {
     if (_introduced.add(id)) {
       final g = _guide[id];
       final say = g is Map ? '${g['say'] ?? ''}' : '';
-      if (say.isNotEmpty) items.add(TutorItem('tutor', say, section: id, heading: titleOf(id)));
+      if (say.isNotEmpty) _tutor(say, section: id, heading: titleOf(id));
       _offerQuiz(id);
     }
     _notify();
@@ -164,14 +185,14 @@ class NoteTutor extends ChangeNotifier {
       final r = await checkQuiz(contentId, quiz.section, choice, quiz.tries + 1);
       if (r['correct'] == true) {
         quiz.settled = true;
-        items.add(TutorItem('tutor', 'Correct! ${r['explain'] ?? ''}'.trim(), section: quiz.section));
+        _tutor('Correct! ${r['explain'] ?? ''}'.trim(), section: quiz.section);
       } else if (r['revealed'] == true) {
         quiz.settled = true;
-        items.add(TutorItem('tutor', 'The answer is "${r['answer']}". ${r['explain'] ?? ''} No worries, that is how we learn it.'.trim(), section: quiz.section));
+        _tutor('The answer is "${r['answer']}". ${r['explain'] ?? ''} No worries, that is how we learn it.'.trim(), section: quiz.section);
       } else {
         quiz.tries++;
         quiz.picked = null;
-        items.add(TutorItem('tutor', 'Not quite. Read that part once more and try another option.', section: quiz.section));
+        _tutor('Not quite. Read that part once more and try another option.', section: quiz.section);
       }
     } catch (e) {
       quiz.picked = null;
@@ -192,7 +213,7 @@ class NoteTutor extends ChangeNotifier {
     asking = true;
     _notify();
     try {
-      items.add(TutorItem('tutor', await askTutor(contentId, current, q, history), section: current));
+      _tutor(await askTutor(contentId, current, q, history), section: current);
     } catch (e) {
       items.add(TutorItem('system', tutorProblem(e)));
     }

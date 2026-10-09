@@ -15,7 +15,11 @@ class ModulesPanel extends StatefulWidget {
   /// Starts an AI Lab experiment of a module.
   final void Function(int labId) onStartLab;
   final bool canStart;
-  const ModulesPanel({super.key, required this.onStartLab, required this.canStart});
+
+  /// The tutor's voice, through the helper on this computer.
+  final void Function(String text)? speak;
+  final void Function()? hush;
+  const ModulesPanel({super.key, required this.onStartLab, required this.canStart, this.speak, this.hush});
 
   @override
   State<ModulesPanel> createState() => _ModulesPanelState();
@@ -73,7 +77,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
 
   /// A note opens inside the app, with the tutor beside it.
   Future<void> _note(ContentItem item) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: item.id, title: item.title)));
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush)));
   }
 
   Future<void> _link(String? url) async {
