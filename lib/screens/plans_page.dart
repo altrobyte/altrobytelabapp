@@ -6,6 +6,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
@@ -18,6 +19,7 @@ const _muted = Color(0xFF5B6475);
 const _green = Color(0xFF12A150);
 
 class ProgramPlan {
+  final String key; // the name the server knows the plan by
   final String name;
   final String tag; // what makes this plan different, in three words
   final int offer; // the offer price, rupees
@@ -26,7 +28,16 @@ class ProgramPlan {
   final String period; // how the price is quoted
   final bool recommended;
   final List<String> features;
-  const ProgramPlan(this.name, this.tag, this.offer, this.standard, this.months, this.period, this.features, {this.recommended = false});
+  const ProgramPlan(this.key, this.name, this.tag, this.offer, this.standard, this.months, this.period, this.features, {this.recommended = false});
+
+  /// A plan as the server describes it. Null when something is missing, so a half-read answer never replaces good numbers.
+  static ProgramPlan? fromJson(Map j) {
+    final offer = j['offer'], standard = j['standard'], months = j['months'];
+    if (j['key'] is! String || j['name'] is! String || offer is! num || standard is! num || months is! num || months < 1 || standard < offer) return null;
+    return ProgramPlan('${j['key']}', '${j['name']}', '${j['tag'] ?? ''}', offer.round(), standard.round(), months.round(), '${j['period'] ?? ''}',
+        [for (final f in (j['features'] as List? ?? const [])) '$f'],
+        recommended: j['recommended'] == true);
+  }
 
   int get saving => standard - offer;
   int get percentOff => ((saving * 100) / standard).round();
@@ -36,9 +47,9 @@ class ProgramPlan {
 const _base = ['Live classes (online / offline)', 'Live projects', 'Doubt support', 'Learning resources', 'Certificate', 'Access to recorded lectures'];
 
 const programPlans = [
-  ProgramPlan('Plan 1', 'Core Learning', 10000, 18000, 1, 'per month', _base),
-  ProgramPlan('Plan 2', 'With Kit', 18000, 32000, 2, 'for 2 months', ['Mini lab set-up kit', ..._base]),
-  ProgramPlan('Plan 3', 'With Kit + Placement', 28000, 50000, 3, 'for 3 months', ['Mini lab set-up kit', 'Placement assistance', ..._base], recommended: true),
+  ProgramPlan('plan1', 'Plan 1', 'Core Learning', 10000, 18000, 1, 'per month', _base),
+  ProgramPlan('plan2', 'Plan 2', 'With Kit', 18000, 32000, 2, 'for 2 months', ['Mini lab set-up kit', ..._base]),
+  ProgramPlan('plan3', 'Plan 3', 'With Kit + Placement', 28000, 50000, 3, 'for 3 months', ['Mini lab set-up kit', 'Placement assistance', ..._base], recommended: true),
 ];
 
 /// ₹18,000 in the Indian style.
@@ -78,6 +89,9 @@ Duration? offerLeft(String? setting, DateTime now) {
 /// announced end). Once a set date has passed, the standard fee is the price again, with nothing for anyone to remember to edit.
 bool offerRunning(String? setting, DateTime now) => offerEnd(setting) == null || offerLeft(setting, now) != null;
 
+/// Where the Enrol button of a plan goes: the enrolment form, with the plan carried along. Null when no form is open.
+String? enrolPath(String slug, ProgramPlan p) => slug.trim().isEmpty ? null : '/enroll/${Uri.encodeComponent(slug.trim())}?plan=${p.key}';
+
 /// The message a plan's button opens WhatsApp with.
 String enrolMessage(ProgramPlan p, bool offerOn) =>
     'Hi! I want to enrol in ${p.name} (${p.tag}) at Altrobyte: ${inr(offerOn ? p.offer : p.standard)} ${p.period} + GST. '
@@ -92,6 +106,8 @@ class PlansPage extends StatefulWidget {
 
 class _PlansPageState extends State<PlansPage> {
   String _wa = '';
+  String _slug = ''; // the enrolment form a student fills
+  List<ProgramPlan> _plans = programPlans; // the poster's numbers until the server answers
   String _seats = '';
   String _startLabel = '';
   String? _ends;
@@ -113,13 +129,16 @@ class _PlansPageState extends State<PlansPage> {
     super.dispose();
   }
 
-  // The number, the seats and the offer date are settings an admin keeps true: none of them is written into this page.
+  // The plans, the number, the seats and the offer date all come from the server, where an admin keeps them true.
   Future<void> _load() async {
     try {
-      final r = await ApiService.getRoadmap('product-engineering');
+      final r = await ApiService.programPlans();
       if (!mounted) return;
+      final plans = [for (final j in (r['plans'] as List? ?? const [])) ProgramPlan.fromJson(j as Map)];
       setState(() {
+        if (plans.isNotEmpty && plans.every((p) => p != null)) _plans = plans.cast<ProgramPlan>();
         _wa = r['whatsapp_number'] as String? ?? '';
+        _slug = '${r['enrol_slug'] ?? ''}';
         _seats = '${r['seats_left'] ?? ''}'.trim();
         _startLabel = '${r['start_label'] ?? ''}'.trim();
         _ends = r['offer_ends'] as String?;
@@ -130,10 +149,28 @@ class _PlansPageState extends State<PlansPage> {
   Duration? get _left => offerLeft(_ends, _now);
   bool get _offerOn => offerRunning(_ends, _now);
 
+  /// A question, on WhatsApp. (Never the college-partnership form: that page is for institutions, not students.)
   Future<void> _open(String text) async {
-    final uri = _wa.isEmpty ? Uri.parse('https://altrobytelab.com/partner') : Uri.parse('https://wa.me/$_wa?text=${Uri.encodeComponent(text)}');
+    if (_wa.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Our WhatsApp number is loading. Please try again in a moment.')));
+      _load();
+      return;
+    }
+    final uri = Uri.parse('https://wa.me/$_wa?text=${Uri.encodeComponent(text)}');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open WhatsApp')));
+    }
+  }
+
+  /// Enrol: the enrolment form for this plan, then payment. WhatsApp only if no form is open.
+  Future<void> _enrol(ProgramPlan p) async {
+    if (_slug.isEmpty) await _load(); // tapped before the page finished loading: ask once more
+    if (!mounted) return;
+    final path = enrolPath(_slug, p);
+    if (path != null) {
+      context.go(path);
+    } else {
+      await _open(enrolMessage(p, _offerOn));
     }
   }
 
@@ -299,7 +336,7 @@ class _PlansPageState extends State<PlansPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _open(enrolMessage(p, on)),
+                onPressed: () => _enrol(p),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: hot ? _yellow : _navy,
                   foregroundColor: hot ? _navy : Colors.white,
@@ -311,7 +348,7 @@ class _PlansPageState extends State<PlansPage> {
               ),
             ),
             const SizedBox(height: 6),
-            Center(child: Text('Opens WhatsApp. No payment on this page.', style: GoogleFonts.inter(color: _muted, fontSize: 11.5))),
+            Center(child: Text('Two steps: your details, then payment by UPI.', style: GoogleFonts.inter(color: _muted, fontSize: 11.5))),
           ]),
         ),
       ]),
@@ -387,7 +424,7 @@ class _PlansPageState extends State<PlansPage> {
           color: _navy,
           child: Row(children: [
             cell(Text('What you get', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)), flex: 3, head: true),
-            for (final p in programPlans)
+            for (final p in _plans)
               cell(Center(child: Text(p.name, style: GoogleFonts.inter(color: p.recommended ? _yellow : Colors.white, fontWeight: FontWeight.w700, fontSize: 13))), head: true),
           ]),
         ),
@@ -459,7 +496,7 @@ class _PlansPageState extends State<PlansPage> {
   }
 
   Widget _closing() {
-    final best = programPlans.last;
+    final best = _plans.last;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 44),
@@ -477,7 +514,7 @@ class _PlansPageState extends State<PlansPage> {
         const SizedBox(height: 18),
         Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
           ElevatedButton.icon(
-            onPressed: () => _open(enrolMessage(best, _offerOn)),
+            onPressed: () => _enrol(best),
             icon: const Icon(Icons.send_rounded, size: 18),
             label: Text('Enrol in ${best.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
             style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
@@ -496,7 +533,7 @@ class _PlansPageState extends State<PlansPage> {
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final wide = w >= 980;
-    final cards = [for (final p in programPlans) _planCard(p)];
+    final cards = [for (final p in _plans) _planCard(p)];
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
       bottomNavigationBar: wide
@@ -508,12 +545,12 @@ class _PlansPageState extends State<PlansPage> {
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text('From ${inr(_offerOn ? programPlans.first.offer : programPlans.first.standard)} / month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                      Text('From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)} / month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
                       Text('+ GST · EMI available', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
                     ]),
                   ),
                   ElevatedButton(
-                    onPressed: () => _open(enrolMessage(programPlans.last, _offerOn)),
+                    onPressed: () => _enrol(_plans.last),
                     style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13)),
                     child: Text('Enrol now', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                   ),

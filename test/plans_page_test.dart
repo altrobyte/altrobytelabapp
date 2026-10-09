@@ -36,6 +36,20 @@ void main() {
     }
   });
 
+  test('Enrol goes to the enrolment form with the plan, and never anywhere else when a form is open', () {
+    expect(enrolPath('embedded-batch-x1', programPlans[1]), '/enroll/embedded-batch-x1?plan=plan2');
+    expect(enrolPath('  ', programPlans[1]), isNull); // no form open: the page falls back to WhatsApp, not to another form
+    expect(programPlans.map((p) => p.key).toList(), ['plan1', 'plan2', 'plan3']);
+  });
+
+  test('plans from the server replace the built-in ones only when they are complete', () {
+    final ok = ProgramPlan.fromJson({'key': 'plan2', 'name': 'Plan 2', 'tag': 'With Kit', 'offer': 18000, 'standard': 32000, 'months': 2, 'period': 'for 2 months', 'features': ['Kit'], 'recommended': false})!;
+    expect((ok.key, ok.offer, ok.perMonth), ('plan2', 18000, 9000));
+    expect(ok.features, ['Kit']);
+    expect(ProgramPlan.fromJson({'key': 'plan2', 'name': 'Plan 2', 'offer': 18000}), isNull);
+    expect(ProgramPlan.fromJson({'key': 'p', 'name': 'P', 'offer': 50000, 'standard': 100, 'months': 1}), isNull); // an offer above the standard fee is not an offer
+  });
+
   test('the WhatsApp message names the plan and the price being shown', () {
     expect(enrolMessage(programPlans[2], true), contains('Plan 3 (With Kit + Placement)'));
     expect(enrolMessage(programPlans[2], true), contains('₹28,000 for 3 months + GST'));

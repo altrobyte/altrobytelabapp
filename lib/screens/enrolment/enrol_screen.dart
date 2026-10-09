@@ -4,12 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import 'plan_pay.dart';
 
 /// The page behind an enrolment form's link (/enroll/<slug>). Public: anyone with the link can open it, and fills it
 /// after signing in with Google. The server checks the Google sign-in itself; this page never decides who someone is.
 class EnrolScreen extends StatefulWidget {
   final String slug;
-  const EnrolScreen({super.key, required this.slug});
+
+  /// The programme plan chosen on the plans page (plan1, plan2, plan3), when the person came from there.
+  final String? plan;
+  const EnrolScreen({super.key, required this.slug, this.plan});
 
   @override
   State<EnrolScreen> createState() => _EnrolScreenState();
@@ -26,11 +30,18 @@ class _EnrolScreenState extends State<EnrolScreen> {
   bool _busy = false;
   String? _error;
   Map<String, dynamic>? _done;
+  Map<String, dynamic>? _checkout; // what the chosen plan costs today, from the server
 
   @override
   void initState() {
     super.initState();
     _user = FirebaseAuth.instance.currentUser;
+    final plan = widget.plan;
+    if (plan != null && plan.isNotEmpty) {
+      ApiService.programCheckout(plan).then((c) {
+        if (mounted) setState(() => _checkout = c);
+      }).catchError((_) {}); // an unknown plan: the form still works, without the payment step
+    }
     () async {
       try {
         final f = await ApiService.publicEnrolmentForm(widget.slug);
@@ -87,7 +98,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
         for (final e in _choice.entries) e.key: e.value ?? '',
         for (final e in _multi.entries) e.key: e.value.toList(),
       };
-      _done = await ApiService.submitEnrolment(widget.slug, token ?? '', _phone.text.trim(), answers);
+      _done = await ApiService.submitEnrolment(widget.slug, token ?? '', _phone.text.trim(), answers, plan: _checkout == null ? null : widget.plan);
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
@@ -134,6 +145,34 @@ class _EnrolScreenState extends State<EnrolScreen> {
     final form = _form;
     if (form == null) return const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()));
     final done = _done;
+    final checkout = _checkout;
+    if (done != null && checkout != null && done['plan'] != null) {
+      // Enrolled for a plan: the next thing is paying for it, not a thank-you page.
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Step 1 done: your details are saved (${done['email']})', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5))),
+        ]),
+        const SizedBox(height: 18),
+        PlanPaySection(
+          checkout: checkout,
+          onPaid: (reference) async {
+            final token = await _user?.getIdToken(true);
+            final r = await ApiService.enrolPaid(widget.slug, token ?? '', reference);
+            return '${r['message'] ?? 'Thank you! We have your payment reference.'}';
+          },
+        ),
+        const SizedBox(height: 14),
+        Center(
+          child: TextButton.icon(
+            onPressed: () => context.go('/download'),
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Meanwhile: get the Altrobyte app'),
+          ),
+        ),
+      ]);
+    }
     if (done != null) {
       return Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.check_circle_rounded, size: 52, color: AppColors.success),
@@ -162,6 +201,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
         Text('Altrobyte Lab', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.primary)),
       ]),
       const SizedBox(height: 16),
+      if (checkout != null) PlanBanner(checkout: checkout),
       Text('${form['title']}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 22)),
       if ('${form['description']}'.isNotEmpty) ...[
         const SizedBox(height: 8),

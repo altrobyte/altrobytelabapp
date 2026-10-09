@@ -343,7 +343,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // An enrolment form shared by link — public; the person signs in with Google on the page itself.
         GoRoute(
           path: '/enroll/:slug',
-          builder: (context, state) => EnrolScreen(slug: state.pathParameters['slug'] ?? ''),
+          builder: (context, state) => EnrolScreen(slug: state.pathParameters['slug'] ?? '', plan: state.uri.queryParameters['plan']),
         ),
         // Events — public, no login.
         GoRoute(path: '/events', builder: (_, __) => const EventsScreen()),
