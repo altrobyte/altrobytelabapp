@@ -149,11 +149,34 @@ export async function findRunningHelper(home: string, timeoutMs = 1500): Promise
 }
 
 /** Joins the helper that is running on this computer, or starts one. There is only ever one. */
+/** The oldest helper this extension works with: before it, courses and the setup check do not exist. */
+export const MIN_HELPER_VERSION = '0.2.0';
+
+/** True when `have` ("0.1.0") is the same as or newer than `need`. An unreadable version counts as too old. */
+export function versionAtLeast(have: string, need: string): boolean {
+  const a = String(have).split('.').map((n) => parseInt(n, 10));
+  const b = String(need).split('.').map((n) => parseInt(n, 10));
+  if (a.some(Number.isNaN)) {
+    return false;
+  }
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) {
+      return x > y;
+    }
+  }
+  return true;
+}
+
 export async function connectHelper(opts: LaunchOptions & { home?: string }): Promise<RunningHelper> {
   const home = opts.home ?? helperHome({ ...process.env, ...opts.env });
   const found = await findRunningHelper(home);
   if (found) {
-    return { info: found, proc: null, attached: true, stop: async () => undefined, detach: () => undefined };
+    if (versionAtLeast(found.version, MIN_HELPER_VERSION)) {
+      return { info: found, proc: null, attached: true, stop: async () => undefined, detach: () => undefined };
+    }
+    await shutdownHelper(found, home); // an older helper left running by an older app: replace it with this one's own
   }
   return launchHelper(opts); // if another app starts one at the same moment, the helper itself sees it and reuses it
 }

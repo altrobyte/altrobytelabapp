@@ -480,6 +480,14 @@ void main() {
   });
 
   group('small things', () {
+    test('a helper from an older app is recognised so it can be replaced', () {
+      expect(versionAtLeast('0.2.0', '0.2.0'), isTrue);
+      expect(versionAtLeast('0.10.1', '0.2.0'), isTrue);
+      expect(versionAtLeast('1.0', '0.2.0'), isTrue);
+      expect(versionAtLeast('0.1.0', '0.2.0'), isFalse);
+      expect(versionAtLeast('', '0.2.0'), isFalse);
+    });
+
     test('a lesson page may run its own script but can reach nothing', () {
       final page = lessonPage('<!DOCTYPE html><html><head><title>t</title></head><body><script>1</script></body></html>');
       expect(page, contains("default-src 'none'"));

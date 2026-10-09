@@ -136,3 +136,14 @@ test('PlatformIO is suggested only when it is not there in any form', () => {
 test('a quiz answer reaches the trainer in the exact tagged shape its instructions name', () => {
   assert.equal(quizAnswerText('what_is_pin', 1), '[quiz answer] milestone=what_is_pin choice=1');
 });
+
+import { versionAtLeast } from '../src/helper';
+
+test('an older helper left running by an older app is recognised, so it can be replaced', () => {
+  assert.equal(versionAtLeast('0.2.0', '0.2.0'), true);
+  assert.equal(versionAtLeast('0.10.1', '0.2.0'), true);
+  assert.equal(versionAtLeast('1.0', '0.2.0'), true);
+  assert.equal(versionAtLeast('0.1.0', '0.2.0'), false);
+  assert.equal(versionAtLeast('', '0.2.0'), false);
+  assert.equal(versionAtLeast('abc', '0.2.0'), false);
+});
