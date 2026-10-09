@@ -150,7 +150,7 @@ export async function findRunningHelper(home: string, timeoutMs = 1500): Promise
 
 /** Joins the helper that is running on this computer, or starts one. There is only ever one. */
 /** The oldest helper this extension works with: before it, courses and the setup check do not exist. */
-export const MIN_HELPER_VERSION = '0.2.0';
+export const MIN_HELPER_VERSION = '0.3.0';
 
 /** True when `have` ("0.1.0") is the same as or newer than `need`. An unreadable version counts as too old. */
 export function versionAtLeast(have: string, need: string): boolean {

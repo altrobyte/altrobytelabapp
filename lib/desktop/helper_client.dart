@@ -132,8 +132,8 @@ Future<HelperInfo> launchHelper(HelperRuntime runtime, {Map<String, String>? env
   }
 }
 
-/// The oldest helper this app works with: before it, courses and the setup check do not exist.
-const minHelperVersion = '0.2.0';
+/// The oldest helper this app works with: before it, the tutor's voice and the app's own build folder do not exist.
+const minHelperVersion = '0.3.0';
 
 /// True when [have] ("0.1.0") is the same as or newer than [need]. An unreadable version counts as too old.
 bool versionAtLeast(String have, String need) {

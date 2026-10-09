@@ -9,6 +9,7 @@ import 'package:webview_windows/webview_windows.dart';
 import '../constants/app_colors.dart';
 import 'note_tutor.dart' show tutorProblem;
 import 'visual_page.dart';
+import 'web_scroll.dart';
 
 class LessonScreen extends StatefulWidget {
   final String title;
@@ -23,6 +24,7 @@ class LessonScreen extends StatefulWidget {
 
 class _LessonScreenState extends State<LessonScreen> {
   final _web = WebviewController();
+  late final _pan = PanScroller((script) => _web.executeScript(script));
   StreamSubscription? _messages;
   String? _html;
   String? _problem; // the page could not be fetched
@@ -63,6 +65,7 @@ class _LessonScreenState extends State<LessonScreen> {
   @override
   void dispose() {
     _messages?.cancel();
+    _pan.dispose();
     _web.dispose();
     super.dispose();
   }
@@ -93,10 +96,8 @@ class _LessonScreenState extends State<LessonScreen> {
     if (!_ready) return const Center(child: CircularProgressIndicator());
     // A two-finger swipe on a touchpad reaches Flutter, not the web view, so it is handed on as a scroll of the page.
     return Listener(
-      onPointerPanZoomUpdate: (e) {
-        final dx = (-e.panDelta.dx).toStringAsFixed(1), dy = (-e.panDelta.dy).toStringAsFixed(1);
-        _web.executeScript('window.scrollBy($dx, $dy)');
-      },
+      onPointerPanZoomUpdate: (e) => _pan.add(e.panDelta),
+      onPointerPanZoomEnd: (_) => _pan.end(),
       child: Webview(_web),
     );
   }

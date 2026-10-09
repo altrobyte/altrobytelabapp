@@ -13,6 +13,7 @@ import '../services/api_service.dart';
 import 'chat_text.dart';
 import 'note_tutor.dart';
 import 'visual_page.dart';
+import 'web_scroll.dart';
 
 class NoteTutorScreen extends StatefulWidget {
   final int contentId;
@@ -31,6 +32,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   late final NoteTutor t = NoteTutor(widget.contentId,
       loadNote: ApiService.noteTutor, loadGuide: ApiService.noteGuide, checkQuiz: ApiService.noteQuiz, askTutor: ApiService.noteAsk, speak: widget.speak, hush: widget.hush);
   final _web = WebviewController();
+  late final _pan = PanScroller((script) => _web.executeScript(script));
   final _input = TextEditingController();
   final _scroll = ScrollController();
   StreamSubscription? _messages;
@@ -90,6 +92,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     t.removeListener(_onTutor);
     _messages?.cancel();
     t.dispose();
+    _pan.dispose();
     _web.dispose();
     _input.dispose();
     _scroll.dispose();
@@ -271,10 +274,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     if (!_webReady) return const Center(child: CircularProgressIndicator());
     // A two-finger swipe on a touchpad reaches Flutter, not the web view, so it is handed on as a scroll of the page.
     return Listener(
-      onPointerPanZoomUpdate: (e) {
-        final dx = (-e.panDelta.dx).toStringAsFixed(1), dy = (-e.panDelta.dy).toStringAsFixed(1);
-        _web.executeScript('window.scrollBy($dx, $dy)');
-      },
+      onPointerPanZoomUpdate: (e) => _pan.add(e.panDelta),
+      onPointerPanZoomEnd: (_) => _pan.end(),
       child: Webview(_web),
     );
   }
