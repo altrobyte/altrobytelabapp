@@ -335,12 +335,49 @@ class _AiLabScreenState extends State<AiLabScreen> {
     ]);
   }
 
+  /// Asks the server whether each AI model answers right now, and shows the real reason when one does not.
+  Future<void> _checkAi() async {
+    showDialog(context: context, barrierDismissible: false, builder: (_) => const AlertDialog(content: Row(children: [CircularProgressIndicator(), SizedBox(width: 16), Text('Asking each model…')])));
+    String text;
+    try {
+      final r = await ApiService.trainerDiagnose();
+      String line(String name) {
+        final m = (r[name] as Map?) ?? const {};
+        String one(String k) {
+          final x = (m[k] as Map?) ?? const {};
+          return x['ok'] == true ? 'OK' : 'FAILED: ${x['error'] ?? 'no answer'}';
+        }
+
+        return '$name\n  plain question: ${one('plain')}\n  with the trainer\'s tools: ${one('with_tools')}';
+      }
+
+      text = 'Trainer uses: ${r['provider']} (backup: ${r['fallback']})\n'
+          'Groq key: ${r['groq_key'] == true ? 'set' : 'MISSING'}   Gemini key: ${r['gemini_key'] == true ? 'set' : 'MISSING'}\n'
+          'Gemini model: ${r['gemini_model']}   Groq model: ${r['trainer_model']}\n\n${line('groq')}\n\n${line('gemini')}';
+    } catch (e) {
+      text = 'Could not run the check: $e';
+    }
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    showDialog(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('AI models right now'),
+        content: SizedBox(width: 560, child: SingleChildScrollView(child: SelectableText(text, style: GoogleFonts.robotoMono(fontSize: 12.5, height: 1.5)))),
+        actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Close'))],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final open = _open;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text('AI Lab: ${widget.title}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16))),
+      appBar: AppBar(
+        title: Text('AI Lab: ${widget.title}', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+        actions: [TextButton.icon(onPressed: _checkAi, icon: const Icon(Icons.monitor_heart_outlined, size: 18), label: const Text('Check AI'))],
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 860),
