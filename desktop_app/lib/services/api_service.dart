@@ -2016,25 +2016,25 @@ class ApiService {
       .get(Uri.parse('${ApiConstants.baseUrl}/trainer/diagnose'), headers: _headers(await _token()))
       .timeout(const Duration(seconds: 120)));
 
-  /// A note to read with the tutor: the page as written, its sections, and the tutor's guide for each.
-  static Future<Map<String, dynamic>> noteTutor(int contentId) async => _parse(await http
-      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId'), headers: _headers(await _learnerToken()))
+  /// A note to read with the tutor: the page as written, its sections, and the tutor's guide for each, in English or Hindi.
+  static Future<Map<String, dynamic>> noteTutor(int contentId, String lang) async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId?lang=$lang'), headers: _headers(await _learnerToken()))
       .timeout(const Duration(seconds: 45)));
 
-  static Future<Map<String, dynamic>> noteGuide(int contentId) async => _parse(await http
-      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/guide'), headers: _headers(await _learnerToken()))
+  static Future<Map<String, dynamic>> noteGuide(int contentId, String lang) async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/guide?lang=$lang'), headers: _headers(await _learnerToken()))
       .timeout(const Duration(seconds: 30)));
 
   /// The server decides whether the option is right; the answer is never sent ahead of time.
-  static Future<Map<String, dynamic>> noteQuiz(int contentId, String section, int choice, int tries) async => _parse(await http
+  static Future<Map<String, dynamic>> noteQuiz(int contentId, String section, int choice, int tries, String lang) async => _parse(await http
       .post(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/quiz'),
-          headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'choice': choice, 'tries': tries}))
+          headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'choice': choice, 'tries': tries, 'lang': lang}))
       .timeout(const Duration(seconds: 30)));
 
-  static Future<String> noteAsk(int contentId, String section, String question, List<Map<String, String>> history) async {
+  static Future<String> noteAsk(int contentId, String section, String question, List<Map<String, String>> history, String lang) async {
     final r = _parse(await http
         .post(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/ask'),
-            headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'question': question, 'history': history}))
+            headers: _headers(await _learnerToken()), body: jsonEncode({'section': section, 'question': question, 'history': history, 'lang': lang}))
         .timeout(const Duration(seconds: 90)));
     return '${r['answer'] ?? ''}';
   }

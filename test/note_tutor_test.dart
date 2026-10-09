@@ -23,24 +23,34 @@ class FakeServer {
   Map<String, dynamic> quizReply = {'correct': true, 'explain': 'IoT is about being connected.'};
   Object? askError;
 
-  NoteTutor tutor({Duration retry = const Duration(milliseconds: 10), int retries = 3}) => NoteTutor(41,
-      loadNote: (id) async {
-        calls.add('note $id');
+  final List<String> spoken = [];
+  final List<List<String>> prepared = [];
+  final List<String> remembered = [];
+  int hushed = 0;
+
+  NoteTutor tutor({Duration retry = const Duration(milliseconds: 10), int retries = 3, String lang = 'en'}) => NoteTutor(41,
+      loadNote: (id, lang) async {
+        calls.add('note $id $lang');
         return note;
       },
-      loadGuide: (id) async {
-        calls.add('guide $id');
+      loadGuide: (id, lang) async {
+        calls.add('guide $id $lang');
         return guideLater;
       },
-      checkQuiz: (id, section, choice, tries) async {
+      checkQuiz: (id, section, choice, tries, lang) async {
         calls.add('quiz $section $choice $tries');
         return quizReply;
       },
-      askTutor: (id, section, question, history) async {
-        calls.add('ask $section $question ${history.length}');
+      askTutor: (id, section, question, history, lang) async {
+        calls.add('ask $section $question ${history.length} $lang');
         if (askError != null) throw askError!;
-        return 'Because it is nearby.';
+        return lang == 'hi' ? 'क्योंकि वह पास में है।' : 'Because it is nearby.';
       },
+      speak: spoken.add,
+      hush: () => hushed++,
+      prepare: prepared.add,
+      onLanguage: remembered.add,
+      lang: lang,
       guideRetry: retry,
       guideRetries: retries);
 }
@@ -115,6 +125,7 @@ void main() {
     t.readingIndex(1);
     await t.ask('  why is edge faster?  ');
     expect(s.calls.last, startsWith('ask s1 why is edge faster? '));
+    expect(s.calls.last, endsWith(' en'));
     expect(t.items[t.items.length - 2].kind, 'me');
     expect(t.items.last.text, 'Because it is nearby.');
     s.askError = Exception('The trainer is having a problem right now. Please try again in a minute.');
@@ -156,28 +167,19 @@ void main() {
 
   test('the tutor says each new thing out loud, and muting silences it at once', () async {
     final s = FakeServer();
-    final spoken = <String>[];
-    var hushed = 0;
-    final t = NoteTutor(41,
-        loadNote: (id) async => s.note,
-        loadGuide: (id) async => s.guideLater,
-        checkQuiz: (a, b, c, d) async => s.quizReply,
-        askTutor: (a, b, c, d) async => 'Because it is nearby.',
-        speak: spoken.add,
-        hush: () => hushed++);
+    final t = s.tutor();
     await t.load();
-    expect(spoken, ['Think of things that learned to talk.']); // the section it opened on, not the written note
+    expect(s.spoken, ['Think of things that learned to talk.']); // the section it opened on, not the written note
     t.readingIndex(1);
-    expect(spoken.last, 'Flip the toggle and watch the time.');
-    await t.ask('why?');
-    expect(spoken.last, 'Because it is nearby.');
+    expect(s.spoken.last, 'Flip the toggle and watch the time.');
     t.setVoice(false);
-    expect(hushed, 1);
-    final n = spoken.length;
+    expect(s.hushed, 1);
+    final n = s.spoken.length;
     await t.answer(t.items.firstWhere((i) => i.kind == 'quiz'), 0);
-    expect(spoken.length, n); // muted: shown, not spoken
+    await t.ask('why?');
+    expect(s.spoken.length, n); // muted: shown, not spoken (not even the "let me think")
     t.dispose();
-    expect(hushed, 2); // leaving the note stops the voice
+    expect(s.hushed, 2); // leaving the note stops the voice
   });
 
   test('the note is told which section the tutor is on, and to go there when it was picked from the list', () async {
@@ -197,12 +199,87 @@ void main() {
     t.dispose();
   });
 
+  test('a question is met at once with a short spoken "let me think", different each time, and never written down', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    await t.load();
+    final before = t.items.length;
+    final asked = t.ask('why is edge faster?');
+    expect(t.asking, isTrue); // the screen shows the tutor typing
+    expect(thinkingLines['en'], contains(s.spoken.last)); // said immediately, before the answer exists
+    final first = s.spoken.last;
+    await asked;
+    expect(s.spoken.last, 'Because it is nearby.');
+    expect(t.items.length, before + 2); // the question and the answer: the filler is not part of the conversation
+    await t.ask('and cloud?');
+    final second = s.spoken[s.spoken.length - 2];
+    expect(second, isNot(first));
+    t.dispose();
+  });
+
+  test('what will be said next is made ready before the learner gets there', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    await t.load();
+    expect(s.prepared.last, contains('Flip the toggle and watch the time.')); // the next section's words
+    expect(s.prepared.last, containsAll(thinkingLines['en']!)); // and the short acknowledgements
+    t.readingIndex(1);
+    expect(s.prepared.last.where((x) => x.startsWith('Flip')), isEmpty); // already said: not prepared again
+    t.dispose();
+  });
+
+  test('the learner can switch to Hindi: the guide, the fixed lines, the answers and the choice are all Hindi', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    await t.load();
+    s.guideLater = {
+      'guide_ready': true,
+      'guide': {
+        's0': {'say': 'चलिए देखते हैं: IoT यानी जुड़ी हुई चीज़ें।', 'quiz': {'question': 'Bulb को IoT क्या बनाता है?', 'options': ['वह connected है', 'वह bright है']}},
+        's1': {'say': 'Toggle को बदलकर देखिए।', 'quiz': null},
+      },
+    };
+    await t.setLanguage('hi');
+    expect(t.lang, 'hi');
+    expect(s.remembered, ['hi']); // kept for next time
+    expect(s.calls, contains('guide 41 hi'));
+    final said = t.items.where((i) => i.kind == 'tutor' && i.lang == 'hi').map((i) => i.text).toList();
+    expect(said, ['ठीक है, अब हिंदी में।', 'चलिए देखते हैं: IoT यानी जुड़ी हुई चीज़ें।']); // where the learner is, again, in Hindi
+    final quiz = t.items.lastWhere((i) => i.kind == 'quiz');
+    expect(quiz.lang, 'hi');
+    expect(quiz.text, 'Bulb को IoT क्या बनाता है?');
+    await t.answer(quiz, 0);
+    expect(t.items.last.text, startsWith('बिल्कुल सही!'));
+    await t.ask('edge fast kyun hai?');
+    expect(s.calls.last, endsWith(' hi'));
+    expect(t.items.last.text, 'क्योंकि वह पास में है।');
+    expect(thinkingLines['hi'], contains(s.spoken[s.spoken.length - 2]));
+    await t.setLanguage('hi'); // already Hindi: nothing happens
+    await t.setLanguage('fr'); // not a language we have
+    expect(s.remembered, ['hi']);
+    await t.setLanguage('en');
+    expect(t.items.last.kind == 'quiz' || t.items.last.text.isNotEmpty, isTrue);
+    expect(t.items.where((i) => i.text == 'Okay, English from here.').length, 1);
+    expect(t.items.where((i) => i.text == 'Think of things that learned to talk.').length, 1); // already said in English: not repeated
+    t.dispose();
+  });
+
+  test('a tutor opened in Hindi greets in Hindi', () async {
+    final s = FakeServer();
+    final t = s.tutor(lang: 'hi');
+    await t.load();
+    expect(s.calls.first, 'note 41 hi');
+    expect(t.items.first.text, startsWith('चलिए, यह note साथ में पढ़ते हैं।'));
+    expect(NoteTutor(1, loadNote: (a, b) async => {}, loadGuide: (a, b) async => {}, checkQuiz: (a, b, c, d, e) async => {}, askTutor: (a, b, c, d, e) async => '', lang: 'xx').lang, 'en');
+    t.dispose();
+  });
+
   test('a note that cannot be loaded says why in plain words', () async {
     final t = NoteTutor(1,
-        loadNote: (id) async => throw Exception('Unlock this module first to read its notes.'),
-        loadGuide: (id) async => {},
-        checkQuiz: (a, b, c, d) async => {},
-        askTutor: (a, b, c, d) async => '');
+        loadNote: (id, lang) async => throw Exception('Unlock this module first to read its notes.'),
+        loadGuide: (id, lang) async => {},
+        checkQuiz: (a, b, c, d, e) async => {},
+        askTutor: (a, b, c, d, e) async => '');
     await t.load();
     expect(t.problem, 'Unlock this module first to read its notes.');
     expect(tutorProblem(Exception('SocketException: Failed host lookup')), contains('internet'));

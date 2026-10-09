@@ -357,6 +357,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           // A voice problem must never disturb reading: failures are swallowed.
           speak: (text) => c.client.post('/say', {'text': text}).then((_) {}, onError: (_) {}),
           hush: () => c.client.post('/say/stop').then((_) {}, onError: (_) {}),
+          prepare: (texts) => c.client.post('/say/prepare', {'texts': texts}).then((_) {}, onError: (_) {}),
         ),
         const SizedBox(height: 14),
         _howItFits(),

@@ -7,11 +7,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_windows/webview_windows.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
 import 'chat_text.dart';
 import 'note_tutor.dart';
+import 'tutor_feel.dart';
 import 'visual_page.dart';
 import 'web_scroll.dart';
 
@@ -22,15 +24,28 @@ class NoteTutorScreen extends StatefulWidget {
   /// Speaks through the computer (the helper), and stops speaking. Null when no helper is connected.
   final void Function(String text)? speak;
   final void Function()? hush;
-  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush});
+
+  /// Makes sentences ready ahead of time on this computer, so saying them starts at once.
+  final void Function(List<String> texts)? prepare;
+  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
 }
 
 class _NoteTutorScreenState extends State<NoteTutorScreen> {
-  late final NoteTutor t = NoteTutor(widget.contentId,
-      loadNote: ApiService.noteTutor, loadGuide: ApiService.noteGuide, checkQuiz: ApiService.noteQuiz, askTutor: ApiService.noteAsk, speak: widget.speak, hush: widget.hush);
+  late NoteTutor t = _tutorIn('en');
+
+  NoteTutor _tutorIn(String lang) => NoteTutor(widget.contentId,
+      loadNote: ApiService.noteTutor,
+      loadGuide: ApiService.noteGuide,
+      checkQuiz: ApiService.noteQuiz,
+      askTutor: ApiService.noteAsk,
+      speak: widget.speak,
+      hush: widget.hush,
+      prepare: widget.prepare,
+      lang: lang,
+      onLanguage: (l) => SharedPreferences.getInstance().then((p) => p.setString('tutor_lang', l)));
   final _web = WebviewController();
   late final _pan = PanScroller((script) => _web.executeScript(script));
   final _input = TextEditingController();
@@ -49,6 +64,16 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   }
 
   Future<void> _start() async {
+    if (t.items.isEmpty && t.problem == null) {
+      // The language the learner chose last time, before anything is said.
+      final saved = (await SharedPreferences.getInstance()).getString('tutor_lang');
+      if (saved != null && saved != t.lang && tutorLanguages.containsKey(saved)) {
+        t.removeListener(_onTutor);
+        t = _tutorIn(saved)
+          ..addListener(_onTutor)
+          ..onFocus = _show;
+      }
+    }
     await t.load();
     if (!mounted || t.problem != null) return;
     try {
@@ -86,6 +111,11 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     if (s is num) t.readingIndex(s.toInt());
     final link = m['open'];
     if (link is String) openExternal(link);
+  }
+
+  // Keep the newest words in view while they are being written out.
+  void _follow() {
+    if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
   }
 
   void _onTutor() {
@@ -171,7 +201,10 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
             ),
           system
               ? Text(i.text, style: GoogleFonts.inter(fontSize: 12.5, fontStyle: FontStyle.italic, color: AppColors.textSecondary, height: 1.4))
-              : ChatText(i.text, color: me ? Colors.white : AppColors.textPrimary),
+              : (i.kind == 'tutor' && !i.shown)
+                  // A new line from the tutor is written out, at about the pace the voice says it.
+                  ? RevealText(i.text, key: ObjectKey(i), color: AppColors.textPrimary, onDone: () => i.shown = true, onGrow: _follow)
+                  : ChatText(i.text, color: me ? Colors.white : AppColors.textPrimary),
         ]),
       ),
     );
@@ -192,6 +225,15 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
               const SizedBox(width: 8),
               Text('Your tutor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
               const Spacer(),
+              // English or Hindi: the tutor's words, questions, answers and voice all follow.
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                style: const ButtonStyle(visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                segments: [for (final e in tutorLanguages.entries) ButtonSegment(value: e.key, label: Text(e.value, style: GoogleFonts.inter(fontSize: 12)))],
+                selected: {t.lang},
+                onSelectionChanged: t.asking ? null : (v) => t.setLanguage(v.first),
+              ),
+              const SizedBox(width: 4),
               if (widget.speak != null)
                 IconButton(
                   tooltip: t.voice ? 'The tutor is speaking. Tap to mute.' : 'The tutor is muted. Tap to hear it.',
@@ -233,15 +275,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         Expanded(
           child: ListView(controller: _scroll, padding: const EdgeInsets.all(12), children: [
             for (final i in t.items) _bubble(i),
-            if (t.asking)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(children: [
-                  const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
-                  const SizedBox(width: 8),
-                  Text('Thinking…', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-                ]),
-              ),
+            if (t.asking) const TypingDots(),
           ]),
         ),
         Padding(
