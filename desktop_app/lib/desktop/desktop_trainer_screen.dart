@@ -156,6 +156,20 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         builder: (_) => LessonScreen(title: title, load: () => labId != null ? ApiService.trainerLabNote(labId) : ApiService.trainerLesson(courseId))));
   }
 
+  // The helper needs the learner's sign-in to ask for the natural voice. It is given once, the first time anything is to be
+  // said (a note can be opened without ever starting a course), and again if that failed.
+  Future<void>? _voiceSignIn;
+  Future<void> _voiceReady() => _voiceSignIn ??= () async {
+        final auth = context.read<AuthProvider>();
+        final token = auth.token ?? auth.jwtToken;
+        try {
+          if (token == null) throw StateError('signed out');
+          await c.signIn(token);
+        } catch (_) {
+          _voiceSignIn = null; // try again with the next sentence; meanwhile the computer's own voice speaks
+        }
+      }();
+
   Future<void> _start({int? labId, String? course}) async {
     if (course != null) {
       c.hasLesson = _courses.any((k) => k['id'] == course && k['lesson'] == true);
@@ -355,9 +369,9 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           onStartLab: (id) => _start(labId: id),
           canStart: c.ready && !c.busy,
           // A voice problem must never disturb reading: failures are swallowed.
-          speak: (text) => c.client.post('/say', {'text': text}).then((_) {}, onError: (_) {}),
+          speak: (text) => _voiceReady().then((_) => c.client.post('/say', {'text': text})).then((_) {}, onError: (_) {}),
           hush: () => c.client.post('/say/stop').then((_) {}, onError: (_) {}),
-          prepare: (texts) => c.client.post('/say/prepare', {'texts': texts}).then((_) {}, onError: (_) {}),
+          prepare: (texts) => _voiceReady().then((_) => c.client.post('/say/prepare', {'texts': texts})).then((_) {}, onError: (_) {}),
         ),
         const SizedBox(height: 14),
         _howItFits(),

@@ -173,12 +173,12 @@ void main() {
     s.guideLater = {
       'guide_ready': false,
       'guide': {
-        's0': {'say': 'अब हम What is IoT वाले हिस्से पर हैं।', 'quiz': null},
-        's1': {'say': 'यह हिस्सा Cloud vs Edge के बारे में है।', 'quiz': null},
+        's0': {'say': 'अब हम What is IoT वाले section पर हैं।', 'quiz': null},
+        's1': {'say': 'यह section Cloud vs Edge के बारे में है।', 'quiz': null},
       },
     };
     await t.setLanguage('hi');
-    expect(s.spoken.last, 'अब हम What is IoT वाले हिस्से पर हैं।'); // Hindi at once, never the note's English
+    expect(s.spoken.last, 'अब हम What is IoT वाले section पर हैं।'); // Hindi at once, never the note's English
     s.guideLater = {
       'guide_ready': true,
       'guide': {
@@ -273,7 +273,7 @@ void main() {
     expect(s.remembered, ['hi']); // kept for next time
     expect(s.calls, contains('guide 41 hi'));
     final said = t.items.where((i) => i.kind == 'tutor' && i.lang == 'hi').map((i) => i.text).toList();
-    expect(said, ['ठीक है, अब हिंदी में।', 'चलिए देखते हैं: IoT यानी जुड़ी हुई चीज़ें।']); // where the learner is, again, in Hindi
+    expect(said, ['ठीक है, अब Hinglish में।', 'चलिए देखते हैं: IoT यानी जुड़ी हुई चीज़ें।']); // where the learner is, again, in Hindi
     final quiz = t.items.lastWhere((i) => i.kind == 'quiz');
     expect(quiz.lang, 'hi');
     expect(quiz.text, 'Bulb को IoT क्या बनाता है?');

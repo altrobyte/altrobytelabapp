@@ -17,10 +17,10 @@ typedef LoadGuide = Future<Map<String, dynamic>> Function(int contentId, String 
 typedef CheckQuiz = Future<Map<String, dynamic>> Function(int contentId, String section, int choice, int tries, String lang);
 typedef AskTutor = Future<String> Function(int contentId, String section, String question, List<Map<String, String>> history, String lang);
 
-const tutorLanguages = {'en': 'English', 'hi': 'हिंदी'};
+const tutorLanguages = {'en': 'English', 'hi': 'Hinglish'};
 
-/// The tutor's own fixed lines, in each language. The Hindi is how a teacher speaks in class: Hindi sentences, technical
-/// words left in English, and no verb that assumes the tutor is a man or a woman.
+/// The tutor's own fixed lines, in each language. "hi" is Hinglish, the way people really talk: Hindi grammar, everyday and
+/// technical words left in English, and no verb that assumes the tutor is a man or a woman.
 const _lines = <String, Map<String, String>>{
   'en': {
     'hello': 'I am reading this note with you. Open or scroll to a section and I will tell you what to notice, then ask one quick question. You can ask me anything, any time.',
@@ -32,20 +32,20 @@ const _lines = <String, Map<String, String>>{
     'switched': 'Okay, English from here.',
   },
   'hi': {
-    'hello': 'चलिए, यह note साथ में पढ़ते हैं। किसी भी section पर जाइए, हम देखेंगे कि वहाँ क्या ख़ास है, और फिर एक छोटा सा सवाल। कुछ भी पूछना हो तो कभी भी पूछिए।',
-    'hello_plain': 'आप पढ़िए, कुछ भी पूछना हो तो इस note के बारे में कभी भी पूछिए।',
+    'hello': 'चलिए, यह note साथ में पढ़ते हैं। किसी भी section पर जाइए, हम देखेंगे कि वहाँ important क्या है, और फिर एक quick question। कोई भी doubt हो तो कभी भी पूछिए।',
+    'hello_plain': 'आप पढ़िए, इस note के बारे में कोई भी doubt हो तो कभी भी पूछिए।',
     'correct': 'बिल्कुल सही!',
-    'answer_is': 'सही जवाब है',
-    'no_worries': 'कोई बात नहीं, ऐसे ही सीखते हैं।',
-    'try_again': 'अभी नहीं। वह हिस्सा एक बार फिर पढ़िए और दूसरा option चुनकर देखिए।',
-    'switched': 'ठीक है, अब हिंदी में।',
+    'answer_is': 'Correct answer है',
+    'no_worries': 'कोई बात नहीं, ऐसे ही तो सीखते हैं।',
+    'try_again': 'Not quite। वह part एक बार फिर पढ़िए और दूसरा option try कीजिए।',
+    'switched': 'ठीक है, अब Hinglish में।',
   },
 };
 
 /// What a person says the moment they are asked something, before the answer: short, and different each time.
 const thinkingLines = <String, List<String>>{
   'en': ['Good question. Give me a second.', 'Hmm, let me think about that.', 'Okay, one moment.', 'Let me look at that with you.'],
-  'hi': ['अच्छा सवाल है। एक second।', 'हम्म, सोचने दीजिए।', 'ठीक है, एक पल।', 'चलिए, इसे साथ में देखते हैं।'],
+  'hi': ['अच्छा question है। एक second।', 'हम्म, एक minute सोचने दीजिए।', 'ठीक है, one moment।', 'चलिए, इसे साथ में देखते हैं।'],
 };
 
 String tutorLine(String lang, String key) => (_lines[lang] ?? _lines['en']!)[key] ?? _lines['en']![key] ?? '';
