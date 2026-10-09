@@ -2,7 +2,7 @@
   "name": "altrobyte-trainer",
   "displayName": "Altrobyte AI Trainer",
   "description": "A hands-on lab instructor inside VS Code: it watches your real setup (PlatformIO, board, serial, MQTT), teaches without doing the work for you, and verifies every milestone with real checks.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "altrobytelab",
   "license": "SEE LICENSE IN LICENSE.txt",
   "engines": {

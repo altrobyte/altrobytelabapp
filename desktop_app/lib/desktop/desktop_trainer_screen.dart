@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +10,11 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'chat_text.dart';
 import 'desktop_main.dart' show desktopNavKey;
+import 'app_version.dart';
+import 'helper_client.dart' show versionAtLeast;
 import 'helper_controller.dart';
+import 'local_tools.dart' show openFolderInVsCode;
+import 'modules_panel.dart';
 import 'visual_page.dart';
 
 /// The trainer on the learner's own computer: chat on the left, and on the right everything the learner controls or
@@ -40,9 +46,9 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   final _mqttUser = TextEditingController();
   final _mqttPass = TextEditingController();
   bool _mqttTls = true;
-  List<Map<String, dynamic>> _labs = [];
   List<Map<String, dynamic>> _courses = [];
   bool _coursesFailed = false;
+  String? _newVersion; // a newer installer exists
   int _shown = 0;
 
   @override
@@ -51,8 +57,8 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     c.askLearner = _askLearner;
     c.addListener(_onChange);
     _fillMqtt();
-    _loadLabs();
     _loadCourses();
+    _checkUpdate();
     c.checkSetup();
   }
 
@@ -65,7 +71,11 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     super.dispose();
   }
 
+  bool _wasStarted = false;
+
   void _onChange() {
+    if (_wasStarted && !c.started) _loadCourses(); // back on the learning path: show the progress just made
+    _wasStarted = c.started;
     if (c.chat.length != _shown) {
       _shown = c.chat.length;
       _scrollDown();
@@ -111,14 +121,17 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     if (dir != null) await c.setProjectDir(dir);
   }
 
-  /// The experiments the learner's teachers switched on (each made from a note of a module).
-  Future<void> _loadLabs() async {
+  /// Quietly asks whether a newer app is published. Any failure just means no banner.
+  Future<void> _checkUpdate() async {
     try {
-      _labs = await ApiService.liveAiLabs();
-    } catch (_) {
-      _labs = [];
-    }
-    if (mounted) setState(() {});
+      final r = await http.get(Uri.parse(latestReleaseUrl)).timeout(const Duration(seconds: 8));
+      if (r.statusCode != 200) return;
+      final v = '${(jsonDecode(r.body) as Map)['version']}';
+      if (!versionAtLeast(appVersion, v)) {
+        _newVersion = v;
+        if (mounted) setState(() {});
+      }
+    } catch (_) {}
   }
 
   /// The ready-made courses, with where this learner is in each. Light: a few lines of text.
@@ -306,6 +319,18 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(22),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (_newVersion != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: Row(children: [
+              const Icon(Icons.system_update_alt_rounded, color: AppColors.accent),
+              const SizedBox(width: 10),
+              Expanded(child: Text('A new version of the app is ready ($_newVersion). Install it over this one: your progress stays.', style: GoogleFonts.inter(fontSize: 12.5))),
+              TextButton(onPressed: () => openExternal(downloadPageUrl), child: const Text('Get it')),
+            ]),
+          ),
         Row(children: [
           const Icon(Icons.school_rounded, size: 30, color: AppColors.primary),
           const SizedBox(width: 10),
@@ -327,28 +352,39 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           Text('Loading your courses…', style: GoogleFonts.inter(color: AppColors.textSecondary))
         else
           for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),
-        if (_labs.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          Text('Experiments from your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-          const SizedBox(height: 2),
-          Text('Each one loads only when you start it.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
-          for (final m in _labs)
-            ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.science_rounded, color: AppColors.primary),
-              title: Text('${m['title']}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
-              subtitle: Text('${m['module_title'] ?? ''}', style: GoogleFonts.inter(fontSize: 11.5)),
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(tooltip: 'Open the note', onPressed: () => _openLesson('', labId: (m['id'] as num).toInt()), icon: const Icon(Icons.auto_stories_rounded, color: AppColors.accent)),
-                OutlinedButton(onPressed: c.ready && !c.busy ? () => _start(labId: (m['id'] as num).toInt()) : null, child: const Text('Start')),
-              ]),
-            ),
-        ],
+        const SizedBox(height: 20),
+        ModulesPanel(onStartLab: (id) => _start(labId: id), canStart: c.ready && !c.busy),
+        const SizedBox(height: 14),
+        _howItFits(),
       ]),
     );
   }
+
+  /// Who does what, in four lines, for someone who has never seen any of it.
+  Widget _howItFits() => Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          title: Text('How the pieces fit together', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+          children: [
+            for (final line in const [
+              ('🏠', 'This app is your home: courses, notes, computer check, and your trainer.'),
+              ('✏️', 'VS Code is where you type your code. The trainer opens it for you at the right line; the </> button opens your project folder.'),
+              ('🔌', 'The Altrobyte extension in VS Code is optional: it shows the same trainer next to your code.'),
+              ('🔗', 'Both use one helper on this computer, so your progress, permissions and board are the same in both. Nothing leaves your computer without you seeing it in the log.'),
+            ])
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(line.$1, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(line.$2, style: GoogleFonts.inter(fontSize: 12.5, height: 1.4, color: AppColors.textSecondary))),
+                ]),
+              ),
+          ],
+        ),
+      );
 
   Widget _courseTile(Map<String, dynamic> k, int number, bool isNext) {
     final p = k['progress'] as Map?;
@@ -566,6 +602,19 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           ),
           const SizedBox(width: 8),
           OutlinedButton.icon(onPressed: _pickFolder, icon: const Icon(Icons.folder_open_rounded, size: 18), label: const Text('Choose')),
+          if (c.projectDir != null) ...[
+            const SizedBox(width: 6),
+            Tooltip(
+              message: 'Open this folder in VS Code to write your code',
+              child: IconButton.outlined(
+                onPressed: () async {
+                  final ok = await openFolderInVsCode(c.projectDir!);
+                  if (!ok && mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open VS Code. Install it from the "Is my computer ready?" card.')));
+                },
+                icon: const Icon(Icons.code_rounded, size: 18),
+              ),
+            ),
+          ],
         ]),
       );
 

@@ -1976,6 +1976,26 @@ class ApiService {
     return [for (final c in (r['courses'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)];
   }
 
+  /// The token for the signed-in learner, whichever way they signed in on this app.
+  static Future<String?> _learnerToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('student_token') ?? prefs.getString('token');
+  }
+
+  /// The learner's published training modules (a light list: no notes yet).
+  static Future<List<dynamic>> desktopModules() async {
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/student/training-modules'), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 30));
+    return _parse(res)['modules'] as List? ?? [];
+  }
+
+  /// One module with its topics and notes, fetched only when the learner opens it.
+  static Future<Map<String, dynamic>> desktopModule(int id) async {
+    final res = await http.get(Uri.parse(ApiConstants.trainingModule(id)), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 45));
+    return _parse(res);
+  }
+
   /// The module note an experiment was made from, as its author wrote it.
   static Future<String> trainerLabNote(int labId) async {
     final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/labs/$labId/note'), headers: _headers(await _token())));

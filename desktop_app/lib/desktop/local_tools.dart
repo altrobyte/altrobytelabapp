@@ -30,6 +30,19 @@ List<String> codeCandidates({Map<String, String>? env}) {
   ];
 }
 
+/// Opens a whole project folder in VS Code. False when VS Code could not be started.
+Future<bool> openFolderInVsCode(String folder) async {
+  for (final exe in codeCandidates()) {
+    try {
+      final r = await Process.run(exe, [folder], runInShell: true).timeout(const Duration(seconds: 20));
+      if (r.exitCode == 0) return true;
+    } catch (_) {
+      // not there, try the next
+    }
+  }
+  return false;
+}
+
 /// Brings a file to a line in VS Code, if it is installed. The helper asks for this when no VS Code window is connected
 /// to it, which is the normal case while this app is the only one open.
 Future<void> openInVsCode(String path, int line) async {

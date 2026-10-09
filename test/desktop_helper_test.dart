@@ -7,8 +7,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:altrobytelab/desktop/app_version.dart';
 import 'package:altrobytelab/desktop/helper_client.dart';
 import 'package:altrobytelab/desktop/helper_controller.dart';
+import 'package:altrobytelab/desktop/modules_panel.dart' show modulesProblem;
 import 'package:altrobytelab/models/trainer_model.dart';
 import 'package:altrobytelab/desktop/local_tools.dart';
 import 'package:altrobytelab/desktop/sse.dart';
@@ -486,6 +488,19 @@ void main() {
       expect(versionAtLeast('1.0', '0.2.0'), isTrue);
       expect(versionAtLeast('0.1.0', '0.2.0'), isFalse);
       expect(versionAtLeast('', '0.2.0'), isFalse);
+    });
+
+    test('a problem loading the modules is said in plain words', () {
+      expect(modulesProblem('HelperError 401 Unauthorized'), contains('sign in'));
+      expect(modulesProblem('SocketException: Failed host lookup'), contains('internet'));
+      expect(modulesProblem('FormatException'), contains('Try again'));
+    });
+
+    test('the version in the code is the version the installer is stamped with', () {
+      final pubspec = File('desktop_app/pubspec.yaml').readAsStringSync();
+      expect(RegExp(r'^version:\s*([0-9.]+)', multiLine: true).firstMatch(pubspec)!.group(1), appVersion);
+      expect(versionAtLeast(appVersion, '1.0.0'), isTrue);
+      expect(versionAtLeast(appVersion, '1.0.1'), isFalse); // a published 1.0.1 means this app is out of date
     });
 
     test('a lesson page may run its own script but can reach nothing', () {

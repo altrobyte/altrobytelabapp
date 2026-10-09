@@ -48,6 +48,24 @@ Future<bool> openLessonHtml(String html) async {
   }
 }
 
+/// Opens a web address in the default browser. Only http(s) addresses are opened.
+Future<bool> openExternal(String url) async {
+  final u = Uri.tryParse(url.trim());
+  if (u == null || !(u.scheme == 'http' || u.scheme == 'https') || u.host.isEmpty) return false;
+  try {
+    if (Platform.isWindows) {
+      await Process.run('rundll32', ['url.dll,FileProtocolHandler', u.toString()]);
+    } else if (Platform.isMacOS) {
+      await Process.run('open', [u.toString()]);
+    } else {
+      await Process.run('xdg-open', [u.toString()]);
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// The picture of a `wiring_diagram` or `visual` interactive: its HTML body.
 String pictureBody(Map<String, dynamic> props) => '${props['svg'] ?? props['html'] ?? ''}';
 

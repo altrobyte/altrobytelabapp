@@ -297,6 +297,9 @@ export class Controller implements vscode.WebviewViewProvider {
     if (ui.type === 'quiz') {
       return this.askQuiz(ui.props ?? {});
     }
+    if (ui.type === 'replies') {
+      return this.askReplies(ui.props ?? {});
+    }
     const props = ui.props ?? {};
     const body = ui.type === 'wiring_diagram' ? String(props.svg ?? '') : ui.type === 'visual' ? String(props.html ?? '') : '';
     if (!body) {
@@ -311,6 +314,19 @@ export class Controller implements vscode.WebviewViewProvider {
     this.visualPanel.webview.html = visualPage(title, body);
     this.visualPanel.reveal(vscode.ViewColumn.Beside, true);
     this.post({ type: 'system', text: `Opened a picture beside your editor: ${title}` });
+  }
+
+  /** The answers the trainer suggests for its question, as a picker. Esc closes it and the learner types their own. */
+  private async askReplies(props: { options?: string[] }) {
+    const options = Array.isArray(props.options) ? props.options.map(String).filter((o) => o.trim()) : [];
+    if (options.length < 2) {
+      return;
+    }
+    const picked = await vscode.window.showQuickPick(options, { title: 'Your answer', placeHolder: 'Tap an answer, or press Esc and type your own below' });
+    if (picked !== undefined) {
+      this.post({ type: 'system', text: `You chose: ${picked}` });
+      await this.send(picked);
+    }
   }
 
   /** A quick question from the trainer, as VS Code's own picker. The lesson, not the model, decides if the choice is right. */
