@@ -61,6 +61,7 @@ import 'screens/enquiries/enquiries_admin_screen.dart';
 import 'screens/mock_interview/mock_interview_screen.dart';
 import 'screens/pricing/pricing_screen.dart';
 import 'screens/program_page.dart';
+import 'screens/plans_page.dart';
 import 'screens/book_call_screen.dart';
 import 'screens/admin/bookings_screen.dart';
 import 'screens/admin/errors_screen.dart';
@@ -366,6 +367,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // sent directly to someone who asked, while the public pricing page
         // still quotes programmes on request.
         GoRoute(path: '/program', builder: (_, __) => const ProgramPage()),
+        GoRoute(path: '/plans', builder: (_, __) => const PlansPage()),
         // Public and shareable, like the roadmap: the whole point is that a
         // link turns into a time in the diary without anyone signing in.
         GoRoute(path: '/book', builder: (_, __) => const BookCallScreen()),

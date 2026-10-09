@@ -26,6 +26,11 @@ class PageSeo {
       'Learn embedded systems and IoT by building real industrial products — '
           'firmware, your own PCB, cloud and edge AI. Classroom and online, Indore.'
     ),
+    '/plans': (
+      'Programme Plans & Fees — Embedded Systems, IoT, AI',
+      'Three plans for the Altrobyte programme: live classes and projects, with a lab kit and placement assistance on the '
+          'higher plans. EMI from ₹10,000 a month. See what each plan includes.'
+    ),
     '/program': (
       'Product Engineering Program — 4 Months, 3-4 Real Products',
       'A four-month embedded and IoT programme: design your own PCB, write the '
