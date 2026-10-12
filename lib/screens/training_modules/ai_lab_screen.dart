@@ -257,7 +257,12 @@ class _AiLabScreenState extends State<AiLabScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(children: [
-            Icon(m['how'] == 'learner confirms' ? Icons.person_rounded : Icons.verified_rounded, size: 16, color: AppColors.primary),
+            Icon(
+                m['how'] == 'learner confirms'
+                    ? Icons.person_rounded
+                    : (m['how'] == 'quiz question' ? Icons.quiz_rounded : Icons.verified_rounded),
+                size: 16,
+                color: AppColors.primary),
             const SizedBox(width: 8),
             Expanded(child: Text('${m['title']}', style: GoogleFonts.inter(fontSize: 13))),
             Text('${m['how']}', style: GoogleFonts.robotoMono(fontSize: 11, color: AppColors.textSecondary)),
