@@ -331,6 +331,25 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                   child: _EnrollCta(
                                       roadmap: r, planIndex: _plan),
                                 ),
+                                // The last thing on the page: the three plans
+                                // side by side, with the offer and enrolment.
+                                if (!widget.present)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => context.push('/plans'),
+                                        icon: const Icon(Icons.sell_outlined, size: 18),
+                                        label: const Text('See plans & pricing'),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ]);
                             }
                             final i = index - 1;
