@@ -83,6 +83,41 @@ class _CrmScreenState extends State<CrmScreen> {
     }
   }
 
+  // The same person saved under two forms of one number. The server has already put their details on one contact and
+  // hides the other; this removes the hidden copies, after saying how many there are.
+  Future<void> _cleanDuplicates() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final found = await ApiService.crmDuplicates();
+      final n = (found['duplicates'] as num?)?.toInt() ?? 0;
+      if (!mounted) return;
+      if (n == 0) {
+        messenger.showSnackBar(const SnackBar(content: Text('No duplicate contacts.')));
+        return;
+      }
+      final yes = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+                title: Text('$n duplicate contact${n == 1 ? '' : 's'}'),
+                content: const Text('These are second copies of people already in the list, saved under the other form of '
+                    'their number. Their name, stage, owner and consent are already on the contact that stays. '
+                    'Removing the copies cannot be undone.'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Keep them')),
+                  FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Remove copies')),
+                ],
+              ));
+      if (yes != true) return;
+      final done = await ApiService.crmDuplicates(remove: true);
+      messenger.showSnackBar(SnackBar(content: Text('Removed ${done['removed'] ?? 0} duplicate contacts.')));
+      if (!mounted) return;
+      setState(() => _loading = true);
+      _load();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not check for duplicates. ${'$e'.replaceFirst('Exception: ', '')}')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,6 +135,10 @@ class _CrmScreenState extends State<CrmScreen> {
               tooltip: 'Scholarship test candidates',
               onPressed: () => context.push('/scholars'),
               icon: const Icon(Icons.school_rounded, size: 21)),
+          IconButton(
+              tooltip: 'Remove duplicate contacts',
+              onPressed: _cleanDuplicates,
+              icon: const Icon(Icons.cleaning_services_outlined, size: 21)),
           IconButton(
               tooltip: 'Import leads from a CSV',
               onPressed: () => LeadImportSheet.show(context, () {

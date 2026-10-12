@@ -941,6 +941,16 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Contacts saved twice, once under each form of the same number. Counts them; with [remove] deletes the extra copies
+  /// (their details are already on the contact that stays).
+  static Future<Map<String, dynamic>> crmDuplicates({bool remove = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/contacts/duplicates${remove ? '?remove=true' : ''}'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> crmLead(String phone) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
