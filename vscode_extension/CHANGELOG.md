@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.11
+- The trainer speaks with the same natural voice as the Altrobyte app.
+- The trainer's answer options are now buttons in the chat itself, and stay there until you choose (they used to be a picker that disappeared on any click).
+- Brings the newest helper: the tutor's voice starts sooner and no longer stops half way through a sentence.
+- Experiments made for a Raspberry Pi or any board run here as well as in the Altrobyte app.
+
 ## 0.1.10
 - The tutor can speak with a natural voice: a one-time download from the Altrobyte app's "Is my computer ready?" card, then it works offline.
 

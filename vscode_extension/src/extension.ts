@@ -76,11 +76,16 @@ export class Controller implements vscode.WebviewViewProvider {
         return this.startModuleLab();
       case 'send':
         return this.send(String(m.text ?? ''));
+      case 'choice':
+        return this.chose(m);
       case 'connector':
         return this.setConnector(String(m.id), !!m.on);
       case 'chooseProject':
         return this.chooseProject();
       case 'speak':
+        if (!m.on) {
+          this.client?.post('/say/stop', {}).catch(() => undefined); // switching the voice off silences it at once
+        }
         return this.updateSettings({ speak: { enabled: !!m.on } });
       case 'audit':
         return this.showAudit();
@@ -316,31 +321,31 @@ export class Controller implements vscode.WebviewViewProvider {
     this.post({ type: 'system', text: `Opened a picture beside your editor: ${title}` });
   }
 
-  /** The answers the trainer suggests for its question, as a picker. Esc closes it and the learner types their own. */
+  /** The answers the trainer suggests for its question: buttons in the chat itself, which stay until one is tapped or
+   *  the learner types their own. (They used to be a picker at the top of the window, which vanished on any click.) */
   private async askReplies(props: { options?: string[] }) {
     const options = Array.isArray(props.options) ? props.options.map(String).filter((o) => o.trim()) : [];
     if (options.length < 2) {
       return;
     }
-    const picked = await vscode.window.showQuickPick(options, { title: 'Your answer', placeHolder: 'Tap an answer, or press Esc and type your own below' });
-    if (picked !== undefined) {
-      this.post({ type: 'system', text: `You chose: ${picked}` });
-      await this.send(picked);
-    }
+    this.post({ type: 'choices', kind: 'replies', options });
   }
 
-  /** A quick question from the trainer, as VS Code's own picker. The lesson, not the model, decides if the choice is right. */
+  /** A quick question from the trainer, as buttons in the chat. The lesson, not the model, decides if the choice is right. */
   private async askQuiz(props: { milestone?: string; question?: string; options?: string[] }) {
     const options = Array.isArray(props.options) ? props.options.map(String) : [];
     if (!props.milestone || options.length < 2) {
       return;
     }
-    const picked = await vscode.window.showQuickPick(options, { title: 'Quick question', placeHolder: String(props.question ?? ''), ignoreFocusOut: true });
-    if (picked === undefined) {
-      return;                                                  // dismissed: the trainer will ask again in the chat
+    this.post({ type: 'choices', kind: 'quiz', milestone: String(props.milestone), question: String(props.question ?? ''), options });
+  }
+
+  /** A button in the chat was tapped. */
+  private async chose(m: { kind?: string; milestone?: string; index?: number; text?: string }) {
+    if (m.kind === 'quiz' && m.milestone) {
+      return this.send(quizAnswerText(String(m.milestone), Number(m.index ?? 0)));
     }
-    this.post({ type: 'system', text: `You chose: ${picked}` });
-    await this.send(quizAnswerText(String(props.milestone), options.indexOf(picked)));
+    return this.send(String(m.text ?? ''));
   }
 
   /** The learner is asked, every time, before anything is built or uploaded. */
@@ -358,6 +363,15 @@ export class Controller implements vscode.WebviewViewProvider {
       return;
     }
     try {
+      // The same voice as the Altrobyte app: the helper speaks through the computer (the natural voice, starting with
+      // the first sentence, and a newer message interrupts an older one). An older helper has no such thing, and then
+      // the sound is made here as before.
+      try {
+        await this.client.post('/say', { text });
+        return;
+      } catch {
+        /* fall through to the sound made in this panel */
+      }
       const wav = await this.client.audio(text);
       this.post({ type: 'audio', data: 'data:audio/wav;base64,' + wav.toString('base64') });
     } catch (e) {

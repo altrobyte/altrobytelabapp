@@ -23,6 +23,10 @@ export function panelHtml(nonce: string, cspSource: string): string {
   .trainer { background: var(--vscode-editor-inactiveSelectionBackground); }
   .learner { background: var(--vscode-button-background); color: var(--vscode-button-foreground); margin-left: auto; }
   .system { font-size: 12px; font-style: italic; opacity: .75; }
+  .choices { margin: 6px 0 10px; display: flex; flex-direction: column; gap: 5px; max-width: 92%; }
+  .choices .q { font-weight: 600; margin-bottom: 2px; }
+  .choices button { text-align: left; white-space: normal; line-height: 1.35; padding: 6px 10px; border-radius: 6px; }
+  .choices.used button { opacity: .45; cursor: default; }
   #activity { font-size: 12px; opacity: .8; padding: 0 10px 4px; min-height: 16px; }
   #composer { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--vscode-panel-border); }
   details { border-top: 1px solid var(--vscode-panel-border); padding: 6px 10px; }
@@ -89,6 +93,22 @@ export function panelHtml(nonce: string, cspSource: string): string {
     if (role === 'trainer') renderMd(d, text); else d.textContent = text;
     chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
   }
+  // The trainer's question with its answers as buttons, in the conversation where it was asked. They stay until one is
+  // tapped (or the learner types something else), so an answer is never lost to a click somewhere else.
+  function choices(m) {
+    retireChoices();
+    const d = document.createElement('div'); d.className = 'choices';
+    if (m.question) { const q = document.createElement('div'); q.className = 'q'; q.textContent = m.question; d.appendChild(q); }
+    (m.options || []).forEach((text, index) => {
+      const b = document.createElement('button'); b.className = 'secondary'; b.textContent = text;
+      b.onclick = () => { if (busy || !session || d.classList.contains('used')) return;
+        d.classList.add('used'); add('learner', text); busy = true; refreshControls();
+        vscode.postMessage({ type: 'choice', kind: m.kind, milestone: m.milestone, index, text }); };
+      d.appendChild(b);
+    });
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+  }
+  function retireChoices() { for (const old of chat.querySelectorAll('.choices:not(.used)')) old.classList.add('used'); }
   function pinForm() {
     const d = document.createElement('div'); d.className = 'msg trainer';
     d.innerHTML = '<b>Which pin is each sensor wire on?</b><div class="pins"></div>';
@@ -132,7 +152,7 @@ export function panelHtml(nonce: string, cspSource: string): string {
     }
     $('count').textContent = state.progress.filter(m => m.status === 'done').length + '/' + state.progress.length;
   }
-  function send() { const t = $('input').value.trim(); if (!t || !session || busy) return; add('learner', t); $('input').value = ''; busy = true; refreshControls(); vscode.postMessage({ type: 'send', text: t }); }
+  function send() { const t = $('input').value.trim(); if (!t || !session || busy) return; retireChoices(); add('learner', t); $('input').value = ''; busy = true; refreshControls(); vscode.postMessage({ type: 'send', text: t }); }
 
   $('send').onclick = send;
   $('input').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
@@ -158,6 +178,7 @@ export function panelHtml(nonce: string, cspSource: string): string {
       case 'message': add('trainer', m.text); break;
       case 'system': add('system', m.text); break;
       case 'pinmap': pinForm(); break;
+      case 'choices': choices(m); break;
       case 'state': renderProgress(m.state); break;
       case 'activity': $('activity').textContent = m.text ? 'The trainer is ' + m.text + '…' : ''; break;
       case 'turn': busy = false; $('activity').textContent = ''; if (m.finished) add('system', 'Mission complete: every milestone is proven.'); refreshControls(); if (!$('input').disabled) $('input').focus(); break;
