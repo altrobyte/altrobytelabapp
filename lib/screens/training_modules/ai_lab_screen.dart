@@ -66,9 +66,20 @@ class _AiLabScreenState extends State<AiLabScreen> {
     try {
       await call();
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+        _say(_error!, bad: true); // the page is long: the message at its top is out of sight from the buttons at the bottom
+      }
     }
     if (mounted) setState(() => _busy = false);
+  }
+
+  // Said where it can be seen from anywhere on the page.
+  void _say(String text, {bool bad = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text), backgroundColor: bad ? AppColors.error : AppColors.success, duration: const Duration(seconds: 5)));
   }
 
   void _warn(Map<String, dynamic> r) {
@@ -90,11 +101,12 @@ class _AiLabScreenState extends State<AiLabScreen> {
         _open = await ApiService.aiLabDetail(widget.moduleId, labId);
       });
 
-  Future<void> _act(String what, Future<Map<String, dynamic>> Function() call) => _run(what, () async {
+  Future<void> _act(String what, Future<Map<String, dynamic>> Function() call, {String? done}) => _run(what, () async {
         final r = await call();
         if (_open != null && _open!['id'] == r['id']) _open = r;
         final status = await ApiService.aiLabStatus(widget.moduleId);
         _labs = [for (final l in (status['labs'] as List? ?? const [])) Map<String, dynamic>.from(l as Map)];
+        if (done != null) _say(done);
       });
 
   Future<void> _delete(Map<String, dynamic> l) async {
@@ -232,9 +244,9 @@ class _AiLabScreenState extends State<AiLabScreen> {
             ),
             TextButton(onPressed: _busy ? null : () => _openLab((l['id'] as num).toInt()), child: const Text('Open')),
             if (l['enabled'] == true)
-              TextButton(onPressed: _busy ? null : () => _act('Turning off', () => ApiService.aiLabDisable(widget.moduleId, (l['id'] as num).toInt())), child: const Text('Turn off'))
+              TextButton(onPressed: _busy ? null : () => _act('Turning off', () => ApiService.aiLabDisable(widget.moduleId, (l['id'] as num).toInt()), done: 'Turned off. Learners no longer see this experiment.'), child: const Text('Turn off'))
             else if (l['has_live'] == true)
-              TextButton(onPressed: _busy ? null : () => _act('Turning on', () => ApiService.aiLabPublish(widget.moduleId, (l['id'] as num).toInt())), child: const Text('Turn on')),
+              TextButton(onPressed: _busy ? null : () => _act('Turning on', () => ApiService.aiLabPublish(widget.moduleId, (l['id'] as num).toInt()), done: 'Turned on. Learners can open this experiment now.'), child: const Text('Turn on')),
             IconButton(tooltip: 'Delete', onPressed: _busy ? null : () => _delete(l), icon: const Icon(Icons.delete_outline_rounded, size: 20)),
           ]),
         ),
@@ -299,7 +311,8 @@ class _AiLabScreenState extends State<AiLabScreen> {
         OutlinedButton(onPressed: _busy ? null : _editDraft, child: const Text('Edit draft')),
         const SizedBox(width: 10),
         ElevatedButton(
-          onPressed: _busy ? null : () => _act('Publishing', () => ApiService.aiLabPublish(widget.moduleId, (lab['id'] as num).toInt())),
+          onPressed: _busy ? null : () => _act('Publishing', () => ApiService.aiLabPublish(widget.moduleId, (lab['id'] as num).toInt()),
+                    done: 'Published. Learners can open this experiment now.'),
           child: Text(lab['enabled'] == true ? 'Publish this draft (replaces the live one)' : 'Publish and turn on'),
         ),
       ]),
@@ -407,7 +420,7 @@ class _AiLabScreenState extends State<AiLabScreen> {
             if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: AppColors.error))),
             _card('Make an experiment from a note', _notesPicker()),
             if (_labs.isNotEmpty) _card('Experiments in this module (${_labs.length})', _labList()),
-            if (open != null) _card('Draft: ${open['title']}', _preview(open)),
+            if (open != null) _card('${open['enabled'] == true ? 'On for learners' : 'Draft'}: ${open['title']}', _preview(open)),
             if (_learners.isNotEmpty) _card('Learners (${_learners.length})', _progressList()),
           ]),
         ),

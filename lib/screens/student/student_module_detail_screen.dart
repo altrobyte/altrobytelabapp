@@ -788,11 +788,19 @@ class _AiLabCard extends StatelessWidget {
                 ),
               ]),
             ),
-          TextButton.icon(
-            onPressed: () => context.push('/connect-vscode'),
-            icon: const Icon(Icons.extension_rounded, color: Colors.white70, size: 18),
-            label: const Text('First time? Connect VS Code', style: TextStyle(color: Colors.white70)),
-          ),
+          Wrap(spacing: 4, children: [
+            // The desktop app runs the same experiment with nothing to set up: it is under this module there.
+            TextButton.icon(
+              onPressed: () => context.push('/download'),
+              icon: const Icon(Icons.desktop_windows_rounded, color: Colors.white70, size: 18),
+              label: const Text('No VS Code? Use the Altrobyte app', style: TextStyle(color: Colors.white70)),
+            ),
+            TextButton.icon(
+              onPressed: () => context.push('/connect-vscode'),
+              icon: const Icon(Icons.extension_rounded, color: Colors.white70, size: 18),
+              label: const Text('First time? Connect VS Code', style: TextStyle(color: Colors.white70)),
+            ),
+          ]),
         ]),
       ),
     );
