@@ -6,6 +6,7 @@
 
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,6 +38,8 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
   bool _sending = false;
   bool _suggesting = false;
   bool sent = false; // the screen behind refreshes when something was sent
+  String _mode = ''; // who answers this chat on WhatsApp: bot (the AI) or human (the team); '' = not known
+  bool _switching = false;
   Timer? _poll;
 
   @override
@@ -44,6 +47,9 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
     super.initState();
     _box.text = widget.draft;
     _load(first: true);
+    ApiService.crmMode(widget.phone).then((m) {
+      if (mounted) setState(() => _mode = m);
+    }).catchError((_) {});
     // New messages (theirs, or the AI's reply) appear without anyone pressing refresh.
     _poll = Timer.periodic(const Duration(seconds: 15), (_) => _load());
   }
@@ -86,13 +92,83 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      await ApiService.crmSend(widget.phone, text);
+      final r = await ApiService.crmSend(widget.phone, text);
+      if ('${r['mode'] ?? ''}'.isNotEmpty) _mode = '${r['mode']}';
       _box.clear();
       sent = true;
       await _load();
       _toBottom();
     } catch (e) {
       _toast(e is ApiException ? e.message : 'Could not send.', bad: true);
+    }
+    if (mounted) setState(() => _sending = false);
+  }
+
+  // Hand the chat to the AI, or take it over: while the team has it, the AI does not answer this person.
+  Future<void> _switchMode() async {
+    final next = _mode == 'human' ? 'bot' : 'human';
+    setState(() => _switching = true);
+    try {
+      _mode = await ApiService.crmMode(widget.phone, set: next);
+      _toast(next == 'bot' ? 'The AI assistant answers this chat again.' : 'You have the chat. The AI stays quiet until you hand it back.');
+    } catch (e) {
+      _toast(e is ApiException ? e.message : 'Could not switch just now.', bad: true);
+    }
+    if (mounted) setState(() => _switching = false);
+  }
+
+  static const _mimes = {
+    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'mp4': 'video/mp4', '3gp': 'video/3gpp',
+    'pdf': 'application/pdf', 'txt': 'text/plain', 'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel', 'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+
+  // A photo, video or document: picked, given a caption, sent.
+  Future<void> _attach() async {
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: _mimes.keys.toList(), withData: true);
+    final f = picked?.files.single;
+    if (f == null || f.bytes == null || !mounted) return;
+    final mime = _mimes[(f.extension ?? '').toLowerCase()] ?? '';
+    final caption = TextEditingController(text: _box.text.trim());
+    final kind = mime.startsWith('image') ? 'photo' : mime.startsWith('video') ? 'video' : 'document';
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('Send this $kind?'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (kind == 'photo')
+            ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(f.bytes!, height: 180, fit: BoxFit.cover))
+          else
+            Row(children: [
+              Icon(kind == 'video' ? Icons.movie_rounded : Icons.description_rounded, color: _bar),
+              const SizedBox(width: 8),
+              Expanded(child: Text(f.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600))),
+            ]),
+          const SizedBox(height: 6),
+          Text('${(f.size / (1024 * 1024)).toStringAsFixed(1)} MB', style: GoogleFonts.inter(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 10),
+          TextField(controller: caption, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: 'Add a caption (optional)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          FilledButton.icon(onPressed: () => Navigator.pop(d, true), icon: const Icon(Icons.send_rounded, size: 16), label: const Text('Send')),
+        ],
+      ),
+    );
+    if (go != true) return;
+    setState(() => _sending = true);
+    try {
+      final r = await ApiService.crmSendMedia(widget.phone, f.bytes!, f.name, mime, caption.text.trim());
+      if ('${r['mode'] ?? ''}'.isNotEmpty) _mode = '${r['mode']}';
+      if (caption.text.trim() == _box.text.trim()) _box.clear();
+      sent = true;
+      await _load();
+      _toBottom();
+    } catch (e) {
+      _toast(e is ApiException ? e.message : 'Could not send the file.', bad: true);
     }
     if (mounted) setState(() => _sending = false);
   }
@@ -167,6 +243,18 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
             ),
           ]),
           actions: [
+            if (_mode.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: ActionChip(
+                  onPressed: _switching ? null : _switchMode,
+                  avatar: Icon(_mode == 'human' ? Icons.person_rounded : Icons.smart_toy_rounded, size: 16, color: _bar),
+                  label: Text(_mode == 'human' ? 'Team replying · Hand to AI' : 'AI replying · Take over',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _bar)),
+                  backgroundColor: Colors.white,
+                  side: BorderSide.none,
+                ),
+              ),
             IconButton(
               tooltip: 'Call',
               onPressed: () => launchUrl(Uri.parse('tel:+91${widget.phone}')),
@@ -247,6 +335,11 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
                   icon: _suggesting
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.auto_awesome_rounded, color: _bar),
+                ),
+                IconButton(
+                  tooltip: 'Photo, video or document',
+                  onPressed: _sending ? null : _attach,
+                  icon: const Icon(Icons.attach_file_rounded, color: Colors.black54),
                 ),
                 Expanded(
                   child: TextField(

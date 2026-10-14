@@ -971,6 +971,30 @@ class ApiService {
     return _parse(res);
   }
 
+  /// A photo, video or document to the lead on WhatsApp (it goes to Meta's media store, not ours).
+  static Future<Map<String, dynamic>> crmSendMedia(String phone, List<int> bytes, String filename, String mime, String caption) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final parts = mime.split('/');
+    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/media'))
+      ..headers['Authorization'] = 'Bearer ${token ?? ""}'
+      ..fields['caption'] = caption
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType(parts.first, parts.last)));
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    return _parse(await http.Response.fromStream(streamed));
+  }
+
+  /// Who answers this chat on WhatsApp: 'bot' (the AI) or 'human' (the team).
+  static Future<String> crmMode(String phone, {String? set}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final uri = Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/mode');
+    final res = set == null
+        ? await http.get(uri, headers: _headers(token))
+        : await http.put(uri, headers: _headers(token), body: jsonEncode({'status': set}));
+    return '${_parse(res)['mode'] ?? ''}';
+  }
+
   static Future<Map<String, dynamic>> crmLead(String phone) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
