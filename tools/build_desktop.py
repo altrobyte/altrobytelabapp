@@ -30,7 +30,12 @@ def main() -> None:
 
     if not (RUNTIME / "python" / "python.exe").exists():
         run([sys.executable, str(ROOT / "vscode_extension" / "tools" / "build_runtime.py")], ROOT)
+    # Always the backend's current helper and trainer engine: an old copy left in the runtime once nearly shipped.
+    sys.path.insert(0, str(ROOT / "tools"))
+    from dev_desktop import refresh_helper_code
+    refresh_helper_code()
     run([sys.executable, str(ROOT / "tools" / "sync_desktop_app.py")], ROOT)
+    run([sys.executable, str(ROOT / "tools" / "check_release.py")], ROOT)      # stops here if the parts do not match
     run(["flutter", "build", "windows", "--release"], APP)
 
     target = RELEASE / "runtime"

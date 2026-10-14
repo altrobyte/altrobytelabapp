@@ -499,8 +499,9 @@ void main() {
     test('the version in the code is the version the installer is stamped with', () {
       final pubspec = File('desktop_app/pubspec.yaml').readAsStringSync();
       expect(RegExp(r'^version:\s*([0-9.]+)', multiLine: true).firstMatch(pubspec)!.group(1), appVersion);
-      expect(versionAtLeast(appVersion, '1.0.0'), isTrue);
-      expect(versionAtLeast(appVersion, '1.0.1'), isFalse); // a published 1.0.1 means this app is out of date
+      expect(versionAtLeast(appVersion, appVersion), isTrue);
+      expect(versionAtLeast('1.0.0', '1.0.1'), isFalse); // a published 1.0.1 means a 1.0.0 app is out of date
+      expect(versionAtLeast(appVersion, '1.1.0'), isTrue); // V1 of the trainer
     });
 
     test('the project a file belongs to is the folder above it that has a platformio.ini', () {
