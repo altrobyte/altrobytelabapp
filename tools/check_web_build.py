@@ -1,0 +1,28 @@
+"""Refuses to let a broken web build be deployed.
+
+An incomplete `flutter build web` (seen when the disk was nearly full) left out manifest.json and assets/FontManifest.json;
+Firebase then answered those with index.html, the app failed to parse them at start-up, and every visitor got a white
+page. Run this after the build and before `firebase deploy`:
+
+    flutter build web --release --no-wasm-dry-run && python tools/check_web_build.py && python stamp_version.py && firebase deploy --only hosting
+"""
+import json
+import sys
+from pathlib import Path
+
+WEB = Path(__file__).resolve().parent.parent / "build" / "web"
+NEEDED = ["index.html", "main.dart.js", "flutter_bootstrap.js", "flutter.js", "manifest.json", "favicon.png", "version.json",
+          "assets/FontManifest.json", "assets/AssetManifest.bin.json", "canvaskit/canvaskit.wasm", "live/index.html"]
+JSON = ["manifest.json", "assets/FontManifest.json", "version.json"]
+
+missing = [f for f in NEEDED if not (WEB / f).is_file() or (WEB / f).stat().st_size == 0]
+broken = []
+for f in JSON:
+    try:
+        json.loads((WEB / f).read_text(encoding="utf-8"))
+    except Exception:       # noqa: BLE001
+        broken.append(f)
+if missing or broken:
+    sys.exit("The web build is incomplete, do not deploy it. Missing: " + ", ".join(missing) +
+             ("; not valid JSON: " + ", ".join(broken) if broken else "") + ". Free some disk space and build again.")
+print("web build complete")
