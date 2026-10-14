@@ -354,7 +354,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       await cam.setBackgroundColor(const Color(0xFF0D1726));
       await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       final token = await ApiService.learnerToken() ?? '';
-      await cam.loadUrl(liveTutorUrl(noteId: widget.contentId, token: token).replaceFirst('embed=1', 'embed=1&compact=1'));
+      await cam.loadUrl(liveTutorUrl(noteId: widget.contentId, token: token).replaceFirst('embed=1', 'embed=1&compact=1&lang=${t.lang}'));
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {

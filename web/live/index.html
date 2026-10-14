@@ -38,7 +38,8 @@
   body.compact .bar { padding: 8px; gap: 8px; }
   body.compact .primary { padding: 11px 20px; font-size: 15px; }
   body.compact .round { width: 44px; height: 44px; font-size: 17px; }
-  body.compact .langs { margin: 6px 0 0; }
+  body.compact .langs { display: none !important; }
+  .pick.preset { display: none !important; }
   body.compact .placeholder span { display: none; }
   body.embed main { padding-top: 10px; }
   body.embed .stage { max-height: 70vh; }
@@ -152,6 +153,10 @@
   const embedded = params.get('embed') === '1';
   if (embedded) document.body.classList.add('embed');
   if (params.get('compact') === '1') document.body.classList.add('compact');
+  // Opened from a note or an experiment, the topic is already known: no picker, and the small view keeps its room
+  // for the picture. The list of modules is only fetched when it is needed.
+  const presetTopic = !!(params.get('note') || params.get('lab'));
+  if (presetTopic) document.getElementById('pick').classList.add('preset');
   try {
     const fromApp = new URLSearchParams(location.hash.slice(1)).get('t');
     if (fromApp) { sessionStorage.setItem('altron_t', fromApp); history.replaceState(null, '', location.pathname + location.search); }
@@ -224,7 +229,8 @@
     chooseTopic($('topic').value);
   };
   $('topic').onchange = () => chooseTopic($('topic').value);
-  loadTopics();
+  if (presetTopic) chooseTopic(params.get('note') ? 'n' + params.get('note') : 'l' + params.get('lab'));
+  else loadTopics();
 
   // ── on a computer: offer the phone ──
   const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && innerWidth < 900);
