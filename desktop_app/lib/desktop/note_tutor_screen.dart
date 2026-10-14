@@ -12,6 +12,7 @@ import 'package:webview_windows/webview_windows.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
 import 'chat_text.dart';
+import 'live_tutor_screen.dart';
 import 'note_tutor.dart';
 import 'tutor_feel.dart';
 import 'visual_page.dart';
@@ -47,6 +48,13 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       lang: lang,
       onLanguage: (l) => SharedPreferences.getInstance().then((p) => p.setString('tutor_lang', l)));
   final _web = WebviewController();
+
+  // The camera tutor, in the corner of this window. While it talks, the note tutor is silent (its words stay on screen):
+  // two voices over one another is noise. Closing the camera brings the note tutor's voice back as it was.
+  WebviewController? _cam;
+  bool _camReady = false;
+  bool _camBig = false;
+  bool? _voiceBefore;
   late final _pan = PanScroller((script) => _web.executeScript(script));
   final _input = TextEditingController();
   final _scroll = ScrollController();
@@ -135,6 +143,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     t.dispose();
     _pan.dispose();
     _web.dispose();
+    _cam?.dispose();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -238,7 +247,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
               IconButton(
                 tooltip: 'Show your bench to Altron (camera)',
                 visualDensity: VisualDensity.compact,
-                onPressed: () => openExternal('https://altrobytelab.com/live/?note=${widget.contentId}'),
+                onPressed: _cam == null ? _openCamera : _closeCamera,
                 icon: const Icon(Icons.videocam_rounded, size: 20, color: AppColors.primary),
               ),
               if (widget.speak != null)
@@ -332,6 +341,88 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     );
   }
 
+  Future<void> _openCamera() async {
+    final cam = WebviewController();
+    setState(() {
+      _cam = cam;
+      _camReady = false;
+      _voiceBefore = t.voice;
+    });
+    if (t.voice) t.setVoice(false); // one voice at a time: the camera tutor speaks now
+    try {
+      await cam.initialize();
+      await cam.setBackgroundColor(const Color(0xFF0D1726));
+      await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
+      final token = await ApiService.learnerToken() ?? '';
+      await cam.loadUrl(liveTutorUrl(noteId: widget.contentId, token: token).replaceFirst('embed=1', 'embed=1&compact=1'));
+      if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
+    } catch (_) {
+      if (mounted) {
+        _closeCamera();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('The camera tutor could not open here.')));
+      }
+    }
+  }
+
+  void _closeCamera() {
+    final cam = _cam;
+    setState(() {
+      _cam = null;
+      _camReady = false;
+    });
+    cam?.dispose(); // ends the session and lets go of the camera
+    if (_voiceBefore == true && !t.voice) t.setVoice(true);
+    _voiceBefore = null;
+  }
+
+  Widget _cameraCorner() {
+    final w = _camBig ? 560.0 : 380.0;
+    final h = _camBig ? 560.0 : 420.0;
+    return Positioned(
+      right: 16,
+      bottom: 16,
+      child: Material(
+        elevation: 12,
+        color: const Color(0xFF0D1726),
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          width: w,
+          height: h,
+          child: Column(children: [
+            Container(
+              color: AppColors.primary,
+              padding: const EdgeInsets.only(left: 12),
+              child: Row(children: [
+                const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
+                const SizedBox(width: 6),
+                Expanded(child: Text('Altron · camera', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
+                Text('note tutor muted', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
+                IconButton(
+                  tooltip: _camBig ? 'Smaller' : 'Bigger',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => _camBig = !_camBig),
+                  icon: Icon(_camBig ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded, size: 16, color: Colors.white),
+                ),
+                IconButton(
+                  tooltip: 'Close the camera',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _closeCamera,
+                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+                ),
+              ]),
+            ),
+            Expanded(
+              child: _camReady && _cam != null
+                  ? Webview(_cam!, permissionRequested: (url, kind, userInitiated) => livePermission(url, kind))
+                  : const Center(child: CircularProgressIndicator()),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -352,7 +443,11 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                     ElevatedButton(onPressed: _start, child: const Text('Try again')),
                   ]),
                 )
-              : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()]),
+              : Stack(children: [
+                  Positioned.fill(
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
+                  if (_cam != null) _cameraCorner(),
+                ]),
     );
   }
 }

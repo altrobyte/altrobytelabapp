@@ -2046,6 +2046,9 @@ class ApiService {
   }
 
   /// The token for the signed-in learner, whichever way they signed in on this app.
+  /// The learner's sign-in, for a page of ours shown inside the app (the camera tutor).
+  static Future<String?> learnerToken() => _learnerToken();
+
   static Future<String?> _learnerToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('student_token') ?? prefs.getString('token');

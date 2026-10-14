@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../models/training_module_model.dart';
 import '../services/api_service.dart';
+import 'live_tutor_screen.dart';
 import 'note_tutor_screen.dart';
 import 'visual_page.dart';
 
@@ -144,7 +145,8 @@ class _ModulesPanelState extends State<ModulesPanel> {
               // Altron looks at the bench through the phone's camera and checks the wiring of this experiment.
               IconButton(
                 tooltip: 'Show your circuit to Altron (camera)',
-                onPressed: () => openExternal('https://altrobytelab.com/live/?lab=${l.id}'),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => LiveTutorScreen(labId: l.id, title: l.title))),
                 icon: const Icon(Icons.videocam_rounded, size: 20, color: AppColors.primary),
               ),
               ElevatedButton(onPressed: widget.canStart ? () => widget.onStartLab(l.id) : null, child: const Text('Start')),
@@ -169,6 +171,12 @@ class _ModulesPanelState extends State<ModulesPanel> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Expanded(child: Text('Your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15))),
+        // Altron with the camera: pick a module and topic on its page, then show the bench.
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LiveTutorScreen())),
+          icon: const Icon(Icons.videocam_rounded, size: 18),
+          label: const Text('Learn with the camera'),
+        ),
         IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded, size: 20)),
       ]),
       Text('Your notes, videos and experiments. Each module loads only when you open it.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),

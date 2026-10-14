@@ -27,6 +27,21 @@
   .chip.live i { background: #ff4d4f; box-shadow: 0 0 0 4px rgba(255,77,79,.25); }
   .chip.talking i { background: #52c41a; }
   .timer { position: absolute; top: 12px; right: 12px; padding: 6px 10px; border-radius: 20px; background: rgba(0,0,0,.6); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .caption { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px 14px; border-radius: 12px;
+             background: rgba(0,0,0,.66); font-size: 16px; line-height: 1.45; max-height: 40%; overflow: hidden; }
+  .caption small { display: block; opacity: .7; font-size: 12.5px; margin-top: 4px; }
+  body.embed header { display: none; }
+  body.compact main { padding: 8px 8px 84px; }
+  body.compact .stage { aspect-ratio: auto; height: calc(100vh - 96px); max-height: none; border-radius: 10px; }
+  body.compact .card, body.compact .say, body.compact .pick.preset { display: none !important; }
+  body.compact .caption { font-size: 14px; }
+  body.compact .bar { padding: 8px; gap: 8px; }
+  body.compact .primary { padding: 11px 20px; font-size: 15px; }
+  body.compact .round { width: 44px; height: 44px; font-size: 17px; }
+  body.compact .langs { margin: 6px 0 0; }
+  body.compact .placeholder span { display: none; }
+  body.embed main { padding-top: 10px; }
+  body.embed .stage { max-height: 70vh; }
   .say { margin-top: 12px; min-height: 64px; background: rgba(255,255,255,.07); border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.5; }
   .say .who { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; opacity: .6; margin-bottom: 2px; }
   .say .you { opacity: .7; font-size: 13px; margin-top: 8px; }
@@ -71,6 +86,7 @@
     </div>
     <div class="chip hidden" id="chip"><i></i><span id="chipText">Connecting…</span></div>
     <div class="timer hidden" id="timer">0:00</div>
+    <div class="caption hidden" id="caption"><span id="capTutor"></span><small id="capYou"></small></div>
   </div>
 
   <div class="pick" id="pick">
@@ -132,8 +148,16 @@
   const $ = (id) => document.getElementById(id);
   let lang = params.get('lang') || localStorage.getItem('live_lang') || 'en';
 
-  // ── sign-in: the same one the website uses ──
+  // ── sign-in: the app's (handed over in the #fragment, which no server ever receives), or the website's ──
+  const embedded = params.get('embed') === '1';
+  if (embedded) document.body.classList.add('embed');
+  if (params.get('compact') === '1') document.body.classList.add('compact');
+  try {
+    const fromApp = new URLSearchParams(location.hash.slice(1)).get('t');
+    if (fromApp) { sessionStorage.setItem('altron_t', fromApp); history.replaceState(null, '', location.pathname + location.search); }
+  } catch (_) {}
   function token() {
+    try { const t = sessionStorage.getItem('altron_t'); if (t) return t; } catch (_) {}
     for (const k of ['flutter.student_token', 'flutter.token']) {
       try { const v = localStorage.getItem(k); if (v) { const t = JSON.parse(v); if (t) return t; } } catch (_) {}
     }
@@ -161,7 +185,7 @@
   function topicsOf(mod) {
     const labs = mod.labs || [];
     return [
-      ...(mod.topics || []).map((t) => ({ value: 'n' + t.id, label: (t.group ? t.group + ' · ' : '') + t.title })),
+      ...(mod.topics || []).map((t) => ({ value: 'n' + t.id, label: (t.group && t.group !== t.title ? t.group + ' · ' : '') + t.title })),
       ...labs.map((l) => ({ value: 'l' + l.id, label: '🔧 Experiment · ' + l.title })),
     ];
   }
@@ -188,6 +212,7 @@
     $('mod').value = String(mod.id);
     fill($('topic'), topicsOf(mod), 'Anything on my bench');
     const pre = noteId ? 'n' + noteId : labId ? 'l' + labId : '';
+    if (pre) $('pick').classList.add('preset');
     if (pre && [...$('topic').options].some((o) => o.value === pre)) $('topic').value = pre;
     else if (!pre && $('topic').options.length > 1) $('topic').value = $('topic').options[1].value;
     chooseTopic($('topic').value);
@@ -203,7 +228,7 @@
 
   // ── on a computer: offer the phone ──
   const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && innerWidth < 900);
-  if (!phone && window.QRCode) {
+  if (!phone && !embedded && window.QRCode) {
     $('phoneCard').classList.remove('hidden');
     new QRCode($('qr'), { text: location.href, width: 150, height: 150 });
   }
@@ -303,8 +328,16 @@
       if (sc) {
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
-        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; $('tutorText').textContent = tutorLine.slice(-400); }
-        if (sc.inputTranscription && sc.inputTranscription.text) { youLine += sc.inputTranscription.text; $('youText').textContent = 'You: ' + youLine.slice(-200); }
+        if (sc.outputTranscription && sc.outputTranscription.text) {
+          tutorLine += sc.outputTranscription.text;
+          $('tutorText').textContent = tutorLine.slice(-400);
+          $('capTutor').textContent = tutorLine.slice(-220); $('caption').classList.remove('hidden');
+        }
+        if (sc.inputTranscription && sc.inputTranscription.text) {
+          youLine += sc.inputTranscription.text;
+          $('youText').textContent = 'You: ' + youLine.slice(-200);
+          $('capYou').textContent = 'You: ' + youLine.slice(-120); $('caption').classList.remove('hidden');
+        }
         if (sc.turnComplete) { tutorLine = ''; youLine = ''; }
       }
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
@@ -373,7 +406,7 @@
     for (const s of [camStream, micStream]) if (s) s.getTracks().forEach((t) => t.stop());
     camStream = micStream = null;
     if (inCtx) { inCtx.close().catch(() => {}); inCtx = null; }
-    $('cam').srcObject = null; $('ph').classList.remove('hidden');
+    $('cam').srcObject = null; $('ph').classList.remove('hidden'); $('caption').classList.add('hidden');
   }
 
   function stop(message) {
