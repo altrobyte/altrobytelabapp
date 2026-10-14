@@ -13,6 +13,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
+import 'crm_chat_screen.dart';
 
 const _stageLabels = {
   'new': 'New',
@@ -502,9 +503,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   bool _loading = true;
   bool _changed = false;
   final _noteCtrl = TextEditingController();
-  final _replyCtrl = TextEditingController();
   bool _asking = false;
-  bool _sending = false;
 
   @override
   void initState() {
@@ -515,7 +514,6 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   @override
   void dispose() {
     _noteCtrl.dispose();
-    _replyCtrl.dispose();
     super.dispose();
   }
 
@@ -537,27 +535,22 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     try {
       final r = await ApiService.crmAskAi(widget.phone);
       _data = {...?_data, 'ai': r};
-      if ((r['message'] as String? ?? '').isNotEmpty && _replyCtrl.text.trim().isEmpty) _replyCtrl.text = r['message'] as String;
     } catch (e) {
       _toast(e is ApiException ? e.message : 'The AI could not read this lead just now. Try again in a moment.', bad: true);
     }
     if (mounted) setState(() => _asking = false);
   }
 
-  Future<void> _send() async {
-    final text = _replyCtrl.text.trim();
-    if (text.isEmpty) return;
-    setState(() => _sending = true);
-    try {
-      await ApiService.crmSend(widget.phone, text);
-      _replyCtrl.clear();
+  // The conversation in a chat window of its own, the way the team knows it from WhatsApp.
+  Future<void> _openChat() async {
+    final lead = _data?['lead'] as Map<String, dynamic>?;
+    final ai = _data?['ai'] as Map?;
+    final sent = await Navigator.push<bool>(context, MaterialPageRoute(
+        builder: (_) => CrmChatScreen(phone: widget.phone, name: '${lead?['name'] ?? ''}', draft: '${ai?['message'] ?? ''}')));
+    if (sent == true) {
       _changed = true;
-      _toast('Sent on WhatsApp.');
       await _load();
-    } catch (e) {
-      _toast(e is ApiException ? e.message : 'Could not send.', bad: true);
     }
-    if (mounted) setState(() => _sending = false);
   }
 
   Widget _coachCard() {
@@ -599,49 +592,26 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                 : const Icon(Icons.auto_awesome_rounded, size: 17),
             label: Text(_asking ? 'Reading the conversation…' : (ai == null ? 'Ask AI' : 'Ask AI again')),
           ),
-          if (ai != null && '${ai['message'] ?? ''}'.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            TextButton(onPressed: () => setState(() => _replyCtrl.text = '${ai['message']}'), child: const Text('Use its message')),
-          ],
+          const SizedBox(width: 8),
+          OutlinedButton.icon(onPressed: _openChat, icon: const Icon(Icons.chat_rounded, size: 17), label: const Text('Open chat')),
         ]),
+        if (ai != null && '${ai['message'] ?? ''}'.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: const Color(0xFFD9FDD3), borderRadius: BorderRadius.circular(10)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Suggested message', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.black54)),
+              const SizedBox(height: 3),
+              SelectableText('${ai['message']}', style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
+            ]),
+          ),
+        ],
       ]),
     );
   }
 
-  Widget _replyBox() {
-    final open = _data?['window_open'] == true;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const SizedBox(height: 10),
-      TextField(
-        controller: _replyCtrl,
-        minLines: 1,
-        maxLines: 5,
-        enabled: open,
-        decoration: InputDecoration(
-          hintText: open ? 'Write to them on WhatsApp…' : 'WhatsApp window closed',
-          isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      ),
-      const SizedBox(height: 6),
-      Row(children: [
-        Expanded(
-          child: Text(
-              open
-                  ? 'Goes out from the Lab WhatsApp number.'
-                  : 'They have not written in the last 24 hours, so WhatsApp allows only an approved template. Call them, '
-                      'or send a template from the WhatsApp dashboard.',
-              style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textSecondary)),
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: open && !_sending ? _send : null,
-          icon: const Icon(Icons.send_rounded, size: 16),
-          label: Text(_sending ? 'Sending…' : 'Send'),
-        ),
-      ]),
-    ]);
-  }
 
   Future<void> _setStage(String stage) async {
     try {
@@ -788,6 +758,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary, // the theme's white would hide the back arrow and the title
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -913,41 +884,40 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                     const SizedBox(height: 12),
                     _Card(
                       title: 'Conversation',
-                      subtitle: 'What they wrote, our messages and the AI assistant\'s replies.',
+                      subtitle: "What they wrote, our messages and the AI assistant's replies.",
+                      trailing: TextButton.icon(onPressed: _openChat, icon: const Icon(Icons.open_in_full_rounded, size: 15), label: const Text('Open chat')),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         if (messages.isEmpty)
-                          Text('No messages yet.',
-                              style: GoogleFonts.inter(
-                                  fontSize: 12, color: AppColors.textSecondary))
+                          Text('No messages yet.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary))
                         else
-                          Column(
-                              children: [
-                                for (final m in messages)
-                                  Align(
-                                    alignment: m['direction'] == 'out'
-                                        ? Alignment.centerRight
-                                        : Alignment.centerLeft,
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 6),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 11, vertical: 7),
-                                      constraints: const BoxConstraints(maxWidth: 300),
-                                      decoration: BoxDecoration(
-                                        color: m['direction'] == 'out'
-                                            ? AppColors.primary.withValues(alpha: 0.1)
-                                            : Colors.black.withValues(alpha: 0.05),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text('${m['body'] ?? ''}',
-                                          style: GoogleFonts.inter(
-                                              fontSize: 12.5, height: 1.35)),
-                                    ),
-                                  ),
-                              ],
+                          for (final m in messages.skip(messages.length > 3 ? messages.length - 3 : 0))
+                            Align(
+                              alignment: m['direction'] == 'out' ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                                constraints: const BoxConstraints(maxWidth: 360),
+                                decoration: BoxDecoration(
+                                  color: m['direction'] == 'out' ? const Color(0xFFD9FDD3) : const Color(0xFFF1F1F1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text('${m['body'] ?? ''}', maxLines: 4, overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(fontSize: 12.5, height: 1.35)),
+                              ),
                             ),
-                        _replyBox(),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _openChat,
+                            icon: const Icon(Icons.chat_rounded, size: 18),
+                            label: Text(messages.isEmpty ? 'Open chat' : 'Open chat (${messages.length} messages)'),
+                            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
+                          ),
+                        ),
                       ]),
                     ),
+                    const SizedBox(height: 12),
                     if ((_data?['dashboard_url'] as String? ?? '').isNotEmpty) ...[
                       const SizedBox(height: 12),
                       SizedBox(
