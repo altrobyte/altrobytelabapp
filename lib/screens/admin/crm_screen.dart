@@ -553,66 +553,6 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     }
   }
 
-  Widget _coachCard() {
-    final heat = (_data?['heat'] as Map?) ?? const {};
-    final temp = '${heat['temperature'] ?? 'cold'}';
-    final reasons = ((heat['reasons'] as List?) ?? const []).map((e) => '$e').toList();
-    final ai = _data?['ai'] as Map?;
-    return _Card(
-      title: 'What to do next',
-      trailing: _HeatBadge(temp),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        for (final r in reasons)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 3),
-            child: Row(children: [
-              Icon(Icons.circle, size: 6, color: _heatColors[temp]),
-              const SizedBox(width: 7),
-              Expanded(child: Text(r, style: GoogleFonts.inter(fontSize: 12.5))),
-            ]),
-          ),
-        const SizedBox(height: 10),
-        if (ai != null) ...[
-          if ('${ai['summary'] ?? ''}'.isNotEmpty) Text('${ai['summary']}', style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
-          if ('${ai['next_step'] ?? ''}'.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Expanded(child: Text('${ai['next_step']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, height: 1.4))),
-            ]),
-          ],
-          const SizedBox(height: 10),
-        ],
-        Row(children: [
-          FilledButton.icon(
-            onPressed: _asking ? null : _askAi,
-            icon: _asking
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.auto_awesome_rounded, size: 17),
-            label: Text(_asking ? 'Reading the conversation…' : (ai == null ? 'Ask AI' : 'Ask AI again')),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(onPressed: _openChat, icon: const Icon(Icons.chat_rounded, size: 17), label: const Text('Open chat')),
-        ]),
-        if (ai != null && '${ai['message'] ?? ''}'.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: const Color(0xFFD9FDD3), borderRadius: BorderRadius.circular(10)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Suggested message', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.black54)),
-              const SizedBox(height: 3),
-              SelectableText('${ai['message']}', style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
-            ]),
-          ),
-        ],
-      ]),
-    );
-  }
-
-
   Future<void> _setStage(String stage) async {
     try {
       await ApiService.crmUpdateLead(widget.phone, {'stage': stage});
@@ -741,13 +681,277 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     }
   }
 
+  // ── the page ──
+  //
+  // One look should answer: who is this, how warm are they, what do I do now. So the top is the person with the actions
+  // (chat, call, ask AI) and the AI's advice; the details and notes sit beside it on a wide screen and below on a phone.
+
+  Widget _header(Map<String, dynamic> lead, Map<String, dynamic>? student) {
+    final name = (lead['name'] as String?)?.isNotEmpty == true ? lead['name'] as String : widget.phone;
+    final heat = (_data?['heat'] as Map?) ?? const {};
+    final temp = '${heat['temperature'] ?? 'cold'}';
+    final color = _heatColors[temp] ?? AppColors.textSecondary;
+    final stage = lead['stage'] as String? ?? 'new';
+    final org = '${student?['company'] ?? student?['college'] ?? ''}';
+    final occupation = '${student?['occupation'] ?? ''}';
+    final sub = [
+      widget.phone,
+      if (occupation.isNotEmpty) occupation == 'working' ? 'Working' : 'Student',
+      if (org.isNotEmpty && org != 'null') org,
+      if (student != null && '${student['plan'] ?? 'free'}' != 'free') '${student['plan']} plan',
+    ].join('  ·  ');
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: color.withValues(alpha: 0.14),
+            child: Text(name.characters.first.toUpperCase(),
+                style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Flexible(
+                  child: Text(name, overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                ),
+                if (student != null) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(message: 'Has a student account', child: Icon(Icons.verified_rounded, size: 17, color: AppColors.success)),
+                ],
+                if (lead['opt_in'] == false) ...[
+                  const SizedBox(width: 6),
+                  Tooltip(message: 'Said STOP: no marketing', child: Icon(Icons.notifications_off_rounded, size: 17, color: AppColors.error)),
+                ],
+              ]),
+              const SizedBox(height: 3),
+              Text(sub, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          _HeatBadge(temp),
+        ]),
+        const SizedBox(height: 16),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.icon(
+            onPressed: _openChat,
+            icon: const Icon(Icons.chat_rounded, size: 18),
+            label: const Text('Chat'),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => launchUrl(Uri.parse('tel:+91${widget.phone}')),
+            icon: const Icon(Icons.call_rounded, size: 18),
+            label: const Text('Call'),
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+          OutlinedButton.icon(
+            onPressed: _asking ? null : _askAi,
+            icon: _asking
+                ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.auto_awesome_rounded, size: 18),
+            label: Text(_asking ? 'Reading…' : 'Ask AI'),
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Text('STAGE', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: .6, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
+        // The pipeline as steps: where they are is filled, and one tap moves them.
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final s in _stageLabels.keys)
+            ChoiceChip(
+              label: Text(_stageLabels[s]!),
+              selected: stage == s,
+              onSelected: (_) => _setStage(s),
+              showCheckmark: false,
+              labelStyle: GoogleFonts.inter(
+                  fontSize: 12.5, fontWeight: FontWeight.w600, color: stage == s ? Colors.white : _stageColors[s]),
+              selectedColor: _stageColors[s],
+              backgroundColor: _stageColors[s]!.withValues(alpha: 0.08),
+              side: BorderSide(color: _stageColors[s]!.withValues(alpha: 0.3)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _advice() {
+    final heat = (_data?['heat'] as Map?) ?? const {};
+    final temp = '${heat['temperature'] ?? 'cold'}';
+    final reasons = ((heat['reasons'] as List?) ?? const []).map((e) => '$e').toList();
+    final ai = _data?['ai'] as Map?;
+    final message = '${ai?['message'] ?? ''}';
+    return _Card(
+      title: 'What to do next',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final r in reasons)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: _heatColors[temp]!.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+              child: Text(r, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _heatColors[temp])),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        if (ai == null)
+          Text('Press Ask AI: it reads the whole conversation and tells you where they stand, the next step, and a message to send.',
+              style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary, height: 1.45))
+        else ...[
+          if ('${ai['summary'] ?? ''}'.isNotEmpty)
+            Text('${ai['summary']}', style: GoogleFonts.inter(fontSize: 13.5, height: 1.45)),
+          if ('${ai['next_step'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10)),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.flag_rounded, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(child: Text('${ai['next_step']}', style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.45))),
+              ]),
+            ),
+          ],
+          if (message.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFD9FDD3), borderRadius: BorderRadius.circular(10)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Suggested WhatsApp message', style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.black54)),
+                const SizedBox(height: 4),
+                SelectableText(message, style: GoogleFonts.inter(fontSize: 13.5, height: 1.45)),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: _openChat,
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: const Text('Review and send'),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text('AI read it ${'${ai['at'] ?? ''}'.isEmpty ? 'just now' : 'on ${'${ai['at']}'.split('T').first}'}',
+              style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textSecondary)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _conversation(List messages) => _Card(
+        title: 'Latest messages',
+        trailing: TextButton(onPressed: _openChat, child: Text(messages.isEmpty ? 'Open chat' : 'All ${messages.length} →')),
+        child: messages.isEmpty
+            ? Text('No messages yet.', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary))
+            : InkWell(
+                onTap: _openChat,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFEFEAE2), borderRadius: BorderRadius.circular(10)),
+                  child: Column(children: [
+                    for (final m in messages.skip(messages.length > 4 ? messages.length - 4 : 0))
+                      Align(
+                        alignment: m['direction'] == 'out' ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          decoration: BoxDecoration(
+                            color: m['direction'] == 'out' ? const Color(0xFFD9FDD3) : Colors.white,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text('${m['body'] ?? ''}', maxLines: 3, overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(fontSize: 13, height: 1.35)),
+                        ),
+                      ),
+                  ]),
+                ),
+              ),
+      );
+
+  Widget _details(Map<String, dynamic> lead, Map<String, dynamic>? student) {
+    final consent = lead['opt_in'] == false
+        ? 'No — said STOP'
+        : lead['opt_in'] == true
+            ? 'Yes${lead['opt_in_source'] != null ? ' (${lead['opt_in_source']})' : ''}'
+            : 'Not asked yet';
+    String day(dynamic v) => v == null ? '' : '$v'.split('T').first;
+    final rows = <(String, String)>[
+      ('Phone', widget.phone),
+      if (student != null && '${student['email'] ?? ''}'.isNotEmpty && '${student['email']}' != 'null') ('Email', '${student['email']}'),
+      ('Marketing OK', consent),
+      if (lead['last_inbound_at'] != null) ('Last wrote', day(lead['last_inbound_at'])),
+      if ('${lead['source'] ?? ''}'.isNotEmpty) ('Came from', '${lead['source']}'.replaceAll('_', ' ')),
+      if (student != null) ('Plan', '${student['plan'] ?? 'free'}${student['status'] != null ? ' · ${student['status']}' : ''}'),
+      if (student != null && student['created_at'] != null) ('Joined', day(student['created_at'])),
+      if (student != null && '${student['address'] ?? ''}'.isNotEmpty && '${student['address']}' != 'null') ('Address', '${student['address']}'),
+    ];
+    return _Card(
+      title: 'Details',
+      trailing: student == null
+          ? null
+          : TextButton.icon(onPressed: () => _editStudent(student), icon: const Icon(Icons.edit_outlined, size: 15), label: const Text('Edit')),
+      child: Column(children: [for (final r in rows) _kv(r.$1, r.$2)]),
+    );
+  }
+
+  Widget _notesCard(List notes) => _Card(
+        title: 'Notes',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          TextField(
+            controller: _noteCtrl,
+            minLines: 1,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'What happened on the call, what they want…',
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              suffixIcon: IconButton(onPressed: _addNote, icon: const Icon(Icons.add_circle_rounded), tooltip: 'Add note'),
+            ),
+            onSubmitted: (_) => _addNote(),
+          ),
+          const SizedBox(height: 10),
+          if (notes.isEmpty)
+            Text('No notes yet.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary))
+          else
+            for (final n in notes)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(9)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${n['text']}', style: GoogleFonts.inter(fontSize: 12.5, height: 1.4)),
+                  const SizedBox(height: 3),
+                  Text(['${n['author'] ?? ''}', '${n['created_at']}'.split('T').first].where((x) => x.isNotEmpty).join(' · '),
+                      style: GoogleFonts.inter(fontSize: 10, color: AppColors.textSecondary)),
+                ]),
+              ),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final lead = _data?['lead'] as Map<String, dynamic>?;
     final student = _data?['student'] as Map<String, dynamic>?;
     final messages = (_data?['messages'] as List?) ?? [];
     final notes = (_data?['notes'] as List?) ?? [];
-    final stage = lead?['stage'] as String? ?? 'new';
 
     return PopScope(
       canPop: false,
@@ -755,189 +959,42 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
         if (!didPop) Navigator.pop(context, _changed);
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFFF5F6FA),
         appBar: AppBar(
           backgroundColor: Colors.white,
           foregroundColor: AppColors.textPrimary, // the theme's white would hide the back arrow and the title
+          surfaceTintColor: Colors.white,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context, _changed),
-          ),
-          title: Text(
-            (lead?['name'] as String?)?.isNotEmpty == true
-                ? lead!['name'] as String
-                : widget.phone,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
+          leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context, _changed)),
+          title: Text('Lead', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary)),
+          actions: [
+            IconButton(tooltip: 'Refresh', onPressed: () { setState(() => _loading = true); _load(); }, icon: const Icon(Icons.refresh_rounded)),
+          ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : lead == null
-                ? Center(
-                    child: Text('Lead not found',
-                        style: GoogleFonts.inter(color: AppColors.textSecondary)))
-                : ListView(padding: const EdgeInsets.all(14), children: [
-                    _coachCard(),
-                    const SizedBox(height: 12),
-                    _Card(title: 'Stage', child: Wrap(spacing: 7, runSpacing: 7, children: [
-                      for (final s in _stageLabels.keys)
-                        _StageChip(
-                          label: _stageLabels[s]!,
-                          count: 0,
-                          selected: stage == s,
-                          color: _stageColors[s]!,
-                          onTap: () => _setStage(s),
-                        ),
-                    ])),
-                    const SizedBox(height: 12),
-                    _Card(
-                      title: 'Contact',
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        _kv('Phone', lead['phone'] as String? ?? ''),
-                        _kv('Opted in',
-                            // Three states, not two. Null is "never asked",
-                            // which is the honest answer for an imported lead
-                            // and a different thing from consent.
-                            lead['opt_in'] == false
-                                ? 'No — do not send marketing'
-                                : lead['opt_in'] == true
-                                    ? 'Yes'
-                                    : 'Not asked — imported, no consent on file'),
-                        if (lead['opt_in_source'] != null)
-                          _kv('Opt-in source', '${lead['opt_in_source']}'),
-                        if (lead['last_inbound_at'] != null)
-                          _kv('Last message', '${lead['last_inbound_at']}'.split('T').first),
-                      ]),
-                    ),
-                    if (student != null) ...[
-                      const SizedBox(height: 12),
-                      _Card(
-                        title: 'Student account',
-                        trailing: TextButton.icon(
-                          onPressed: () => _editStudent(student),
-                          icon: const Icon(Icons.edit_outlined, size: 15),
-                          label: const Text('Edit'),
-                        ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          _kv('Name', '${student['name'] ?? ''}'),
-                          if (student['phone'] != null) _kv('Phone', '${student['phone']}'),
-                          if (student['email'] != null) _kv('Email', '${student['email']}'),
-                          if ((student['occupation'] as String? ?? '').isNotEmpty)
-                            _kv('Occupation',
-                                student['occupation'] == 'working'
-                                    ? 'Working professional'
-                                    : 'Student'),
-                          if (student['college'] != null) _kv('College', '${student['college']}'),
-                          if (student['company'] != null) _kv('Company', '${student['company']}'),
-                          if (student['address'] != null) _kv('Address', '${student['address']}'),
-                          _kv('Plan', '${student['plan'] ?? 'free'}'),
-                          if (student['status'] != null) _kv('Status', '${student['status']}'),
-                          if (student['created_at'] != null)
-                            _kv('Joined', '${student['created_at']}'.split('T').first),
+                ? Center(child: Text('Lead not found', style: GoogleFonts.inter(color: AppColors.textSecondary)))
+                : LayoutBuilder(builder: (context, box) {
+                    final wide = box.maxWidth >= 980;
+                    final main = [_header(lead, student), const SizedBox(height: 14), _advice(), const SizedBox(height: 14), _conversation(messages)];
+                    final side = [_details(lead, student), const SizedBox(height: 14), _notesCard(notes)];
+                    return Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1240),
+                        child: ListView(padding: const EdgeInsets.all(16), children: [
+                          if (wide)
+                            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Expanded(flex: 3, child: Column(children: main)),
+                              const SizedBox(width: 16),
+                              Expanded(flex: 2, child: Column(children: side)),
+                            ])
+                          else ...[...main, const SizedBox(height: 14), ...side],
+                          const SizedBox(height: 24),
                         ]),
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    _Card(
-                      title: 'Notes',
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _noteCtrl,
-                              decoration: InputDecoration(
-                                hintText: 'Add a note',
-                                isDense: true,
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(9)),
-                              ),
-                              onSubmitted: (_) => _addNote(),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(onPressed: _addNote, child: const Text('Add')),
-                        ]),
-                        const SizedBox(height: 10),
-                        if (notes.isEmpty)
-                          Text('No notes yet.',
-                              style: GoogleFonts.inter(
-                                  fontSize: 12, color: AppColors.textSecondary))
-                        else
-                          for (final n in notes)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('${n['text']}',
-                                        style: GoogleFonts.inter(
-                                            fontSize: 12.5, height: 1.4)),
-                                    Text('${n['created_at']}'.split('T').first,
-                                        style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            color: AppColors.textSecondary)),
-                                  ]),
-                            ),
-                      ]),
-                    ),
-                    const SizedBox(height: 12),
-                    _Card(
-                      title: 'Conversation',
-                      subtitle: "What they wrote, our messages and the AI assistant's replies.",
-                      trailing: TextButton.icon(onPressed: _openChat, icon: const Icon(Icons.open_in_full_rounded, size: 15), label: const Text('Open chat')),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (messages.isEmpty)
-                          Text('No messages yet.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary))
-                        else
-                          for (final m in messages.skip(messages.length > 3 ? messages.length - 3 : 0))
-                            Align(
-                              alignment: m['direction'] == 'out' ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                                constraints: const BoxConstraints(maxWidth: 360),
-                                decoration: BoxDecoration(
-                                  color: m['direction'] == 'out' ? const Color(0xFFD9FDD3) : const Color(0xFFF1F1F1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text('${m['body'] ?? ''}', maxLines: 4, overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(fontSize: 12.5, height: 1.35)),
-                              ),
-                            ),
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: _openChat,
-                            icon: const Icon(Icons.chat_rounded, size: 18),
-                            label: Text(messages.isEmpty ? 'Open chat' : 'Open chat (${messages.length} messages)'),
-                            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 13)),
-                          ),
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 12),
-                    if ((_data?['dashboard_url'] as String? ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => launchUrl(
-                              Uri.parse(_data!['dashboard_url'] as String),
-                              mode: LaunchMode.externalApplication),
-                          icon: const Icon(Icons.open_in_new_rounded, size: 17),
-                          label: const Text('Open chat in WhatsApp dashboard'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11)),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 30),
-                  ]),
+                    );
+                  }),
       ),
     );
   }
@@ -946,7 +1003,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
         padding: const EdgeInsets.only(bottom: 5),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
-            width: 96,
+            width: 108,
             child: Text(k,
                 style: GoogleFonts.inter(
                     fontSize: 11.5, color: AppColors.textSecondary)),
