@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Altron Camera Tutor</title>
+<meta name="theme-color" content="#1e3a5f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --navy: #1e3a5f; --orange: #e8590c; --ink: #10202f; --muted: #5b6b7b; --bg: #0d1726; --card: #ffffff; --ok: #2e7d32; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: #fff; font-family: Inter, system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--navy); }
+  header .dot { width: 10px; height: 26px; background: var(--orange); border-radius: 3px; }
+  header h1 { font: 700 17px Poppins, sans-serif; margin: 0; flex: 1; }
+  header small { display: block; font: 500 12px Inter, sans-serif; opacity: .75; }
+  main { max-width: 760px; margin: 0 auto; padding: 14px 16px 120px; }
+  .stage { position: relative; background: #000; border-radius: 16px; overflow: hidden; aspect-ratio: 3 / 4; max-height: 62vh; width: 100%; }
+  @media (min-width: 700px) { .stage { aspect-ratio: 4 / 3; } }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; color: #cfd8e3; }
+  .placeholder b { font: 600 18px Poppins, sans-serif; color: #fff; }
+  .chip { position: absolute; top: 12px; left: 12px; padding: 6px 12px; border-radius: 20px; background: rgba(0,0,0,.6); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .chip i { width: 9px; height: 9px; border-radius: 50%; background: #9aa5b1; display: inline-block; }
+  .chip.live i { background: #ff4d4f; box-shadow: 0 0 0 4px rgba(255,77,79,.25); }
+  .chip.talking i { background: #52c41a; }
+  .timer { position: absolute; top: 12px; right: 12px; padding: 6px 10px; border-radius: 20px; background: rgba(0,0,0,.6); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .say { margin-top: 12px; min-height: 64px; background: rgba(255,255,255,.07); border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.5; }
+  .say .who { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; opacity: .6; margin-bottom: 2px; }
+  .say .you { opacity: .7; font-size: 13px; margin-top: 8px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(13,23,38,.96); border-top: 1px solid rgba(255,255,255,.08); display: flex; gap: 10px; justify-content: center; align-items: center; }
+  button { font: 600 15px Inter, sans-serif; border: 0; border-radius: 28px; padding: 14px 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--orange); color: #fff; padding: 15px 26px; font-size: 16px; }
+  .end { background: #d9363e; color: #fff; }
+  .round { width: 52px; height: 52px; padding: 0; justify-content: center; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; }
+  .round.off { background: #fff; color: var(--ink); }
+  .langs { display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; }
+  .langs button { padding: 8px 16px; font-size: 13px; background: rgba(255,255,255,.1); color: #fff; }
+  .langs button.on { background: #fff; color: var(--ink); }
+  .card { background: var(--card); color: var(--ink); border-radius: 16px; padding: 18px; margin-top: 14px; }
+  .card h2 { font: 700 16px Poppins, sans-serif; margin: 0 0 6px; }
+  .card p { margin: 6px 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .qr { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  #qr { background: #fff; padding: 8px; border-radius: 10px; }
+  .tips { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  .err { background: #fdecea; color: #8a1c1c; }
+  a { color: var(--orange); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot"></span>
+  <h1>Altron Camera Tutor<small id="what">Show your circuit, talk it through</small></h1>
+</header>
+
+<main>
+  <div class="stage">
+    <video id="cam" playsinline muted autoplay></video>
+    <div class="placeholder" id="ph">
+      <div style="font-size:42px">📷</div>
+      <b>Point your phone at your breadboard</b>
+      <span>Altron looks at your board, tells you what each part is, and checks every wire against the experiment.</span>
+    </div>
+    <div class="chip hidden" id="chip"><i></i><span id="chipText">Connecting…</span></div>
+    <div class="timer hidden" id="timer">0:00</div>
+  </div>
+
+  <div class="langs" id="langs">
+    <button data-l="en">English</button>
+    <button data-l="hi">Hinglish</button>
+  </div>
+
+  <div class="say" id="say">
+    <div class="who">Altron</div>
+    <div id="tutorText">Press <b>Start</b>, allow the camera and the microphone, and speak normally. You can interrupt any time.</div>
+    <div class="you" id="youText"></div>
+  </div>
+
+  <div class="card hidden" id="phoneCard">
+    <h2>Easier on your phone</h2>
+    <div class="qr">
+      <div id="qr"></div>
+      <div style="flex:1;min-width:200px">
+        <p>Scan this with your phone's camera. Your phone is easy to hold over the bench; sign in there with the same number.</p>
+        <p>Or press <b>Start</b> to use this computer's camera.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="msgCard"><p id="msg"></p></div>
+
+  <div class="card">
+    <h2>Get a good look</h2>
+    <ul class="tips">
+      <li>Hold the phone about a forearm's length above the board, in good light.</li>
+      <li>Say what you are stuck on: "is my LED the right way round?", "where does the yellow wire go?"</li>
+      <li>Unplug the USB or power before you move wires.</li>
+    </ul>
+  </div>
+</main>
+
+<div class="bar">
+  <button class="primary" id="start">▶ Start</button>
+  <button class="round hidden" id="mic" title="Mute">🎙️</button>
+  <button class="round hidden" id="camBtn" title="Camera">📷</button>
+  <button class="end hidden" id="stop">■ End</button>
+</div>
+
+<script>
+(() => {
+  const API = 'https://edu.altrobytelab.com';
+  const params = new URLSearchParams(location.search);
+  const labId = params.get('lab') ? Number(params.get('lab')) : null;
+  const $ = (id) => document.getElementById(id);
+  let lang = params.get('lang') || localStorage.getItem('live_lang') || 'en';
+
+  // ── sign-in: the same one the website uses ──
+  function token() {
+    for (const k of ['flutter.student_token', 'flutter.token']) {
+      try { const v = localStorage.getItem(k); if (v) { const t = JSON.parse(v); if (t) return t; } } catch (_) {}
+    }
+    return null;
+  }
+
+  function show(text, bad) {
+    $('msgCard').classList.remove('hidden');
+    $('msgCard').classList.toggle('err', !!bad);
+    $('msg').innerHTML = text;
+  }
+
+  // ── language ──
+  function paintLangs() { for (const b of $('langs').children) b.classList.toggle('on', b.dataset.l === lang); }
+  for (const b of $('langs').children) b.onclick = () => { if (running) return; lang = b.dataset.l; try { localStorage.setItem('live_lang', lang); } catch (_) {} paintLangs(); };
+  paintLangs();
+
+  // ── on a computer: offer the phone ──
+  const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && innerWidth < 900);
+  if (!phone && window.QRCode) {
+    $('phoneCard').classList.remove('hidden');
+    new QRCode($('qr'), { text: location.href, width: 150, height: 150 });
+  }
+
+  // ── state ──
+  let running = false, ws = null, camStream = null, micStream = null, inCtx = null, outCtx = null, worklet = null;
+  let camOn = true, micOn = true, frameTimer = null, clock = null, startedAt = 0, limitMin = 10;
+  let handle = null, setup = null, wsUrl = '', playing = [], nextAt = 0, tutorLine = '', youLine = '';
+
+  function chip(text, cls) {
+    $('chip').classList.remove('hidden', 'live', 'talking');
+    if (cls) $('chip').classList.add(cls);
+    $('chipText').textContent = text;
+  }
+
+  async function fetchToken(resume) {
+    const t = token();
+    if (!t) throw Object.assign(new Error('signin'), { signin: true });
+    const r = await fetch(API + '/trainer/live/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+      body: JSON.stringify({ lab_id: labId, lang, resume: !!resume }),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (r.status === 401) throw Object.assign(new Error('signin'), { signin: true });
+    if (!r.ok) throw new Error(body.detail || 'The camera tutor could not start. Try again in a minute.');
+    return body;
+  }
+
+  // ── sound in: the microphone as 16 kHz 16-bit PCM ──
+  const MIC_WORKLET = `class Mic extends AudioWorkletProcessor { process(i) { const c = i[0] && i[0][0]; if (c) this.port.postMessage(c.slice(0)); return true; } } registerProcessor('mic', Mic);`;
+  let pcm = [];
+  function b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+
+  async function startMic() {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+    inCtx = new AudioContext({ sampleRate: 16000 });
+    await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC_WORKLET], { type: 'application/javascript' })));
+    const src = inCtx.createMediaStreamSource(micStream);
+    worklet = new AudioWorkletNode(inCtx, 'mic');
+    worklet.port.onmessage = (e) => {
+      if (!micOn || !ws || ws.readyState !== 1) return;
+      for (const v of e.data) pcm.push(v);
+      if (pcm.length >= 1600) {                                   // about a tenth of a second at a time
+        const out = new Int16Array(pcm.length);
+        for (let i = 0; i < pcm.length; i++) { const s = Math.max(-1, Math.min(1, pcm[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
+        pcm = [];
+        ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64(new Uint8Array(out.buffer)), mimeType: 'audio/pcm;rate=16000' } } }));
+      }
+    };
+    src.connect(worklet);
+  }
+
+  // ── sound out: 24 kHz PCM, played in order; an interruption stops it at once ──
+  function play(base64) {
+    if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+    const raw = atob(base64), n = raw.length / 2, f = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v >= 0x8000) v -= 0x10000; f[i] = v / 0x8000; }
+    const buf = outCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
+    const node = outCtx.createBufferSource(); node.buffer = buf; node.connect(outCtx.destination);
+    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02);
+    node.start(nextAt); nextAt += buf.duration;
+    playing.push(node); node.onended = () => { playing = playing.filter((x) => x !== node); if (!playing.length && running) chip('Live · listening', 'live'); };
+    chip('Altron is talking', 'talking');
+  }
+  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; }
+
+  // ── the picture: one JPEG a second while the camera is on ──
+  const canvas = document.createElement('canvas');
+  async function startCam() {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } } });
+    $('cam').srcObject = camStream; $('ph').classList.add('hidden');
+    frameTimer = setInterval(() => {
+      if (!camOn || !ws || ws.readyState !== 1) return;
+      const v = $('cam'); if (!v.videoWidth) return;
+      const w = 768, h = Math.round(v.videoHeight * w / v.videoWidth);
+      canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(v, 0, 0, w, h);
+      const data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+      ws.send(JSON.stringify({ realtimeInput: { video: { data, mimeType: 'image/jpeg' } } }));
+    }, 1000);
+  }
+
+  // ── the conversation ──
+  function connect(first) {
+    const msg = { setup: { ...setup } };
+    if (handle) msg.setup.sessionResumption = { handle };
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => ws.send(JSON.stringify(msg));
+    ws.onmessage = async (ev) => {
+      const text = typeof ev.data === 'string' ? ev.data : await ev.data.text();
+      let m; try { m = JSON.parse(text); } catch (_) { return; }
+      if (m.setupComplete) {
+        chip('Live · listening', 'live');
+        if (first) ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'The session has started. Greet me in one short sentence and ask me to show you my board.' }] }], turnComplete: true } }));
+      }
+      const sc = m.serverContent;
+      if (sc) {
+        if (sc.interrupted) hush();
+        for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
+        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; $('tutorText').textContent = tutorLine.slice(-400); }
+        if (sc.inputTranscription && sc.inputTranscription.text) { youLine += sc.inputTranscription.text; $('youText').textContent = 'You: ' + youLine.slice(-200); }
+        if (sc.turnComplete) { tutorLine = ''; youLine = ''; }
+      }
+      if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
+      if (m.goAway) reconnect();
+    };
+    ws.onclose = () => { if (running && ws && ws.__retired !== true) reconnect(); };
+    ws.onerror = () => {};
+  }
+
+  let reconnecting = false;
+  async function reconnect() {
+    if (!running || reconnecting) return;
+    reconnecting = true;
+    chip('Reconnecting…');
+    try {
+      const old = ws; if (old) { old.__retired = true; try { old.close(); } catch (_) {} }
+      const t = await fetchToken(true);
+      wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
+      connect(false);
+    } catch (e) { stop('The connection dropped. Press Start to carry on.'); }
+    reconnecting = false;
+  }
+
+  async function start() {
+    $('msgCard').classList.add('hidden');
+    $('start').disabled = true; chip('Connecting…');
+    try {
+      const t = await fetchToken(false);
+      wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup; limitMin = t.minutes || 10;
+      if (t.title) $('what').textContent = t.title;
+      await startCam();
+      await startMic();
+      outCtx = outCtx || new AudioContext({ sampleRate: 24000 });
+      running = true; handle = null;
+      connect(true);
+      startedAt = Date.now();
+      clock = setInterval(() => {
+        const s = Math.floor((Date.now() - startedAt) / 1000), left = limitMin * 60 - s;
+        $('timer').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        if (left <= 0) stop('That was ' + limitMin + ' minutes, the length of one session. Start again whenever you need Altron.');
+      }, 1000);
+      $('timer').classList.remove('hidden');
+      for (const id of ['mic', 'camBtn', 'stop']) $(id).classList.remove('hidden');
+      $('start').classList.add('hidden'); $('langs').classList.add('hidden'); $('phoneCard').classList.add('hidden');
+    } catch (e) {
+      cleanup();
+      $('start').disabled = false; $('chip').classList.add('hidden');
+      if (e.signin) show('Please sign in to Altrobyte first: <a href="/">open altrobytelab.com</a>, sign in, then come back to this page.', true);
+      else if (e.name === 'NotAllowedError') show('The camera or microphone was blocked. Allow both for this site in your browser settings, then press Start.', true);
+      else show(e.message || 'Something went wrong. Try again.', true);
+    }
+  }
+
+  function cleanup() {
+    running = false;
+    if (ws) { ws.__retired = true; try { ws.close(); } catch (_) {} ws = null; }
+    clearInterval(frameTimer); clearInterval(clock); hush();
+    for (const s of [camStream, micStream]) if (s) s.getTracks().forEach((t) => t.stop());
+    camStream = micStream = null;
+    if (inCtx) { inCtx.close().catch(() => {}); inCtx = null; }
+    $('cam').srcObject = null; $('ph').classList.remove('hidden');
+  }
+
+  function stop(message) {
+    cleanup();
+    $('chip').classList.add('hidden'); $('timer').classList.add('hidden');
+    for (const id of ['mic', 'camBtn', 'stop']) $(id).classList.add('hidden');
+    $('start').classList.remove('hidden'); $('start').disabled = false; $('langs').classList.remove('hidden');
+    if (typeof message === 'string') show(message);
+  }
+
+  $('start').onclick = start;
+  $('stop').onclick = () => stop();
+  $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  $('camBtn').onclick = () => { camOn = !camOn; $('camBtn').classList.toggle('off', !camOn); $('camBtn').textContent = camOn ? '📷' : '🚫'; };
+  addEventListener('pagehide', cleanup);
+  if (!token()) show('Sign in to Altrobyte first: <a href="/">open altrobytelab.com</a>, sign in, then come back here.');
+})();
+</script>
+</body>
+</html>

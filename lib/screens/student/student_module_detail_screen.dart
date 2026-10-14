@@ -772,12 +772,22 @@ class _AiLabCard extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
               decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Expanded(child: Text(lab.title, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5))),
+              // The title, then the ways in; on a phone the buttons go onto the next line instead of squeezing the title.
+              child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 4, runSpacing: 4, children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 180, maxWidth: 360),
+                  child: Text(lab.title, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
                 TextButton.icon(
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AiLabVisualsScreen(moduleId: module.id, labId: lab.id, title: lab.title))),
                   icon: const Icon(Icons.image_rounded, color: Colors.white70, size: 18),
                   label: const Text('Pictures', style: TextStyle(color: Colors.white70)),
+                ),
+                TextButton.icon(
+                  // Altron looks at the bench through the camera (best on a phone) and checks this experiment's wiring.
+                  onPressed: () => launchUrl(Uri.parse('/live/?lab=${lab.id}'), webOnlyWindowName: '_blank'),
+                  icon: const Icon(Icons.videocam_rounded, color: Colors.white70, size: 18),
+                  label: const Text('Show your circuit', style: TextStyle(color: Colors.white70)),
                 ),
                 const SizedBox(width: 4),
                 ElevatedButton.icon(

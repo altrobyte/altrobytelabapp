@@ -922,12 +922,14 @@ class ApiService {
   }
 
   // ── CRM ───────────────────────────────────────────────────────────────
-  static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = ''}) async {
+  static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = '', String heat = '', int limit = 300}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     final uri = Uri.parse('${ApiConstants.baseUrl}/crm/leads').replace(queryParameters: {
       if (stage.isNotEmpty) 'stage': stage,
       if (q.isNotEmpty) 'q': q,
+      if (heat.isNotEmpty) 'heat': heat,
+      'limit': '$limit',
     });
     final res = await http.get(uri, headers: _headers(token));
     return _parse(res);
@@ -939,6 +941,58 @@ class ApiService {
     final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/summary'),
         headers: _headers(token));
     return _parse(res);
+  }
+
+  /// Contacts saved twice, once under each form of the same number. Counts them; with [remove] deletes the extra copies
+  /// (their details are already on the contact that stays).
+  static Future<Map<String, dynamic>> crmDuplicates({bool remove = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/contacts/duplicates${remove ? '?remove=true' : ''}'),
+        headers: _headers(token));
+    return _parse(res);
+  }
+
+  /// The model reads one lead and says where they stand, the next step, and a message to send.
+  static Future<Map<String, dynamic>> crmAskAi(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/ai'), headers: _headers(token))
+        .timeout(const Duration(seconds: 90));
+    return _parse(res);
+  }
+
+  /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
+  static Future<Map<String, dynamic>> crmSend(String phone, String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/send'),
+        headers: _headers(token), body: jsonEncode({'text': text}));
+    return _parse(res);
+  }
+
+  /// A photo, video or document to the lead on WhatsApp (it goes to Meta's media store, not ours).
+  static Future<Map<String, dynamic>> crmSendMedia(String phone, List<int> bytes, String filename, String mime, String caption) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final parts = mime.split('/');
+    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/media'))
+      ..headers['Authorization'] = 'Bearer ${token ?? ""}'
+      ..fields['caption'] = caption
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType(parts.first, parts.last)));
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    return _parse(await http.Response.fromStream(streamed));
+  }
+
+  /// Who answers this chat on WhatsApp: 'bot' (the AI) or 'human' (the team).
+  static Future<String> crmMode(String phone, {String? set}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final uri = Uri.parse('${ApiConstants.baseUrl}/crm/leads/$phone/mode');
+    final res = set == null
+        ? await http.get(uri, headers: _headers(token))
+        : await http.put(uri, headers: _headers(token), body: jsonEncode({'status': set}));
+    return '${_parse(res)['mode'] ?? ''}';
   }
 
   static Future<Map<String, dynamic>> crmLead(String phone) async {

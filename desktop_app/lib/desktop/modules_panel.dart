@@ -140,7 +140,15 @@ class _ModulesPanelState extends State<ModulesPanel> {
             contentPadding: const EdgeInsets.only(left: 8),
             leading: const Icon(Icons.science_rounded, size: 20, color: AppColors.accent),
             title: Text(l.title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            trailing: ElevatedButton(onPressed: widget.canStart ? () => widget.onStartLab(l.id) : null, child: const Text('Start')),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              // Altron looks at the bench through the phone's camera and checks the wiring of this experiment.
+              IconButton(
+                tooltip: 'Show your circuit to Altron (camera)',
+                onPressed: () => openExternal('https://altrobytelab.com/live/?lab=${l.id}'),
+                icon: const Icon(Icons.videocam_rounded, size: 20, color: AppColors.primary),
+              ),
+              ElevatedButton(onPressed: widget.canStart ? () => widget.onStartLab(l.id) : null, child: const Text('Start')),
+            ]),
           ),
       ],
       for (final t in d.topics) ...[
