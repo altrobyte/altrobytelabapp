@@ -15,6 +15,7 @@ import 'helper_client.dart' show versionAtLeast;
 import 'helper_controller.dart';
 import 'local_tools.dart' show openFolderInVsCode;
 import 'lesson_screen.dart';
+import 'help_button.dart';
 import 'modules_panel.dart';
 import 'visual_page.dart';
 
@@ -61,6 +62,28 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     _loadCourses();
     _checkUpdate();
     c.checkSetup();
+    ApiService.trainerEvent('app_open', detail: appVersion, version: appVersion);
+  }
+
+  // The readiness check's answer, counted once per run (ready, or the first thing missing).
+  bool _setupCounted = false;
+  void _countSetup() {
+    final r = c.setupReport;
+    if (_setupCounted || r == null || c.settingUp) return;
+    _setupCounted = true;
+    final missing = [for (final i in (r['items'] as List? ?? const [])) if (i is Map && i['state'] != 'ok' && i['optional'] != true) '${i['id'] ?? i['label'] ?? ''}'];
+    ApiService.trainerEvent('setup_checked', detail: r['ready'] == true ? 'ready' : 'missing: ${missing.join(', ')}', version: appVersion);
+  }
+
+  // Where the learner is, for the help message: the lesson and the first step not done yet.
+  String _whereNow() {
+    final st = c.state;
+    if (st == null || !c.started) return 'On the home screen';
+    final step = st.progress.where((m) => !m.done).map((m) => m.title).firstOrNull ?? 'all steps done';
+    final lesson = c.courseId != null
+        ? '${_courses.firstWhere((k) => k['id'] == c.courseId, orElse: () => {'title': c.courseId})['title']}'
+        : st.mission;
+    return 'Lesson: $lesson · Step: $step';
   }
 
   @override
@@ -75,6 +98,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   bool _wasStarted = false;
 
   void _onChange() {
+    _countSetup();
     if (_wasStarted && !c.started) _loadCourses(); // back on the learning path: show the progress just made
     _wasStarted = c.started;
     if (c.chat.length != _shown) {
@@ -789,6 +813,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                   icon: const Icon(Icons.restart_alt_rounded, color: Colors.white, size: 18),
                   label: const Text('New session', style: TextStyle(color: Colors.white)),
                 ),
+              HelpButton(where: _whereNow),
               Center(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(auth.instituteName ?? '', style: GoogleFonts.inter(fontSize: 12.5)))),
               TextButton(onPressed: () => context.read<AuthProvider>().logout(), child: const Text('Sign out', style: TextStyle(color: Colors.white))),
             ],

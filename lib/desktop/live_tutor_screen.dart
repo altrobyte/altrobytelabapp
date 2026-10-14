@@ -54,6 +54,7 @@ class _LiveTutorScreenState extends State<LiveTutorScreen> {
   void initState() {
     super.initState();
     _start();
+    ApiService.trainerEvent('camera_opened', detail: widget.title);
   }
 
   Future<void> _start() async {

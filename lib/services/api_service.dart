@@ -2046,6 +2046,27 @@ class ApiService {
   }
 
   /// The token for the signed-in learner, whichever way they signed in on this app.
+  /// One moment in the learner's use of the trainer (app opened, computer ready, help pressed ...), for the V1 numbers.
+  /// Never waits and never fails: counting must not slow or stop a learner.
+  static void trainerEvent(String kind, {String detail = '', String version = ''}) {
+    () async {
+      try {
+        await http
+            .post(Uri.parse('${ApiConstants.baseUrl}/trainer/events'),
+                headers: _headers(await _learnerToken()),
+                body: jsonEncode({'kind': kind, 'detail': detail.length > 200 ? detail.substring(0, 200) : detail, 'version': version}))
+            .timeout(const Duration(seconds: 10));
+      } catch (_) {}
+    }();
+  }
+
+  /// The WhatsApp number the help button writes to.
+  static Future<String> trainerHelpNumber() async {
+    final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/help'), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 15)));
+    return '${r['whatsapp'] ?? ''}';
+  }
+
   /// The learner's sign-in, for a page of ours shown inside the app (the camera tutor).
   static Future<String?> learnerToken() => _learnerToken();
 

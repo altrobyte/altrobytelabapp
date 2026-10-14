@@ -13,6 +13,7 @@ import 'package:webview_windows/webview_windows.dart';
 import '../constants/app_colors.dart';
 import '../services/api_service.dart';
 import 'chat_text.dart';
+import 'help_button.dart';
 import 'live_tutor_screen.dart';
 import 'note_tutor.dart';
 import 'tutor_feel.dart';
@@ -70,6 +71,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     t.addListener(_onTutor);
     t.onFocus = _show;
     _start();
+    ApiService.trainerEvent('note_opened', detail: widget.title);
   }
 
   Future<void> _start() async {
@@ -350,6 +352,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _voiceBefore = t.voice;
     });
     if (t.voice) t.setVoice(false); // one voice at a time: the camera tutor speaks now
+    ApiService.trainerEvent('camera_opened', detail: 'note: ${widget.title}');
     try {
       await cam.initialize();
       await cam.setBackgroundColor(const Color(0xFF0D1726));
@@ -434,6 +437,10 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         title: Text(t.title.isEmpty ? widget.title : t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+        actions: [
+          HelpButton(where: () => 'Note: ${t.title.isEmpty ? widget.title : t.title} · Section: ${t.titleOf(t.current)}'),
+          const SizedBox(width: 6),
+        ],
       ),
       body: t.loading
           ? const Center(child: CircularProgressIndicator())
