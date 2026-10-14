@@ -91,6 +91,10 @@ class NoteTutor extends ChangeNotifier {
   /// Makes these sentences ready ahead of time, so that saying them later starts at once.
   final void Function(List<String> texts)? prepare;
 
+  /// While the camera tutor is open there is one voice, not two: what this tutor would say is handed to the camera tutor,
+  /// which says it in its own words, and this tutor only writes. Set by the screen while the camera is on.
+  void Function(String text)? relay;
+
   /// Remembers the learner's language for next time.
   final void Function(String lang)? onLanguage;
   bool voice = true; // the learner can switch the tutor's voice off
@@ -137,7 +141,12 @@ class NoteTutor extends ChangeNotifier {
   // older one, so scrolling on makes it talk about the new section instead of finishing the old one.
   void _tutor(String text, {String section = '', String heading = ''}) {
     items.add(TutorItem('tutor', text, section: section, heading: heading, lang: lang));
-    if (voice && text.isNotEmpty) speak?.call(text);
+    if (text.isEmpty) return;
+    if (relay != null) {
+      relay!(heading.isNotEmpty ? 'The learner is now reading the section "$heading". $text' : text);
+    } else if (voice) {
+      speak?.call(text);
+    }
   }
 
   void setVoice(bool on) {
@@ -249,7 +258,10 @@ class NoteTutor extends ChangeNotifier {
   void _offerQuiz(String id) {
     final q = _quizOf(id);
     if (q == null || items.any((i) => i.kind == 'quiz' && i.section == id && i.lang == lang)) return;
-    items.add(TutorItem('quiz', '${q['question'] ?? ''}', section: id, options: [for (final o in (q['options'] as List? ?? const [])) '$o'], lang: lang));
+    final options = [for (final o in (q['options'] as List? ?? const [])) '$o'];
+    items.add(TutorItem('quiz', '${q['question'] ?? ''}', section: id, options: options, lang: lang));
+    relay?.call('Ask them this quick question from the note (they answer by tapping an option in the note panel, '
+        'do not give the answer): ${q['question'] ?? ''} Options: ${options.join(' / ')}');
   }
 
   // Say what this section is about (once per language) and offer its question.

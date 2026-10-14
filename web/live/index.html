@@ -423,6 +423,16 @@
     if (typeof message === 'string') show(message);
   }
 
+  // The note window hands over what its tutor would have said (a new section, a quick question, whether an answer was
+  // right). Said here, in this voice, so the learner hears one tutor. Nothing is sent before the session is ready.
+  window.altronTell = (text) => {
+    if (!running || !ws || ws.readyState !== 1 || !ws.__ready || !text) return false;
+    ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text:
+      '[From the note the learner is reading, not something they said] Say this to them briefly, in your own words and ' +
+      'in the language you are using, then carry on with the bench: ' + String(text).slice(0, 1200) }] }], turnComplete: true } }));
+    return true;
+  };
+
   $('start').onclick = start;
   $('stop').onclick = () => stop();
   $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };

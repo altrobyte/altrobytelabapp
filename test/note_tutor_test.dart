@@ -303,6 +303,25 @@ void main() {
     t.dispose();
   });
 
+  test('while the camera tutor is on there is one voice: this tutor writes and hands its lines over', () async {
+    final s = FakeServer();
+    final t = s.tutor();
+    await t.load();
+    final handed = <String>[];
+    t.relay = handed.add;
+    final spokenBefore = s.spoken.length;
+    t.readingIndex(1);
+    expect(handed.single, contains('Flip the toggle and watch the time.'));
+    expect(handed.single, contains('Cloud vs Edge'));                     // it knows which section the learner is on
+    await t.answer(t.items.firstWhere((i) => i.kind == 'quiz'), 0);
+    expect(handed.last, startsWith('Correct!'));
+    expect(s.spoken.length, spokenBefore);                               // nothing spoken on top of the camera tutor
+    expect(t.items.where((i) => i.text == 'Flip the toggle and watch the time.'), isNotEmpty);   // still written
+    t.relay = null;
+    t.readingIndex(0);
+    t.dispose();
+  });
+
   test('a note that cannot be loaded says why in plain words', () async {
     final t = NoteTutor(1,
         loadNote: (id, lang) async => throw Exception('Unlock this module first to read its notes.'),

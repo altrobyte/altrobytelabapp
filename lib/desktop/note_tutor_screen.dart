@@ -5,6 +5,7 @@
 // computer the note opens in the browser instead and the tutor still works: the learner picks the section they are reading.
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -354,6 +355,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       await cam.setBackgroundColor(const Color(0xFF0D1726));
       await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       final token = await ApiService.learnerToken() ?? '';
+      // One voice: the note tutor's lines go to the camera tutor to say, instead of being spoken on top of it.
+      t.relay = (text) => cam.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
       await cam.loadUrl(liveTutorUrl(noteId: widget.contentId, token: token).replaceFirst('embed=1', 'embed=1&compact=1&lang=${t.lang}'));
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
@@ -370,6 +373,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _cam = null;
       _camReady = false;
     });
+    t.relay = null;
     cam?.dispose(); // ends the session and lets go of the camera
     if (_voiceBefore == true && !t.voice) t.setVoice(true);
     _voiceBefore = null;
@@ -397,7 +401,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                 const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
                 const SizedBox(width: 6),
                 Expanded(child: Text('Altron · camera', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
-                Text('note tutor muted', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
+                Text('one voice: Altron', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
                 IconButton(
                   tooltip: _camBig ? 'Smaller' : 'Bigger',
                   visualDensity: VisualDensity.compact,
