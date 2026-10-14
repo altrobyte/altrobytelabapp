@@ -117,7 +117,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen> {
             ),
             const SizedBox(height: 22),
             _step(1, 'Download and open it', 'Double-click the file you downloaded. If Windows shows "protected your PC", choose More info, then Run anyway. It installs for you only; no administrator password.'),
-            _step(2, 'Sign in', 'Use the same email and password as the Altrobyte website.'),
+            _step(2, 'Sign in with your WhatsApp number', 'Type the number you joined with; an OTP arrives on WhatsApp. Teachers can sign in with their email and password instead.'),
             _step(3, 'Start with the first course', 'It explains everything from scratch, then helps you set up your laptop one tool at a time. You never have to figure out what to install.'),
             _step(4, 'Your modules appear by themselves', 'Each experiment downloads only when you start it, so the app stays light.'),
           ]),
