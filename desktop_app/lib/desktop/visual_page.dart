@@ -62,34 +62,57 @@ const noteBridgeScript = r"""
       el = el.parentElement;
     }
   }, true);
-  // The part the tutor is talking about glows, so the learner's eyes land where the voice is. The glow is on the block
-  // that holds the heading (a card, a section) when the note is built that way, otherwise on the heading itself.
+  // The part the tutor is talking about glows, so the learner's eyes land where the voice is: the whole section, not just
+  // its heading. When the note puts a section in a box of its own (a card, a <section>), that box glows. When the note is
+  // flat (a heading, then paragraphs, then the next heading), every block from the heading to the next one is marked.
   var style = document.createElement('style');
   style.textContent =
     '.altro-now{position:relative;border-radius:12px;outline:2px solid rgba(255,193,7,.9);outline-offset:6px;' +
     'box-shadow:0 0 0 0 rgba(255,193,7,.55);animation:altroGlow 1.6s ease-out 4;transition:outline-color .4s}' +
-    '@keyframes altroGlow{0%{box-shadow:0 0 0 0 rgba(255,193,7,.55)}70%{box-shadow:0 0 0 18px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}';
+    '.altro-run{background:rgba(255,193,7,.08);box-shadow:inset 4px 0 0 rgba(255,193,7,.95);transition:background .4s}' +
+    '.altro-run.altro-first{animation:altroRun 1.6s ease-out 3}' +
+    '@keyframes altroGlow{0%{box-shadow:0 0 0 0 rgba(255,193,7,.55)}70%{box-shadow:0 0 0 18px rgba(255,193,7,0)}100%{box-shadow:0 0 0 0 rgba(255,193,7,0)}}' +
+    '@keyframes altroRun{0%{background:rgba(255,193,7,.28)}100%{background:rgba(255,193,7,.08)}}';
   (document.head || document.documentElement).appendChild(style);
-  function blockOf(h) {
-    var el = h.parentElement;
-    for (var up = 0; el && el !== document.body && up < 4; up++, el = el.parentElement) {
-      var inside = el.querySelectorAll('h1,h2,h3').length;
-      if (inside > 1) break;                      // this box holds other sections too: too big
-      if (el.matches('section,article,details,.card,[class*="card"],[class*="section"]')) return el;
+  function isHead(n) { return !!(n && n.matches && n.matches('h1,h2,h3')); }
+  function holdsHead(n) { return isHead(n) || !!(n && n.querySelector && n.querySelector('h1,h2,h3')); }
+  function textOf(n) { return ((n && (n.innerText || n.textContent)) || '').length; }
+  function regionOf(h) {
+    // The largest box around the heading that holds no other section and is clearly more than the heading itself.
+    var box = null, el = h.parentElement;
+    for (var up = 0; el && el !== document.body && up < 6; up++, el = el.parentElement) {
+      if (el.querySelectorAll('h1,h2,h3').length > 1) break;
+      if (textOf(el) > textOf(h) + 40) box = el;
     }
-    return h;
+    if (box) return { block: box };
+    // Flat: start at the heading (or the small box that holds only it) and take what follows, up to the next section.
+    var first = h;
+    while (first.parentElement && first.parentElement !== document.body &&
+           first.parentElement.querySelectorAll('h1,h2,h3').length === 1 && !first.nextElementSibling) first = first.parentElement;
+    var run = [first], n = first.nextElementSibling;
+    while (n && !holdsHead(n) && run.length < 60) { run.push(n); n = n.nextElementSibling; }
+    return run.length > 1 ? { run: run } : { block: h };
   }
-  var glowing = null;
+  var lit = [];
+  function unlight() {
+    for (var k = 0; k < lit.length; k++) lit[k].classList.remove('altro-now', 'altro-run', 'altro-first');
+    lit = [];
+  }
   window.__altroShow = function (i, bring) {
     collect();
     var h = heads[i];
     if (!h) return;
-    var b = blockOf(h);
-    if (glowing && glowing !== b) glowing.classList.remove('altro-now');
-    b.classList.remove('altro-now');
-    void b.offsetWidth;                           // restart the pulse when the same block is pointed at again
-    b.classList.add('altro-now');
-    glowing = b;
+    unlight();
+    var r = regionOf(h);
+    if (r.block) {
+      void r.block.offsetWidth;                   // restart the pulse when the same block is pointed at again
+      r.block.classList.add('altro-now');
+      lit = [r.block];
+    } else {
+      for (var k = 0; k < r.run.length; k++) r.run[k].classList.add('altro-run');
+      r.run[0].classList.add('altro-first');
+      lit = r.run.slice();
+    }
     if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   };
   function start() { collect(); inView(); }
