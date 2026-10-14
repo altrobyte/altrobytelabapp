@@ -2060,6 +2060,13 @@ class ApiService {
     }();
   }
 
+  /// Staff: the trainer funnel and one row per learner over the last [days].
+  static Future<Map<String, dynamic>> trainerUsage(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/usage?days=$days'), headers: _headers(prefs.getString('token')))
+        .timeout(const Duration(seconds: 30)));
+  }
+
   /// The WhatsApp number the help button writes to.
   static Future<String> trainerHelpNumber() async {
     final r = _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/help'), headers: _headers(await _learnerToken()))

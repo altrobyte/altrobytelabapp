@@ -30,6 +30,7 @@ import 'screens/connect/connect_vscode_screen.dart';
 import 'screens/connect/download_app_screen.dart';
 import 'screens/enrolment/enrolment_forms_screen.dart';
 import 'screens/trainer/trainer_admin_screen.dart';
+import 'screens/trainer/trainer_usage_screen.dart';
 import 'screens/analytics/analytics_screen.dart';
 import 'screens/batches/batches_screen.dart';
 import 'screens/broadcast/broadcast_screen.dart';
@@ -204,6 +205,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/invoices',
           '/enrolment-forms',
           '/trainer-admin',
+          '/trainer-usage',
           '/reviews-admin',
           '/company-admin',
           '/scholarship-admin',
@@ -705,6 +707,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
               GoRoute(
                 path: '/trainer-admin',
                 builder: (_, __) => const TrainerAdminScreen(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: '/trainer-usage',
+                builder: (_, __) => const TrainerUsageScreen(),
               ),
             ]),
             StatefulShellBranch(routes: [

@@ -144,6 +144,8 @@ class _Nav extends StatelessWidget {
       // Admin only, like Settings: it spends model tokens on the shared Groq key.
       if (auth.canAccessSettings)
         _NavItem(Icons.smart_toy_rounded, 'AI Trainer', '/trainer-admin'),
+      // Where learners get to with the trainer, and who is stuck: the V1 numbers.
+      _NavItem(Icons.insights_rounded, 'Trainer Usage', '/trainer-usage'),
       // Last, because it should usually be empty — and first thing you look
       // at when something is wrong.
       _NavItem(Icons.bug_report_rounded, 'Errors', '/errors'),
