@@ -354,6 +354,7 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
           // AI Lab: shown only when the teacher switched it on for this module
           if (!loading && !module.locked && module.aiLabEnabled)
             SliverToBoxAdapter(child: _AiLabCard(module: module)),
+            SliverToBoxAdapter(child: _CameraTutorStrip(module: module)),
 
           // Content tree
           if (!loading && !module.locked)
@@ -815,4 +816,44 @@ class _AiLabCard extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// "Learn with the camera": Altron looks at the learner's bench and teaches a topic of this module, which it has read.
+class _CameraTutorStrip extends StatelessWidget {
+  final TrainingModule module;
+  const _CameraTutorStrip({required this.module});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+        child: Material(
+          color: const Color(0xFFFFF3E8),
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => launchUrl(Uri.parse('/live/?module=${module.id}'), webOnlyWindowName: '_blank'),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFE8590C), borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.videocam_rounded, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Learn with the camera', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.5)),
+                    const SizedBox(height: 2),
+                    Text('Show your breadboard to Altron. It has read this module, tells you what each part is and checks your wiring as you build.',
+                        style: GoogleFonts.inter(fontSize: 12.5, color: Colors.black54, height: 1.4)),
+                  ]),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFFE8590C)),
+              ]),
+            ),
+          ),
+        ),
+      );
 }

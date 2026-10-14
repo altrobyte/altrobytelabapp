@@ -234,6 +234,13 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                 onSelectionChanged: t.asking ? null : (v) => t.setLanguage(v.first),
               ),
               const SizedBox(width: 4),
+              // The same topic with the camera: Altron looks at the bench (best from a phone; the page shows a QR).
+              IconButton(
+                tooltip: 'Show your bench to Altron (camera)',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => openExternal('https://altrobytelab.com/live/?note=${widget.contentId}'),
+                icon: const Icon(Icons.videocam_rounded, size: 20, color: AppColors.primary),
+              ),
               if (widget.speak != null)
                 IconButton(
                   tooltip: t.voice ? 'The tutor is speaking. Tap to mute.' : 'The tutor is muted. Tap to hear it.',
