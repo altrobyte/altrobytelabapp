@@ -42,6 +42,8 @@ class _CrmScreenState extends State<CrmScreen> {
   Map<String, dynamic> _counts = {};
   Map<String, dynamic> _summary = {};
   String _stage = '';
+  String _heat = '';
+  Map<String, dynamic> _heatCounts = {};
   String _query = '';
   bool _loading = true;
   final _searchCtrl = TextEditingController();
@@ -60,9 +62,10 @@ class _CrmScreenState extends State<CrmScreen> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiService.crmLeads(stage: _stage, q: _query);
+      final res = await ApiService.crmLeads(stage: _stage, q: _query, heat: _heat);
       _leads = (res['leads'] as List?) ?? [];
       _counts = Map<String, dynamic>.from(res['counts'] ?? {});
+      _heatCounts = Map<String, dynamic>.from(res['heat_counts'] ?? {});
     } catch (_) {
       _leads = [];
     }
@@ -187,6 +190,29 @@ class _CrmScreenState extends State<CrmScreen> {
               },
             ),
             const SizedBox(height: 10),
+            // Who to talk to first. Worked out from what each person did; hottest first in every view.
+            SizedBox(
+              height: 32,
+              child: ListView(scrollDirection: Axis.horizontal, children: [
+                for (final h in _heatLabels.keys)
+                  _StageChip(
+                    label: _heatLabels[h]!,
+                    count: h.isEmpty
+                        ? _heatCounts.values.fold<int>(0, (a, b) => a + (b is int ? b : 0))
+                        : (_heatCounts[h] as int?) ?? 0,
+                    selected: _heat == h,
+                    color: _heatColors[h]!,
+                    onTap: () {
+                      setState(() {
+                        _heat = h;
+                        _loading = true;
+                      });
+                      _load();
+                    },
+                  ),
+              ]),
+            ),
+            const SizedBox(height: 8),
             SizedBox(
               height: 32,
               child: ListView(scrollDirection: Axis.horizontal, children: [
@@ -230,7 +256,7 @@ class _CrmScreenState extends State<CrmScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(32),
                         child: Text(
-                          _query.isNotEmpty || _stage.isNotEmpty
+                          _query.isNotEmpty || _stage.isNotEmpty || _heat.isNotEmpty
                               ? 'No leads match that.'
                               : 'No leads yet. They appear here the moment '
                                   'someone messages the WhatsApp number.',
@@ -323,7 +349,10 @@ class _LeadRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stage = lead['stage'] as String? ?? 'new';
-    final color = _stageColors[stage] ?? AppColors.textSecondary;
+    final heat = (lead['heat'] as Map?) ?? const {};
+    final temp = '${heat['temperature'] ?? 'cold'}';
+    final color = _heatColors[temp] ?? AppColors.textSecondary;
+    final why = ((heat['reasons'] as List?) ?? const []).join('  ·  ');
     final isStudent = lead['student_user_id'] != null;
     final optedOut = lead['opt_in'] == false;
     final last = lead['last_message'] as String? ?? '';
@@ -425,6 +454,13 @@ class _LeadRow extends StatelessWidget {
                     style: GoogleFonts.inter(
                         fontSize: 11, color: AppColors.textSecondary)),
               ],
+              if (why.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(why,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+              ],
               if (last.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(last,
@@ -438,16 +474,13 @@ class _LeadRow extends StatelessWidget {
             ]),
           ),
           const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.11),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(_stageLabels[stage] ?? stage,
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            _HeatBadge(temp),
+            const SizedBox(height: 4),
+            Text(_stageLabels[stage] ?? stage,
                 style: GoogleFonts.inter(
-                    fontSize: 9.5, fontWeight: FontWeight.w700, color: color)),
-          ),
+                    fontSize: 9.5, fontWeight: FontWeight.w600, color: _stageColors[stage] ?? AppColors.textSecondary)),
+          ]),
         ]),
       ),
     );
@@ -469,6 +502,9 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   bool _loading = true;
   bool _changed = false;
   final _noteCtrl = TextEditingController();
+  final _replyCtrl = TextEditingController();
+  bool _asking = false;
+  bool _sending = false;
 
   @override
   void initState() {
@@ -479,6 +515,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   @override
   void dispose() {
     _noteCtrl.dispose();
+    _replyCtrl.dispose();
     super.dispose();
   }
 
@@ -487,6 +524,123 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
       _data = await ApiService.crmLead(widget.phone);
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
+  }
+
+  void _toast(String text, {bool bad = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), backgroundColor: bad ? AppColors.error : null));
+  }
+
+  // The model reads this lead and says where they stand, what to do, and a message to send.
+  Future<void> _askAi() async {
+    setState(() => _asking = true);
+    try {
+      final r = await ApiService.crmAskAi(widget.phone);
+      _data = {...?_data, 'ai': r};
+      if ((r['message'] as String? ?? '').isNotEmpty && _replyCtrl.text.trim().isEmpty) _replyCtrl.text = r['message'] as String;
+    } catch (e) {
+      _toast(e is ApiException ? e.message : 'The AI could not read this lead just now. Try again in a moment.', bad: true);
+    }
+    if (mounted) setState(() => _asking = false);
+  }
+
+  Future<void> _send() async {
+    final text = _replyCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _sending = true);
+    try {
+      await ApiService.crmSend(widget.phone, text);
+      _replyCtrl.clear();
+      _changed = true;
+      _toast('Sent on WhatsApp.');
+      await _load();
+    } catch (e) {
+      _toast(e is ApiException ? e.message : 'Could not send.', bad: true);
+    }
+    if (mounted) setState(() => _sending = false);
+  }
+
+  Widget _coachCard() {
+    final heat = (_data?['heat'] as Map?) ?? const {};
+    final temp = '${heat['temperature'] ?? 'cold'}';
+    final reasons = ((heat['reasons'] as List?) ?? const []).map((e) => '$e').toList();
+    final ai = _data?['ai'] as Map?;
+    return _Card(
+      title: 'What to do next',
+      trailing: _HeatBadge(temp),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final r in reasons)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Row(children: [
+              Icon(Icons.circle, size: 6, color: _heatColors[temp]),
+              const SizedBox(width: 7),
+              Expanded(child: Text(r, style: GoogleFonts.inter(fontSize: 12.5))),
+            ]),
+          ),
+        const SizedBox(height: 10),
+        if (ai != null) ...[
+          if ('${ai['summary'] ?? ''}'.isNotEmpty) Text('${ai['summary']}', style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
+          if ('${ai['next_step'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Expanded(child: Text('${ai['next_step']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, height: 1.4))),
+            ]),
+          ],
+          const SizedBox(height: 10),
+        ],
+        Row(children: [
+          FilledButton.icon(
+            onPressed: _asking ? null : _askAi,
+            icon: _asking
+                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.auto_awesome_rounded, size: 17),
+            label: Text(_asking ? 'Reading the conversation…' : (ai == null ? 'Ask AI' : 'Ask AI again')),
+          ),
+          if (ai != null && '${ai['message'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            TextButton(onPressed: () => setState(() => _replyCtrl.text = '${ai['message']}'), child: const Text('Use its message')),
+          ],
+        ]),
+      ]),
+    );
+  }
+
+  Widget _replyBox() {
+    final open = _data?['window_open'] == true;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 10),
+      TextField(
+        controller: _replyCtrl,
+        minLines: 1,
+        maxLines: 5,
+        enabled: open,
+        decoration: InputDecoration(
+          hintText: open ? 'Write to them on WhatsApp…' : 'WhatsApp window closed',
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+      const SizedBox(height: 6),
+      Row(children: [
+        Expanded(
+          child: Text(
+              open
+                  ? 'Goes out from the Lab WhatsApp number.'
+                  : 'They have not written in the last 24 hours, so WhatsApp allows only an approved template. Call them, '
+                      'or send a template from the WhatsApp dashboard.',
+              style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.textSecondary)),
+        ),
+        const SizedBox(width: 8),
+        FilledButton.icon(
+          onPressed: open && !_sending ? _send : null,
+          icon: const Icon(Icons.send_rounded, size: 16),
+          label: Text(_sending ? 'Sending…' : 'Send'),
+        ),
+      ]),
+    ]);
   }
 
   Future<void> _setStage(String stage) async {
@@ -653,6 +807,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                     child: Text('Lead not found',
                         style: GoogleFonts.inter(color: AppColors.textSecondary)))
                 : ListView(padding: const EdgeInsets.all(14), children: [
+                    _coachCard(),
+                    const SizedBox(height: 12),
                     _Card(title: 'Stage', child: Wrap(spacing: 7, runSpacing: 7, children: [
                       for (final s in _stageLabels.keys)
                         _StageChip(
@@ -756,14 +912,15 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     _Card(
-                      title: 'Recent conversation',
-                      subtitle: 'What they sent us. The full thread, the AI '
-                          'replies and the reply box are on the WhatsApp dashboard.',
-                      child: messages.isEmpty
-                          ? Text('No messages yet.',
+                      title: 'Conversation',
+                      subtitle: 'What they wrote, our messages and the AI assistant\'s replies.',
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        if (messages.isEmpty)
+                          Text('No messages yet.',
                               style: GoogleFonts.inter(
                                   fontSize: 12, color: AppColors.textSecondary))
-                          : Column(
+                        else
+                          Column(
                               children: [
                                 for (final m in messages)
                                   Align(
@@ -788,6 +945,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                                   ),
                               ],
                             ),
+                        _replyBox(),
+                      ]),
                     ),
                     if ((_data?['dashboard_url'] as String? ?? '').isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -826,6 +985,32 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
               child: Text(v, style: GoogleFonts.inter(fontSize: 12.5))),
         ]),
       );
+}
+
+const _heatLabels = {'': 'Everyone', 'hot': 'Hot', 'warm': 'Warm', 'cold': 'Cold', 'customer': 'Customers', 'out': 'Out'};
+const _heatColors = {
+  '': AppColors.primary,
+  'hot': Color(0xFFD84315),
+  'warm': Color(0xFFF9A825),
+  'cold': Color(0xFF546E7A),
+  'customer': Color(0xFF2E7D32),
+  'out': Color(0xFF9E9E9E),
+};
+
+class _HeatBadge extends StatelessWidget {
+  final String temperature;
+  const _HeatBadge(this.temperature);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _heatColors[temperature] ?? AppColors.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)),
+      child: Text(temperature == 'hot' ? '🔥 HOT' : (_heatLabels[temperature] ?? temperature).toUpperCase(),
+          style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: color)),
+    );
+  }
 }
 
 class _Card extends StatelessWidget {
