@@ -5,7 +5,7 @@ import 'package:altrobytelab/desktop/web_scroll.dart';
 void main() {
   test('the movements of one frame are sent together, as an instant scroll the other way', () async {
     final sent = <String>[];
-    final p = PanScroller(sent.add, frame: const Duration(milliseconds: 5));
+    final p = PanScroller(sent.add, frame: const Duration(milliseconds: 5), speed: 1);
     p.add(const Offset(0, -4));
     p.add(const Offset(0, -6));
     p.add(const Offset(1, -10));
@@ -24,6 +24,8 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     final n = sent.length;
     expect(n, greaterThan(5));
+    final glided = sent.skip(1).map((x) => double.parse(RegExp(r'top:(-?[\d.]+)').firstMatch(x)!.group(1)!)).fold<double>(0, (a, b) => a + b);
+    expect(glided, lessThan(110)); // a flick carries the page on a little, not a whole screen
     await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(sent.length, n); // it has stopped
     p.dispose();
@@ -36,7 +38,7 @@ void main() {
     p.end();
     p.add(const Offset(0, 5)); // fingers down again, the other way
     await Future<void>.delayed(const Duration(milliseconds: 30));
-    expect(sent.last, "window.scrollBy({left:0.0,top:-5.0,behavior:'instant'})");
+    expect(sent.last, "window.scrollBy({left:0.0,top:-2.8,behavior:'instant'})");   // scaled to the computer's own pace
     expect(sent.length, 2);
     p.dispose();
   });
