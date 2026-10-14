@@ -66,6 +66,9 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
     try {
       final r = await ApiService.crmLead(widget.phone);
       final next = [for (final m in (r['messages'] as List? ?? const [])) Map<String, dynamic>.from(m as Map)];
+      // A message still on its way stays on screen until the server's list has it.
+      final waiting = _messages.where((m) => m['pending'] == true && !next.any((n) => n['direction'] == 'out' && n['body'] == m['body']));
+      next.addAll(waiting);
       final grew = next.length != _messages.length;
       _messages = next;
       _open = r['window_open'] == true;
@@ -87,21 +90,33 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), backgroundColor: bad ? Colors.red.shade700 : null));
   }
 
+  // The message appears at once, with a clock, the way WhatsApp shows it; the tick comes when the server has handed it
+  // to WhatsApp. If it could not go, it is taken back out and the words return to the box.
   Future<void> _send() async {
     final text = _box.text.trim();
-    if (text.isEmpty || _sending) return;
-    setState(() => _sending = true);
+    if (text.isEmpty) return;
+    final mine = <String, dynamic>{'direction': 'out', 'type': 'text', 'body': text,
+        'created_at': DateTime.now().toUtc().toIso8601String(), 'pending': true};
+    setState(() {
+      _messages = [..._messages, mine];
+      _box.clear();
+    });
+    _toBottom();
     try {
       final r = await ApiService.crmSend(widget.phone, text);
       if ('${r['mode'] ?? ''}'.isNotEmpty) _mode = '${r['mode']}';
-      _box.clear();
       sent = true;
-      await _load();
-      _toBottom();
+      if (mounted) setState(() => mine['pending'] = false);
+      _load(); // the saved copy replaces this one; nobody waits for it
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages = [for (final m in _messages) if (!identical(m, mine)) m];
+          if (_box.text.trim().isEmpty) _box.text = text;
+        });
+      }
       _toast(e is ApiException ? e.message : 'Could not send.', bad: true);
     }
-    if (mounted) setState(() => _sending = false);
   }
 
   // Hand the chat to the AI, or take it over: while the team has it, the AI does not answer this person.
@@ -284,6 +299,7 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
                               mine: m['direction'] == 'out',
                               time: _time(at),
                               automated: m['type'] == 'template',
+                              pending: m['pending'] == true,
                             ),
                           ]);
                         },
@@ -367,7 +383,7 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
               heroTag: 'crm-send',
               elevation: 0,
               backgroundColor: _bar,
-              onPressed: _sending ? null : _send,
+              onPressed: _send,
               child: _sending
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send_rounded, color: Colors.white),
@@ -399,7 +415,8 @@ class _Bubble extends StatelessWidget {
   final bool mine;
   final String time;
   final bool automated;
-  const _Bubble({required this.text, required this.mine, required this.time, this.automated = false});
+  final bool pending;
+  const _Bubble({required this.text, required this.mine, required this.time, this.automated = false, this.pending = false});
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +450,13 @@ class _Bubble extends StatelessWidget {
               child: SelectableText(text, style: GoogleFonts.inter(fontSize: 14.5, height: 1.35, color: const Color(0xFF111B21))),
             ),
             const SizedBox(height: 2),
-            Text(notSent ? 'not delivered · $time' : time, style: GoogleFonts.inter(fontSize: 10.5, color: Colors.black45)),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(notSent ? 'not delivered · $time' : time, style: GoogleFonts.inter(fontSize: 10.5, color: Colors.black45)),
+              if (mine && !notSent) ...[
+                const SizedBox(width: 3),
+                Icon(pending ? Icons.schedule_rounded : Icons.done_rounded, size: 13, color: Colors.black45),
+              ],
+            ]),
           ]),
         ),
       ),
