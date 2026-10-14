@@ -231,6 +231,7 @@
       const text = typeof ev.data === 'string' ? ev.data : await ev.data.text();
       let m; try { m = JSON.parse(text); } catch (_) { return; }
       if (m.setupComplete) {
+        ws.__ready = true;
         chip('Live · listening', 'live');
         if (first) ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'The session has started. Greet me in one short sentence and ask me to show you my board.' }] }], turnComplete: true } }));
       }
@@ -245,7 +246,15 @@
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
       if (m.goAway) reconnect();
     };
-    ws.onclose = () => { if (running && ws && ws.__retired !== true) reconnect(); };
+    let ready = false;
+    const thisWs = ws;
+    ws.addEventListener('message', () => {}, { once: true });
+    ws.onclose = (ev) => {
+      if (thisWs.__retired === true || !running) return;
+      // Closed before the session even began: the settings or the model were refused. Say what Google said.
+      if (!thisWs.__ready) return stop('Altron could not start: ' + (ev.reason || ('connection closed (' + ev.code + ')')) + '. Please send this message to the team.');
+      reconnect();
+    };
     ws.onerror = () => {};
   }
 
