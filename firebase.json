@@ -8,6 +8,11 @@
     ],
     "rewrites": [
       {
+        "//": "The programme link most people already have now opens the admissions page (same address). The Flutter roadmap stays at /curriculum/product-engineering, and ?present=1 is sent there by the page itself.",
+        "source": "/roadmap/product-engineering",
+        "destination": "/admissions/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

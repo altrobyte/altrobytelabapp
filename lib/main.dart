@@ -431,6 +431,15 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (_, state) => TestSeriesPage(
               seriesId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
         ),
+        // The same roadmap at a second address: /roadmap/product-engineering is now the admissions page (firebase.json),
+        // so the full roadmap and the projector view (?present=1) live here.
+        GoRoute(
+          path: '/curriculum/:slug',
+          builder: (_, state) => RoadmapScreen(
+            slug: state.pathParameters['slug'] ?? '',
+            present: state.uri.queryParameters['present'] == '1',
+          ),
+        ),
         GoRoute(
           path: '/roadmap/:slug',
           // ?present=1 for showing this on a screen to a room: no fees, the

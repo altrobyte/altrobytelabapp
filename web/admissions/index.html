@@ -416,6 +416,8 @@
 
 <script>
 (() => {
+  // The projector view of the roadmap is not this page.
+  if (new URLSearchParams(location.search).get('present') === '1') { location.replace('/curriculum/product-engineering?present=1'); return; }
   const API = 'https://edu.altrobytelab.com';
   const $ = (id) => document.getElementById(id);
   const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
@@ -476,7 +478,7 @@
   // ── the roadmap ──
   let roadmap = null;
   fetch(API + '/roadmaps/product-engineering').then((r) => r.json()).then((d) => { roadmap = d; renderStages(); }).catch(() => {
-    $('stages').innerHTML = '<p class="small">The roadmap could not load. <a href="/roadmap/product-engineering">Open it here</a>.</p>';
+    $('stages').innerHTML = '<p class="small">The roadmap could not load. <a href="/curriculum/product-engineering">Open it here</a>.</p>';
   });
 
   function renderStages() {
