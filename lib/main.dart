@@ -448,6 +448,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (_, state) => RoadmapScreen(
             slug: state.pathParameters['slug'] ?? '',
             present: state.uri.queryParameters['present'] == '1',
+            toAdmissions: true,
           ),
         ),
         GoRoute(

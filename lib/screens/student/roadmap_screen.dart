@@ -36,7 +36,11 @@ class RoadmapScreen extends StatefulWidget {
   /// through live, only scrolled past.
   final bool present;
 
-  const RoadmapScreen({super.key, required this.slug, this.present = false});
+  /// Opened at the programme's shared link: the admissions page is what that link now shows (see firebase.json). The
+  /// app's own cached page can answer the link before the server does, so it sends the visitor there itself.
+  final bool toAdmissions;
+
+  const RoadmapScreen({super.key, required this.slug, this.present = false, this.toAdmissions = false});
 
   @override
   State<RoadmapScreen> createState() => _RoadmapScreenState();
@@ -90,6 +94,9 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.toAdmissions && !widget.present && widget.slug == 'product-engineering') {
+      launchUrl(Uri.parse('/admissions/'), webOnlyWindowName: '_self');
+    }
     _load();
   }
 
@@ -460,7 +467,7 @@ class _Header extends StatelessWidget {
           if (plan?['stage_limit'] is int)
             _Chip(
                 icon: Icons.layers_outlined,
-                label: 'Stages 1-${plan!['stage_limit']}'),
+                label: plan!['stage_limit'] == 1 ? 'Stage 1' : 'Stages 1-${plan['stage_limit']}'),
           _Chip(icon: Icons.checklist_rounded, label: '$total milestones'),
         ]),
         if ((plan?['note'] as String? ?? '').isNotEmpty) ...[
@@ -1555,7 +1562,7 @@ class _PlanBuilderState extends State<_PlanBuilder> {
               _Chip(
                   icon: Icons.layers_outlined,
                   label: plan['stage_limit'] is int
-                      ? 'Stages 1-${plan['stage_limit']}'
+                      ? (plan['stage_limit'] == 1 ? 'Stage 1' : 'Stages 1-${plan['stage_limit']}')
                       : 'All 4 stages',
                   dark: true),
             ]),
