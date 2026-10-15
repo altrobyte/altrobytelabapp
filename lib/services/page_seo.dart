@@ -92,7 +92,7 @@ class PageSeo {
           'connected devices and edge AI systems.'
     ),
     '/scholarship': (
-      'Scholarship Test — Up to 50% Off Embedded & IoT Training',
+      'Scholarship Test — Up to 30% Off Your First Month',
       'Take one short test and what you score decides what you pay. Instant '
           'result, and a code in your name. Altrobyte Lab, Indore.'
     ),
