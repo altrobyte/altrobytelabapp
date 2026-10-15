@@ -281,6 +281,29 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                           itemBuilder: (context, index) {
                             if (index == 0) {
                               return Column(children: [
+                                // Admissions are open: the full page (fees, EMI, reviews, trainer, a mentor) is one tap away.
+                                if (!widget.present)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Material(
+                                      color: const Color(0xFFFFF4EC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () => launchUrl(Uri.parse('/admissions/'), webOnlyWindowName: '_self'),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          child: Row(children: [
+                                            const Icon(Icons.campaign_rounded, color: Color(0xFFD4500A)),
+                                            const SizedBox(width: 10),
+                                            Expanded(child: Text('Admissions open — fees, EMI, reviews and a free profile check',
+                                                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13.5, color: const Color(0xFF8A3305)))),
+                                            const Icon(Icons.chevron_right_rounded, color: Color(0xFFD4500A)),
+                                          ]),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 _Header(
                                   roadmap: r,
                                   planIndex: _plan,
@@ -339,7 +362,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                     child: SizedBox(
                                       width: double.infinity,
                                       child: OutlinedButton.icon(
-                                        onPressed: () => context.push('/plans'),
+                                        onPressed: () => launchUrl(Uri.parse('/admissions/#fees'), webOnlyWindowName: '_self'),
                                         icon: const Icon(Icons.sell_outlined, size: 18),
                                         label: const Text('See plans & pricing'),
                                         style: OutlinedButton.styleFrom(
