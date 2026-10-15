@@ -106,6 +106,10 @@
   .phase { background: var(--bg); border-radius: 12px; padding: 12px 14px; }
   .phase b { display: block; font-size: 13.5px; color: var(--navy); margin-bottom: 6px; }
   .phase li { font-size: 13.5px; }
+  details.topic { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; margin-top: 6px; }
+  details.topic summary { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; justify-content: space-between; gap: 8px; }
+  details.topic .cnt { font-size: 11.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  details.topic ul { margin: 8px 0 0; padding-left: 18px; }
   .phase ul, .outs { margin: 0; padding-left: 18px; }
   .outs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; margin-top: 12px; }
   .outs li { background: #E9F6EF; color: var(--ok); border-radius: 20px; padding: 4px 11px; font-size: 12.5px; font-weight: 600; }
@@ -495,7 +499,7 @@
           <span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3><span class="inplans">${['In every plan', 'In Plan 2 and Plan 3', 'In Plan 3', 'In Plan 3'][i] || ''}</span><br><span class="tag">${esc(tagline)}</span></span>
           <span class="chev">▾</span></button>
         <div class="body ${open ? '' : 'locked'}">
-          <div class="phases">${phases.map((p) => `<div class="phase"><b>${esc(p.title)}</b><ul>${(p.children || []).map((t) => `<li>${esc(t.title)}</li>`).join('')}</ul></div>`).join('')}</div>
+          <div class="phases">${phases.map((p) => `<div class="phase"><b>${esc(p.title)}</b>${(p.children || []).map((t) => `<details class="topic"><summary>${esc(t.title)}<span class="cnt">${(t.children || []).length} lessons</span></summary><ul>${(t.children || []).map((l) => `<li>${esc(l.title)}</li>`).join('')}</ul></details>`).join('')}</div>`).join('')}</div>
           ${outs ? `<ul class="outs">${(outs.children || []).map((o) => `<li>${esc(o.title)}</li>`).join('')}</ul>` : ''}
         </div></div>`;
     }).join('');
