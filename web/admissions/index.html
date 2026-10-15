@@ -112,6 +112,7 @@
   .locked { position: relative; }
   .locked .phases { filter: blur(5px); user-select: none; pointer-events: none; }
   .locked::after { content: "Fill the short form above to open the full syllabus"; position: absolute; inset: 0 0 auto 0; top: 30px; text-align: center; font-weight: 700; color: var(--navy); }
+  .inplans { display: inline-block; margin-left: 6px; font: 600 11.5px Inter; color: var(--navy); background: #EEF2F8; padding: 3px 9px; border-radius: 20px; }
   .herehint { display: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
   .stage.here .herehint { display: inline-block; }
 
@@ -489,7 +490,7 @@
       const tagline = fix(s.description || s.subtitle || '').split('\n')[0];
       return `<div class="stage ${i === 0 ? 'open' : ''} ${startStage === i + 1 ? 'here' : ''}" data-i="${i}">
         <button type="button" aria-expanded="${i === 0}"><span class="n">${i + 1}</span>
-          <span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3><span class="tag">${esc(tagline)}</span></span>
+          <span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3><span class="inplans">${['In every plan', 'In Plan 2 and Plan 3', 'In Plan 3', 'In Plan 3'][i] || ''}</span><br><span class="tag">${esc(tagline)}</span></span>
           <span class="chev">▾</span></button>
         <div class="body ${open ? '' : 'locked'}">
           <div class="phases">${phases.map((p) => `<div class="phase"><b>${esc(p.title)}</b><ul>${(p.children || []).map((t) => `<li>${esc(t.title)}</li>`).join('')}</ul></div>`).join('')}</div>
