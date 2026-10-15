@@ -367,8 +367,8 @@ class _PlansPageState extends State<PlansPage> {
             ),
             const SizedBox(width: 14),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text('EMI option available', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-              Text('Learn now, pay comfortably', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
+              Text('EMI on Plan 3', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+              Text('Learn now, pay comfortably — 3 monthly instalments', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
             ]),
           ]),
           Container(
@@ -376,7 +376,7 @@ class _PlansPageState extends State<PlansPage> {
             decoration: BoxDecoration(color: const Color(0xFFFFF6CC), borderRadius: BorderRadius.circular(12)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(inr(10000), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
-              Text('per month + GST', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
+              Text('per month × 3 + GST', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -472,8 +472,9 @@ class _PlansPageState extends State<PlansPage> {
   Widget _faq() {
     const qa = <(String, String)>[
       ('Is GST included in the price?', 'No. GST is added to every price shown on this page.'),
-      ('Can I pay monthly?', 'Yes. There is an EMI option of ₹10,000 per month + GST, so you do not pay everything upfront.'),
-      ('Are classes online or offline?', 'Both. Live classes run online and offline, on weekdays and on weekends: you pick what suits you.'),
+      ('Can I pay monthly?', 'Yes, on Plan 3: ₹10,000 a month for 3 months + GST, so you do not pay everything upfront.'),
+      ('What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day.'),
+      ('Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (5th Floor, Gravity Mall, Mechanic Nagar).'),
       ('What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in Plan 2 and Plan 3, so you can practise outside class.'),
       ('What if I miss a class?', 'Every plan includes access to the recorded lectures, and doubt support to catch up.'),
       ('Which plan should I choose?', 'Plan 1 if you want to start learning now. Plan 2 if you want your own kit. Plan 3 if you also want placement assistance.'),
@@ -546,7 +547,7 @@ class _PlansPageState extends State<PlansPage> {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                       Text('From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)} / month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
-                      Text('+ GST · EMI available', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
+                      Text('+ GST', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
                     ]),
                   ),
                   ElevatedButton(
