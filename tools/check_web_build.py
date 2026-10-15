@@ -27,5 +27,5 @@ if not (WEB / "downloads" / "latest.json").is_file():
     missing.append("downloads/latest.json (run python tools/publish_downloads.py first)")
 if missing or broken:
     sys.exit("The web build is incomplete, do not deploy it. Missing: " + ", ".join(missing) +
-             ("; not valid JSON: " + ", ".join(broken) if broken else "") + ". Free some disk space and build again.")
+             ("; not valid JSON: " + ", ".join(broken) if broken else "") + ". Delete build/web and build again (building over an old build has left files out twice), and keep some disk space free.")
 print("web build complete")
