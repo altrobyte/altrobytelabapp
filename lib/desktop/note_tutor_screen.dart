@@ -14,6 +14,7 @@ import '../constants/app_colors.dart';
 import '../services/api_service.dart';
 import 'chat_text.dart';
 import 'help_button.dart';
+import 'class_screen.dart';
 import 'live_tutor_screen.dart';
 import 'note_tutor.dart';
 import 'tutor_feel.dart';
@@ -437,6 +438,18 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         foregroundColor: Colors.white,
         title: Text(t.title.isEmpty ? widget.title : t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
         actions: [
+          // A note written as a class (docs/altrobyte-class-notes.md) is best taught live, on the board.
+          if (t.html.contains('altro-class'))
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ClassScreen(noteId: widget.contentId, title: t.title.isEmpty ? widget.title : t.title))),
+                icon: const Icon(Icons.graphic_eq_rounded, size: 18),
+                label: const Text('Start the live class'),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+              ),
+            ),
           HelpButton(where: () => 'Note: ${t.title.isEmpty ? widget.title : t.title} · Section: ${t.titleOf(t.current)}'),
           const SizedBox(width: 6),
         ],

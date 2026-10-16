@@ -283,7 +283,8 @@
     if (i < 0 || i >= klass.sections.length) return false;
     done.add(at); at = i; render();
     if (byLearner) tell('[Screen] The learner moved the board to section ' + (i + 1) + '. Teach it: ' + JSON.stringify(sectionFor(i)));
-    if (at === klass.sections.length - 1 && klass.sections[at].kind === 'summary' && !isDemo) showEnd();
+    if (klass.sections[at].kind === 'summary') { done.add(at); if (!isDemo && at === klass.sections.length - 1) showDone(); }
+    saveProgress();
     return true;
   }
   $('prev').onclick = () => go(at - 1, true);
@@ -313,7 +314,7 @@
     const correct = k === s.check.answer;
     btns.forEach((b, i) => { b.classList.toggle('wrong', i === k && !correct); if (correct) { b.disabled = true; b.classList.toggle('right', i === k); } });
     $('why').innerHTML = correct ? '✅ <b>Right.</b> ' + esc(s.check.why) : '❌ Not quite. Try another one.';
-    if (correct) { checkDone = true; done.add(at); }
+    if (correct) { checkDone = true; done.add(at); saveProgress(); }
     return { correct, chosen: s.check.options[k], why: correct ? s.check.why : 'not told yet: let them try again with a hint' };
   }
   function tapPart(part) {
@@ -322,7 +323,7 @@
     const right = part === s.practical.answer;
     el.forEach((x) => { x.classList.add(right ? 'right' : 'wrong'); if (!right) setTimeout(() => x.classList.remove('wrong'), 1200); });
     $('task').innerHTML = right ? '✅ Right! That is the one.' : '👆 Not that one. Try again: ' + esc(s.practical.text);
-    if (right) { pracDone = true; done.add(at); }
+    if (right) { pracDone = true; done.add(at); saveProgress(); }
     tell('[Screen] On the practical the learner tapped "' + part + '": ' + (right ? 'right' : 'not right, they will try again') + '.');
   }
 
@@ -339,6 +340,31 @@
     options.forEach((o, i) => { const ow = new Set(o.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 2)); if (!ow.size) return;
       const sc = [...ow].filter((w) => heardW.has(w)).length / ow.size; if (sc > bs) { sec = bs; bs = sc; best = i; } else if (sc > sec) sec = sc; });
     return best >= 0 && bs >= 0.34 && bs - sec >= 0.15 ? best : null;
+  }
+
+  // ── where the learner is, for a class that stands for a course on their learning path ──
+  let saveT = 0;
+  function saveProgress() {
+    if (isDemo || !classId || !token()) return;
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      try { fetch(API + '/trainer/live/class-progress', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...authH() },
+                    body: JSON.stringify({ class_id: classId, done: [...done].map((k) => k + 1) }) }).catch(() => {}); } catch (_) {}
+    }, 600);
+  }
+  function tellHost(o) { try { if (host) host.postMessage(JSON.stringify(o)); } catch (_) {} }
+
+  // ── the end of a class on the learning path ──
+  function showDone() {
+    if ($('doneCard')) return;
+    done.add(at); saveProgress();
+    const back = host ? '<button type="button" class="go" id="backBtn" style="font-size:15px;padding:12px 20px">Back to my learning path</button>'
+                      : '<a class="mentor" href="/" style="background:var(--navy)">Back to Altrobyte</a>';
+    $('endHost').innerHTML = `<div id="doneCard" class="check" style="margin-top:12px;border-color:#bfe6d1;background:#f2fbf6">
+      <div class="q">🎉 Class complete</div><p style="margin:0 0 12px;color:var(--soft)">Well done. Altron will be there in the next lesson too.</p>${back}</div>`;
+    if ($('backBtn')) $('backBtn').onclick = () => { pause(); tellHost({ type: 'close' }); };
+    tellHost({ type: 'class_done', class_id: classId });
+    $('endHost').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ── the end of the demo: the plans, the recommended one first ──
@@ -448,7 +474,7 @@
         const v = String(a.section || 'next').toLowerCase();
         const i = v === 'next' ? at + 1 : v === 'back' ? at - 1 : Number(v) - 1;
         r = go(i, false) ? sectionFor(at) : { error: i >= klass.sections.length ? 'That was the last section.' : 'No such section.' };
-        if (r.error && i >= klass.sections.length && !isDemo) showEnd();
+        if (r.error && i >= klass.sections.length && !isDemo) { showDone(); r = { done: true, screen: 'the class-complete card is on their screen with a button back to their learning path' }; }
       } else if (c.name === 'point_at') r = pointAt(String(a.part || '')) ? { pointed: true } : { error: 'No such part on this board. Parts: ' + klass.sections[at].points.join(', ') };
       else if (c.name === 'ask_check') r = showCheck() ? { shown: true, ...sectionFor(at).check_question } : { error: 'This section has no check question.' };
       else if (c.name === 'submit_answer') {
@@ -534,6 +560,7 @@
   $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
   $('txbtn').onclick = () => { $('tx').classList.toggle('on'); $('txbtn').textContent = $('tx').classList.contains('on') ? 'Hide what was said ▴' : 'Show what was said ▾'; };
   window.altronPause = () => { if (running) pause(); };
+  if (P.get('autostart') === '1' && token()) setTimeout(startClass, 300);   // inside the app: one less tap
   addEventListener('pagehide', cleanup);
 
   // ── WhatsApp sign-in, the same as the roadmap page ──

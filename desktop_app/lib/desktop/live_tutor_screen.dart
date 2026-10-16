@@ -19,6 +19,7 @@ import 'visual_page.dart';
 
 const liveOrigin = 'https://altrobytelab.com';
 const liveAppHost = 'live.altron.example'; // the private name the app serves its own copy of the page under
+const classAppHost = 'class.altron.example'; // and the class player's
 
 /// Lets Altron speak as soon as a session starts: the page plays sound without waiting for a tap. Called once, before any
 /// browser view is made; a failure only means the learner taps ▶ once.
@@ -28,15 +29,35 @@ Future<void> initLiveEnvironment() async {
   } catch (_) {}
 }
 
-/// The app's own copy of the Live page (next to the exe, in data/flutter_assets/assets/live), or null.
-String? bundledLiveFolder() {
+/// A page the app ships (next to the exe, in data/flutter_assets/assets/<name>/index.html): its folder, or null.
+String? bundledFolder(String name) {
   try {
     final sep = Platform.pathSeparator;
-    final dir = [File(Platform.resolvedExecutable).parent.path, 'data', 'flutter_assets', 'assets', 'live'].join(sep);
+    final dir = [File(Platform.resolvedExecutable).parent.path, 'data', 'flutter_assets', 'assets', name].join(sep);
     return File('$dir${sep}index.html').existsSync() ? dir : null;
   } catch (_) {
     return null;
   }
+}
+
+/// The app's own copy of the Live page, or null.
+String? bundledLiveFolder() => bundledFolder('live');
+
+/// Opens the class player in [web] for a built-in class or a module note written as a class: the app's own copy when it
+/// is there, else the website's. It starts at once (the app lets it play sound without a tap).
+Future<void> loadClass(WebviewController web, {String? classId, int? noteId, String lang = 'en'}) async {
+  final token = await ApiService.learnerToken() ?? '';
+  var base = '$liveOrigin/class/index.html';
+  final folder = bundledFolder('class');
+  if (folder != null) {
+    try {
+      await web.addVirtualHostNameMapping(classAppHost, folder, WebviewHostResourceAccessKind.allow);
+      base = 'https://$classAppHost/index.html';
+    } catch (_) {}
+  }
+  final q = <String, String>{if (classId != null) 'id': classId, if (noteId != null) 'note': '$noteId', 'lang': lang, 'embed': '1', 'autostart': '1'};
+  final query = q.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&');
+  await web.loadUrl('$base?$query${token.isEmpty ? '' : '#t=${Uri.encodeComponent(token)}'}');
 }
 
 /// The address of the Live page (version 2) at [base], for a course, a topic (note) or an experiment.
@@ -91,7 +112,7 @@ String liveTutorUrl({int? noteId, int? labId, int? moduleId, String token = ''})
 
 /// Camera and microphone are allowed for our own page only (the app's copy or the website's); nothing else may ask for them.
 WebviewPermissionDecision livePermission(String url, WebviewPermissionKind kind) {
-  final ours = url.startsWith('$liveOrigin/') || url.startsWith('https://$liveAppHost/');
+  final ours = url.startsWith('$liveOrigin/') || url.startsWith('https://$liveAppHost/') || url.startsWith('https://$classAppHost/');
   final needed = kind == WebviewPermissionKind.camera || kind == WebviewPermissionKind.microphone;
   return ours && needed ? WebviewPermissionDecision.allow : WebviewPermissionDecision.deny;
 }

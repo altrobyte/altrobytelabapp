@@ -14,6 +14,7 @@ import 'app_version.dart';
 import 'helper_client.dart' show versionAtLeast;
 import 'helper_controller.dart';
 import 'local_tools.dart' show openFolderInVsCode;
+import 'class_screen.dart';
 import 'lesson_screen.dart';
 import 'live_course.dart';
 import 'help_button.dart';
@@ -180,6 +181,18 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => LessonScreen(
             title: title, section: section, load: () => labId != null ? ApiService.trainerLabNote(labId) : ApiService.trainerLesson(courseId))));
+  }
+
+  /// Built-in courses that are now taught as a live class on a board (the class keeps the course's progress).
+  static const _classFor = {'intro_roadmap': 'roadmap'};
+
+  Future<void> _openCourse(Map<String, dynamic> k) async {
+    final id = '${k['id']}';
+    final klass = _classFor[id];
+    if (klass == null) return _start(course: id);
+    ApiService.trainerEvent('note_opened', detail: 'class: $klass');
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassScreen(classId: klass, title: '${k['title'] ?? 'Your roadmap'}')));
+    _loadCourses(); // back on the learning path: show the progress the class saved
   }
 
   /// The lesson section the step the learner is on points to ("section 3 of the interactive lesson"), if it names one.
@@ -493,7 +506,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           IconButton(tooltip: 'Open the interactive lesson', onPressed: () => _openLesson('${k['id']}'), icon: const Icon(Icons.auto_stories_rounded, color: AppColors.accent)),
         ],
         ElevatedButton(
-          onPressed: c.ready && !c.busy ? () => _start(course: '${k['id']}') : null,
+          onPressed: c.ready && !c.busy ? () => _openCourse(k) : null,
           style: isNext ? ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white) : null,
           child: Text(label),
         ),
