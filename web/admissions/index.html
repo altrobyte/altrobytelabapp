@@ -197,7 +197,7 @@
            padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 12.5px; color: var(--ink); opacity: 0; transform: translateY(10px); transition: opacity .4s, transform .4s; pointer-events: none; }
   .proof.on { opacity: 1; transform: none; pointer-events: auto; }
   .proof .i { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #E3F6EA; color: #1E9E55; display: grid; place-items: center; font-size: 14px; }
-  .proof .w { min-width: 0; } .proof .w .m { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .proof .w { min-width: 0; transition: opacity .25s; } .proof .w .m { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .proof .w small { display: block; color: var(--muted); font-size: 11px; }
   .proof button { flex: none; border: 0; background: none; color: #9aa6b8; font-size: 16px; cursor: pointer; padding: 0 2px; }
   @media (max-width: 640px) { .proof { left: 12px; right: 12px; max-width: none; bottom: 78px; } }
@@ -712,7 +712,7 @@
   $('faqs').innerHTML = faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
 
   // Who joined lately: the real registrations feed (names already shortened by the server). One line per person, only
-  // the last 30 days, a few turns and then it goes away; it never invents anyone.
+  // the last 30 days; it never invents anyone.
   setTimeout(() => {
     fetch(API + '/activity-feed?limit=20').then((r) => r.json()).then((d) => {
       const esc = (t) => String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -734,19 +734,23 @@
       });
       if (!items.length) return;
       const box = $('proof');
-      let i = 0, turns = 0, timer;
+      let i = 0, timer;
       const show = () => {
         const a = items[i++ % items.length];
         $('proofT').innerHTML = `<span class="m"><b>${esc(a.student_name)}</b> ${esc(a.action)} <b>${esc(a.target)}</b></span><small>${ago(a.timestamp)}</small>`;
         box.classList.add('on');
-        setTimeout(() => box.classList.remove('on'), 6000);
-        if (++turns >= Math.min(5, items.length * 2)) clearInterval(timer);
+      };
+      // Stays on screen and changes to the next person every 5 seconds (the text fades, the card does not leave).
+      const next = () => {
+        const t = $('proofT');
+        t.style.opacity = '0';
+        setTimeout(() => { show(); t.style.opacity = '1'; }, 250);
       };
       $('proofX').onclick = () => { clearInterval(timer); box.classList.remove('on'); };
       show();
-      timer = setInterval(show, 12000);
+      if (items.length > 1) timer = setInterval(next, 5000);
     }).catch(() => {});
-  }, 6000);
+  }, 2500);
 
   for (const a of document.querySelectorAll('a[href^="/enroll/"]')) a.addEventListener('click', () => track('admissions_enrol'));
   document.addEventListener('click', (e) => { const a = e.target.closest('a[data-plan]'); if (a) track('admissions_enrol_' + a.dataset.plan); });
