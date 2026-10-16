@@ -254,7 +254,10 @@
 
   function sectionFor(i) {          // what Altron is told about a section: never the answer
     const s = klass.sections[i];
-    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach,
+    // A part named as [id] in the notes goes in front as a cue for point_at; said aloud it would sound twice ("relay relay").
+    const cue = (t) => { const ids = [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]); const said = t.replace(/\s*\[[\w-]+\]/g, '');
+                         return (ids.length ? '(point at: ' + ids.join(', ') + ') ' : '') + said; };
+    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(cue),
              parts_you_can_point_at: s.points, check_question: s.check ? { question: s.check.q, options: s.check.options.map((o, k) => (k + 1) + '. ' + o) } : null,
              practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts };
   }
@@ -481,7 +484,13 @@
         const s = klass.sections[at];
         if (!s.check) r = { error: 'This section has no check question.' };
         else if (!heard.trim()) r = { ok: false, note: 'The learner has not said an answer yet. Wait for them.' };
-        else { const k = matchOption(a.answer, s.check.options); r = k == null ? { ok: false, note: 'Not clear which option they meant; ask for the number.' } : answer(k); heard = ''; }
+        else {
+          // The learner's own words decide, never the model's: it once "answered" for someone who had only said "yes, go on".
+          let k = matchOption(heard, s.check.options);
+          if (k == null) { const m = matchOption(a.answer, s.check.options); if (m != null && heard.toLowerCase().includes(String(a.answer).toLowerCase().trim())) k = m; }
+          r = k == null ? { ok: false, note: 'What they said is not one of the options. Ask them to say the option number.' } : answer(k);
+          heard = '';
+        }
       } else if (c.name === 'save_counselling') {
         try { await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) }); } catch (_) {}
         showEnd(a.plan, a.why); track('class_counselling_done');

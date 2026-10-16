@@ -130,12 +130,13 @@ class CourseLiveBridge {
         if (heard.trim().isEmpty) {
           return {'ok': false, 'note': 'The learner has not said an answer yet. Ask the question and wait for them to answer.', 'now': courseStep(c)};
         }
-        return answer('${args['answer'] ?? ''}');
+        return answer('${args['answer'] ?? ''}', heard: heard);
     }
     return {'error': 'Unknown tool $name.'};
   }
 
-  Future<Map<String, dynamic>> answer(String said) async {
+  /// [heard] is the learner's own words; on a quiz they decide the option, never the model's [said] alone.
+  Future<Map<String, dynamic>> answer(String said, {String heard = ''}) async {
     said = said.trim();
     if (said.isEmpty) return {'ok': false, 'note': 'Nothing was said. Ask again.'};
     final card = activeCard(c);
@@ -143,7 +144,8 @@ class CourseLiveBridge {
     String sent = said;
     if (card?.interactive == 'quiz') {
       final options = _options(card!);
-      final i = matchOption(said, options);
+      var i = heard.isEmpty ? matchOption(said, options) : matchOption(heard, options);
+      if (i == null && heard.isNotEmpty && heard.toLowerCase().contains(said.toLowerCase())) i = matchOption(said, options);
       if (i == null) {
         return {'ok': false, 'note': 'It is not clear which option they meant. Ask them to say the option number.', 'card_on_screen': _cardMap(card)};
       }

@@ -113,6 +113,21 @@ void main() {
       c.dispose();
     });
 
+    test("on a quiz the learner's own words decide, not the option the model names", () async {
+      final h = helper.FakeHelper();
+      final c = h.controller();
+      await c.init();
+      await c.start(course: 'intro_roadmap');
+      h.emit('ui', {'type': 'quiz', 'props': {'milestone': 'm', 'question': 'Q?', 'options': ['Alpha', 'Beta']}});
+      h.emit('turn_done', {'finished': false});
+      await helper.settle();
+      final sent = h.bodies.length;
+      final out = await CourseLiveBridge(c).run('answer_for_learner', {'answer': '2'}, heard: 'haan samajh gaya aage batao');
+      expect(out['ok'], isFalse);
+      expect(h.bodies.length, sent);
+      c.dispose();
+    });
+
     test('Altron cannot answer for the learner when the learner said nothing', () async {
       final h = helper.FakeHelper();
       final c = h.controller();
