@@ -410,10 +410,10 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         Row(children: [
           const Icon(Icons.school_rounded, size: 30, color: AppColors.primary),
           const SizedBox(width: 10),
-          Expanded(child: Text('Your learning path', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600))),
+          Expanded(child: Text('Module 0 · Start here', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600))),
         ]),
         const SizedBox(height: 6),
-        Text('Start at the top. Your trainer talks with you, asks small questions and never does the work for you. Nothing to install by hand: this app helps you with every step.',
+        Text('A few short lessons before your modules: the program, your laptop, the first ideas and your first program. Then your modules below, lesson by lesson.',
             style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5, fontSize: 13)),
         const SizedBox(height: 16),
         if (_courses.isEmpty && _coursesFailed)
@@ -502,7 +502,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           ]),
         ),
         const SizedBox(width: 10),
-        if (k['lesson'] == true) ...[
+        if (k['lesson'] == true && !_classFor.containsKey('${k['id']}')) ...[   // a live class has its notes on its own board
           IconButton(tooltip: 'Open the interactive lesson', onPressed: () => _openLesson('${k['id']}'), icon: const Icon(Icons.auto_stories_rounded, color: AppColors.accent)),
         ],
         ElevatedButton(
