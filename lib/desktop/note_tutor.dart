@@ -119,6 +119,7 @@ class NoteTutor extends ChangeNotifier {
 
   String title = '';
   String html = '';
+  bool hasClass = false; // the note has a class version, taught live on the board
   String? problem; // the note itself could not be loaded
   bool loading = true;
   bool asking = false; // waiting for an answer: the screen shows the tutor "typing"
@@ -178,6 +179,7 @@ class NoteTutor extends ChangeNotifier {
       final r = await loadNote(contentId, lang);
       title = '${r['title'] ?? ''}';
       html = '${r['html'] ?? ''}';
+      hasClass = r['has_class'] == true;
       sections = [
         for (final s in (r['sections'] as List? ?? const [])) {'id': '${(s as Map)['id']}', 'title': '${s['title'] ?? ''}'}
       ];

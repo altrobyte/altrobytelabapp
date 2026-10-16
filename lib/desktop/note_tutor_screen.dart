@@ -439,7 +439,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         title: Text(t.title.isEmpty ? widget.title : t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
         actions: [
           // A note written as a class (docs/altrobyte-class-notes.md) is best taught live, on the board.
-          if (t.html.contains('altro-class'))
+          if (t.hasClass || t.html.contains('altro-class'))
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: FilledButton.icon(
