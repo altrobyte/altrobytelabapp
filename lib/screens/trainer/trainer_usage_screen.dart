@@ -98,6 +98,24 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
                       ),
                   ]),
                   const SizedBox(height: 22),
+                  // Talk with Altron Live: what it costs, from Google's own counts (or the minutes, when a report never came).
+                  Builder(builder: (_) {
+                    final live = Map<String, dynamic>.from((_data?['live'] as Map?) ?? const {});
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: const Color(0xFFFFF4EC), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFFD2B3))),
+                      child: Wrap(spacing: 28, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        Text('Altron Live', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                        Text('${live['learners'] ?? 0} learners talked', style: GoogleFonts.inter(fontSize: 13)),
+                        Text('${live['minutes'] ?? 0} minutes', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                        Text('≈ ₹${live['inr'] ?? 0} in all', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFB4470A))),
+                        Text('≈ ₹${live['inr_per_learner'] ?? 0} per learner', style: GoogleFonts.inter(fontSize: 13)),
+                        Text('Estimate at Google list prices; the Google Cloud bill is the final word.',
+                            style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+                      ]),
+                    );
+                  }),
+                  const SizedBox(height: 22),
                   Text('Learners (${rows.length})', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
                   const SizedBox(height: 4),
                   Text('Most recent first. Someone who asked for help or is stuck on the same step for long needs a call.',
@@ -119,6 +137,7 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
                             DataColumn(label: Text('Best lesson')),
                             DataColumn(label: Text('Stuck at')),
                             DataColumn(label: Text('Help'), numeric: true),
+                            DataColumn(label: Text('Altron Live'), numeric: true),
                             DataColumn(label: Text('Last seen')),
                             DataColumn(label: Text('Last thing they did')),
                           ],
@@ -134,6 +153,7 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
                                 DataCell(Text(r['best'] == null ? '—' : '${r['best']['stuck_at'] ?? ''}')),
                                 DataCell(Text('${r['help'] ?? 0}',
                                     style: TextStyle(fontWeight: FontWeight.w700, color: (r['help'] ?? 0) > 0 ? AppColors.error : AppColors.textSecondary))),
+                                DataCell(Text((r['live_minutes'] ?? 0) == 0 ? '—' : '${r['live_minutes']} min · ₹${r['live_inr'] ?? 0}')),
                                 DataCell(Text(_when(r['last_seen'] as String?))),
                                 DataCell(ConstrainedBox(constraints: const BoxConstraints(maxWidth: 320), child: Text('${r['last_event'] ?? ''}', overflow: TextOverflow.ellipsis))),
                               ]),
