@@ -61,11 +61,13 @@ Future<void> loadClass(WebviewController web, {String? classId, int? noteId, Str
 }
 
 /// The address of the Live page (version 2) at [base], for a course, a topic (note) or an experiment.
-String liveV2Url(String base, {String? course, int? noteId, int? labId, String lang = 'en', bool compact = true, bool autostart = true, String token = ''}) {
+String liveV2Url(String base,
+    {String? course, int? noteId, int? labId, bool steps = false, String lang = 'en', bool compact = true, bool autostart = true, String token = ''}) {
   final q = <String, String>{
     if (course != null) 'course': course,
     if (noteId != null) 'note': '$noteId',
     if (labId != null) 'lab': '$labId',
+    if (steps) 'steps': '1',
     'lang': lang,
     if (compact) 'compact': '1',
     if (autostart) 'autostart': '1',
@@ -75,7 +77,8 @@ String liveV2Url(String base, {String? course, int? noteId, int? labId, String l
 }
 
 /// Opens the Live page in [web]: the app's own copy when it is there, else the website's.
-Future<void> loadLive(WebviewController web, {String? course, int? noteId, int? labId, String lang = 'en', bool compact = true, bool autostart = true}) async {
+Future<void> loadLive(WebviewController web,
+    {String? course, int? noteId, int? labId, bool steps = false, String lang = 'en', bool compact = true, bool autostart = true}) async {
   final token = await ApiService.learnerToken() ?? '';
   var base = '$liveOrigin/live/v2/index.html';
   final folder = bundledLiveFolder();
@@ -85,7 +88,7 @@ Future<void> loadLive(WebviewController web, {String? course, int? noteId, int? 
       base = 'https://$liveAppHost/index.html';
     } catch (_) {}
   }
-  await web.loadUrl(liveV2Url(base, course: course, noteId: noteId, labId: labId, lang: lang, compact: compact, autostart: autostart, token: token));
+  await web.loadUrl(liveV2Url(base, course: course, noteId: noteId, labId: labId, steps: steps, lang: lang, compact: compact, autostart: autostart, token: token));
 }
 
 /// A message the Live page posted (window.chrome.webview.postMessage of a JSON string), as a map; null if it is not one.

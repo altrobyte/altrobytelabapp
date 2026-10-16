@@ -140,7 +140,7 @@
     if (!t) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
     const r = await fetch(API + '/trainer/live/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, lang, resume: !!resume }),
+      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', lang, resume: !!resume }),
     });
     const body = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
@@ -320,7 +320,7 @@
         status('listening', 'live');
         if (kind === 'first') {
           const camLine = 'My camera is off.';
-          const opener = course
+          const opener = (course || P.get('steps') === '1')
             ? 'The session has started. ' + camLine + ' Call get_current_step, then greet me in one short sentence and teach that step.'
             : 'The session has started. ' + camLine + ' Greet me in one short sentence, say what we will look at today and ask what I am working on.';
           note(opener);

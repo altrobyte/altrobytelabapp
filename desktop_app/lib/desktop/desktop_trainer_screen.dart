@@ -54,6 +54,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   bool _coursesFailed = false;
   String? _newVersion; // a newer installer exists
   int _shown = 0;
+  bool _showLog = false; // the whole conversation instead of the step on screen now
 
   @override
   void initState() {
@@ -184,7 +185,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   }
 
   /// Built-in courses that are now taught as a live class on a board (the class keeps the course's progress).
-  static const _classFor = {'intro_roadmap': 'roadmap'};
+  static const _classFor = {'intro_roadmap': 'roadmap', 'intro_welcome': 'electronics'};
 
   Future<void> _openCourse(Map<String, dynamic> k) async {
     final id = '${k['id']}';
@@ -347,6 +348,75 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
             : ChatText(b.text, color: trainer ? AppColors.textPrimary : Colors.white),
       ),
     );
+  }
+
+  /// The step on screen now, big and alone: what the trainer said since the learner last answered, and the card or the
+  /// buttons to answer it. The whole conversation stays one tap away.
+  Widget _stepView() {
+    var i = c.chat.length - 1;
+    while (i >= 0 && c.chat[i].role != 'learner') {
+      i--;
+    }
+    final said = i >= 0 ? c.chat[i] : null;
+    final now = c.chat.sublist(i + 1).where((b) => b.interactive != 'lesson').toList();
+    final texts = [for (final b in now) if (b.interactive == null && b.text.trim().isNotEmpty) b];
+    final cards = [for (final b in now) if (b.interactive != null) b];
+    return ListView(padding: const EdgeInsets.fromLTRB(18, 16, 18, 16), children: [
+      if (said != null)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+            child: Text('You: ${said.text}', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.primary)),
+          ),
+        ),
+      if (texts.isNotEmpty)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 18, offset: const Offset(0, 6))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (var k = 0; k < texts.length; k++) ...[
+              if (k > 0) const SizedBox(height: 12),
+              texts[k].role == 'system'
+                  ? Text(texts[k].text, style: GoogleFonts.inter(fontSize: 13.5, fontStyle: FontStyle.italic, color: AppColors.textSecondary))
+                  : ChatText(texts[k].text, color: AppColors.textPrimary, fontSize: 16),
+            ],
+          ]),
+        ),
+      const SizedBox(height: 12),
+      for (final b in cards) _bubble(b),
+      if (c.busy)
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(children: [
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(c.activity.isEmpty ? 'Altron is checking…' : 'Altron is ${c.activity}…',
+                  style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+            ),
+          ]),
+        ),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _showLog = true);
+            _scrollDown();
+          },
+          icon: const Icon(Icons.forum_outlined, size: 16),
+          label: const Text('Show the whole conversation'),
+        ),
+      ),
+    ]);
   }
 
   Widget _stepBanner() {
@@ -623,7 +693,17 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         Expanded(
           child: !c.started
               ? _courseHome()
-              : ListView(controller: _scroll, padding: const EdgeInsets.all(14), children: [
+              : !_showLog
+                  ? _stepView()
+                  : ListView(controller: _scroll, padding: const EdgeInsets.all(14), children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _showLog = false),
+                      icon: const Icon(Icons.flag_rounded, size: 16),
+                      label: const Text('Back to the step on screen'),
+                    ),
+                  ),
                   for (final b in c.chat) _bubble(b),
                   if (c.busy)
                     Padding(
@@ -650,7 +730,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
-                decoration: InputDecoration(hintText: c.started ? 'Reply to the trainer…' : 'Start the session first', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                decoration: InputDecoration(hintText: c.started ? 'Answer, or ask Altron anything…' : 'Start a lesson first', isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
               ),
             ),
             const SizedBox(width: 8),
@@ -867,7 +947,8 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                 flex: 4,
                 child: Column(children: [
                   // Altron's voice for a course: outside the list, so scrolling never ends the talk.
-                  if (c.started && c.courseId != null) LiveCoursePanel(key: ValueKey('live-${c.courseId}'), controller: c, course: c.courseId!),
+                  if (c.started && (c.courseId != null || c.labId != null))
+                    LiveCoursePanel(key: ValueKey('live-${c.courseId ?? 'lab${c.labId}'}'), controller: c, course: c.courseId, labId: c.labId),
                   Expanded(
                     child: ListView(children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
                   ),

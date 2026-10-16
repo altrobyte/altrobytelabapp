@@ -106,6 +106,7 @@ class HelperController extends ChangeNotifier {
   bool ready = false;
   bool lost = false; // the helper went away (restarted from another app, or ended)
   String? courseId; // the built-in course being taken, if any
+  int? labId; // the module experiment being done, if any
   bool hasLesson = true; // set by the screen from the course list
   Map<String, dynamic>? setupReport; // what the helper found on this computer (null until checked)
   bool settingUp = false; // a check or a download is in progress
@@ -253,6 +254,7 @@ class HelperController extends ChangeNotifier {
     busy = true;
     started = true;
     courseId = course;
+    this.labId = labId;
     chat.clear();
     state = null;
     // A course comes with an interactive page: offer it before the trainer says anything, so the learner can play with it.
@@ -347,6 +349,7 @@ class HelperController extends ChangeNotifier {
     started = false;
     busy = false;
     courseId = null;
+    labId = null;
     chat.clear();
     state = null;
     _notify();

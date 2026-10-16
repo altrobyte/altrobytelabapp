@@ -169,9 +169,10 @@ class CourseLiveBridge {
 
 /// The Altron card above the course's progress: it starts talking when the course opens (camera off).
 class LiveCoursePanel extends StatefulWidget {
-  const LiveCoursePanel({super.key, required this.controller, required this.course});
+  const LiveCoursePanel({super.key, required this.controller, this.course, this.labId});
   final HelperController controller;
-  final String course;
+  final String? course;
+  final int? labId; // a module experiment, run step by step on the screen
 
   @override
   State<LiveCoursePanel> createState() => _LiveCoursePanelState();
@@ -208,7 +209,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
       await web.setBackgroundColor(const Color(0xFF1E3A5F));
       await web.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       _messages = web.webMessage.listen(_onPage);
-      await loadLive(web, course: widget.course, lang: _lang);
+      await loadLive(web, course: widget.course, labId: widget.labId, steps: widget.labId != null, lang: _lang);
       if (!mounted) {
         web.dispose();
         return;
@@ -254,7 +255,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
     setState(() => _lang = l);
     unawaited(SharedPreferences.getInstance().then((p) => p.setString('tutor_lang', l)));
     final web = _web;
-    if (web != null) await loadLive(web, course: widget.course, lang: l);
+    if (web != null) await loadLive(web, course: widget.course, labId: widget.labId, steps: widget.labId != null, lang: l);
   }
 
   @override
