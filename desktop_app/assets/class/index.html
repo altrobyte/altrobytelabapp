@@ -71,6 +71,16 @@
   [data-point].wrong { filter: drop-shadow(0 0 9px var(--bad)); }
   .points { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
   .points li { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 15px; }
+  /* the slide's notes: what Altron is saying, to read along and keep */
+  .notes { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+  .notes .nh { font-size: 12px; font-weight: 800; letter-spacing: .5px; color: var(--soft); margin-bottom: 6px; }
+  .notes ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  .notes li { font-size: 15px; line-height: 1.5; padding: 2px 6px; border-radius: 8px; transition: background .25s; }
+  .notes li.lit { background: #fff1e3; box-shadow: inset 3px 0 0 var(--lit); }
+  .faq { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+  .faq summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--navy); }
+  .faq p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+  .faq p b { display: block; }
   .task { background: #fff4e8; border: 1px solid #ffd2a8; color: #7a3a06; border-radius: 12px; padding: 10px 12px; font-weight: 600; }
   .check { background: #fff; border: 2px solid #c9d8f5; border-radius: 16px; padding: 14px; }
   .check .q { font-weight: 700; font-size: 16px; margin-bottom: 10px; }
@@ -272,7 +282,13 @@
     let h = '';
     if (s.boardHtml) h += `<div class="board${s.kind === 'practical' ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
     if (s.practical) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
-    if (!s.boardHtml || s.kind === 'summary') h += `<ul class="points">${s.teach.map((t) => `<li>${esc(t.replace(/\s*\[[\w-]+\]/g, ''))}</li>`).join('')}</ul>`;
+    if (s.teach.length) {
+      const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
+      h += `<div class="notes"><div class="nh">📝 NOTES</div><ul>${s.teach.map((t) => `<li data-ids="${esc(ids(t))}">${esc(t.replace(/\s*\[[\w-]+\]/g, ''))}</li>`).join('')}</ul></div>`;
+    }
+    if (s.doubts.length) {
+      h += `<details class="faq"><summary>Common questions (${s.doubts.length})</summary>${s.doubts.map((d) => { const m = d.match(/^(.*?\?)\s*(.*)$/); return m ? `<p><b>${esc(m[1])}</b>${esc(m[2])}</p>` : `<p>${esc(d)}</p>`; }).join('')}</details>`;
+    }
     h += '<div id="checkHost"></div><div id="endHost"></div>';
     $('bbody').innerHTML = h;
     if (s.kind === 'practical') {
@@ -300,6 +316,8 @@
     if (!els.length) return false;
     b.querySelectorAll('.lit').forEach((x) => x.classList.remove('lit'));
     els.forEach((x) => x.classList.add('lit')); b.classList.add('pointing');
+    // the note line about this part lights up with it
+    document.querySelectorAll('.notes li').forEach((li) => li.classList.toggle('lit', (' ' + li.dataset.ids + ' ').includes(' ' + part + ' ')));
     clearTimeout(pointAt.t); pointAt.t = setTimeout(() => { b.classList.remove('pointing'); els.forEach((x) => x.classList.remove('lit')); }, 6000);
     return true;
   }
