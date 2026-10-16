@@ -153,8 +153,12 @@ class CourseLiveBridge {
       toolTurn = true;
       await c.answerQuiz('${card.props?['milestone']}', i, options[i]);
     } else {
+      // A step with suggested replies waits for one of them: "it's already open" is sent as the "It's open" it means.
+      final options = card == null ? const <String>[] : _options(card);
+      final i = options.isEmpty ? null : matchOption(heard.isEmpty ? said : heard, options);
+      if (i != null) sent = options[i];
       toolTurn = true;
-      await c.send(said);
+      await c.send(sent);
     }
     await Future.delayed(const Duration(milliseconds: 150));
     await _idle();

@@ -144,6 +144,22 @@ void main() {
       c.dispose();
     });
 
+    test('a spoken reply is sent as the suggested reply it means', () async {
+      final h = helper.FakeHelper();
+      final c = h.controller();
+      await c.init();
+      await c.start(course: 'intro_first_program');
+      h.emit('ui', {'type': 'replies', 'props': {'options': ["It's open", "I can't find it"]}});
+      h.emit('turn_done', {'finished': false});
+      await helper.settle();
+      final pending = CourseLiveBridge(c).run('answer_for_learner', {'answer': 'it is already open'}, heard: "It's already open.");
+      await helper.settle();
+      expect(h.bodies.last, {'text': "It's open"});
+      h.emit('turn_done', {'finished': false});
+      await pending.timeout(const Duration(seconds: 5));
+      c.dispose();
+    });
+
     test('with no course open the tools say so', () async {
       final h = helper.FakeHelper();
       final c = h.controller();
