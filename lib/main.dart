@@ -440,6 +440,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             present: state.uri.queryParameters['present'] == '1',
           ),
         ),
+        // The short link (/roadmap) is the admissions page too (firebase.json); this only catches a visitor whose
+        // browser still runs an old copy of the app, and sends them there.
+        GoRoute(
+          path: '/roadmap',
+          builder: (_, __) => const RoadmapScreen(slug: 'product-engineering', toAdmissions: true),
+        ),
         GoRoute(
           path: '/roadmap/:slug',
           // ?present=1 for showing this on a screen to a room: no fees, the

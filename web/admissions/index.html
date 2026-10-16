@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Admissions Open · Product Engineering Program · Altrobyte Lab</title>
-<meta name="description" content="Build 3-4 real industrial products — PCB, firmware, cloud and AI — with live classes in Indore and online. Admissions open: see the roadmap, the fees and the EMI option.">
-<meta property="og:title" content="Admissions open — Product Engineering Program, Altrobyte Lab">
-<meta property="og:description" content="Your own PCB, firmware, cloud and AI: 165 milestones, live classes, a kit for your desk. See the roadmap and fees.">
+<title>Embedded + IoT with AI Roadmap · Altrobyte Lab</title>
+<meta name="description" content="The step-by-step roadmap to learn Embedded, IoT and AI: ESP32 to STM32, your own PCB, cloud and edge AI — 4 stages, 200+ milestones, live classes in Indore and online.">
+<meta property="og:title" content="Roadmap to learn Embedded + IoT with AI — Altrobyte Lab">
+<meta property="og:description" content="ESP32 → STM32 → your own PCB → cloud → edge AI. 4 stages, 200+ milestones, the projects you build at each step.">
 <meta property="og:image" content="https://altrobytelab.com/og-program.jpg">
-<meta property="og:url" content="https://altrobytelab.com/admissions/">
+<meta property="og:url" content="https://altrobytelab.com/roadmap">
 <meta name="theme-color" content="#0B2450">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -192,6 +192,15 @@
   footer { padding: 30px 0 110px; color: var(--muted); font-size: 13.5px; text-align: center; }
   .hidden { display: none !important; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* who just joined: real registrations, names shortened */
+  .proof { position: fixed; left: 16px; bottom: 84px; z-index: 29; max-width: 300px; background: #fff; border-radius: 24px; box-shadow: 0 8px 26px rgba(11,36,80,.18);
+           padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 12.5px; color: var(--ink); opacity: 0; transform: translateY(10px); transition: opacity .4s, transform .4s; pointer-events: none; }
+  .proof.on { opacity: 1; transform: none; pointer-events: auto; }
+  .proof .i { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #E3F6EA; color: #1E9E55; display: grid; place-items: center; font-size: 14px; }
+  .proof .w { min-width: 0; } .proof .w .m { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .proof .w small { display: block; color: var(--muted); font-size: 11px; }
+  .proof button { flex: none; border: 0; background: none; color: #9aa6b8; font-size: 16px; cursor: pointer; padding: 0 2px; }
+  @media (max-width: 640px) { .proof { left: 12px; right: 12px; max-width: none; bottom: 78px; } }
 </style>
 </head>
 <body>
@@ -463,6 +472,7 @@
 
 <footer>© Altrobyte Lab · 5th Floor, Gravity Mall, Mechanic Nagar, Indore 452010 · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a> · <a href="https://wa.me/917222977927">+91 72229 77927</a><br><a href="/">altrobytelab.com</a> · <a href="/plans">All plans</a></footer>
 
+<div class="proof" id="proof" role="status" aria-live="polite"><span class="i">⚡</span><span class="w" id="proofT"></span><button type="button" id="proofX" aria-label="Close">×</button></div>
 <div class="bar">
   <div class="t"><b id="barT">Admissions open</b> · early-bird price for this batch only</div>
   <a class="btn ghost" href="#talk">Talk to mentor</a>
@@ -700,6 +710,43 @@
     ['Can I buy only the lab kit, or a lab for my college?', 'Yes. The Altrobyte mini lab kit is sold on its own too, and we set up custom labs for colleges, schools and companies. Ask for a quote in the "Kit & custom lab" section.'],
   ];
   $('faqs').innerHTML = faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
+
+  // Who joined lately: the real registrations feed (names already shortened by the server). One line per person, only
+  // the last 30 days, a few turns and then it goes away; it never invents anyone.
+  setTimeout(() => {
+    fetch(API + '/activity-feed?limit=20').then((r) => r.json()).then((d) => {
+      const esc = (t) => String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const at = (ts) => new Date(/Z|[+-]\d\d:\d\d$/.test(ts) ? ts : ts + 'Z').getTime();   // the server's times are UTC
+      const ago = (ts) => {
+        const h = (Date.now() - at(ts)) / 36e5;
+        if (h < 1) return 'just now';
+        if (h < 24) return `${Math.floor(h)} hour${h >= 2 ? 's' : ''} ago`;
+        const n = Math.floor(h / 24);
+        return n === 1 ? 'yesterday' : `${n} days ago`;
+      };
+      const seen = new Set();
+      const items = (d.activity || []).filter((a) => {
+        if (!a.student_name || !a.target || !a.timestamp) return false;
+        if (Date.now() - at(a.timestamp) > 30 * 864e5) return false;
+        if (seen.has(a.student_name)) return false;
+        seen.add(a.student_name);
+        return true;
+      });
+      if (!items.length) return;
+      const box = $('proof');
+      let i = 0, turns = 0, timer;
+      const show = () => {
+        const a = items[i++ % items.length];
+        $('proofT').innerHTML = `<span class="m"><b>${esc(a.student_name)}</b> ${esc(a.action)} <b>${esc(a.target)}</b></span><small>${ago(a.timestamp)}</small>`;
+        box.classList.add('on');
+        setTimeout(() => box.classList.remove('on'), 6000);
+        if (++turns >= Math.min(5, items.length * 2)) clearInterval(timer);
+      };
+      $('proofX').onclick = () => { clearInterval(timer); box.classList.remove('on'); };
+      show();
+      timer = setInterval(show, 12000);
+    }).catch(() => {});
+  }, 6000);
 
   for (const a of document.querySelectorAll('a[href^="/enroll/"]')) a.addEventListener('click', () => track('admissions_enrol'));
   document.addEventListener('click', (e) => { const a = e.target.closest('a[data-plan]'); if (a) track('admissions_enrol_' + a.dataset.plan); });
