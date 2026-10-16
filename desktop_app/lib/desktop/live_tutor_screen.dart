@@ -1,9 +1,13 @@
-// Altron with the camera, inside the trainer: it looks at the learner's bench through the computer's camera and talks them
-// through the topic they are on (Gemini Live). The page itself is the website's /live page, shown in the app's own browser
-// view; the app hands it the learner's sign-in in the address's #fragment, which never reaches any server, and lets that
-// one site use the camera and the microphone.
+// Altron by voice, inside the trainer (Gemini Live): it talks the learner through the topic or the course they are on, and
+// looks at their bench when they turn the camera on (it starts off). The page is shipped inside the app (assets/live, copied
+// from web/live/v2 by tools/sync_desktop_app.py) and served to the app's browser view from that folder under a private
+// name, so a website deploy can never break it; when the folder is missing the website's copy (/live/v2/) is used. The app
+// hands the page the learner's sign-in in the address's #fragment, which never reaches any server, and lets only that page
+// use the camera and the microphone.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +18,64 @@ import '../services/api_service.dart';
 import 'visual_page.dart';
 
 const liveOrigin = 'https://altrobytelab.com';
+const liveAppHost = 'live.altron.example'; // the private name the app serves its own copy of the page under
+
+/// Lets Altron speak as soon as a session starts: the page plays sound without waiting for a tap. Called once, before any
+/// browser view is made; a failure only means the learner taps ▶ once.
+Future<void> initLiveEnvironment() async {
+  try {
+    await WebviewController.initializeEnvironment(additionalArguments: '--autoplay-policy=no-user-gesture-required');
+  } catch (_) {}
+}
+
+/// The app's own copy of the Live page (next to the exe, in data/flutter_assets/assets/live), or null.
+String? bundledLiveFolder() {
+  try {
+    final sep = Platform.pathSeparator;
+    final dir = [File(Platform.resolvedExecutable).parent.path, 'data', 'flutter_assets', 'assets', 'live'].join(sep);
+    return File('$dir${sep}index.html').existsSync() ? dir : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// The address of the Live page (version 2) at [base], for a course, a topic (note) or an experiment.
+String liveV2Url(String base, {String? course, int? noteId, int? labId, String lang = 'en', bool compact = true, bool autostart = true, String token = ''}) {
+  final q = <String, String>{
+    if (course != null) 'course': course,
+    if (noteId != null) 'note': '$noteId',
+    if (labId != null) 'lab': '$labId',
+    'lang': lang,
+    if (compact) 'compact': '1',
+    if (autostart) 'autostart': '1',
+  };
+  final query = q.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&');
+  return '$base?$query${token.isEmpty ? '' : '#t=${Uri.encodeComponent(token)}'}';
+}
+
+/// Opens the Live page in [web]: the app's own copy when it is there, else the website's.
+Future<void> loadLive(WebviewController web, {String? course, int? noteId, int? labId, String lang = 'en', bool compact = true, bool autostart = true}) async {
+  final token = await ApiService.learnerToken() ?? '';
+  var base = '$liveOrigin/live/v2/index.html';
+  final folder = bundledLiveFolder();
+  if (folder != null) {
+    try {
+      await web.addVirtualHostNameMapping(liveAppHost, folder, WebviewHostResourceAccessKind.allow);
+      base = 'https://$liveAppHost/index.html';
+    } catch (_) {}
+  }
+  await web.loadUrl(liveV2Url(base, course: course, noteId: noteId, labId: labId, lang: lang, compact: compact, autostart: autostart, token: token));
+}
+
+/// A message the Live page posted (window.chrome.webview.postMessage of a JSON string), as a map; null if it is not one.
+Map<String, dynamic>? liveMessage(dynamic m) {
+  try {
+    final v = m is String ? jsonDecode(m) : m;
+    return v is Map ? Map<String, dynamic>.from(v) : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 /// The address of the camera tutor for a topic (a note), an experiment, or a module. [token] goes in the fragment.
 String liveTutorUrl({int? noteId, int? labId, int? moduleId, String token = ''}) {
@@ -27,9 +89,9 @@ String liveTutorUrl({int? noteId, int? labId, int? moduleId, String token = ''})
   return '$liveOrigin/live/?$query${token.isEmpty ? '' : '#t=${Uri.encodeComponent(token)}'}';
 }
 
-/// Camera and microphone are allowed for our own site only; nothing else may ask for them.
+/// Camera and microphone are allowed for our own page only (the app's copy or the website's); nothing else may ask for them.
 WebviewPermissionDecision livePermission(String url, WebviewPermissionKind kind) {
-  final ours = url.startsWith('$liveOrigin/');
+  final ours = url.startsWith('$liveOrigin/') || url.startsWith('https://$liveAppHost/');
   final needed = kind == WebviewPermissionKind.camera || kind == WebviewPermissionKind.microphone;
   return ours && needed ? WebviewPermissionDecision.allow : WebviewPermissionDecision.deny;
 }
@@ -66,8 +128,7 @@ class _LiveTutorScreenState extends State<LiveTutorScreen> {
       await _web.initialize();
       await _web.setBackgroundColor(const Color(0xFF0D1726));
       await _web.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
-      final token = await ApiService.learnerToken() ?? '';
-      await _web.loadUrl(liveTutorUrl(noteId: widget.noteId, labId: widget.labId, moduleId: widget.moduleId, token: token));
+      await loadLive(_web, noteId: widget.noteId, labId: widget.labId, compact: false);
       if (mounted) setState(() => _ready = true);
     } catch (e) {
       if (mounted) setState(() => _problem = 'The camera tutor could not open here.');

@@ -357,10 +357,9 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       await cam.initialize();
       await cam.setBackgroundColor(const Color(0xFF0D1726));
       await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
-      final token = await ApiService.learnerToken() ?? '';
-      // One voice: the note tutor's lines go to the camera tutor to say, instead of being spoken on top of it.
+      // One voice: the note tutor's lines go to Altron Live to say, instead of being spoken on top of it.
       t.relay = (text) => cam.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
-      await cam.loadUrl(liveTutorUrl(noteId: widget.contentId, token: token).replaceFirst('embed=1', 'embed=1&compact=1&lang=${t.lang}'));
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang); // talks at once; the camera stays off until the learner turns it on
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {

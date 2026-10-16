@@ -328,7 +328,14 @@
       if (m.setupComplete) {
         ws.__ready = true;
         chip('Live · listening', 'live');
-        if (first) ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: 'The session has started. Greet me in one short sentence, say what we will learn today, and ask me to show you my board.' }] }], turnComplete: true } }));
+        if (first) ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: '[The camera is on: you get about one picture a second.] The session has started. Greet me in one short sentence, say what we will learn today, and ask me to show you my board.' }] }], turnComplete: true } }));
+      }
+      // This page's camera is on from the start; Altron may still ask for it (the ask_camera tool) after it was turned off.
+      if (m.toolCall) {
+        const responses = (m.toolCall.functionCalls || []).map((c) => ({ id: c.id, name: c.name, response:
+          c.name === 'ask_camera' ? { camera: camOn ? 'already on' : 'off: ask the learner to tap the camera button' }
+                                  : { error: 'Not available on this page.' } }));
+        ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
       }
       const sc = m.serverContent;
       if (sc) {
@@ -436,7 +443,11 @@
   $('start').onclick = start;
   $('stop').onclick = () => stop();
   $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
-  $('camBtn').onclick = () => { camOn = !camOn; $('camBtn').classList.toggle('off', !camOn); $('camBtn').textContent = camOn ? '📷' : '🚫'; };
+  $('camBtn').onclick = () => {
+    camOn = !camOn; $('camBtn').classList.toggle('off', !camOn); $('camBtn').textContent = camOn ? '📷' : '🚫';
+    if (ws && ws.readyState === 1 && ws.__ready) ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text:
+      camOn ? '[The learner turned the camera on. You get about one picture a second again.]' : '[The learner turned the camera off. You cannot see anything now.]' }] }], turnComplete: true } }));
+  };
   addEventListener('pagehide', cleanup);
   if (!token()) show('Sign in to Altrobyte first: <a href="/">open altrobytelab.com</a>, sign in, then come back here.');
 })();

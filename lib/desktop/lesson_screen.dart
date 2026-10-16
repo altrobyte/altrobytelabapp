@@ -16,7 +16,10 @@ class LessonScreen extends StatefulWidget {
 
   /// Fetches the page. It is called when the screen opens, so nothing is downloaded before the learner asks for it.
   final Future<String> Function() load;
-  const LessonScreen({super.key, required this.title, required this.load});
+
+  /// The section to open and show first (a course page's "section 3"), when the step the learner is on points to one.
+  final int? section;
+  const LessonScreen({super.key, required this.title, required this.load, this.section});
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
@@ -56,9 +59,25 @@ class _LessonScreenState extends State<LessonScreen> {
       });
       await _web.loadStringContent(tutorPage(_html!));
       if (mounted) setState(() => _ready = true);
+      if (widget.section != null) unawaited(_showSection(widget.section!));
     } catch (_) {
       await openLessonHtml(_html!);
       if (mounted) setState(() => _inBrowser = true);
+    }
+  }
+
+  /// Opens section [n] of a course page (its boxes are <section id="sN">, opened by the page's own toggle) and scrolls to
+  /// it. Tried a few times while the page finishes loading; a page without such a section is left as it is.
+  Future<void> _showSection(int n) async {
+    final script = "(function(){var c=document.getElementById('s$n');if(!c)return false;"
+        "if(!c.classList.contains('open')&&typeof toggle==='function')toggle('s$n');"
+        "c.scrollIntoView({behavior:'smooth',block:'start'});return true;})()";
+    for (var i = 0; i < 6; i++) {
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+      try {
+        if (await _web.executeScript(script) == true) return;
+      } catch (_) {}
     }
   }
 

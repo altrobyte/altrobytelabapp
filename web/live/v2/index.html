@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Altron Live</title>
+<meta name="theme-color" content="#1e3a5f">
+<!--
+  Altron by voice (Gemini Live), version 2. Shipped inside the desktop app (served from a folder of the app, so a website
+  deploy can never break it) and also published at altrobytelab.com/live/v2/.
+
+  Address:  ?course=<id> | ?note=<id> | ?lab=<id>   what Altron teaches
+            &lang=en|hi  &autostart=1  &compact=1    and the learner's sign-in in the #fragment (#t=...), never sent anywhere
+
+  The camera starts OFF. Altron asks for it (the ask_camera tool) and the learner turns it on. In a course, Altron reads
+  and answers the steps through the app (get_current_step, answer_for_learner): the page passes those to the app and the
+  app's answer back. Every connection is metered by the server: a token covers at most the minutes it allows, and the page
+  reports what the connection really used.
+-->
+<style>
+  :root { --navy:#1e3a5f; --navy2:#16304f; --orange:#e8590c; --ok:#3ccf7a; --ink:#0f1c2b; --soft:#b8c6d8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--navy); color: #fff; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+  .top { display: flex; align-items: center; gap: 8px; padding: 10px 12px 4px; font-size: 12.5px; color: var(--soft); }
+  .top b { color: #fff; font-size: 13.5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #8a9bb0; flex: none; }
+  .dot.live { background: #ff4d4f; box-shadow: 0 0 0 4px rgba(255,77,79,.22); }
+  .dot.talk { background: var(--ok); box-shadow: 0 0 0 4px rgba(60,207,122,.22); }
+  .grow { flex: 1; }
+  .stage { position: relative; flex: 1; min-height: 0; margin: 4px 10px; border-radius: 14px; background: var(--navy2); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; background: #000; }
+  .cam-on video { display: block; }
+  .orb { width: 78px; height: 78px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff9a5a, var(--orange) 55%, #9c3a07); box-shadow: 0 0 0 0 rgba(232,89,12,.5); transition: transform .2s; }
+  .orb.talk { animation: pulse 1.1s ease-in-out infinite; }
+  .orb.listen { box-shadow: 0 0 0 6px rgba(255,255,255,.08); }
+  .orb.off { filter: grayscale(.8) brightness(.7); }
+  @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,89,12,.45); } 50% { transform: scale(1.07); box-shadow: 0 0 0 14px rgba(232,89,12,0); } }
+  .cam-on .orb { display: none; }
+  .cap { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 7px 10px; border-radius: 10px; background: rgba(0,0,0,.55); font-size: 13px; line-height: 1.4; max-height: 58%; overflow: hidden; display: none; }
+  .cap.on { display: block; }
+  .cap small { display: block; color: var(--soft); font-size: 11.5px; margin-top: 3px; }
+  .ask { margin: 4px 10px 0; padding: 8px 10px; border-radius: 10px; background: #fff3e6; color: #7a3204; font-size: 12.5px; font-weight: 600; display: none; align-items: center; gap: 8px; }
+  .ask.on { display: flex; }
+  .ask button { margin-left: auto; background: var(--orange); color: #fff; padding: 6px 12px; font-size: 12.5px; }
+  .msg { margin: 4px 10px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.1); font-size: 12.5px; line-height: 1.45; display: none; }
+  .msg.on { display: block; }
+  .msg.bad { background: #fdecea; color: #8a1c1c; }
+  .bar { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 8px 10px 10px; }
+  button { font: 600 13.5px inherit; font-family: inherit; border: 0; border-radius: 22px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .go { background: var(--orange); color: #fff; padding: 10px 18px; font-size: 14px; }
+  .round { width: 40px; height: 40px; background: rgba(255,255,255,.14); color: #fff; font-size: 16px; padding: 0; position: relative; }
+  .round.off { background: #fff; color: var(--ink); }
+  .round.want { animation: want 1s ease-in-out infinite; background: var(--orange); }
+  @keyframes want { 0%,100% { box-shadow: 0 0 0 0 rgba(232,89,12,.7); } 50% { box-shadow: 0 0 0 8px rgba(232,89,12,0); } }
+  .round small { position: absolute; bottom: -2px; right: -2px; font-size: 9px; background: #5b6b7b; color: #fff; border-radius: 6px; padding: 0 3px; }
+  .langs { display: flex; gap: 4px; }
+  .langs button { padding: 6px 10px; font-size: 12px; background: rgba(255,255,255,.12); color: #fff; }
+  .langs button.on { background: #fff; color: var(--ink); }
+  .hidden { display: none !important; }
+  body.full .stage { max-width: 720px; width: calc(100% - 20px); margin: 8px auto; aspect-ratio: 4 / 3; flex: none; }
+  body.full .bar, body.full .ask, body.full .msg { max-width: 720px; width: calc(100% - 20px); margin-left: auto; margin-right: auto; }
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="dot" id="dot"></span>
+  <b>Altron</b><span id="status">voice tutor</span>
+  <span class="grow"></span>
+  <span id="clock"></span>
+</div>
+<div class="stage" id="stage">
+  <video id="cam" playsinline muted autoplay></video>
+  <div class="orb off" id="orb"></div>
+  <div class="cap" id="cap"><span id="capT"></span><small id="capY"></small></div>
+</div>
+<div class="ask" id="ask"><span>📷 <span id="askT">Altron wants to see your board</span></span><button type="button" id="askGo">Turn camera on</button></div>
+<div class="msg" id="msg"></div>
+<div class="bar">
+  <div class="langs" id="langs"><button type="button" data-l="en">English</button><button type="button" data-l="hi">Hinglish</button></div>
+  <button class="go" id="go" type="button">▶ Talk to Altron</button>
+  <button class="round hidden" id="mic" type="button" title="Mute the microphone">🎙️</button>
+  <button class="round off hidden" id="camBtn" type="button" title="Camera is off. Tap to show Altron your board.">📷<small>off</small></button>
+  <button class="round hidden" id="pause" type="button" title="Pause">⏸</button>
+</div>
+<script>
+(() => {
+  const API = 'https://edu.altrobytelab.com';
+  const P = new URLSearchParams(location.search);
+  const $ = (id) => document.getElementById(id);
+  const course = P.get('course') || null;
+  const noteId = P.get('note') ? Number(P.get('note')) : null;
+  const labId = P.get('lab') ? Number(P.get('lab')) : null;
+  const IDLE_S = 120;                                       // nobody spoke for this long: pause, so an open app costs nothing
+  let lang = P.get('lang') || 'en';
+  if (P.get('compact') !== '1') document.body.classList.add('full');
+  const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
+
+  // ── sign-in: the app hands it over in the #fragment, which no server receives ──
+  try {
+    const t = new URLSearchParams(location.hash.slice(1)).get('t');
+    if (t) { sessionStorage.setItem('altron_t', t); history.replaceState(null, '', location.pathname + location.search); }
+  } catch (_) {}
+  function token() {
+    try { const t = sessionStorage.getItem('altron_t'); if (t) return t; } catch (_) {}
+    for (const k of ['flutter.student_token', 'flutter.token']) {
+      try { const v = localStorage.getItem(k); if (v) { const t = JSON.parse(v); if (t) return t; } } catch (_) {}
+    }
+    return null;
+  }
+  function tellHost(o) { try { if (host) host.postMessage(JSON.stringify(o)); } catch (_) {} }
+
+  // ── what the learner sees ──
+  function say(text, bad) { $('msg').innerHTML = text; $('msg').classList.toggle('bad', !!bad); $('msg').classList.add('on'); }
+  function unsay() { $('msg').classList.remove('on'); }
+  let lastState = '';
+  function status(text, cls) {
+    $('status').textContent = text;
+    $('dot').className = 'dot' + (cls ? ' ' + cls : '');
+    $('orb').className = 'orb' + (cls === 'talk' ? ' talk' : cls === 'live' ? ' listen' : ' off');
+    const st = cls || text;
+    if (st !== lastState) { lastState = st; tellHost({ type: 'state', state: cls || 'idle', text }); }
+  }
+  function paintLangs() { for (const b of $('langs').children) b.classList.toggle('on', b.dataset.l === lang); }
+  for (const b of $('langs').children) b.onclick = () => { if (!running) { lang = b.dataset.l; paintLangs(); } };
+  paintLangs();
+
+  // ── state ──
+  let running = false, ws = null, micStream = null, camStream = null, inCtx = null, outCtx = null;
+  let micOn = true, camOn = false, frameTimer = null, ticker = null, handle = null, setup = null, wsUrl = '';
+  let playing = [], nextAt = 0, tutorLine = '', youLine = '', lastActive = Date.now();
+  let conn = null;            // the connection being metered: {ref, seconds, opened, camera, usage}
+  let rotateAt = 0;           // when this token's minutes run out and a new one must be asked for
+  let firstStart = true;
+  let heard = '';             // what the learner said since their last answer: Altron may only answer for them with this
+
+  async function fetchToken(resume) {
+    const t = token();
+    if (!t) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
+    const r = await fetch(API + '/trainer/live/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, lang, resume: !!resume }),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
+    if (r.status === 429) throw Object.assign(new Error(body.detail || "Today's talking time is used up. It comes back tomorrow."), { out: true });
+    if (!r.ok) throw new Error(body.detail || 'Altron could not start. Try again in a minute.');
+    return body;
+  }
+
+  // ── metering: what each connection really used, reported to the server ──
+  function addUsage(u) {
+    if (!conn || !u) return;
+    const k = conn.usage;
+    k.prompt += u.promptTokenCount || 0; k.response += u.responseTokenCount || 0; k.total += u.totalTokenCount || 0;
+    for (const d of u.promptTokensDetails || []) {
+      const m = String(d.modality || '').toUpperCase();
+      if (m === 'AUDIO') k.prompt_audio += d.tokenCount || 0; else if (m === 'TEXT') k.prompt_text += d.tokenCount || 0; else k.prompt_image += d.tokenCount || 0;
+    }
+    for (const d of u.responseTokensDetails || []) {
+      const m = String(d.modality || '').toUpperCase();
+      if (m === 'AUDIO') k.response_audio += d.tokenCount || 0; else k.response_text += d.tokenCount || 0;
+    }
+  }
+  function report(c) {
+    if (!c || !c.ref) return;
+    const seconds = Math.round(((c.closed || Date.now()) - c.opened) / 1000);
+    const camera = Math.round((c.camera + (camOn && !c.closed ? Date.now() - c.camSince : 0)) / 1000);
+    try {
+      fetch(API + '/trainer/live/usage', { method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+        body: JSON.stringify({ ref: c.ref, seconds, camera_seconds: camera, usage: c.usage }) })
+        .then((r) => r.json()).then((b) => { if (b && b.left_minutes != null) $('clock').textContent = b.left_minutes + ' min left today'; }).catch(() => {});
+    } catch (_) {}
+  }
+  function newConn(t) {
+    return { ref: t.ref || 0, opened: Date.now(), closed: 0, camera: 0, camSince: Date.now(),
+             usage: { prompt: 0, response: 0, total: 0, prompt_text: 0, prompt_audio: 0, prompt_image: 0, response_text: 0, response_audio: 0 } };
+  }
+  function endConn() {
+    if (!conn) return;
+    if (camOn) conn.camera += Date.now() - conn.camSince;
+    conn.closed = Date.now(); report(conn); conn = null;
+  }
+
+  // ── microphone: 16 kHz 16-bit PCM ──
+  const MIC = `class Mic extends AudioWorkletProcessor { process(i) { const c = i[0] && i[0][0]; if (c) this.port.postMessage(c.slice(0)); return true; } } registerProcessor('mic', Mic);`;
+  let pcm = [];
+  function b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+  async function startMic() {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+    inCtx = new AudioContext({ sampleRate: 16000 });
+    await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC], { type: 'application/javascript' })));
+    const node = new AudioWorkletNode(inCtx, 'mic');
+    node.port.onmessage = (e) => {
+      if (!micOn || !ready()) return;
+      for (const v of e.data) pcm.push(v);
+      if (pcm.length >= 1600) {
+        const out = new Int16Array(pcm.length);
+        for (let i = 0; i < pcm.length; i++) { const s = Math.max(-1, Math.min(1, pcm[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
+        pcm = [];
+        ws.send(JSON.stringify({ realtimeInput: { audio: { data: b64(new Uint8Array(out.buffer)), mimeType: 'audio/pcm;rate=16000' } } }));
+      }
+    };
+    inCtx.createMediaStreamSource(micStream).connect(node);
+  }
+  function stopMic() {
+    if (micStream) micStream.getTracks().forEach((t) => t.stop());
+    micStream = null; pcm = [];
+    if (inCtx) { inCtx.close().catch(() => {}); inCtx = null; }
+  }
+
+  // ── Altron's voice: 24 kHz PCM in order; an interruption stops it at once ──
+  function play(data) {
+    if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+    const raw = atob(data), n = raw.length / 2, f = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v >= 0x8000) v -= 0x10000; f[i] = v / 0x8000; }
+    const buf = outCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
+    const node = outCtx.createBufferSource(); node.buffer = buf; node.connect(outCtx.destination);
+    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration;
+    playing.push(node);
+    node.onended = () => { playing = playing.filter((x) => x !== node); lastActive = Date.now(); if (!playing.length && running) status('listening', 'live'); };
+    lastActive = Date.now();
+    status('talking', 'talk');
+  }
+  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; }
+
+  // ── the camera: off until the learner turns it on ──
+  const canvas = document.createElement('canvas');
+  function ready() { return ws && ws.readyState === 1 && ws.__ready; }
+  function note(text) {                                   // tell Altron something that is not the learner speaking
+    if (!ready()) return false;
+    ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } }));
+    lastActive = Date.now();
+    return true;
+  }
+  async function camOnNow() {
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } } });
+    } catch (e) {
+      say('The camera could not start' + (e && e.name === 'NotAllowedError' ? ': it was blocked.' : '. Is another app using it?'), true);
+      return;
+    }
+    $('cam').srcObject = camStream; camOn = true; if (conn) conn.camSince = Date.now();
+    $('stage').classList.add('cam-on'); $('ask').classList.remove('on'); $('camBtn').classList.remove('off', 'want');
+    $('camBtn').innerHTML = '📷'; $('camBtn').title = 'Camera is on. Tap to turn it off.';
+    frameTimer = setInterval(() => {
+      if (!camOn || !ready()) return;
+      const v = $('cam'); if (!v.videoWidth) return;
+      const w = 768, h = Math.round(v.videoHeight * w / v.videoWidth);
+      canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(v, 0, 0, w, h);
+      ws.send(JSON.stringify({ realtimeInput: { video: { data: canvas.toDataURL('image/jpeg', 0.7).split(',')[1], mimeType: 'image/jpeg' } } }));
+    }, 1000);
+    note('[The learner turned the camera on. From now you get about one picture a second. Say in a few words what you can see.]');
+    tellHost({ type: 'camera', on: true });
+  }
+  function camOffNow(quiet) {
+    if (camOn && conn) conn.camera += Date.now() - conn.camSince;
+    camOn = false; clearInterval(frameTimer); frameTimer = null;
+    if (camStream) camStream.getTracks().forEach((t) => t.stop());         // the light goes off too
+    camStream = null; $('cam').srcObject = null; $('stage').classList.remove('cam-on');
+    $('camBtn').classList.add('off'); $('camBtn').innerHTML = '📷<small>off</small>'; $('camBtn').title = 'Camera is off. Tap to show Altron your board.';
+    if (!quiet) note('[The learner turned the camera off. You cannot see anything now.]');
+    tellHost({ type: 'camera', on: false });
+  }
+  $('camBtn').onclick = () => { if (!running) return; camOn ? camOffNow() : camOnNow(); };
+  $('askGo').onclick = () => { if (running && !camOn) camOnNow(); };
+
+  // ── tools: Altron asks, the page (or the app) answers ──
+  const waiting = {};          // tool call id -> resolve, for answers that come from the app
+  window.altronToolResult = (id, result) => {
+    const done = waiting[id]; if (!done) return false;
+    delete waiting[id];
+    let r = result; if (typeof r === 'string') { try { r = JSON.parse(r); } catch (_) { r = { text: r }; } }
+    done(r || {});
+    return true;
+  };
+  function askApp(call) {
+    if (!host) return Promise.resolve({ error: 'The course steps are only available inside the Altrobyte app.' });
+    return new Promise((resolve) => {
+      waiting[call.id] = resolve;
+      tellHost({ type: 'tool', id: call.id, name: call.name, args: call.args || {}, heard: heard.trim().slice(-300) });
+      if (call.name === 'answer_for_learner') heard = '';
+      setTimeout(() => { if (waiting[call.id]) { delete waiting[call.id]; resolve({ error: 'The app did not answer in time. Ask the learner to tap on the screen.' }); } }, 25000);
+    });
+  }
+  async function onTools(calls) {
+    const responses = [];
+    for (const call of calls || []) {
+      let response;
+      if (call.name === 'ask_camera') {
+        if (camOn) response = { camera: 'already on' };
+        else {
+          $('askT').textContent = (call.args && call.args.reason) ? 'Altron: ' + String(call.args.reason).slice(0, 90) : 'Altron wants to see your board';
+          $('ask').classList.add('on'); $('camBtn').classList.add('want');
+          response = { camera: 'asked: the camera button is glowing; you will get a message once the learner turns it on' };
+        }
+      } else {
+        response = await askApp(call);
+      }
+      responses.push({ id: call.id, name: call.name, response });
+    }
+    lastActive = Date.now();
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
+  }
+
+  // ── the conversation ──
+  function connect(kind) {          // 'first' | 'continue' (after a pause) | 'renew' (a new token mid-talk)
+    const msg = { setup: { ...setup } };
+    if (handle) msg.setup.sessionResumption = { handle };
+    const me = new WebSocket(wsUrl);
+    ws = me;
+    me.onopen = () => me.send(JSON.stringify(msg));
+    me.onmessage = async (ev) => {
+      const text = typeof ev.data === 'string' ? ev.data : await ev.data.text();
+      let m; try { m = JSON.parse(text); } catch (_) { return; }
+      if (m.setupComplete) {
+        me.__ready = true;
+        status('listening', 'live');
+        if (kind === 'first') {
+          const camLine = 'My camera is off.';
+          const opener = course
+            ? 'The session has started. ' + camLine + ' Call get_current_step, then greet me in one short sentence and teach that step.'
+            : 'The session has started. ' + camLine + ' Greet me in one short sentence, say what we will look at today and ask what I am working on.';
+          note(opener);
+        } else if (kind === 'continue') {
+          note('[The learner is back after a pause and the camera is off. Welcome them back in a few words and carry on where you were.]');
+        }
+      }
+      if (m.toolCall) onTools(m.toolCall.functionCalls);
+      if (m.usageMetadata) addUsage(m.usageMetadata);
+      const sc = m.serverContent;
+      if (sc) {
+        if (sc.interrupted) hush();
+        for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
+        if (sc.outputTranscription && sc.outputTranscription.text) {
+          tutorLine += sc.outputTranscription.text;
+          $('capT').textContent = tutorLine.slice(-260); $('cap').classList.add('on');
+        }
+        if (sc.inputTranscription && sc.inputTranscription.text) {
+          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now();
+          $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
+        }
+        if (sc.turnComplete) { tutorLine = ''; youLine = ''; }
+      }
+      if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
+      if (m.goAway) renew();
+    };
+    me.onclose = (ev) => {
+      if (me.__retired || !running) return;
+      if (!me.__ready) return stop('Altron could not start: ' + (ev.reason || ('connection closed, ' + ev.code)) + '. Please send this to the team.', true);
+      renew();
+    };
+    me.onerror = () => {};
+  }
+
+  // A new token: when Google ends a connection, and before this token's minutes run out. The server says no once the
+  // day's minutes are used, and the session then ends kindly.
+  let renewing = false;
+  async function renew() {
+    if (!running || renewing) return;
+    renewing = true; status('reconnecting…');
+    const old = ws; if (old) { old.__retired = true; try { old.close(); } catch (_) {} }
+    endConn();
+    try {
+      const t = await fetchToken(true);
+      wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
+      conn = newConn(t); rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
+      connect('renew');
+    } catch (e) {
+      stop(e.out ? e.message : 'The connection dropped. Tap ▶ to carry on.', !e.out);
+    }
+    renewing = false;
+  }
+
+  async function start() {
+    unsay(); $('go').disabled = true; status('connecting…');
+    try {
+      const t = await fetchToken(!firstStart);
+      wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
+      await startMic();
+      outCtx = outCtx || new AudioContext({ sampleRate: 24000 });
+      if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
+      running = true; conn = newConn(t);
+      rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
+      connect(firstStart ? 'first' : 'continue');
+      firstStart = false; lastActive = Date.now();
+      clearInterval(ticker);
+      ticker = setInterval(tick, 1000);
+      $('go').classList.add('hidden'); $('langs').classList.add('hidden');
+      for (const id of ['mic', 'camBtn', 'pause']) $(id).classList.remove('hidden');
+      if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';
+    } catch (e) {
+      cleanup(); $('go').disabled = false; status('voice tutor');
+      if (e.name === 'NotAllowedError') say('The microphone was blocked. Allow it, then tap ▶.', true);
+      else say(e.message || 'Something went wrong. Try again.', !e.out);
+      tellHost({ type: 'state', state: e.out ? 'out_of_minutes' : 'error', text: e.message || '' });
+    }
+  }
+
+  function tick() {
+    if (!running) return;
+    if (Date.now() >= rotateAt) return renew();
+    const quiet = (Date.now() - lastActive) / 1000;
+    if (!playing.length && quiet >= IDLE_S) pause('Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
+  }
+
+  function cleanup() {
+    running = false;
+    for (const id in waiting) { waiting[id]({ error: 'The session ended.' }); delete waiting[id]; }
+    if (ws) { ws.__retired = true; try { ws.close(); } catch (_) {} ws = null; }
+    endConn();
+    clearInterval(ticker); hush(); stopMic();
+    if (camOn || camStream) camOffNow(true);
+    $('cap').classList.remove('on'); $('ask').classList.remove('on');
+  }
+  function stop(message, bad) {
+    cleanup();
+    for (const id of ['mic', 'camBtn', 'pause']) $(id).classList.add('hidden');
+    $('go').classList.remove('hidden'); $('go').disabled = false; $('go').textContent = '▶ Talk to Altron';
+    status('voice tutor');
+    if (message) say(message, bad);
+  }
+  function pause(message) {
+    stop(message || 'Paused. Tap ▶ to carry on.');
+    $('go').textContent = '▶ Continue';
+    tellHost({ type: 'state', state: 'paused' });
+  }
+
+  // From the app: the course moved on because the learner tapped (one voice: Altron says it), and the app closing.
+  window.altronTell = (text) => {
+    if (!ready() || !text) return false;
+    heard = '';                                         // they answered by tapping: what they said before is used up
+    return note('[Screen] ' + String(text).slice(0, 1500));
+  };
+  window.altronPause = () => { if (running) pause(); };
+
+  $('go').onclick = start;
+  $('pause').onclick = () => pause();
+  $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  addEventListener('pagehide', cleanup);
+  if (!token()) say('Please sign in to Altrobyte first.', true);
+  else if (P.get('autostart') === '1') start();
+})();
+</script>
+</body>
+</html>

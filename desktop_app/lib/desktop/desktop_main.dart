@@ -18,6 +18,7 @@ import 'desktop_login_screen.dart';
 import 'desktop_trainer_screen.dart';
 import 'helper_client.dart';
 import 'helper_controller.dart';
+import 'live_tutor_screen.dart' show initLiveEnvironment;
 import 'local_tools.dart';
 import 'visual_page.dart';
 
@@ -25,6 +26,7 @@ final desktopNavKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initLiveEnvironment(); // before any browser view: lets Altron speak without a tap
   final auth = AuthProvider();
   await auth.tryAutoLogin();
   runApp(ChangeNotifierProvider.value(value: auth, child: const DesktopApp()));

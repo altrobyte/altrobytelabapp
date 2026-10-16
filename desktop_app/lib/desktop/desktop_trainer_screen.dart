@@ -15,6 +15,7 @@ import 'helper_client.dart' show versionAtLeast;
 import 'helper_controller.dart';
 import 'local_tools.dart' show openFolderInVsCode;
 import 'lesson_screen.dart';
+import 'live_course.dart';
 import 'help_button.dart';
 import 'modules_panel.dart';
 import 'visual_page.dart';
@@ -172,12 +173,24 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   }
 
   /// Opens a course's interactive page (or the note of an experiment) inside the app.
-  Future<void> _openLesson(String courseId, {int? labId}) async {
+  Future<void> _openLesson(String courseId, {int? labId, int? section}) async {
     final title = labId != null
         ? 'The note for this experiment'
         : '${_courses.firstWhere((k) => k['id'] == courseId, orElse: () => const {'title': 'Lesson'})['title']}';
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => LessonScreen(title: title, load: () => labId != null ? ApiService.trainerLabNote(labId) : ApiService.trainerLesson(courseId))));
+        builder: (_) => LessonScreen(
+            title: title, section: section, load: () => labId != null ? ApiService.trainerLabNote(labId) : ApiService.trainerLesson(courseId))));
+  }
+
+  /// The lesson section the step the learner is on points to ("section 3 of the interactive lesson"), if it names one.
+  int? _lessonSection() {
+    for (var i = c.chat.length - 1; i >= 0; i--) {
+      final b = c.chat[i];
+      if (b.role == 'learner') break;
+      final m = RegExp(r'[Ss]ection (\d+)').firstMatch(b.text);
+      if (b.role == 'trainer' && m != null) return int.tryParse(m.group(1)!);
+    }
+    return null;
   }
 
   // The helper needs the learner's sign-in to ask for the natural voice. It is given once, the first time anything is to be
@@ -336,6 +349,20 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         Expanded(
           child: Text('Now: ${currentStepTitle(st)}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
         ),
+        // The lesson button stays in sight here: the one at the top of the chat scrolls away as the course goes on.
+        if (c.courseId != null && c.hasLesson) ...[
+          Builder(builder: (_) {
+            final section = _lessonSection();
+            return FilledButton.icon(
+              onPressed: () => _openLesson(c.courseId!, section: section),
+              icon: const Icon(Icons.auto_stories_rounded, size: 16),
+              label: Text(section == null ? 'Open lesson' : 'Open lesson · section $section', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent, visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 12)),
+            );
+          }),
+          const SizedBox(width: 10),
+        ],
         Text('$left step${left == 1 ? '' : 's'} left', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
       ]),
     );
@@ -825,7 +852,13 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               const SizedBox(width: 14),
               Expanded(
                 flex: 4,
-                child: ListView(children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
+                child: Column(children: [
+                  // Altron's voice for a course: outside the list, so scrolling never ends the talk.
+                  if (c.started && c.courseId != null) LiveCoursePanel(key: ValueKey('live-${c.courseId}'), controller: c, course: c.courseId!),
+                  Expanded(
+                    child: ListView(children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
+                  ),
+                ]),
               ),
             ]),
           ),
