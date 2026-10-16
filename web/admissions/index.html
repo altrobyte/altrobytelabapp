@@ -210,6 +210,22 @@
   .proof .w small { display: block; color: var(--muted); font-size: 11px; }
   .proof button { flex: none; border: 0; background: none; color: #9aa6b8; font-size: 16px; cursor: pointer; padding: 0 2px; }
   @media (max-width: 640px) { .proof { left: 12px; right: 12px; max-width: none; bottom: 78px; } }
+  /* what you will build, and how you learn */
+  .projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 22px; }
+  @media (max-width: 760px) { .projects { grid-template-columns: minmax(0, 1fr); } }
+  .proj { border: 1px solid var(--line); border-radius: 18px; padding: 18px; background: #fff; box-shadow: 0 10px 30px -22px rgba(11,36,80,.45); }
+  .proj .pic { width: 100%; height: auto; background: #F6F8FB; border-radius: 12px; padding: 8px; box-sizing: border-box; }
+  .proj .tag { display: inline-block; margin-top: 12px; font-size: 12px; font-weight: 800; color: var(--accent); background: var(--soft); border-radius: 99px; padding: 3px 10px; }
+  .proj h3 { margin: 8px 0 6px; font-size: 19px; color: var(--navy); }
+  .proj p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 15px; }
+  .proj .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .proj .chips span { font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; color: var(--navy); }
+  .how { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+  @media (max-width: 980px) { .how { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .how { grid-template-columns: minmax(0, 1fr); } }
+  .how .h { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .how .h b { display: block; color: var(--navy); font-size: 16px; margin-bottom: 6px; }
+  .how .h span { color: var(--muted); font-size: 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -218,7 +234,7 @@
   <div class="wrap">
     <a class="brand" href="/"><i></i>Altrobyte Lab</a>
     <nav>
-      <a href="#roadmap">Roadmap</a><a href="#kit">Kit</a><a href="#clients">Clients</a><a href="#compare">Why us</a><a href="#fees">Fees</a><a href="#reviews">Reviews</a><a href="#founder">Trainer</a><a href="#faq">FAQ</a>
+      <a href="#build">What you build</a><a href="#roadmap">Curriculum</a><a href="#howlearn">How it works</a><a href="#founder">Trainer</a><a href="#reviews">Reviews</a><a href="#fees">Fees</a><a href="#faq">FAQ</a>
     </nav>
     <a class="btn primary" href="#fees" style="padding:10px 16px">Enrol now</a>
   </div>
@@ -230,7 +246,8 @@
     <h1 style="margin-top:18px">Stop building college projects.<br>Build <em>real products</em> — PCB to cloud to AI.</h1>
     <p class="lede" id="heroLede">The Product Engineering Program: you design your own PCB, write the firmware, put it online and make it think — with a trainer who has shipped this work in industry.</p>
     <div class="ctas">
-      <a class="btn primary" href="#roadmap">See my roadmap</a>
+      <a class="btn primary" href="#build">See what you will build</a>
+      <a class="btn ghost" href="#roadmap">Curriculum</a>
       <a class="btn ghost" href="#fees">Fees &amp; EMI</a>
       <a class="btn wa" id="heroWa" href="#talk">Talk to a mentor</a>
     </div>
@@ -248,10 +265,58 @@
   <div class="wrap"><span>🔥 Early-bird price ends in</span><span class="clock" id="clock">—</span><span id="fomoSeats"></span><a href="#fees" style="color:#8a3305">See the offer →</a></div>
 </div>
 
-<!-- 1. lead form, then the roadmap -->
-<section id="roadmap">
+<section id="clients" style="background:#fff">
   <div class="wrap">
-    <div class="eyebrow">Your roadmap</div>
+    <div class="eyebrow">Built by engineers who ship for industry</div>
+    <h2>The same team builds IoT products for these companies</h2>
+    <p class="sub">Altrobyte Lab is the training arm of Altrobyte Automation. What you learn here is what we deliver to clients.</p>
+    <div class="logos"><span>Vedanta · BALCO</span><span>Tata Steel</span><span>Continental Conveyors</span><span>Unitech AI Solutions</span><span>My e-Kisan</span><span>Pi by 3</span><span>Renu Factory Automation</span><span>Nanotech Solutions</span><span>Oxbow Intellect</span><span>Anedya</span><span>nlink</span><span>Dhartea</span><span>NaviGo</span></div>
+    <h3 style="margin-top:28px;color:var(--navy);font-size:18px">Training partners</h3>
+    <div class="logos edu"><span>NIT Warangal</span><span>IIT Bombay</span><span>ITM University, Gwalior</span><span>SISTec, Bhopal</span><span>Banasthali Vidyapith</span><span>Chameli Devi Group (CDGI)</span></div>
+  </div>
+</section>
+
+<section id="build">
+  <div class="wrap">
+    <div class="eyebrow">What you will build</div>
+    <h2>Four real products, not four certificates.</h2>
+    <p class="sub">One product grows through the program. Each stage ends with something you can hold, run and show in an interview.</p>
+    <div class="projects">
+      <div class="proj">
+        <svg viewBox="0 0 320 120" class="pic" aria-hidden="true"><rect x="8" y="38" width="70" height="44" rx="10" fill="#E7EFFD" stroke="#2D6CDF" stroke-width="2"/><text x="43" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="#132436">Sensors</text><path d="M78 60h30" stroke="#9AA9BC" stroke-width="3"/><rect x="108" y="30" width="96" height="60" rx="10" fill="#132436"/><text x="156" y="64" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">ESP32</text><path d="M204 60h30" stroke="#9AA9BC" stroke-width="3"/><circle cx="262" cy="60" r="24" fill="#FFE27A" stroke="#E0B000" stroke-width="2"/><rect x="108" y="96" width="96" height="18" rx="5" fill="#1E9D66"/><text x="156" y="109" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">your own PCB</text></svg>
+        <span class="tag">Stage 1 · Month 1</span>
+        <h3>A smart device on your own PCB</h3>
+        <p>An ESP32 product with sensors, relay, servo and an OLED screen, running FreeRTOS, controlled from your phone, and its PCB designed by you in KiCad.</p>
+        <div class="chips"><span>ESP32</span><span>Embedded C</span><span>FreeRTOS</span><span>Wi-Fi</span><span>KiCad PCB</span><span>Git</span></div>
+      </div>
+      <div class="proj">
+        <svg viewBox="0 0 320 120" class="pic" aria-hidden="true"><rect x="8" y="40" width="64" height="44" rx="10" fill="#132436"/><text x="40" y="66" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">your PCB</text><path d="M72 62h26" stroke="#9AA9BC" stroke-width="3" stroke-dasharray="5 5"/><rect x="98" y="34" width="100" height="56" rx="26" fill="#E7EFFD" stroke="#2D6CDF" stroke-width="2"/><text x="148" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="#132436">AWS IoT</text><text x="148" y="75" text-anchor="middle" font-size="9" fill="#4A5C6B">MQTT</text><path d="M198 62h26" stroke="#9AA9BC" stroke-width="3" stroke-dasharray="5 5"/><rect x="224" y="22" width="86" height="80" rx="10" fill="#fff" stroke="#132436" stroke-width="2"/><path d="M234 86 L252 66 L268 76 L290 46" stroke="#E08A2E" stroke-width="3" fill="none"/></svg>
+        <span class="tag">Stage 2 · Month 2</span>
+        <h3>The product online, with your dashboard</h3>
+        <p>Your soldered board in an enclosure, sending data over MQTT to AWS IoT Core, a Python dashboard with APIs and a database, and safe over-the-air updates.</p>
+        <div class="chips"><span>Soldering</span><span>MQTT</span><span>AWS IoT Core</span><span>Python</span><span>REST APIs</span><span>OTA</span></div>
+      </div>
+      <div class="proj">
+        <svg viewBox="0 0 320 120" class="pic" aria-hidden="true"><rect x="110" y="34" width="100" height="56" rx="10" fill="#132436"/><text x="160" y="66" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">STM32</text><rect x="8" y="20" width="80" height="34" rx="8" fill="#FCEEDB" stroke="#E08A2E" stroke-width="2"/><text x="48" y="41" text-anchor="middle" font-size="10" font-weight="700" fill="#132436">CAN bus</text><rect x="8" y="70" width="80" height="34" rx="8" fill="#FCEEDB" stroke="#E08A2E" stroke-width="2"/><text x="48" y="91" text-anchor="middle" font-size="10" font-weight="700" fill="#132436">Modbus</text><path d="M88 37l22 15M88 87l22-15M210 62h28" stroke="#9AA9BC" stroke-width="3"/><circle cx="270" cy="50" r="18" fill="#F5B700"/><rect x="250" y="76" width="40" height="8" rx="2" fill="#1E9D66" transform="rotate(-18 270 80)"/><text x="270" y="110" text-anchor="middle" font-size="10" font-weight="700" fill="#132436">solar tracker</text></svg>
+        <span class="tag">Stage 3 · Month 3</span>
+        <h3>Industrial control on STM32</h3>
+        <p>A solar tracker and an industrial dashboard on STM32, speaking CAN and Modbus like real machines, debugged with GDB and tested automatically.</p>
+        <div class="chips"><span>STM32</span><span>Cortex-M4</span><span>CAN</span><span>Modbus</span><span>GDB</span><span>CI tests</span></div>
+      </div>
+      <div class="proj">
+        <svg viewBox="0 0 320 120" class="pic" aria-hidden="true"><rect x="8" y="38" width="64" height="44" rx="10" fill="#E7EFFD" stroke="#2D6CDF" stroke-width="2"/><text x="40" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="#132436">Camera</text><path d="M72 60h28" stroke="#9AA9BC" stroke-width="3"/><rect x="100" y="28" width="104" height="64" rx="12" fill="#7C4DFF"/><text x="152" y="58" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">AI</text><text x="152" y="76" text-anchor="middle" font-size="9" fill="#ECE4FF">OpenCV · YOLO</text><path d="M204 60h28" stroke="#9AA9BC" stroke-width="3"/><rect x="232" y="38" width="80" height="44" rx="10" fill="#FBE7E7" stroke="#C24B4B" stroke-width="2"/><text x="272" y="58" text-anchor="middle" font-size="10" font-weight="700" fill="#132436">defect!</text><text x="272" y="72" text-anchor="middle" font-size="9" fill="#132436">alert over IoT</text></svg>
+        <span class="tag">Stage 4 · with Plan 3</span>
+        <h3>A system that sees and predicts</h3>
+        <p>Defect detection on a production line and early fault warnings from sensor data, connected to your IoT system, then a finished portfolio and interview practice.</p>
+        <div class="chips"><span>OpenCV</span><span>YOLO</span><span>AI on IoT data</span><span>IoT security</span><span>Portfolio</span><span>Mock interviews</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" style="background:#fff">
+  <div class="wrap">
+    <div class="eyebrow">Curriculum</div>
     <h2>Four stages. One product at a time.</h2>
     <p class="sub">You do not study UART or ADC in isolation — you meet each idea because the product you are building needs it.</p>
 
@@ -297,107 +362,20 @@
   </div>
 </section>
 
-<!-- 2. why us -->
-<section id="compare" style="background:#fff">
+<section id="howlearn">
   <div class="wrap">
-    <div class="eyebrow">Other courses vs Altrobyte</div>
-    <h2>You can find the theory on YouTube.</h2>
-    <p class="sub">What you cannot find there is someone checking your solder joints, a PCB with your own layout arriving in the post, and a deadline somebody else is holding you to.</p>
-    <div class="tbl" style="margin-top:22px">
-      <table>
-        <thead><tr><th></th><th class="us">Altrobyte Lab</th><th>Typical recorded course</th></tr></thead>
-        <tbody>
-          <tr><td>How you learn</td><td class="us">Build a real product, stage by stage</td><td>Watch videos, then quiz</td></tr>
-          <tr><td>Hardware</td><td class="us"><span class="y">✓</span> Real boards; a mini lab kit for your desk (Plan 2 &amp; 3)</td><td><span class="x">✕</span> Simulators or none</td></tr>
-          <tr><td>Your own PCB</td><td class="us"><span class="y">✓</span> You design it, it is manufactured, you solder it</td><td><span class="x">✕</span></td></tr>
-          <tr><td>Classes</td><td class="us">Live, online or offline in Indore — plus recordings</td><td>Pre-recorded</td></tr>
-          <tr><td>Doubts</td><td class="us">Doubt support from your trainer</td><td>Comment section</td></tr>
-          <tr><td>Practice at home</td><td class="us">AI lab trainer that checks each step on your own board (new)</td><td>On your own</td></tr>
-          <tr><td>What you leave with</td><td class="us">3–4 products, a GitHub portfolio, demo videos and a certificate</td><td>A certificate</td></tr>
-          <tr><td>After the course</td><td class="us">Placement assistance (Plan 3), community access</td><td>—</td></tr>
-        </tbody>
-      </table>
+    <div class="eyebrow">How you learn</div>
+    <h2>Live classes, your own kit, and a trainer that checks every step.</h2>
+    <div class="how">
+      <div class="h"><b>Live classes</b><span>Online or at our Indore centre (Gravity Mall). Weekdays Mon–Fri 1.5 h a day, or weekends Sat–Sun 3 h a day. Every class recorded.</span></div>
+      <div class="h"><b>Your own lab kit</b><span>An ESP32 kit with sensors, relay, servo and display on your desk, so you practise at home. Free with Plan 2 and Plan 3.</span></div>
+      <div class="h"><b>AI lab trainer</b><span>The Altrobyte trainer app guides each experiment and checks your code, your build and what your board prints. You do the work; it checks.</span></div>
+      <div class="h"><b>Mentors &amp; community</b><span>Doubt support from engineers who build products for industry, and a community of learners building alongside you.</span></div>
+      <div class="h"><b>Learn → Build → Prove</b><span>Every topic: a short lesson, an experiment on your own board, then a working result on GitHub that employers can see.</span></div>
     </div>
   </div>
 </section>
 
-<!-- 3. fees -->
-<section id="fees">
-  <div class="wrap">
-    <div class="eyebrow">Fees, offer &amp; EMI</div>
-    <h2>Pick the plan that fits you.</h2>
-    <p class="sub" id="feesSub">Prices include 18% GST — what you see is what you pay. The early-bird price is for this batch only.</p>
-    <div class="sched">
-      <div><b>Weekday batch</b><br><span class="small" style="font-size:14px">Monday to Friday · 1.5 hours a day</span></div>
-      <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
-    </div>
-    <div class="grid3" id="plans" style="margin-top:26px"></div>
-    <div class="card emi">
-      <div><div style="font-weight:700;color:var(--navy)">EMI on Plan 3</div><div class="small">3 monthly instalments: ₹30,000 + GST in all, or ₹28,000 + GST paid upfront.</div></div>
-      <div><b>₹10,000 × 3</b> <span class="small">+ GST</span></div>
-      <a class="btn ghost" href="#talk">Ask about EMI</a>
-    </div>
-    <div class="card" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:#EEF5FF;border-color:#cfdcf5">
-      <div><div style="font-weight:700;color:var(--navy)">🎓 Scholarship test — up to ₹3,000 off your first month</div><div class="small">Take the free test; your score decides the discount (up to 30% of the first month's ₹10,000 fee).</div></div>
-      <a class="btn ghost" href="/scholarship">Take the scholarship test</a>
-    </div>
-  </div>
-</section>
-
-<!-- 4. kit and custom lab -->
-<section id="kit" style="background:#fff">
-  <div class="wrap grid2" style="align-items:center">
-    <div>
-      <div class="eyebrow">Kit &amp; custom lab</div>
-      <h2>The Altrobyte mini lab kit — and labs built to order.</h2>
-      <p class="sub">The kit our students build with, for your own desk: an ESP32 board with the sensors, display, relay and servo the first projects use, a breadboard and wires. Free with Plan 2 and Plan 3, and available on its own.</p>
-      <p class="sub"><b>Custom lab set-up:</b> for a college, school (ATL) or company we put together the hardware, the curriculum and the trainer — on your campus or online — for embedded systems, IoT and industrial automation, sized to your batch.</p>
-    </div>
-    <div class="card">
-      <h3 style="color:var(--navy)">Get a quote</h3>
-      <div class="yn" id="kitWhat" style="margin:8px 0 2px"><button type="button" class="on yes" data-v="Mini lab kit">Mini lab kit</button><button type="button" data-v="Custom lab set-up">Custom lab set-up</button></div>
-      <form class="f" id="labForm">
-        <div class="row"><input id="cName" placeholder="Your name" required><input id="cPhone" placeholder="WhatsApp number" inputmode="tel" required></div>
-        <input id="cOrg" placeholder="City (and college / company, for a lab)" required>
-        <textarea id="cNote" rows="2" placeholder="How many kits, or how many learners and what they should build"></textarea>
-        <button class="btn primary" type="submit" style="justify-content:center">Ask for the price</button>
-        <div class="msg" id="labMsg"></div>
-      </form>
-    </div>
-  </div>
-</section>
-
-<!-- 5. reviews -->
-<section id="reviews">
-  <div class="wrap">
-    <div class="eyebrow">Admissions &amp; reviews</div>
-    <h2>What our students say</h2>
-    <div class="grid3" id="revs" style="margin-top:22px"></div>
-  </div>
-</section>
-
-<!-- 5b. clients and partners -->
-<section id="clients" style="background:#fff">
-  <div class="wrap">
-    <div class="eyebrow">Altrobyte in industry</div>
-    <h2>Our clients and partners</h2>
-    <p class="sub">Companies we have built products and automation for. What you learn here is what we ship for them.</p>
-    <div class="logos"><span>Vedanta · BALCO</span><span>Tata Steel</span><span>Continental Conveyors</span><span>Unitech AI Solutions</span><span>My e-Kisan</span><span>Pi by 3</span><span>Renu Factory Automation</span><span>Nanotech Solutions</span><span>Oxbow Intellect</span><span>Anedya</span><span>nlink</span><span>Dhartea</span><span>NaviGo</span></div>
-    <h3 style="margin-top:28px;color:var(--navy);font-size:18px">Training partners</h3>
-    <div class="logos edu"><span>NIT Warangal</span><span>IIT Bombay</span><span>ITM University, Gwalior</span><span>SISTec, Bhopal</span><span>Banasthali Vidyapith</span><span>Chameli Devi Group (CDGI)</span></div>
-  </div>
-</section>
-
-<section id="learners">
-  <div class="wrap">
-    <div class="eyebrow">Who trains with us</div>
-    <h2>Students and professionals are already building</h2>
-    <div class="people" id="people"></div>
-    <p class="small" style="margin-top:14px;font-weight:700;color:var(--accent)">Spots are filling fast — <a href="#fees">book yours</a>.</p>
-  </div>
-</section>
-
-<!-- 6. founder -->
 <section id="founder" style="background:#fff">
   <div class="wrap">
     <div class="eyebrow">Who teaches you</div>
@@ -431,8 +409,47 @@
   </div>
 </section>
 
-<!-- 7. gallery & social -->
-<section id="gallery">
+<section id="compare">
+  <div class="wrap">
+    <div class="eyebrow">Other courses vs Altrobyte</div>
+    <h2>You can find the theory on YouTube.</h2>
+    <p class="sub">What you cannot find there is someone checking your solder joints, a PCB with your own layout arriving in the post, and a deadline somebody else is holding you to.</p>
+    <div class="tbl" style="margin-top:22px">
+      <table>
+        <thead><tr><th></th><th class="us">Altrobyte Lab</th><th>Typical recorded course</th></tr></thead>
+        <tbody>
+          <tr><td>How you learn</td><td class="us">Build a real product, stage by stage</td><td>Watch videos, then quiz</td></tr>
+          <tr><td>Hardware</td><td class="us"><span class="y">✓</span> Real boards; a mini lab kit for your desk (Plan 2 &amp; 3)</td><td><span class="x">✕</span> Simulators or none</td></tr>
+          <tr><td>Your own PCB</td><td class="us"><span class="y">✓</span> You design it, it is manufactured, you solder it</td><td><span class="x">✕</span></td></tr>
+          <tr><td>Classes</td><td class="us">Live, online or offline in Indore — plus recordings</td><td>Pre-recorded</td></tr>
+          <tr><td>Doubts</td><td class="us">Doubt support from your trainer</td><td>Comment section</td></tr>
+          <tr><td>Practice at home</td><td class="us">AI lab trainer that checks each step on your own board (new)</td><td>On your own</td></tr>
+          <tr><td>What you leave with</td><td class="us">3–4 products, a GitHub portfolio, demo videos and a certificate</td><td>A certificate</td></tr>
+          <tr><td>After the course</td><td class="us">Placement assistance (Plan 3), community access</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="reviews" style="background:#fff">
+  <div class="wrap">
+    <div class="eyebrow">Admissions &amp; reviews</div>
+    <h2>What our students say</h2>
+    <div class="grid3" id="revs" style="margin-top:22px"></div>
+  </div>
+</section>
+
+<section id="learners">
+  <div class="wrap">
+    <div class="eyebrow">Who trains with us</div>
+    <h2>Students and professionals are already building</h2>
+    <div class="people" id="people"></div>
+    <p class="small" style="margin-top:14px;font-weight:700;color:var(--accent)">Spots are filling fast — <a href="#fees">book yours</a>.</p>
+  </div>
+</section>
+
+<section id="gallery" style="background:#fff">
   <div class="wrap">
     <div class="eyebrow">Inside the lab</div>
     <h2>Videos, stories and the community</h2>
@@ -444,8 +461,51 @@
   </div>
 </section>
 
-<!-- 8. talk -->
-<section id="talk" style="background:#fff">
+<section id="fees">
+  <div class="wrap">
+    <div class="eyebrow">Fees, offer &amp; EMI</div>
+    <h2>Pick the plan that fits you.</h2>
+    <p class="sub" id="feesSub">Prices include 18% GST — what you see is what you pay. The early-bird price is for this batch only.</p>
+    <div class="sched">
+      <div><b>Weekday batch</b><br><span class="small" style="font-size:14px">Monday to Friday · 1.5 hours a day</span></div>
+      <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
+    </div>
+    <div class="grid3" id="plans" style="margin-top:26px"></div>
+    <div class="card emi">
+      <div><div style="font-weight:700;color:var(--navy)">EMI on Plan 3</div><div class="small">3 monthly instalments: ₹30,000 + GST in all, or ₹28,000 + GST paid upfront.</div></div>
+      <div><b>₹10,000 × 3</b> <span class="small">+ GST</span></div>
+      <a class="btn ghost" href="#talk">Ask about EMI</a>
+    </div>
+    <div class="card" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:#EEF5FF;border-color:#cfdcf5">
+      <div><div style="font-weight:700;color:var(--navy)">🎓 Scholarship test — up to ₹3,000 off your first month</div><div class="small">Take the free test; your score decides the discount (up to 30% of the first month's ₹10,000 fee).</div></div>
+      <a class="btn ghost" href="/scholarship">Take the scholarship test</a>
+    </div>
+  </div>
+</section>
+
+<section id="kit" style="background:#fff">
+  <div class="wrap grid2" style="align-items:center">
+    <div>
+      <div class="eyebrow">Kit &amp; custom lab</div>
+      <h2>The Altrobyte mini lab kit — and labs built to order.</h2>
+      <p class="sub">The kit our students build with, for your own desk: an ESP32 board with the sensors, display, relay and servo the first projects use, a breadboard and wires. Free with Plan 2 and Plan 3, and available on its own.</p>
+      <p class="sub"><b>Custom lab set-up:</b> for a college, school (ATL) or company we put together the hardware, the curriculum and the trainer — on your campus or online — for embedded systems, IoT and industrial automation, sized to your batch.</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--navy)">Get a quote</h3>
+      <div class="yn" id="kitWhat" style="margin:8px 0 2px"><button type="button" class="on yes" data-v="Mini lab kit">Mini lab kit</button><button type="button" data-v="Custom lab set-up">Custom lab set-up</button></div>
+      <form class="f" id="labForm">
+        <div class="row"><input id="cName" placeholder="Your name" required><input id="cPhone" placeholder="WhatsApp number" inputmode="tel" required></div>
+        <input id="cOrg" placeholder="City (and college / company, for a lab)" required>
+        <textarea id="cNote" rows="2" placeholder="How many kits, or how many learners and what they should build"></textarea>
+        <button class="btn primary" type="submit" style="justify-content:center">Ask for the price</button>
+        <div class="msg" id="labMsg"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="talk">
   <div class="wrap grid2">
     <div class="card">
       <h3 style="color:var(--navy)">Talk to a mentor</h3>
@@ -470,8 +530,7 @@
   </div>
 </section>
 
-<!-- 9. faq -->
-<section id="faq">
+<section id="faq" style="background:#fff">
   <div class="wrap">
     <div class="eyebrow">Questions</div>
     <h2>Frequently asked</h2>
