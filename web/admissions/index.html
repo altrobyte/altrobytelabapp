@@ -31,6 +31,15 @@
   .btn.primary { background: var(--accent); color: #fff; }
   .btn.primary:hover { background: #b84408; }
   .btn.ghost { background: #fff; color: var(--navy); border: 1.5px solid var(--line); }
+  /* the free live class with Altron: the main door from an ad */
+  .btn.ai { background: linear-gradient(135deg, #ff9a3c, #e8590c); color: #fff; box-shadow: 0 10px 26px -10px rgba(232,89,12,.8); }
+  .btn.ai:hover { filter: brightness(1.05); }
+  .aiclass { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: linear-gradient(135deg, #1e3a5f, #2d4f86); color: #fff;
+             border-radius: 18px; padding: 18px 20px; margin: 18px 0 6px; }
+  .aiclass .o { width: 54px; height: 54px; border-radius: 50%; flex: none; background: radial-gradient(circle at 35% 35%, #ffb27a, #e8590c 55%, #9c3a07); box-shadow: 0 0 0 8px rgba(232,89,12,.18); }
+  .aiclass .t { flex: 1; min-width: 220px; }
+  .aiclass b { font-size: 17px; display: block; }
+  .aiclass span { color: #c9d5e6; font-size: 14px; }
   .btn.wa { background: #1FA855; color: #fff; }
   .btn:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
@@ -221,7 +230,8 @@
     <h1 style="margin-top:18px">Stop building college projects.<br>Build <em>real products</em> — PCB to cloud to AI.</h1>
     <p class="lede" id="heroLede">The Product Engineering Program: you design your own PCB, write the firmware, put it online and make it think — with a trainer who has shipped this work in industry.</p>
     <div class="ctas">
-      <a class="btn primary" href="#roadmap">See my roadmap</a>
+      <a class="btn ai" href="/class/?id=demo" data-track="admissions_ai_class_hero">🎓 Free live class with AI · 10 min</a>
+      <a class="btn ghost" href="#roadmap">See my roadmap</a>
       <a class="btn ghost" href="#fees">Fees &amp; EMI</a>
       <a class="btn wa" id="heroWa" href="#talk">Talk to a mentor</a>
     </div>
@@ -275,6 +285,11 @@
 
 </div>
 
+    <div class="aiclass">
+      <div class="o"></div>
+      <div class="t"><b>Not sure yet? Take a free 10-minute live class.</b><span>Altron, our AI teacher, teaches you by voice on a board: how a real smart product works, a small practical, and the path that fits you.</span></div>
+      <a class="btn ai" href="/class/?id=demo" data-track="admissions_ai_class_roadmap">▶ Start the free class</a>
+    </div>
     <div id="stages" style="margin-top:10px"></div>
     <div style="margin-top:22px">
       <div class="card" id="profile">
@@ -475,7 +490,7 @@
 <div class="proof" id="proof" role="status" aria-live="polite"><span class="i">⚡</span><span class="w" id="proofT"></span><button type="button" id="proofX" aria-label="Close">×</button></div>
 <div class="bar">
   <div class="t"><b id="barT">Admissions open</b> · early-bird price for this batch only</div>
-  <a class="btn ghost" href="#talk">Talk to mentor</a>
+  <a class="btn ai" href="/class/?id=demo" data-track="admissions_ai_class_bar">🎓 Free AI class</a>
   <a class="btn primary" href="#fees">Enrol now</a>
 </div>
 
@@ -753,6 +768,7 @@
   }, 2500);
 
   for (const a of document.querySelectorAll('a[href^="/enroll/"]')) a.addEventListener('click', () => track('admissions_enrol'));
+  for (const a of document.querySelectorAll('a[data-track]')) a.addEventListener('click', () => track(a.dataset.track));
   document.addEventListener('click', (e) => { const a = e.target.closest('a[data-plan]'); if (a) track('admissions_enrol_' + a.dataset.plan); });
 })();
 </script>

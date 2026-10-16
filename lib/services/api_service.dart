@@ -2062,6 +2062,14 @@ class ApiService {
   }
 
   /// Staff: the trainer funnel and one row per learner over the last [days].
+  /// Whether a pasted note is a class Altron can teach, and what it still needs (staff).
+  static Future<Map<String, dynamic>> checkClassNote(String html) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http
+        .post(Uri.parse('${ApiConstants.baseUrl}/trainer/class-notes/check'), headers: _headers(prefs.getString('token')), body: jsonEncode({'html': html}))
+        .timeout(const Duration(seconds: 30)));
+  }
+
   static Future<Map<String, dynamic>> trainerUsage(int days) async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/usage?days=$days'), headers: _headers(prefs.getString('token')))

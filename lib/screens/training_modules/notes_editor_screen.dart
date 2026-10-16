@@ -101,6 +101,61 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
         TextSelection.collapsed(offset: pos + template.length);
   }
 
+  /// Asks the server whether Altron can teach this note as a live class (format: docs/altrobyte-class-notes.md) and shows
+  /// what is still missing, section by section.
+  Future<void> _checkForAltron() async {
+    final html = _htmlCtl.text;
+    Map<String, dynamic> r;
+    try {
+      r = await ApiService.checkClassNote(html);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not check the note just now. Try again.')));
+      return;
+    }
+    if (!mounted) return;
+    final problems = [for (final p in (r['problems'] as List? ?? const [])) '$p'];
+    final sections = [for (final x in (r['sections'] as List? ?? const [])) Map<String, dynamic>.from(x as Map)];
+    final ready = r['class_note'] == true && problems.isEmpty;
+    await showDialog<void>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Row(children: [
+          Icon(ready ? Icons.check_circle_rounded : Icons.error_outline_rounded, color: ready ? AppColors.success : AppColors.warning),
+          const SizedBox(width: 8),
+          Expanded(child: Text(ready ? 'Ready: Altron can teach this class' : 'Altron needs a few fixes', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17))),
+        ]),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              if (sections.isNotEmpty) ...[
+                Text('${sections.length} sections', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                for (final x in sections) Text('${x['n']}. ${x['title']}  ·  ${x['kind']}', style: GoogleFonts.inter(fontSize: 13)),
+                const SizedBox(height: 12),
+              ],
+              for (final p in problems)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('•  '),
+                    Expanded(child: Text(p, style: GoogleFonts.inter(fontSize: 13.5))),
+                  ]),
+                ),
+              if (!ready)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('Tip: paste these lines back to Claude and ask it to fix the note.',
+                      style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+                ),
+            ]),
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('OK'))],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,6 +211,11 @@ class _NotesEditorScreenState extends State<NotesEditorScreen>
                 fontWeight: FontWeight.w600,
                 fontSize: 16)),
         actions: [
+          TextButton.icon(
+            onPressed: _checkForAltron,
+            icon: const Icon(Icons.fact_check_rounded, color: Colors.white, size: 20),
+            label: Text('Check for Altron', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
           TextButton.icon(
             onPressed: _writeWithAi,
             icon: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),

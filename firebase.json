@@ -13,6 +13,11 @@
         "destination": "/admissions/index.html"
       },
       {
+        "//": "The free live class with Altron (and module classes): one page, also reachable without the trailing slash.",
+        "source": "/class",
+        "destination": "/class/index.html"
+      },
+      {
         "//": "The short link for ads and WhatsApp replies: the same admissions page, under a name that reads as a roadmap, not a sales page.",
         "source": "/roadmap",
         "destination": "/admissions/index.html"
