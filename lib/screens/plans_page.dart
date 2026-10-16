@@ -90,6 +90,9 @@ Duration? offerLeft(String? setting, DateTime now) {
 bool offerRunning(String? setting, DateTime now) => offerEnd(setting) == null || offerLeft(setting, now) != null;
 
 /// Where the Enrol button of a plan goes: the enrolment form, with the plan carried along. Null when no form is open.
+/// What a student actually pays: the fee with 18% GST, to the rupee.
+int withGst(num fee) => (fee * 1.18).round();
+
 String? enrolPath(String slug, ProgramPlan p) => slug.trim().isEmpty ? null : '/enroll/${Uri.encodeComponent(slug.trim())}?plan=${p.key}';
 
 /// The message a plan's button opens WhatsApp with.
@@ -292,7 +295,7 @@ class _PlansPageState extends State<PlansPage> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (on)
               Row(children: [
-                Text(inr(p.standard), style: GoogleFonts.inter(color: _muted, fontSize: 15, decoration: TextDecoration.lineThrough)),
+                Text(inr(withGst(p.standard)), style: GoogleFonts.inter(color: _muted, fontSize: 15, decoration: TextDecoration.lineThrough)),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -302,13 +305,14 @@ class _PlansPageState extends State<PlansPage> {
               ]),
             const SizedBox(height: 4),
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(inr(price), style: GoogleFonts.poppins(color: _ink, fontSize: 36, fontWeight: FontWeight.w800, height: 1.05)),
+              Text(inr(withGst(price)), style: GoogleFonts.poppins(color: _ink, fontSize: 36, fontWeight: FontWeight.w800, height: 1.05)),
               const SizedBox(width: 8),
-              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${p.period} + GST', style: GoogleFonts.inter(color: _muted, fontSize: 13))),
+              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('incl. GST', style: GoogleFonts.inter(color: _muted, fontSize: 13))),
             ]),
+            Text('${inr(price)} + 18% GST · ${p.period}', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 6),
-            if (on) Text('You save ${inr(p.saving)}', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
-            if (p.months > 1) Text('That is ${inr(on ? p.perMonth : (p.standard / p.months).round())} a month', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
+            if (on) Text('You save ${inr(withGst(p.saving))}', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
+            if (p.months > 1) Text('That is ${inr(withGst(on ? p.perMonth : (p.standard / p.months).round()))} a month', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -376,7 +380,7 @@ class _PlansPageState extends State<PlansPage> {
             decoration: BoxDecoration(color: const Color(0xFFFFF6CC), borderRadius: BorderRadius.circular(12)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(inr(10000), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
-              Text('per month × 3 + GST', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
+              Text('× 3 + GST = ₹30,000 + GST (upfront: ₹28,000 + GST)', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -471,8 +475,10 @@ class _PlansPageState extends State<PlansPage> {
 
   Widget _faq() {
     const qa = <(String, String)>[
-      ('Is GST included in the price?', 'No. GST is added to every price shown on this page.'),
-      ('Can I pay monthly?', 'Yes, on Plan 3: ₹10,000 a month for 3 months + GST, so you do not pay everything upfront.'),
+      ('Is GST included in the price?', 'Yes. The big price includes 18% GST; the fee before GST is shown under it.'),
+      ('Can I start with Plan 1 and upgrade?', 'Yes. Within 30 days of starting, move to Plan 2 or Plan 3 by paying only the difference.'),
+      ('Is there a scholarship?', 'Yes. The free scholarship test can take up to ₹3,000 off your first month.'),
+      ('Can I pay monthly?', 'Yes, on Plan 3: 3 instalments of ₹10,000 + GST (₹30,000 + GST in all), or ₹28,000 + GST upfront.'),
       ('What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day.'),
       ('Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (5th Floor, Gravity Mall, Mechanic Nagar).'),
       ('What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in Plan 2 and Plan 3, so you can practise outside class.'),
@@ -546,8 +552,8 @@ class _PlansPageState extends State<PlansPage> {
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text('From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)} / month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
-                      Text('+ GST', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
+                      Text('From ${inr(withGst(_offerOn ? _plans.first.offer : _plans.first.standard))}', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                      Text('incl. GST', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
                     ]),
                   ),
                   ElevatedButton(
@@ -589,7 +595,7 @@ class _PlansPageState extends State<PlansPage> {
                       _faq(),
                       _closing(),
                       const SizedBox(height: 28),
-                      Text('Prices are in Indian rupees. GST is extra. © Altrobyte Automation Pvt. Ltd.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _muted, fontSize: 12)),
+                      Text('Prices are in Indian rupees and include 18% GST. © Altrobyte Automation Pvt. Ltd.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _muted, fontSize: 12)),
                     ]),
                   ),
                 ),

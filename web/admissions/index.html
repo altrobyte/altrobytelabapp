@@ -227,7 +227,7 @@
 </div>
 
 <div class="fomo" id="fomo">
-  <div class="wrap"><span>🔥 Offer price ends in</span><span class="clock" id="clock">—</span><span id="fomoSeats"></span><a href="#fees" style="color:#8a3305">See the offer →</a></div>
+  <div class="wrap"><span>🔥 Early-bird price ends in</span><span class="clock" id="clock">—</span><span id="fomoSeats"></span><a href="#fees" style="color:#8a3305">See the offer →</a></div>
 </div>
 
 <!-- 1. lead form, then the roadmap -->
@@ -308,19 +308,19 @@
   <div class="wrap">
     <div class="eyebrow">Fees, offer &amp; EMI</div>
     <h2>Pick the plan that fits you.</h2>
-    <p class="sub" id="feesSub">All prices are + GST. The offer price is for this batch only.</p>
+    <p class="sub" id="feesSub">Prices include 18% GST — what you see is what you pay. The early-bird price is for this batch only.</p>
     <div class="sched">
       <div><b>Weekday batch</b><br><span class="small" style="font-size:14px">Monday to Friday · 1.5 hours a day</span></div>
       <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
     </div>
     <div class="grid3" id="plans" style="margin-top:26px"></div>
     <div class="card emi">
-      <div><div style="font-weight:700;color:var(--navy)">EMI on Plan 3</div><div class="small">Learn now, pay comfortably — 3 monthly instalments.</div></div>
-      <div><b>₹10,000 × 3</b> <span class="small">months + GST</span></div>
+      <div><div style="font-weight:700;color:var(--navy)">EMI on Plan 3</div><div class="small">3 monthly instalments: ₹30,000 + GST in all, or ₹28,000 + GST paid upfront.</div></div>
+      <div><b>₹10,000 × 3</b> <span class="small">+ GST</span></div>
       <a class="btn ghost" href="#talk">Ask about EMI</a>
     </div>
     <div class="card" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:#EEF5FF;border-color:#cfdcf5">
-      <div><div style="font-weight:700;color:var(--navy)">🎓 Scholarship test — up to 30% off your first month</div><div class="small">Take the free test; your score decides the discount on the first month's fee.</div></div>
+      <div><div style="font-weight:700;color:var(--navy)">🎓 Scholarship test — up to ₹3,000 off your first month</div><div class="small">Take the free test; your score decides the discount (up to 30% of the first month's ₹10,000 fee).</div></div>
       <a class="btn ghost" href="/scholarship">Take the scholarship test</a>
     </div>
   </div>
@@ -464,7 +464,7 @@
 <footer>© Altrobyte Lab · 5th Floor, Gravity Mall, Mechanic Nagar, Indore 452010 · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a> · <a href="https://wa.me/917222977927">+91 72229 77927</a><br><a href="/">altrobytelab.com</a> · <a href="/plans">All plans</a></footer>
 
 <div class="bar">
-  <div class="t"><b id="barT">Admissions open</b> · offer price for this batch only</div>
+  <div class="t"><b id="barT">Admissions open</b> · early-bird price for this batch only</div>
   <a class="btn ghost" href="#talk">Talk to mentor</a>
   <a class="btn primary" href="#fees">Enrol now</a>
 </div>
@@ -476,6 +476,7 @@
   const API = 'https://edu.altrobytelab.com';
   const $ = (id) => document.getElementById(id);
   const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+  const gst = (n) => Math.round(Number(n || 0) * 1.18);   // what a student pays: the fee with 18% GST
   // Some stored texts were saved with the wrong encoding (â€" for a dash): shown as meant.
   const fix = (s) => String(s || '').replace(/â€”|â€“/g, '—').replace(/â€˜|â€™/g, "'").replace(/â€œ|â€\u009d|â€/g, '"').replace(/Â·/g, '·').replace(/Â/g, '');
   const esc = (s) => fix(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -514,7 +515,7 @@
       if (!s) { $('fomo').classList.add('hidden'); return; }
       const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
       $('clock').textContent = `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(x).padStart(2, '0')}s`;
-      $('barT').textContent = `Offer ends in ${d}d ${h}h`;
+      $('barT').textContent = `Early-bird ends in ${d}d ${h}h`;
     };
     tick(); setInterval(tick, 1000);
   }
@@ -526,8 +527,8 @@
       return `<div class="card plan ${p.recommended ? 'rec' : ''}">
         ${p.recommended ? '<span class="ribbon">Most chosen</span>' : ''}
         <h3>${esc(p.name)}</h3><div class="tg">${esc(p.tag)} · ${esc(p.period)}</div>
-        <div class="price"><b>${inr(price)}</b>${d.offer_on && p.standard ? `<s>${inr(p.standard)}</s><span class="off">${off}% off</span>` : ''}</div>
-        <div class="small">+ GST${p.emi ? ` · or EMI ${inr(p.emi.monthly)} × ${p.emi.months} months` : ''}</div>
+        <div class="price"><b>${inr(gst(price))}</b>${d.offer_on && p.standard ? `<s>${inr(gst(p.standard))}</s><span class="off">${off}% off</span>` : ''}</div>
+        <div class="small">incl. GST · ${inr(price)} + 18% GST${p.emi ? `<br>or ${p.emi.months} instalments of ${inr(p.emi.monthly)} + GST (${inr(p.emi.monthly * p.emi.months)} + GST in all)` : ''}${p.key === 'plan1' ? '<br>Upgrade within 30 days by paying only the difference' : ''}</div>
         <ul>${(p.features || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
         <a class="btn ${p.recommended ? 'primary' : 'ghost'}" href="/enroll/${encodeURIComponent(enrolSlug)}?plan=${encodeURIComponent(p.key)}" data-plan="${esc(p.key)}">Enrol in ${esc(p.name)}</a>
       </div>`;
@@ -687,14 +688,15 @@
   const faq = [
     ['Do I need any experience?', 'No. Stage 1 starts from your first program on a microcontroller. Take "Analyse my profile" above to see where you would start.'],
     ['Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (Gravity Mall, Mechanic Nagar). Every class is recorded.'],
-    ['Is GST included in the price?', 'No. GST is added to every price shown on this page.'],
-    ['Can I pay monthly?', 'Yes, on Plan 3: ₹10,000 a month for 3 months + GST, so you do not pay everything upfront.'],
+    ['Is GST included in the price?', 'Yes. The big price on each plan includes 18% GST; the fee before GST is shown under it.'],
+    ['Can I start with Plan 1 and upgrade later?', 'Yes. Within 30 days of starting, move to Plan 2 or Plan 3 by paying only the difference.'],
+    ['Can I pay monthly?', 'Yes, on Plan 3: 3 instalments of ₹10,000 + GST (₹30,000 + GST in all), or ₹28,000 + GST if you pay upfront.'],
     ['What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day. Online or offline in Indore.'],
     ['What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in Plan 2 and Plan 3, so you can practise outside class.'],
     ['What if I miss a class?', 'Every plan includes the recorded lectures and doubt support to catch up.'],
     ['Do you help with placements?', 'Plan 3 includes placement assistance. In every plan you leave with real products, a GitHub portfolio and demo videos — what interviewers ask about.'],
     ['Which plan should I choose?', 'Plan 1 to start learning now, Plan 2 if you want your own kit, Plan 3 if you also want placement assistance. A mentor can help you decide.'],
-    ['Is there a scholarship?', 'Yes. Take the free scholarship test: your score can take up to 30% off your first month\'s fee.'],
+    ['Is there a scholarship?', 'Yes. Take the free scholarship test: your score can take up to ₹3,000 off your first month.'],
     ['Can I buy only the lab kit, or a lab for my college?', 'Yes. The Altrobyte mini lab kit is sold on its own too, and we set up custom labs for colleges, schools and companies. Ask for a quote in the "Kit & custom lab" section.'],
   ];
   $('faqs').innerHTML = faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
