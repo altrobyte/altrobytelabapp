@@ -45,6 +45,9 @@ class _CrmScreenState extends State<CrmScreen> {
   String _stage = '';
   String _heat = '';
   Map<String, dynamic> _heatCounts = {};
+  Map<String, dynamic> _funnel = {};
+  bool _needsCall = false;
+  bool _recent = true; // the funnel for the last 30 days, or for everyone
   String _query = '';
   bool _loading = true;
   final _searchCtrl = TextEditingController();
@@ -63,10 +66,11 @@ class _CrmScreenState extends State<CrmScreen> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiService.crmLeads(stage: _stage, q: _query, heat: _heat);
+      final res = await ApiService.crmLeads(stage: _stage, q: _query, heat: _heat, needsCall: _needsCall);
       _leads = (res['leads'] as List?) ?? [];
       _counts = Map<String, dynamic>.from(res['counts'] ?? {});
       _heatCounts = Map<String, dynamic>.from(res['heat_counts'] ?? {});
+      _funnel = Map<String, dynamic>.from(res['funnel'] ?? {});
     } catch (_) {
       _leads = [];
     }
@@ -122,6 +126,80 @@ class _CrmScreenState extends State<CrmScreen> {
     }
   }
 
+  // The pipeline at a glance: how many came in, how many we spoke to, how many are interested and how many paid, and the
+  // people who are warm or hot and still waiting for a first call.
+  Widget _funnelCard() {
+    final f = Map<String, dynamic>.from((_funnel[_recent ? 'recent' : 'all'] as Map?) ?? const {});
+    if (f.isEmpty) return const SizedBox.shrink();
+    final leads = (f['leads'] as num?)?.toInt() ?? 0;
+    String pct(String k) => leads == 0 ? '' : ' · ${(100 * ((f[k] as num?) ?? 0) / leads).round()}%';
+    final steps = [('Leads', 'leads'), ('Contacted', 'contacted'), ('Interested', 'interested'), ('Enrolled / paid', 'enrolled')];
+    final waiting = (f['needs_call'] as num?)?.toInt() ?? 0;
+    final sources = Map<String, dynamic>.from((_funnel['recent_sources'] as Map?) ?? const {});
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFFF5F7FB), borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text('Pipeline', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
+          const Spacer(),
+          ChoiceChip(label: const Text('Last 30 days'), selected: _recent, onSelected: (_) => setState(() => _recent = true), visualDensity: VisualDensity.compact),
+          const SizedBox(width: 6),
+          ChoiceChip(label: const Text('Everyone'), selected: !_recent, onSelected: (_) => setState(() => _recent = false), visualDensity: VisualDensity.compact),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          for (var i = 0; i < steps.length; i++) ...[
+            if (i > 0) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textSecondary),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text('${f[steps[i].$2] ?? 0}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text('${steps[i].$1}${i == 0 ? '' : pct(steps[i].$2)}', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary)),
+            ]),
+          ],
+        ]),
+        if (waiting > 0) ...[
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _needsCall = !_needsCall;
+                _heat = '';
+                _stage = '';
+                _loading = true;
+              });
+              _load();
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: _needsCall ? const Color(0xFFD84315) : const Color(0xFFFFF1EA),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                Icon(Icons.phone_in_talk_rounded, size: 18, color: _needsCall ? Colors.white : const Color(0xFFD84315)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      _needsCall
+                          ? 'Showing the $waiting warm and hot leads nobody has called. Tap to show everyone.'
+                          : '$waiting warm and hot leads have not been called yet — call them first',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12.5, color: _needsCall ? Colors.white : const Color(0xFF8A3305))),
+                ),
+              ]),
+            ),
+          ),
+        ],
+        if (_recent && sources.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text('Came from: ${sources.entries.take(5).map((e) => '${'${e.key}'.replaceAll('_', ' ')} ${e.value}').join(' · ')}',
+              style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+        ],
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,6 +241,8 @@ class _CrmScreenState extends State<CrmScreen> {
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: Column(children: [
+            _funnelCard(),
+            const SizedBox(height: 10),
             Row(children: [
               _Stat(label: 'Total', value: '${_summary['total'] ?? '—'}'),
               _Stat(label: 'Registered', value: '${_summary['linked_students'] ?? '—'}'),

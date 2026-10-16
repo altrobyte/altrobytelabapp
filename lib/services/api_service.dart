@@ -922,13 +922,14 @@ class ApiService {
   }
 
   // ── CRM ───────────────────────────────────────────────────────────────
-  static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = '', String heat = '', int limit = 300}) async {
+  static Future<Map<String, dynamic>> crmLeads({String stage = '', String q = '', String heat = '', bool needsCall = false, int limit = 300}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     final uri = Uri.parse('${ApiConstants.baseUrl}/crm/leads').replace(queryParameters: {
       if (stage.isNotEmpty) 'stage': stage,
       if (q.isNotEmpty) 'q': q,
       if (heat.isNotEmpty) 'heat': heat,
+      if (needsCall) 'needs_call': 'true',
       'limit': '$limit',
     });
     final res = await http.get(uri, headers: _headers(token));
