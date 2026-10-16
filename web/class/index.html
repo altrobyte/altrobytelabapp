@@ -282,9 +282,10 @@
     $('prev').disabled = at === 0; $('next').disabled = at >= klass.sections.length - 1;
     document.querySelector('.boardwrap').scrollTop = 0;
   }
+  let movedAt = 0, spokeHere = true;      // when the board last moved, and whether Altron has spoken since
   function go(i, byLearner) {
     if (i < 0 || i >= klass.sections.length) return false;
-    done.add(at); at = i; render();
+    done.add(at); at = i; render(); movedAt = Date.now(); spokeHere = !!byLearner;
     if (byLearner) tell('[Screen] The learner moved the board to section ' + (i + 1) + '. Teach it: ' + JSON.stringify(sectionFor(i)));
     if (klass.sections[at].kind === 'summary') { done.add(at); if (!isDemo && at === klass.sections.length - 1) showDone(); }
     saveProgress();
@@ -476,7 +477,9 @@
       else if (c.name === 'show_section') {
         const v = String(a.section || 'next').toLowerCase();
         const i = v === 'next' ? at + 1 : v === 'back' ? at - 1 : Number(v) - 1;
-        r = go(i, false) ? sectionFor(at) : { error: i >= klass.sections.length ? 'That was the last section.' : 'No such section.' };
+        // Moving on twice before saying anything would skip a section the learner never heard.
+        if (i > at && !spokeHere && Date.now() - movedAt < 15000) { r = { stay: true, note: 'Present this section first.', ...sectionFor(at) }; }
+        else r = go(i, false) ? sectionFor(at) : { error: i >= klass.sections.length ? 'That was the last section.' : 'No such section.' };
         if (r.error && i >= klass.sections.length && !isDemo) { showDone(); r = { done: true, screen: 'the class-complete card is on their screen with a button back to their learning path' }; }
       } else if (c.name === 'point_at') r = pointAt(String(a.part || '')) ? { pointed: true } : { error: 'No such part on this board. Parts: ' + klass.sections[at].points.join(', ') };
       else if (c.name === 'ask_check') r = showCheck() ? { shown: true, ...sectionFor(at).check_question } : { error: 'This section has no check question.' };
@@ -521,7 +524,7 @@
       if (sc) {
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
-        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; $('capT').textContent = tutorLine.slice(-320); }
+        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.slice(-320); }
         if (sc.inputTranscription && sc.inputTranscription.text) { youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
         if (sc.turnComplete) { if (youLine.trim()) txLine('You', youLine.trim()); if (tutorLine.trim()) txLine('Altron', tutorLine.trim()); tutorLine = ''; youLine = ''; }
       }
