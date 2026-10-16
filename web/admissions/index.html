@@ -740,7 +740,7 @@
         $('proofT').innerHTML = `<span class="m"><b>${esc(a.student_name)}</b> ${esc(a.action)} <b>${esc(a.target)}</b></span><small>${ago(a.timestamp)}</small>`;
         box.classList.add('on');
       };
-      // Stays on screen and changes to the next person every 5 seconds (the text fades, the card does not leave).
+      // Stays on screen and changes to the next person every 3 seconds (the text fades, the card does not leave).
       const next = () => {
         const t = $('proofT');
         t.style.opacity = '0';
@@ -748,7 +748,7 @@
       };
       $('proofX').onclick = () => { clearInterval(timer); box.classList.remove('on'); };
       show();
-      if (items.length > 1) timer = setInterval(next, 5000);
+      if (items.length > 1) timer = setInterval(next, 3000);
     }).catch(() => {});
   }, 2500);
 
