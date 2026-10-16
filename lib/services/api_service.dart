@@ -2070,6 +2070,13 @@ class ApiService {
         .timeout(const Duration(seconds: 30)));
   }
 
+  /// How many module notes have their class version yet, and the ones that failed (staff).
+  static Future<Map<String, dynamic>> classNotesStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/class-notes/status'), headers: _headers(prefs.getString('token')))
+        .timeout(const Duration(seconds: 30)));
+  }
+
   static Future<Map<String, dynamic>> trainerUsage(int days) async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/usage?days=$days'), headers: _headers(prefs.getString('token')))

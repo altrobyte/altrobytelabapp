@@ -18,6 +18,7 @@ class TrainerUsageScreen extends StatefulWidget {
 class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
   int _days = 7;
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _classes; // module notes turned into live classes
   String? _problem;
   bool _loading = true;
 
@@ -34,6 +35,11 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
     });
     try {
       _data = await ApiService.trainerUsage(_days);
+      try {
+        _classes = await ApiService.classNotesStatus();
+      } catch (_) {
+        _classes = null; // the usage numbers still show
+      }
     } catch (e) {
       _problem = e is ApiException ? e.message : 'Could not load the numbers. Try again.';
     }
@@ -98,6 +104,32 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
                       ),
                   ]),
                   const SizedBox(height: 22),
+                  // Module notes turned into live classes on the board, by Claude on the server.
+                  if (_classes != null)
+                    Builder(builder: (_) {
+                      final n = Map<String, dynamic>.from((_classes!['counts'] as Map?) ?? const {});
+                      final failed = [for (final f in (_classes!['failed'] as List? ?? const [])) Map<String, dynamic>.from(f as Map)];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFC9D8F5))),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Wrap(spacing: 24, runSpacing: 6, children: [
+                            Text('Live class versions of notes', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+                            Text('${n['ready'] ?? 0} ready', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.success)),
+                            Text('${(n['waiting'] ?? 0) + (n['working'] ?? 0)} waiting', style: GoogleFonts.inter(fontSize: 13)),
+                            Text('${n['failed'] ?? 0} failed', style: GoogleFonts.inter(fontSize: 13, color: (n['failed'] ?? 0) > 0 ? AppColors.error : AppColors.textSecondary)),
+                            Text(_classes!['worker'] == true ? 'Converting now…' : 'Idle', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+                          ]),
+                          for (final f in failed.take(5))
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('• ${f['title']}: ${'${f['class_problems'] ?? ''}'.split('\n').first}',
+                                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ),
+                        ]),
+                      );
+                    }),
                   // Talk with Altron Live: what it costs, from Google's own counts (or the minutes, when a report never came).
                   Builder(builder: (_) {
                     final live = Map<String, dynamic>.from((_data?['live'] as Map?) ?? const {});
