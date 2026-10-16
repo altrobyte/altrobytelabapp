@@ -129,6 +129,6 @@ class _HelperHostState extends State<_HelperHost> {
         ),
       );
     }
-    return const Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 14), Text('Starting…')])));
+    return const Scaffold(body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 14), Text('Starting…'), SizedBox(height: 6), Text('The first start after installing can take a minute.', style: TextStyle(fontSize: 12, color: Colors.black54))])));
   }
 }

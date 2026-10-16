@@ -99,7 +99,8 @@ HelperRuntime? locateRuntime({String? exeDir, Map<String, String>? env}) {
 
 /// Starts the helper and waits for its "ready" line. If another helper turned out to be running (two apps started at the
 /// same moment), the line says so and that one is used; nothing new was started.
-Future<HelperInfo> launchHelper(HelperRuntime runtime, {Map<String, String>? env, Duration timeout = const Duration(seconds: 30)}) async {
+// 90 seconds: the first start after installing compiles the helper and is scanned by the antivirus, which took over 30.
+Future<HelperInfo> launchHelper(HelperRuntime runtime, {Map<String, String>? env, Duration timeout = const Duration(seconds: 90)}) async {
   final proc = await Process.start(runtime.python, ['-u', '-m', 'altrobyte_helper'],
       workingDirectory: runtime.helperDir,
       environment: env,
