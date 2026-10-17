@@ -1,0 +1,103 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="12">
+<p class="lead">You can wire a button and an LED to an ESP32 and make the button control the LED.</p>
+
+<section class="step" data-kind="concept">
+  <h2>GPIO pins: in or out</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 140" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="esp"><rect x="120" y="20" width="100" height="100" rx="10" fill="#132436"/><text x="170" y="75" text-anchor="middle" font-size="14" fill="#fff">ESP32</text></g>
+      <g data-point="out"><line x1="220" y1="50" x2="280" y2="50" stroke="#e8590c" stroke-width="2"/><text x="285" y="54" font-size="12">OUTPUT → LED</text></g>
+      <g data-point="in"><line x1="60" y1="90" x2="120" y2="90" stroke="#2d6cdf" stroke-width="2"/><text x="5" y="94" font-size="12">button → INPUT</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>GPIO means general-purpose input/output: a pin you choose to use as input or output [esp].</li>
+    <li>As OUTPUT the ESP32 drives the pin to 3.3 V or 0 V, for example to light an LED [out].</li>
+    <li>As INPUT it reads whether something outside pulls the pin high or low, for example a button [in].</li>
+    <li>pinMode(pin, OUTPUT) or pinMode(pin, INPUT_PULLUP) in setup() tells the chip which one.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>What voltage does an ESP32 output pin give for HIGH?</p>
+    <ol><li>5 V</li><li>About 3.3 V</li><li>12 V</li></ol>
+    <p class="why">The ESP32 uses 3.3 V logic; never feed 5 V into its pins.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Can every pin be an output?</b> No. GPIO 34 to 39 are input only, and some pins affect booting, so use the pins your kit guide lists.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>An LED needs a resistor</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="gpio"><text x="10" y="64" font-size="13">GPIO 2</text></g>
+      <line x1="65" y1="60" x2="110" y2="60" stroke="#132436"/>
+      <g data-point="res"><rect x="110" y="50" width="60" height="20" fill="#ffe8d6" stroke="#e8590c"/><text x="140" y="90" text-anchor="middle" font-size="11">220 Ω</text></g>
+      <line x1="170" y1="60" x2="210" y2="60" stroke="#132436"/>
+      <g data-point="led"><polygon points="210,45 210,75 240,60" fill="#ffd43b" stroke="#132436"/><text x="225" y="95" text-anchor="middle" font-size="11">LED</text></g>
+      <line x1="240" y1="60" x2="290" y2="60" stroke="#132436"/><g data-point="gnd"><text x="295" y="64" font-size="13">GND</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Current flows from the pin [gpio] through a resistor [res], through the LED [led] to ground [gnd].</li>
+    <li>The resistor limits the current. Without it the LED or the pin can be damaged.</li>
+    <li>The LED's long leg goes towards the pin, the short leg towards GND.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>Why is the resistor there?</p>
+    <ol><li>To limit the current</li><li>To make the LED brighter</li><li>To store charge</li></ol>
+    <p class="why">The resistor keeps the current small enough for the LED and the pin.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>A button with INPUT_PULLUP</h2>
+  <div class="board">
+    <pre data-point="code">pinMode(4, INPUT_PULLUP);
+pinMode(2, OUTPUT);
+
+if (digitalRead(4) == LOW) {   // pressed
+  digitalWrite(2, HIGH);
+} else {
+  digitalWrite(2, LOW);
+}</pre>
+    <p data-point="pull">Not pressed: HIGH. Pressed (connected to GND): LOW.</p>
+  </div>
+  <ul class="teach">
+    <li>Wire the button between GPIO 4 and GND. INPUT_PULLUP turns on a resistor inside the chip that holds the pin high [pull].</li>
+    <li>So the pin reads HIGH when the button is free and LOW when it is pressed. It feels upside down, but it is the usual way.</li>
+    <li>The code reads the button and copies it to the LED [code].</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>With INPUT_PULLUP, what does digitalRead give while the button is pressed?</p>
+    <ol><li>HIGH</li><li>A random value</li><li>LOW</li></ol>
+    <p class="why">Pressing connects the pin to GND, which pulls it low.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why does my LED flicker when I press once?</b> Buttons bounce for a few milliseconds; a short delay or a debounce check fixes it.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="practical">
+  <h2>Try it</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="p_led"><rect x="15" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="62" y="60" text-anchor="middle" font-size="13">LED</text></g>
+      <g data-point="p_res"><rect x="122" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="170" y="60" text-anchor="middle" font-size="13">Resistor</text></g>
+      <g data-point="p_btn"><rect x="230" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="277" y="60" text-anchor="middle" font-size="13">Button</text></g>
+    </svg>
+  </div>
+  <div class="practical" data-task="tap" data-answer="p_btn">Tap the part you connect to a pin set as INPUT_PULLUP.</div>
+  <ul class="teach"><li>The button is the input; the LED and its resistor are on the output pin.</li></ul>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>A GPIO pin is input or output, set with pinMode; the ESP32 uses 3.3 V.</li>
+    <li>An LED always goes with a resistor.</li>
+    <li>With INPUT_PULLUP a pressed button reads LOW.</li>
+  </ul>
+</section>
+</article>

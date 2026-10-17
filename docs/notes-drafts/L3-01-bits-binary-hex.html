@@ -1,0 +1,99 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="10">
+<p class="lead">You can read and write numbers the way a microcontroller stores them: bits, bytes, binary and hex.</p>
+
+<section class="step" data-kind="concept">
+  <h2>A bit is one switch</h2>
+  <div class="board">
+    <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="off"><rect x="30" y="30" width="90" height="60" rx="10" fill="#eef2f7" stroke="#132436"/><text x="75" y="58" text-anchor="middle" font-size="14">OFF</text><text x="75" y="78" text-anchor="middle" font-size="16" font-weight="700">0</text></g>
+      <g data-point="on"><rect x="200" y="30" width="90" height="60" rx="10" fill="#ffe8d6" stroke="#e8590c"/><text x="245" y="58" text-anchor="middle" font-size="14">ON</text><text x="245" y="78" text-anchor="middle" font-size="16" font-weight="700">1</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Inside a chip, every piece of information is a tiny switch that is either off or on, like a ceiling fan switch.</li>
+    <li>Off is written 0 [off], on is written 1 [on]. One such switch is called a bit.</li>
+    <li>On an ESP32, a 1 on a pin means about 3.3 volts and a 0 means about 0 volts.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>How many different values can one bit hold?</p>
+    <ol><li>One</li><li>Two</li><li>Ten</li></ol>
+    <p class="why">A bit is either 0 or 1, so it holds exactly two values.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why not use 10 levels like our digits?</b> Two levels are easy to tell apart even with electrical noise, so the chip never confuses them.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Eight bits make a byte</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="byte"><rect x="10" y="40" width="320" height="44" rx="8" fill="none" stroke="#132436"/>
+        <text x="30" y="68" font-size="16">0</text><text x="70" y="68" font-size="16">0</text><text x="110" y="68" font-size="16">0</text><text x="150" y="68" font-size="16">0</text><text x="190" y="68" font-size="16">0</text><text x="230" y="68" font-size="16">1</text><text x="270" y="68" font-size="16">0</text><text x="310" y="68" font-size="16">1</text></g>
+      <g data-point="weights"><text x="18" y="110" font-size="11">128</text><text x="62" y="110" font-size="11">64</text><text x="102" y="110" font-size="11">32</text><text x="142" y="110" font-size="11">16</text><text x="187" y="110" font-size="11">8</text><text x="227" y="110" font-size="11">4</text><text x="267" y="110" font-size="11">2</text><text x="307" y="110" font-size="11">1</text></g>
+      <text x="10" y="25" font-size="13">byte = 8 bits</text>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Eight bits side by side make one byte [byte]. It is the basic unit the chip stores and sends.</li>
+    <li>Each position has a weight, doubling from right to left: 1, 2, 4, 8 up to 128 [weights].</li>
+    <li>Add the weights where the bit is 1. Here 4 + 1 = 5, so this byte is the number 5.</li>
+    <li>A byte can count from 0 (all zeros) to 255 (all ones), so 256 values.</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>What number is the byte 00001010?</p>
+    <ol><li>5</li><li>8</li><li>10</li></ol>
+    <p class="why">The 1s sit at weights 8 and 2, and 8 + 2 = 10.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why does a byte stop at 255?</b> All eight weights added together, 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1, make 255.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Hex: a short way to write bytes</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="nibbles"><rect x="20" y="20" width="140" height="40" rx="8" fill="#eef2f7" stroke="#132436"/><text x="90" y="46" text-anchor="middle" font-size="16">1111</text>
+        <rect x="180" y="20" width="140" height="40" rx="8" fill="#eef2f7" stroke="#132436"/><text x="250" y="46" text-anchor="middle" font-size="16">0001</text></g>
+      <g data-point="hex"><text x="90" y="95" text-anchor="middle" font-size="20" font-weight="700">F</text><text x="250" y="95" text-anchor="middle" font-size="20" font-weight="700">1</text><text x="170" y="95" text-anchor="middle" font-size="14">= 0xF1</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Long strings of 0s and 1s are hard to read, so engineers split a byte into two halves of four bits [nibbles].</li>
+    <li>Each half is one hex digit: 0 to 9, then A=10, B=11 up to F=15 [hex].</li>
+    <li>So 1111 0001 is written 0xF1. The 0x in front means "this is hex", and you will see it in datasheets and code.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>What is 0xFF in decimal?</p>
+    <ol><li>255</li><li>15</li><li>100</li></ol>
+    <p class="why">0xFF is 1111 1111, every bit on, which is 255.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Do I have to convert hex in my head?</b> Not at first; the Windows calculator in Programmer mode converts for you. You will learn the common ones by using them.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="practical">
+  <h2>Try it</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="b1"><rect x="20" y="30" width="90" height="50" rx="8" fill="#eef2f7" stroke="#132436"/><text x="65" y="60" text-anchor="middle" font-size="15">00000011</text></g>
+      <g data-point="b2"><rect x="125" y="30" width="90" height="50" rx="8" fill="#eef2f7" stroke="#132436"/><text x="170" y="60" text-anchor="middle" font-size="15">00000111</text></g>
+      <g data-point="b3"><rect x="230" y="30" width="90" height="50" rx="8" fill="#eef2f7" stroke="#132436"/><text x="275" y="60" text-anchor="middle" font-size="15">00000110</text></g>
+    </svg>
+  </div>
+  <div class="practical" data-task="tap" data-answer="b2">Tap the byte that equals 7.</div>
+  <ul class="teach"><li>00000111 is 4 + 2 + 1 = 7. The others are 3 and 6.</li></ul>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>A bit is one switch, 0 or 1; on an ESP32 a 1 is about 3.3 V.</li>
+    <li>Eight bits make a byte, which holds 0 to 255.</li>
+    <li>Hex writes each four bits as one digit, so a byte is two hex digits like 0xF1.</li>
+  </ul>
+</section>
+</article>

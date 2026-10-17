@@ -1,0 +1,85 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="intermediate" data-minutes="10">
+<p class="lead">You can set, clear, toggle and test one bit of a register with bitwise operators, without touching the others.</p>
+
+<section class="step" data-kind="concept">
+  <h2>Shift: make a mask</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="one"><text x="20" y="45" font-size="14">1</text><text x="60" y="45" font-size="14">= 0000 0001</text></g>
+      <g data-point="shift"><text x="20" y="90" font-size="14">1 &lt;&lt; 3</text><text x="90" y="90" font-size="14">= 0000 1000</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>A mask is a number with a 1 only on the bit you care about.</li>
+    <li>1 is 0000 0001 [one]. The shift operator &lt;&lt; slides it left: 1 &lt;&lt; 3 puts the 1 at bit 3 [shift].</li>
+    <li>Bits are counted from 0 on the right, so bit 3 has weight 8.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>What is 1 &lt;&lt; 2 in binary?</p>
+    <ol><li>0000 0010</li><li>0000 0100</li><li>0000 0011</li></ol>
+    <p class="why">The 1 moves two places left, landing on bit 2 (weight 4).</p>
+  </div>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Set with OR, clear with AND NOT</h2>
+  <div class="board">
+    <pre data-point="set">reg |=  (1 &lt;&lt; 3);   // set bit 3</pre>
+    <pre data-point="clear">reg &amp;= ~(1 &lt;&lt; 3);   // clear bit 3</pre>
+  </div>
+  <ul class="teach">
+    <li>To turn one bit on, OR it with the mask [set]. Bits where the mask is 0 stay exactly as they were.</li>
+    <li>To turn one bit off, AND it with the inverted mask [clear]. ~ flips the mask so only bit 3 is 0.</li>
+    <li>This is how you change one pin without disturbing the seven others in the same register.</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>reg is 0000 0001. After reg |= (1 &lt;&lt; 3), what is reg?</p>
+    <ol><li>0000 1000</li><li>0000 0001</li><li>0000 1001</li></ol>
+    <p class="why">OR adds bit 3 and keeps bit 0, giving 0000 1001.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why not just write reg = 8?</b> That would also clear bit 0 and every other bit, switching off pins you did not mean to touch.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Toggle with XOR, test with AND</h2>
+  <div class="board">
+    <pre data-point="toggle">reg ^= (1 &lt;&lt; 3);          // flip bit 3</pre>
+    <pre data-point="test">if (reg &amp; (1 &lt;&lt; 3)) { ... }  // is bit 3 on?</pre>
+  </div>
+  <ul class="teach">
+    <li>XOR with the mask flips just that bit [toggle]: on becomes off, off becomes on. A blinking LED in one line.</li>
+    <li>AND with the mask [test] gives a non-zero result only if that bit is 1, so if() can check it.</li>
+    <li>These four lines, set, clear, toggle and test, are used in almost every driver you will read.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>Which operator flips a bit each time it runs?</p>
+    <ol><li>^ (XOR)</li><li>| (OR)</li><li>&amp; (AND)</li></ol>
+    <p class="why">XOR with 1 inverts the bit, so repeating it toggles.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="practical">
+  <h2>Try it</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="op_or"><rect x="15" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="62" y="60" text-anchor="middle" font-size="13">|= mask</text></g>
+      <g data-point="op_and"><rect x="122" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="170" y="60" text-anchor="middle" font-size="13">&amp;= ~mask</text></g>
+      <g data-point="op_xor"><rect x="230" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="277" y="60" text-anchor="middle" font-size="13">^= mask</text></g>
+    </svg>
+  </div>
+  <div class="practical" data-task="tap" data-answer="op_and">Tap the line that switches a relay off without touching the other pins.</div>
+  <ul class="teach"><li>AND with the inverted mask clears only that bit.</li></ul>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>1 &lt;&lt; n makes a mask for bit n.</li>
+    <li>|= sets, &amp;= ~ clears, ^= toggles, &amp; tests.</li>
+    <li>Masks change one bit and leave the rest of the register alone.</li>
+  </ul>
+</section>
+</article>

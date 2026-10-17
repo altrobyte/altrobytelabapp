@@ -1,0 +1,82 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="10">
+<p class="lead">You can explain how a line of code turns a pin on: by setting a bit in a register.</p>
+
+<section class="step" data-kind="concept">
+  <h2>A register is a byte wired to hardware</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 140" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="reg"><rect x="20" y="30" width="200" height="40" rx="6" fill="#eef2f7" stroke="#132436"/><text x="120" y="55" text-anchor="middle" font-size="14">0 0 0 0 0 1 0 0</text></g>
+      <g data-point="pin"><line x1="170" y1="70" x2="170" y2="110" stroke="#e8590c" stroke-width="2"/><circle cx="170" cy="118" r="10" fill="#ffd43b" stroke="#e8590c"/><text x="215" y="122" font-size="12">LED on pin</text></g>
+      <text x="20" y="20" font-size="12">output register</text>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Most memory boxes just hold numbers. A register is a special box whose bits are wired straight to the hardware [reg].</li>
+    <li>In an output register, each bit controls one pin. Make that bit 1 and the pin goes to 3.3 V, and the LED lights [pin].</li>
+    <li>Like the switchboard in your room: each switch is a bit, each light is a pin.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>What happens when code sets a bit in an output register to 1?</p>
+    <ol><li>The program restarts</li><li>Its pin goes high (3.3 V)</li><li>The byte is saved to flash</li></ol>
+    <p class="why">Each bit of an output register drives its pin; 1 means high.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Where do I find which bit is which pin?</b> In the chip's technical reference manual, the "register map". Datasheets list every register and bit.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>digitalWrite is a register write</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="code"><rect x="10" y="20" width="150" height="40" rx="6" fill="#132436"/><text x="85" y="45" text-anchor="middle" font-size="12" fill="#fff">digitalWrite(2, HIGH)</text></g>
+      <g data-point="lib"><rect x="180" y="20" width="150" height="40" rx="6" fill="#eef2f7" stroke="#132436"/><text x="255" y="45" text-anchor="middle" font-size="12">library sets bit 2</text></g>
+      <line x1="160" y1="40" x2="180" y2="40" stroke="#132436"/>
+      <g data-point="hw"><rect x="180" y="80" width="150" height="34" rx="6" fill="#ffe8d6" stroke="#e8590c"/><text x="255" y="102" text-anchor="middle" font-size="12">GPIO 2 goes high</text></g>
+      <line x1="255" y1="60" x2="255" y2="80" stroke="#132436"/>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>When you write digitalWrite(2, HIGH) [code], you do not touch the register yourself.</li>
+    <li>The Arduino library finds the right register and sets bit 2 for you [lib], and the pin goes high [hw].</li>
+    <li>Knowing this matters when something does not work: you can check the register, not just guess.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>Who actually changes the register when you call digitalWrite?</p>
+    <ol><li>The library code inside the function</li><li>The USB cable</li><li>VS Code</li></ol>
+    <p class="why">The library function writes the register; the USB cable only carries your program onto the chip.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Input registers read pins</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="button"><rect x="20" y="60" width="60" height="30" rx="6" fill="#eef2f7" stroke="#132436"/><text x="50" y="80" text-anchor="middle" font-size="12">button</text></g>
+      <line x1="80" y1="75" x2="140" y2="75" stroke="#132436"/>
+      <g data-point="inreg"><rect x="140" y="55" width="180" height="40" rx="6" fill="#ffe8d6" stroke="#e8590c"/><text x="230" y="80" text-anchor="middle" font-size="13">0 0 0 1 0 0 0 0</text></g>
+      <text x="140" y="45" font-size="12">input register</text>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>It works the other way too. When a button [button] pulls a pin high, the chip sets that pin's bit in an input register [inreg].</li>
+    <li>digitalRead reads that bit and returns HIGH or LOW.</li>
+    <li>So every sensor reading and every pin you drive comes down to bits in registers.</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>What does digitalRead actually look at?</p>
+    <ol><li>The voltage on the USB port</li><li>A file on the laptop</li><li>A bit in an input register</li></ol>
+    <p class="why">The pin's level is stored as a bit in an input register, and digitalRead returns it.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>A register is a byte or word whose bits are wired to hardware.</li>
+    <li>Output register bits drive pins; input register bits show what pins see.</li>
+    <li>digitalWrite and digitalRead are library functions that write and read those bits for you.</li>
+  </ul>
+</section>
+</article>

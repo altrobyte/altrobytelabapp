@@ -1,0 +1,97 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="10">
+<p class="lead">You can pick the right data type for a value and explain how it sits in the microcontroller's memory.</p>
+
+<section class="step" data-kind="concept">
+  <h2>Memory is a row of numbered boxes</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="box"><rect x="20" y="40" width="70" height="44" fill="#ffe8d6" stroke="#e8590c"/><text x="55" y="67" text-anchor="middle" font-size="14">25</text></g>
+      <rect x="90" y="40" width="70" height="44" fill="#eef2f7" stroke="#132436"/><rect x="160" y="40" width="70" height="44" fill="#eef2f7" stroke="#132436"/><rect x="230" y="40" width="70" height="44" fill="#eef2f7" stroke="#132436"/>
+      <g data-point="address"><text x="55" y="105" text-anchor="middle" font-size="11">0x100</text><text x="125" y="105" text-anchor="middle" font-size="11">0x101</text><text x="195" y="105" text-anchor="middle" font-size="11">0x102</text><text x="265" y="105" text-anchor="middle" font-size="11">0x103</text></g>
+      <text x="20" y="28" font-size="12">RAM: one byte per box</text>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>RAM is like a long row of post-office boxes. Each box holds one byte [box].</li>
+    <li>Every box has a number called its address, usually written in hex [address].</li>
+    <li>When your code says temperature = 25, the chip puts 25 in some box and remembers its address.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>What does one memory box (address) hold?</p>
+    <ol><li>One byte</li><li>One bit</li><li>One whole program</li></ol>
+    <p class="why">Memory is addressed byte by byte; each address holds 8 bits.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Is RAM the same as flash?</b> No. Flash keeps your program even when power is off; RAM holds working values and is wiped at power off.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Data types decide how many boxes</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 150" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="u8"><rect x="20" y="15" width="40" height="30" fill="#ffe8d6" stroke="#e8590c"/><text x="80" y="35" font-size="12">uint8_t: 1 byte, 0 to 255</text></g>
+      <g data-point="i16"><rect x="20" y="58" width="80" height="30" fill="#ffe8d6" stroke="#e8590c"/><text x="110" y="78" font-size="12">int16_t: 2 bytes, -32768 to 32767</text></g>
+      <g data-point="i32"><rect x="20" y="101" width="160" height="30" fill="#ffe8d6" stroke="#e8590c"/><text x="190" y="121" font-size="12">int32_t / float: 4 bytes</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>A data type tells the compiler how many bytes a value needs and what it means.</li>
+    <li>uint8_t [u8] is one byte, 0 to 255: good for a brightness level or a pin state.</li>
+    <li>int16_t [i16] is two bytes and can be negative: good for a temperature like -5.</li>
+    <li>int32_t and float [i32] are four bytes; float holds decimals like 23.6 °C.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>You must store an ADC reading from 0 to 4095. Which type fits?</p>
+    <ol><li>uint8_t</li><li>uint16_t</li><li>char</li></ol>
+    <p class="why">4095 is more than 255, so one byte is too small; uint16_t holds up to 65535.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why not use float for everything?</b> It takes more memory and more time, and small chips have little of both; use whole numbers when you can.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Overflow: when the box is too small</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="full"><rect x="30" y="35" width="100" height="44" rx="6" fill="#ffe8d6" stroke="#e8590c"/><text x="80" y="62" text-anchor="middle" font-size="15">255</text></g>
+      <text x="160" y="62" text-anchor="middle" font-size="14">+1 →</text>
+      <g data-point="wrap"><rect x="200" y="35" width="100" height="44" rx="6" fill="#fde2e2" stroke="#c62828"/><text x="250" y="62" text-anchor="middle" font-size="15">0</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>A uint8_t holding 255 [full] has every bit on. Add 1 and it wraps around to 0 [wrap], like a car odometer rolling over.</li>
+    <li>This is called overflow. The chip gives no error; your reading is simply wrong.</li>
+    <li>Pick a type big enough for the largest value you will ever store.</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>A uint8_t counter is at 255 and you add 1. What does it hold?</p>
+    <ol><li>256</li><li>An error is shown</li><li>0</li></ol>
+    <p class="why">One byte cannot hold 256, so it wraps to 0 silently.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="practical">
+  <h2>Try it</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="t_u8"><rect x="15" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="62" y="60" text-anchor="middle" font-size="13">uint8_t</text></g>
+      <g data-point="t_i16"><rect x="122" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="170" y="60" text-anchor="middle" font-size="13">int16_t</text></g>
+      <g data-point="t_float"><rect x="230" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="277" y="60" text-anchor="middle" font-size="13">float</text></g>
+    </svg>
+  </div>
+  <div class="practical" data-task="tap" data-answer="t_float">Tap the type for a body temperature like 36.8.</div>
+  <ul class="teach"><li>36.8 has a decimal point, so it needs float.</li></ul>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>Memory is numbered boxes of one byte each; the number is the address.</li>
+    <li>The data type sets how many bytes a value uses and its range.</li>
+    <li>A value bigger than its type overflows and wraps around without any error.</li>
+  </ul>
+</section>
+</article>

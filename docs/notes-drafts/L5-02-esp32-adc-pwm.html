@@ -1,0 +1,93 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="12">
+<p class="lead">You can read an analog sensor with the ESP32's ADC and dim an LED with PWM.</p>
+
+<section class="step" data-kind="concept">
+  <h2>ADC: voltage to a number</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="volts"><text x="20" y="40" font-size="13">0 V</text><text x="270" y="40" font-size="13">3.3 V</text><line x1="20" y1="50" x2="320" y2="50" stroke="#132436" stroke-width="3"/></g>
+      <g data-point="counts"><text x="20" y="95" font-size="13">0</text><text x="270" y="95" font-size="13">4095</text><line x1="20" y1="75" x2="320" y2="75" stroke="#e8590c" stroke-width="3"/></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>Sensors like a light sensor or a potentiometer give a voltage that can be anywhere between 0 and 3.3 V [volts].</li>
+    <li>The ADC (analog-to-digital converter) turns that voltage into a number from 0 to 4095 [counts], because it is 12 bits.</li>
+    <li>analogRead(pin) gives you that number. About 1.65 V reads roughly 2048, the middle.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>What range does analogRead give on an ESP32?</p>
+    <ol><li>0 to 255</li><li>0 to 4095</li><li>0 to 1023</li></ol>
+    <p class="why">The ESP32's ADC is 12-bit, so it reads 0 to 4095.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why is my reading not exactly linear?</b> The ESP32's ADC is less accurate near 0 V and near 3.3 V; for precise work, calibrate or use the middle of the range.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Reading a potentiometer</h2>
+  <div class="board">
+    <pre data-point="code">int raw = analogRead(34);          // 0..4095
+float volts = raw * 3.3 / 4095;
+Serial.println(volts);</pre>
+    <p data-point="pin34">GPIO 34 is input only: good for sensors</p>
+  </div>
+  <ul class="teach">
+    <li>Connect the potentiometer's ends to 3.3 V and GND and its middle pin to GPIO 34 [pin34].</li>
+    <li>analogRead gives the raw number; multiply by 3.3 and divide by 4095 to get volts [code].</li>
+    <li>Turn the knob and watch the numbers change in the Serial Monitor.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>analogRead returns 4095. About what voltage is on the pin?</p>
+    <ol><li>3.3 V</li><li>0 V</li><li>5 V</li></ol>
+    <p class="why">4095 is the top of the range, which is about 3.3 V.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>PWM: fake a voltage by blinking fast</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="low"><polyline points="20,40 40,40 40,20 50,20 50,40 70,40 70,20 80,20 80,40 100,40" fill="none" stroke="#132436"/><text x="60" y="60" text-anchor="middle" font-size="11">25% on: dim</text></g>
+      <g data-point="high"><polyline points="190,40 195,40 195,20 225,20 225,40 230,40 230,20 260,20 260,40 265,40" fill="none" stroke="#e8590c"/><text x="230" y="60" text-anchor="middle" font-size="11">75% on: bright</text></g>
+      <g data-point="duty"><text x="170" y="100" text-anchor="middle" font-size="13">duty cycle = time on ÷ total time</text></g>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>A pin can only be fully on or fully off. PWM switches it on and off thousands of times a second.</li>
+    <li>The share of time it is on is the duty cycle [duty]. Our eyes see an LED on 25% of the time as dim [low] and 75% as bright [high].</li>
+    <li>analogWrite(pin, value) with value 0 to 255 sets the duty cycle on an ESP32 (the chip's LEDC unit does it).</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>analogWrite(2, 128) gives roughly what brightness?</p>
+    <ol><li>Off</li><li>Full</li><li>About half</li></ol>
+    <p class="why">128 of 255 is about 50% duty cycle, so about half brightness.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Is PWM real analog output?</b> No, it is fast switching; for LEDs and motors the effect is the same as a lower voltage.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="practical">
+  <h2>Try it</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="f_read"><rect x="15" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="62" y="60" text-anchor="middle" font-size="12">analogRead</text></g>
+      <g data-point="f_write"><rect x="122" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="170" y="60" text-anchor="middle" font-size="12">analogWrite</text></g>
+      <g data-point="f_digital"><rect x="230" y="30" width="95" height="50" rx="10" fill="#eef2f7" stroke="#132436"/><text x="277" y="60" text-anchor="middle" font-size="12">digitalRead</text></g>
+    </svg>
+  </div>
+  <div class="practical" data-task="tap" data-answer="f_write">Tap the function that dims an LED.</div>
+  <ul class="teach"><li>analogWrite sets a PWM duty cycle; analogRead only reads.</li></ul>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>The ESP32's ADC turns 0 to 3.3 V into 0 to 4095.</li>
+    <li>raw × 3.3 ÷ 4095 converts a reading to volts.</li>
+    <li>PWM switches a pin fast; the duty cycle sets brightness or speed.</li>
+  </ul>
+</section>
+</article>

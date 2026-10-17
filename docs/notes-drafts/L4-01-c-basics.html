@@ -1,0 +1,105 @@
+<!-- altrobyte-class v1 -->
+<article class="altro-class" data-level="beginner" data-minutes="12">
+<p class="lead">You can read and write a small embedded C program: variables, if, loops and functions inside setup and loop.</p>
+
+<section class="step" data-kind="concept">
+  <h2>setup runs once, loop runs forever</h2>
+  <div class="board">
+    <svg viewBox="0 0 340 140" xmlns="http://www.w3.org/2000/svg">
+      <g data-point="setup"><rect x="20" y="20" width="130" height="44" rx="8" fill="#eef2f7" stroke="#132436"/><text x="85" y="47" text-anchor="middle" font-size="13">setup()</text></g>
+      <g data-point="loop"><rect x="190" y="20" width="130" height="44" rx="8" fill="#ffe8d6" stroke="#e8590c"/><text x="255" y="47" text-anchor="middle" font-size="13">loop()</text></g>
+      <line x1="150" y1="42" x2="190" y2="42" stroke="#132436"/>
+      <path d="M255 64 v30 h-60 v-30" fill="none" stroke="#e8590c"/><text x="225" y="112" text-anchor="middle" font-size="11">again and again</text>
+    </svg>
+  </div>
+  <ul class="teach">
+    <li>An ESP32 program has two main parts. setup() runs once when the board powers on [setup]: set pin modes, start Serial.</li>
+    <li>loop() then runs again and again until power is cut [loop]: read sensors, decide, act.</li>
+    <li>A microcontroller never "finishes" a program, like a watchman doing rounds all night.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>Where do you put Serial.begin(115200)?</p>
+    <ol><li>In loop()</li><li>In setup()</li><li>Outside both, at the end</li></ol>
+    <p class="why">Starting Serial is needed once, so it goes in setup().</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Is this real C?</b> It is C++ with the Arduino library; underneath, a main() calls setup once and loop forever.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Variables and if</h2>
+  <div class="board">
+    <pre data-point="code">int temp = readTemp();
+if (temp &gt; 40) {
+  digitalWrite(FAN, HIGH);
+} else {
+  digitalWrite(FAN, LOW);
+}</pre>
+    <p data-point="cond">temp &gt; 40 is either true or false</p>
+  </div>
+  <ul class="teach">
+    <li>A variable is a named memory box with a type: int temp holds a whole number [code].</li>
+    <li>if checks a condition [cond]. If it is true, the first block runs; otherwise the else block runs.</li>
+    <li>Here: above 40 the fan turns on, otherwise it turns off. Every smart device is full of decisions like this.</li>
+  </ul>
+  <div class="check" data-answer="1">
+    <p>temp is 35. What does the code do?</p>
+    <ol><li>Turns the fan off</li><li>Turns the fan on</li><li>Nothing</li></ol>
+    <p class="why">35 &gt; 40 is false, so the else block runs and writes LOW.</p>
+  </div>
+  <ul class="doubts">
+    <li><b>Why == and not = in a comparison?</b> = puts a value into a variable; == asks whether two values are equal. Mixing them up is the most common bug.</li>
+  </ul>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Loops repeat work</h2>
+  <div class="board">
+    <pre data-point="for">for (int i = 0; i &lt; 3; i++) {
+  digitalWrite(LED, HIGH); delay(200);
+  digitalWrite(LED, LOW);  delay(200);
+}</pre>
+    <p data-point="count">i = 0, 1, 2 → three blinks</p>
+  </div>
+  <ul class="teach">
+    <li>A for loop repeats a block a fixed number of times [for].</li>
+    <li>It starts i at 0, runs while i &lt; 3, and adds 1 each time, so the LED blinks three times [count].</li>
+    <li>while (condition) repeats as long as the condition stays true, for example waiting for a button.</li>
+  </ul>
+  <div class="check" data-answer="3">
+    <p>How many times does for (int i = 0; i &lt; 5; i++) run?</p>
+    <ol><li>4</li><li>6</li><li>5</li></ol>
+    <p class="why">i takes 0, 1, 2, 3, 4: five values before i &lt; 5 becomes false.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="concept">
+  <h2>Functions keep code tidy</h2>
+  <div class="board">
+    <pre data-point="def">void blink(int times) {
+  for (int i = 0; i &lt; times; i++) { ... }
+}</pre>
+    <pre data-point="call">blink(3);   // in loop()</pre>
+  </div>
+  <ul class="teach">
+    <li>A function is a named block you can call again and again [def]. void means it gives nothing back.</li>
+    <li>times is a parameter: you choose the value when you call it, blink(3) [call].</li>
+    <li>Good firmware is many small functions with clear names, not one giant loop.</li>
+  </ul>
+  <div class="check" data-answer="2">
+    <p>What does int readTemp() promise?</p>
+    <ol><li>It takes an int</li><li>It gives back an int</li><li>It never returns</li></ol>
+    <p class="why">The type before the name is what the function returns.</p>
+  </div>
+</section>
+
+<section class="step" data-kind="summary">
+  <h2>What you learned</h2>
+  <ul class="teach">
+    <li>setup() runs once, loop() runs forever.</li>
+    <li>Variables hold values; if/else decides; for and while repeat.</li>
+    <li>Functions are named, reusable blocks with parameters and a return type.</li>
+  </ul>
+</section>
+</article>
