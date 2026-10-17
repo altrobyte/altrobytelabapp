@@ -18,6 +18,7 @@ import 'caller_api.dart';
 import 'caller_controller.dart';
 import 'calls_screen.dart';
 import 'demo_client.dart';
+import 'leads_screen.dart';
 import 'lead_screen.dart';
 import 'log_call_sheet.dart';
 import 'login_screen.dart';
@@ -157,7 +158,7 @@ class _CallerHomeState extends State<CallerHome> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final c = context.watch<CallerController>();
     final lead = c.me?.teamLead ?? false;
-    final tabs = [('Today', Icons.today), ('Calls', Icons.history), if (lead) ('Team', Icons.leaderboard)];
+    final tabs = [('Today', Icons.today), ('Leads', Icons.people), ('Calls', Icons.history), if (lead) ('Team', Icons.leaderboard)];
     final tab = _tab.clamp(0, tabs.length - 1);
     return Scaffold(
       appBar: AppBar(
@@ -191,6 +192,7 @@ class _CallerHomeState extends State<CallerHome> with WidgetsBindingObserver {
       ),
       body: switch (tabs[tab].$1) {
         'Calls' => const CallsScreen(),
+        'Leads' => const LeadsScreen(),
         'Team' => const TeamScreen(),
         _ => const TodayScreen(),
       },

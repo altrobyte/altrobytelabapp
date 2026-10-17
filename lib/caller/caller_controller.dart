@@ -482,6 +482,21 @@ class CallerController extends ChangeNotifier {
       if (calls.isNotEmpty && calls.first.at.millisecondsSinceEpoch > upto) {
         await prefs.setInt('caller_synced_upto_ms', calls.first.at.millisecondsSinceEpoch);
       }
+      // Anyone saved in this phone's contacts is the caller's own person, never a lead made by the sync: take back any
+      // the sync made before this rule (only ones nobody has worked on; the server checks).
+      final forgot = (prefs.getStringList('caller_forgot') ?? const []).toSet();
+      final personal = {
+        ...calls.where((d) => d.contactName.trim().isNotEmpty).map((d) => last10(d.phone)),
+        ...ignored,
+      }.where((p) => p.length == 10 && !forgot.contains(p)).toList();
+      if (personal.isNotEmpty) {
+        final removed = await api.forgetPersonal(personal);
+        await prefs.setStringList('caller_forgot', [...forgot, ...personal]);
+        if (removed > 0) {
+          sentCalls += removed; // the list changed: read it again
+          callSyncSaid = 'Took $removed personal contact${removed == 1 ? '' : 's'} out of your leads.';
+        }
+      }
       if (fresh.isNotEmpty) {
         callSyncSaid = 'Sent $sentCalls call${sentCalls == 1 ? '' : 's'} from this phone, $newLeads new lead${newLeads == 1 ? '' : 's'}.'
             '${sentCalls < fresh.length ? ' The rest were spam, missed rings or short calls from numbers that are not leads.' : ''}';

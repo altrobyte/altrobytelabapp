@@ -128,6 +128,16 @@ class CallerApi {
       ((await _send('POST', '/crm/calls/sync', {'calls': calls, 'add_new': addNew}, const Duration(seconds: 60))) as Map)
           .cast<String, dynamic>();
 
+  /// Takes back leads the sync made from personal contacts (only ones nobody worked on).
+  Future<int> forgetPersonal(List<String> phones) async =>
+      (((await _send('POST', '/crm/calls/forget', {'phones': phones})) as Map)['removed'] as num?)?.toInt() ?? 0;
+
+  /// Every lead (the whole CRM for a team lead), hottest first.
+  Future<Map<String, dynamic>> browse({String q = '', String heat = ''}) async {
+    final query = {if (q.isNotEmpty) 'q': q, if (heat.isNotEmpty) 'heat': heat, 'limit': '1000'};
+    return ((await _send('GET', Uri(path: '/crm/browse', queryParameters: query).toString())) as Map).cast<String, dynamic>();
+  }
+
   Future<Map<String, dynamic>> timeline(String phone) async =>
       ((await _send('GET', '/crm/leads/$phone/timeline')) as Map).cast<String, dynamic>();
 
