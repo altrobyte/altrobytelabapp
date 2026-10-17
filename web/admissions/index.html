@@ -836,8 +836,13 @@
     panel.classList.remove('on'); document.body.classList.remove('altron-open'); fab.style.display = '';
   }
   document.addEventListener('click', (e) => { if (e.target.closest('[data-altron]')) { e.preventDefault(); open(); } });
-  document.getElementById('altronClose').onclick = close;
+  // Altron opens by itself (browsers allow the voice only after a tap, so the learner taps Start once). Someone who
+  // closed it is not shown it again on later visits.
+  const closedKey = 'altron_closed';
+  document.getElementById('altronClose').onclick = () => { close(); try { localStorage.setItem(closedKey, '1'); } catch (_) {} };
+  let wasClosed = false; try { wasClosed = localStorage.getItem(closedKey) === '1'; } catch (_) {}
   if (new URLSearchParams(location.search).get('demo') === '1' || location.hash === '#demo') open();
+  else if (!wasClosed) setTimeout(open, 1500);
 })();
 </script>
 </body>
