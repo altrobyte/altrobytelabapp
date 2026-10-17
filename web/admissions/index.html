@@ -453,6 +453,10 @@
       <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
     </div>
     <div class="grid3" id="plans" style="margin-top:26px"></div>
+    <div class="card emi" style="background:#FFF7EC;border-color:#f3d7b4">
+      <div><div style="font-weight:700;color:var(--navy)">Not ready to pay the fee today?</div><div class="small">Book your seat in the next batch for ₹999 (with GST). It is adjusted in your fee.</div></div>
+      <a class="btn primary" id="seatBtn" href="/enroll/program-enrolment?plan=token" data-track="admissions_seat_booking">Book my seat · ₹999</a>
+    </div>
     <div class="card emi">
       <div><div style="font-weight:700;color:var(--navy)">Why monthly works</div><div class="small">Month 1 you design your own PCB and it goes for manufacturing. Month 2 that board is in your hands, to solder and put online.</div></div>
       <div><b>₹9,999</b> <span class="small">+ GST a month</span></div>
@@ -573,6 +577,7 @@
     if (d.seats_left) { $('seatsBadge').textContent = d.seats_left + ' seats left'; $('fomoSeats').textContent = '· only ' + d.seats_left + ' seats left'; }
     if (d.offer_on && d.offer_ends) countdown(d.offer_ends); else $('fomo').classList.add('hidden');
     renderPlans(d);
+    $('seatBtn').href = `/enroll/${encodeURIComponent(enrolSlug)}?plan=token`;
     const sel = $('tPlan');
     for (const p of plans) { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} — ${p.tag}`; sel.appendChild(o); }
     $('altronBtn').href = `https://wa.me/${waNumber}?text=${encodeURIComponent('Hi Altron, I want to know about the Product Engineering Program.')}`;
