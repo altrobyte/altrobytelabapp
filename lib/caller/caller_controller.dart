@@ -199,11 +199,14 @@ class CallerController extends ChangeNotifier {
     try {
       await sync();
       if (!signedIn) return;
-      await syncDeviceCalls();
+      // The leads first, so the screen fills at once; the phone's calls go after and the list is read again only
+      // if they changed it.
       await _takeQueue(await api.myQueue());
       offline = false;
       lastSync = now;
       unawaited(_extras());
+      notifyListeners();
+      if (await syncDeviceCalls() > 0) await _takeQueue(await api.myQueue());
     } on CallerError catch (e) {
       if (e.signedOut) {
         await _expired();
@@ -443,38 +446,53 @@ class CallerController extends ChangeNotifier {
     }
   }
 
+  /// What the last sending of the phone's calls did, in words, for the Today screen.
+  String? callSyncSaid;
+
   /// Sends every call from the phone's call log not sent yet (the first time, the last 7 days). Nothing to tap: who,
   /// which way, how long and missed or not reach the CRM, and new numbers arrive as leads named from the contacts.
-  /// Returns how many new leads it made.
+  /// Returns how many calls it sent (0 when nothing changed).
   Future<int> syncDeviceCalls() async {
     if (!signedIn || _syncingCalls) return 0;
     _syncingCalls = true;
+    var sentCalls = 0, newLeads = 0;
     try {
       final prefs = await SharedPreferences.getInstance();
       final upto = prefs.getInt('caller_synced_upto_ms') ?? now.subtract(const Duration(days: 7)).millisecondsSinceEpoch;
       final calls = await native.recentCalls(limit: 1000);
-      if (calls == null) return 0;
+      if (calls == null) {
+        callSyncSaid = 'Allow "Read the call log" (menu > Permissions) so your calls reach the CRM by themselves.';
+        return 0;
+      }
       final fresh = calls
           .where((d) => d.at.millisecondsSinceEpoch > upto)
           .where((d) => !d.refused && last10(d.phone).length == 10 && !ignored.contains(last10(d.phone)))
           .toList()
         ..sort((a, b) => a.at.compareTo(b.at));
-      var newLeads = 0;
-      for (var i = 0; i < fresh.length; i += 200) {
-        final batch = fresh.sublist(i, (i + 200).clamp(0, fresh.length));
+      for (var i = 0; i < fresh.length; i += 50) {
+        final batch = fresh.sublist(i, (i + 50).clamp(0, fresh.length));
         final r = await api.syncCalls(batch.map((d) => d.toSync()).toList(), addNew: autoAdd);
+        sentCalls += (r['synced'] as num?)?.toInt() ?? 0;
         newLeads += (r['new_leads'] as num?)?.toInt() ?? 0;
         await prefs.setInt('caller_synced_upto_ms', batch.last.at.millisecondsSinceEpoch);
+        callSyncSaid = 'Sending your calls… ${i + batch.length} of ${fresh.length}';
+        notifyListeners();
       }
       // Everything up to the newest call is now done, personal numbers included.
       if (calls.isNotEmpty && calls.first.at.millisecondsSinceEpoch > upto) {
         await prefs.setInt('caller_synced_upto_ms', calls.first.at.millisecondsSinceEpoch);
       }
-      return newLeads;
-    } on CallerError {
-      return 0; // no signal: the same calls go next time
+      if (fresh.isNotEmpty) {
+        callSyncSaid = 'Sent $sentCalls call${sentCalls == 1 ? '' : 's'} from this phone, $newLeads new lead${newLeads == 1 ? '' : 's'}.'
+            '${sentCalls < fresh.length ? ' The rest were spam, missed rings or short calls from numbers that are not leads.' : ''}';
+      }
+      return sentCalls;
+    } on CallerError catch (e) {
+      callSyncSaid = 'Could not send your calls yet: ${e.message}';
+      return sentCalls; // what went is saved; the rest go next time
     } finally {
       _syncingCalls = false;
+      notifyListeners();
     }
   }
 

@@ -31,11 +31,29 @@ class TodayScreen extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           if (c.offline || c.outbox.length > 0) _SyncBar(waiting: c.outbox.length, offline: c.offline),
+          if (c.callSyncSaid != null)
+            Container(
+              key: const ValueKey('call_sync_said'),
+              color: AppColors.primary.withValues(alpha: 0.06),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(children: [
+                const Icon(Icons.sync, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(child: Text(c.callSyncSaid!, style: const TextStyle(fontSize: 13))),
+              ]),
+            ),
           if (c.leads.isEmpty)
             Padding(
               padding: const EdgeInsets.all(40),
-              child: Text(c.syncing ? 'Getting your leads…' : 'No leads given to you yet. Pull down to check again.',
-                  textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+              child: Text(
+                  c.syncing && c.lastSync == null
+                      ? 'Getting your leads…'
+                      : (c.me?.teamLead ?? false)
+                          ? 'No leads are yours yet. Calls from this phone add leads by themselves; to take leads that '
+                              'are already in the CRM, open Team > Unassigned and assign them to yourself or the team.'
+                          : 'No leads given to you yet. Calls from this phone add leads by themselves. Pull down to check again.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
             ),
           ...rows,
         ],

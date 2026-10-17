@@ -42,7 +42,7 @@ class CallerApi {
       };
 
   /// One request, tried on the other host when this one cannot be reached at all, and once more on a timeout.
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
+  Future<dynamic> _send(String method, String path, [Object? body, Duration timeout = _timeout]) async {
     final order = [if (_live != null) _live!, ..._hosts.where((h) => h != _live)];
     CallerError? last;
     for (final host in order) {
@@ -51,7 +51,7 @@ class CallerApi {
           final uri = Uri.parse('$host$path');
           final req = http.Request(method, uri)..headers.addAll(_headers);
           if (body != null) req.body = jsonEncode(body);
-          final res = await http.Response.fromStream(await _client.send(req).timeout(_timeout));
+          final res = await http.Response.fromStream(await _client.send(req).timeout(timeout));
           _live = host;
           return _read(res);
         } on CallerError {
@@ -125,7 +125,8 @@ class CallerApi {
 
   /// The phone's own calls, sent by themselves (crm_calls.sync_calls).
   Future<Map<String, dynamic>> syncCalls(List<Map<String, dynamic>> calls, {bool addNew = true}) async =>
-      ((await _send('POST', '/crm/calls/sync', {'calls': calls, 'add_new': addNew})) as Map).cast<String, dynamic>();
+      ((await _send('POST', '/crm/calls/sync', {'calls': calls, 'add_new': addNew}, const Duration(seconds: 60))) as Map)
+          .cast<String, dynamic>();
 
   Future<Map<String, dynamic>> timeline(String phone) async =>
       ((await _send('GET', '/crm/leads/$phone/timeline')) as Map).cast<String, dynamic>();
