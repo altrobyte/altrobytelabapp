@@ -552,6 +552,11 @@
     const v = store.get(k); try { return v && JSON.parse(v); } catch (_) { return false; }
   });
   const unlocked = () => true;          // the whole roadmap is open to everyone; anyone who wants to talk, reaches out
+  // Someone signed in on the website opened the roadmap: the CRM shows it on their row. Anonymous visitors stay anonymous.
+  (() => {
+    let tok = ''; try { tok = JSON.parse(store.get('flutter.student_token') || 'null') || ''; } catch (_) {}
+    if (tok) fetch(API + '/crm/seen', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ what: 'roadmap' }) }).catch(() => {});
+  })();
 
   async function postLead(body) {
     const r = await fetch(API + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

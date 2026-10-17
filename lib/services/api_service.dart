@@ -936,6 +936,14 @@ class ApiService {
     return _parse(res);
   }
 
+  /// What each person did (signed up, signed in, registered, paid, the form, a callback, the roadmap, the AI demo),
+  /// keyed by phone. Calling it also brings everyone who registered into the CRM.
+  static Future<Map<String, dynamic>> crmActivity() async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/activity'), headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> crmSummary() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');

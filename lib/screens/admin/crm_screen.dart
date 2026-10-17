@@ -49,6 +49,9 @@ class _CrmScreenState extends State<CrmScreen> {
   bool _needsCall = false;
   bool _recent = true; // the funnel for the last 30 days, or for everyone
   bool _showPipeline = false; // the list comes first; the pipeline and totals open on a tap
+  Map<String, dynamic> _activity = {}; // phone -> what they did, newest first
+  Map<String, dynamic> _didCounts = {};
+  String _did = ''; // show only people who did this
   String _query = '';
   bool _loading = true;
   final _searchCtrl = TextEditingController();
@@ -66,6 +69,12 @@ class _CrmScreenState extends State<CrmScreen> {
   }
 
   Future<void> _load() async {
+    // First: it also adds everyone who registered or filled the form, so they are in the list that follows.
+    try {
+      final a = await ApiService.crmActivity();
+      _activity = Map<String, dynamic>.from(a['activity'] ?? {});
+      _didCounts = Map<String, dynamic>.from(a['counts'] ?? {});
+    } catch (_) {}
     try {
       final res = await ApiService.crmLeads(stage: _stage, q: _query, heat: _heat, needsCall: _needsCall);
       _leads = (res['leads'] as List?) ?? [];
@@ -266,14 +275,14 @@ class _CrmScreenState extends State<CrmScreen> {
           SliverToBoxAdapter(child: _filters()),
           if (_loading)
             const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
-          else if (_leads.isEmpty)
+          else if (_shown.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: Text(
-                    _query.isNotEmpty || _stage.isNotEmpty || _heat.isNotEmpty || _needsCall
+                    _query.isNotEmpty || _stage.isNotEmpty || _heat.isNotEmpty || _needsCall || _did.isNotEmpty
                         ? 'No leads match that.'
                         : 'No leads yet. They appear here the moment someone messages the WhatsApp number or signs up.',
                     textAlign: TextAlign.center,
@@ -286,11 +295,12 @@ class _CrmScreenState extends State<CrmScreen> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
               sliver: SliverList.separated(
-                itemCount: _leads.length,
+                itemCount: _shown.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (context, i) => _LeadRow(
-                  lead: _leads[i] as Map<String, dynamic>,
-                  onTap: () => _open(_leads[i] as Map<String, dynamic>),
+                  lead: _shown[i],
+                  activity: (_activity['${_shown[i]['phone']}'] as List?) ?? const [],
+                  onTap: () => _open(_shown[i]),
                 ),
               ),
             ),
@@ -298,6 +308,11 @@ class _CrmScreenState extends State<CrmScreen> {
       ),
     );
   }
+
+  List<Map<String, dynamic>> get _shown => [
+        for (final l in _leads.cast<Map<String, dynamic>>())
+          if (_did.isEmpty || ((_activity['${l['phone']}'] as List?) ?? const []).any((x) => (x as Map)['kind'] == _did)) l
+      ];
 
   int get _waiting => ((Map<String, dynamic>.from((_funnel['recent'] as Map?) ?? const {}))['needs_call'] as num?)?.toInt() ?? 0;
 
@@ -385,9 +400,24 @@ class _CrmScreenState extends State<CrmScreen> {
                 ),
             ]),
           ),
+          const SizedBox(height: 6),
+          // What they did: signed up, signed in, registered for a programme or demo class, paid, a callback, the roadmap
+          SizedBox(
+            height: 32,
+            child: ListView(scrollDirection: Axis.horizontal, children: [
+              for (final k in _didLabels.keys)
+                _StageChip(
+                  label: _didLabels[k]!,
+                  count: k.isEmpty ? _leads.length : (_didCounts[k] as int?) ?? 0,
+                  selected: _did == k,
+                  color: const Color(0xFF37474F),
+                  onTap: () => setState(() => _did = _did == k ? '' : k),
+                ),
+            ]),
+          ),
           if (!_loading) ...[
             const SizedBox(height: 6),
-            Text('${_leads.length} ${_leads.length == 1 ? 'person' : 'people'}${_stage.isNotEmpty ? ' · ${_stageLabels[_stage]}' : ''}${_needsCall ? ' · to call first' : ''}',
+            Text('${_shown.length} ${_shown.length == 1 ? 'person' : 'people'}${_did.isNotEmpty ? ' · ${_didLabels[_did]}' : ''}${_stage.isNotEmpty ? ' · ${_stageLabels[_stage]}' : ''}${_needsCall ? ' · to call first' : ''}',
                 style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
           ],
         ]),
@@ -451,10 +481,34 @@ class _StageChip extends StatelessWidget {
       );
 }
 
+const _didLabels = {
+  '': 'Everyone',
+  'registered': '🎓 Registered',
+  'paid': '💰 Paid',
+  'signup': '👤 Signed up',
+  'login': '🔑 Signed in',
+  'enrolment': '📝 Filled the form',
+  'callback': '📞 Asked a callback',
+  'booking': '📅 Booked a call',
+  'roadmap': '🗺 Opened the roadmap',
+  'ai_demo': '🤖 AI demo class',
+};
+
+/// "today", "3d", "2mo": how long ago, short enough for a row.
+String _ago(String iso) {
+  final t = DateTime.tryParse(iso);
+  if (t == null) return '';
+  final d = DateTime.now().difference(t.toLocal());
+  if (d.inHours < 24) return 'today';
+  if (d.inDays < 31) return '${d.inDays}d ago';
+  return '${(d.inDays / 30).floor()}mo ago';
+}
+
 class _LeadRow extends StatelessWidget {
   final Map<String, dynamic> lead;
+  final List activity;
   final VoidCallback onTap;
-  const _LeadRow({required this.lead, required this.onTap});
+  const _LeadRow({required this.lead, required this.onTap, this.activity = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -555,6 +609,19 @@ class _LeadRow extends StatelessWidget {
                             color: AppColors.primary)),
                   ),
               ]),
+              // What they did, newest first: the most useful line on the row.
+              if (activity.isNotEmpty) ...[
+                const SizedBox(height: 3),
+                Text(
+                    activity.take(4).map((x) {
+                      final m = x as Map;
+                      final icon = (_didLabels['${m['kind']}'] ?? '').split(' ').first;
+                      return '$icon ${m['label']} · ${_ago('${m['at']}')}';
+                    }).join('   '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF263238))),
+              ],
               if (org.isNotEmpty || email.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
