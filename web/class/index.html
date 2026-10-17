@@ -400,8 +400,8 @@
     const cards = plans.map((p) => {
       const price = plansData.offer_on ? p.offer : (p.standard || p.offer);
       return `<div class="plan${p.key === recKey ? ' rec' : ''}">${p.key === recKey ? '<span class="rb">ALTRON SUGGESTS</span>' : ''}<h3>${esc(p.name || p.key)}</h3>
-        <div class="price">${inr(gst(price))}${p.standard && plansData.offer_on ? `<s>${inr(gst(p.standard))}</s>` : ''}</div>
-        <div class="small">incl. GST · ${esc(p.period || '')}</div><div class="small">${esc((p.features || [])[0] || '')}</div>
+        <div class="price">${inr(price)} <span class="small">+ GST</span>${p.standard > price ? `<s>${inr(p.standard)}</s>` : ''}</div>
+        <div class="small">${esc(p.period || '')} · ${inr(gst(price))} incl. GST</div><div class="small">${esc((p.features || [])[0] || '')}</div>
         <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'product-engineering')}?plan=${encodeURIComponent(p.key)}">Book my seat</a></div>`;
     }).join('');
     const text = encodeURIComponent(`Hi, I just took the free Altron class.${rec ? ' Altron suggested ' + rec + '.' : ''} I want to know more.`);

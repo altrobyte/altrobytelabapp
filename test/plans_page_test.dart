@@ -2,14 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:altrobytelab/screens/plans_page.dart';
 
 void main() {
-  test('the three plans carry the numbers on the poster, and the saving follows from them', () {
-    expect(programPlans.map((p) => (p.offer, p.standard, p.months)).toList(), [(10000, 18000, 1), (18000, 32000, 2), (28000, 50000, 3)]);
-    expect(programPlans.map((p) => p.percentOff).toList(), [44, 44, 44]);
-    expect(programPlans.map((p) => p.saving).toList(), [8000, 14000, 22000]);
-    expect(programPlans[1].perMonth, 9000);
-    expect(programPlans[2].features, containsAll(['Mini lab set-up kit', 'Placement assistance']));
-    expect(programPlans[0].features, isNot(contains('Mini lab set-up kit')));
-    expect(programPlans.where((p) => p.recommended).single.name, 'Plan 3');
+  test('monthly leads, three months together saves against monthly, and every plan has the kit', () {
+    expect(programPlans.map((p) => (p.offer, p.standard, p.months)).toList(), [(9999, 9999, 1), (27999, 29997, 3)]);
+    expect(programPlans.map((p) => p.saving).toList(), [0, 1998]); // the only struck-out price is a real saving
+    expect(programPlans.every((p) => p.features.contains('Mini lab set-up kit')), isTrue);
+    expect(programPlans[1].features, contains('Placement assistance'));
+    expect(programPlans[0].features, isNot(contains('Placement assistance')));
+    expect(programPlans.where((p) => p.recommended).single.name, 'Monthly');
   });
 
   test('rupees are written the Indian way', () {
@@ -37,9 +36,9 @@ void main() {
   });
 
   test('Enrol goes to the enrolment form with the plan, and never anywhere else when a form is open', () {
-    expect(enrolPath('embedded-batch-x1', programPlans[1]), '/enroll/embedded-batch-x1?plan=plan2');
+    expect(enrolPath('embedded-batch-x1', programPlans[1]), '/enroll/embedded-batch-x1?plan=plan3');
     expect(enrolPath('  ', programPlans[1]), isNull); // no form open: the page falls back to WhatsApp, not to another form
-    expect(programPlans.map((p) => p.key).toList(), ['plan1', 'plan2', 'plan3']);
+    expect(programPlans.map((p) => p.key).toList(), ['plan1', 'plan3']);
   });
 
   test('plans from the server replace the built-in ones only when they are complete', () {
@@ -51,8 +50,9 @@ void main() {
   });
 
   test('the WhatsApp message names the plan and the price being shown', () {
-    expect(enrolMessage(programPlans[2], true), contains('Plan 3 (With Kit + Placement)'));
-    expect(enrolMessage(programPlans[2], true), contains('₹28,000 for 3 months + GST'));
-    expect(enrolMessage(programPlans[2], false), contains('₹50,000 for 3 months + GST'));
+    expect(enrolMessage(programPlans[1], true), contains('3 months together (Kit + placement, pay once)'));
+    expect(enrolMessage(programPlans[1], true), contains('₹27,999 for 3 months + GST'));
+    expect(enrolMessage(programPlans[1], false), contains('₹29,997 for 3 months + GST'));
+    expect(enrolMessage(programPlans[0], true), contains('₹9,999 per month + GST'));
   });
 }

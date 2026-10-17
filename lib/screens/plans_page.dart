@@ -46,10 +46,11 @@ class ProgramPlan {
 
 const _base = ['Live classes (online / offline)', 'Live projects', 'Doubt support', 'Learning resources', 'Certificate', 'Access to recorded lectures'];
 
+// The same two offers as the server (program_plans.py): monthly leads; three months together costs less than three
+// monthly payments, and that saving is the only struck-out price.
 const programPlans = [
-  ProgramPlan('plan1', 'Plan 1', 'Core Learning', 10000, 18000, 1, 'per month', _base),
-  ProgramPlan('plan2', 'Plan 2', 'With Kit', 18000, 32000, 2, 'for 2 months', ['Mini lab set-up kit', ..._base]),
-  ProgramPlan('plan3', 'Plan 3', 'With Kit + Placement', 28000, 50000, 3, 'for 3 months', ['Mini lab set-up kit', 'Placement assistance', ..._base], recommended: true),
+  ProgramPlan('plan1', 'Monthly', 'Pay one month at a time', 9999, 9999, 1, 'per month', ['Mini lab set-up kit', ..._base], recommended: true),
+  ProgramPlan('plan3', '3 months together', 'Kit + placement, pay once', 27999, 29997, 3, 'for 3 months', ['Mini lab set-up kit', 'Placement assistance', ..._base]),
 ];
 
 /// ₹18,000 in the Indian style.
@@ -293,26 +294,18 @@ class _PlansPageState extends State<PlansPage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (on)
-              Row(children: [
-                Text(inr(withGst(p.standard)), style: GoogleFonts.inter(color: _muted, fontSize: 15, decoration: TextDecoration.lineThrough)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: const Color(0xFFFFE8E6), borderRadius: BorderRadius.circular(6)),
-                  child: Text('${p.percentOff}% OFF', style: GoogleFonts.inter(color: const Color(0xFFD92D20), fontSize: 11.5, fontWeight: FontWeight.w800)),
-                ),
-              ]),
+            if (on && p.saving > 0)
+              Text(inr(p.standard), style: GoogleFonts.inter(color: _muted, fontSize: 15, decoration: TextDecoration.lineThrough)),
             const SizedBox(height: 4),
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(inr(withGst(price)), style: GoogleFonts.poppins(color: _ink, fontSize: 36, fontWeight: FontWeight.w800, height: 1.05)),
+              Text(inr(price), style: GoogleFonts.poppins(color: _ink, fontSize: 36, fontWeight: FontWeight.w800, height: 1.05)),
               const SizedBox(width: 8),
-              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('incl. GST', style: GoogleFonts.inter(color: _muted, fontSize: 13))),
+              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(p.months == 1 ? '+ GST / month' : '+ GST', style: GoogleFonts.inter(color: _muted, fontSize: 13))),
             ]),
-            Text('${inr(price)} + 18% GST · ${p.period}', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
+            Text('${inr(withGst(price))} including 18% GST · ${p.period}', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 6),
-            if (on) Text('You save ${inr(withGst(p.saving))}', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
-            if (p.months > 1) Text('That is ${inr(withGst(on ? p.perMonth : (p.standard / p.months).round()))} a month', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
+            if (on && p.saving > 0) Text('You save ${inr(p.saving)} against paying monthly', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
+            if (p.months == 1) Text('Stop or carry on each month', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -371,20 +364,20 @@ class _PlansPageState extends State<PlansPage> {
             ),
             const SizedBox(width: 14),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text('EMI on Plan 3', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-              Text('Learn now, pay comfortably — 3 monthly instalments', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
+              Text('Pay month by month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
+              Text('Month 1 you design your PCB; month 2 it is in your hands', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
             ]),
           ]),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(color: const Color(0xFFFFF6CC), borderRadius: BorderRadius.circular(12)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(inr(10000), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
-              Text('× 3 + GST = ₹30,000 + GST (upfront: ₹28,000 + GST)', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
+              Text(inr(9999), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
+              Text('+ GST a month (3 months together: ₹27,999 + GST)', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            for (final t in const ['No high upfront cost', 'Flexible learning', 'Easy monthly payments'])
+            for (final t in const ['No high upfront cost', 'Lab kit from day one', 'Stop or carry on each month'])
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -409,14 +402,15 @@ class _PlansPageState extends State<PlansPage> {
       );
 
   Widget _compare() {
-    const rows = <(String, List<bool>)>[
-      ('Live classes (online / offline)', [true, true, true]),
-      ('Live projects', [true, true, true]),
-      ('Doubt support', [true, true, true]),
-      ('Learning resources and recorded lectures', [true, true, true]),
-      ('Certificate', [true, true, true]),
-      ('Mini lab set-up kit', [false, true, true]),
-      ('Placement assistance', [false, false, true]),
+    // One tick per plan shown, from that plan's own features, so the table always matches the cards.
+    const rows = <(String, String?)>[
+      ('Live classes (online / offline)', null),
+      ('Live projects', null),
+      ('Doubt support', null),
+      ('Learning resources and recorded lectures', null),
+      ('Certificate', null),
+      ('Mini lab set-up kit', 'Mini lab set-up kit'),
+      ('Placement assistance', 'Placement assistance'),
     ];
     Widget cell(Widget c, {int flex = 1, bool head = false}) =>
         Expanded(flex: flex, child: Padding(padding: EdgeInsets.symmetric(vertical: head ? 12 : 11, horizontal: 8), child: c));
@@ -437,7 +431,7 @@ class _PlansPageState extends State<PlansPage> {
             color: i.isEven ? Colors.white : const Color(0xFFF8FAFC),
             child: Row(children: [
               cell(Text(rows[i].$1, style: GoogleFonts.inter(fontSize: 13.5, color: _ink)), flex: 3),
-              for (final has in rows[i].$2)
+              for (final has in [for (final p in _plans) rows[i].$2 == null || p.features.contains(rows[i].$2)])
                 cell(Center(child: Icon(has ? Icons.check_circle_rounded : Icons.remove_rounded, size: 19, color: has ? _green : const Color(0xFFCBD2DC)))),
             ]),
           ),
@@ -450,7 +444,7 @@ class _PlansPageState extends State<PlansPage> {
       (Icons.memory_rounded, 'Hands-on learning', 'You build on real boards from the first week, not on slides.'),
       (Icons.lightbulb_outline_rounded, 'Real world projects', 'Projects shaped like the products the industry actually ships.'),
       (Icons.code_rounded, 'Expert mentorship', 'Engineers who build these systems answer your doubts.'),
-      (Icons.trending_up_rounded, 'Career and placement support', 'Help turning what you built into a job (Plan 3).'),
+      (Icons.trending_up_rounded, 'Career and placement support', 'Help turning what you built into a job (3-month plan).'),
     ];
     return Wrap(spacing: 14, runSpacing: 14, alignment: WrapAlignment.center, children: [
       for (final it in items)
@@ -475,15 +469,15 @@ class _PlansPageState extends State<PlansPage> {
 
   Widget _faq() {
     const qa = <(String, String)>[
-      ('Is GST included in the price?', 'Yes. The big price includes 18% GST; the fee before GST is shown under it.'),
-      ('Can I start with Plan 1 and upgrade?', 'Yes. Within 30 days of starting, move to Plan 2 or Plan 3 by paying only the difference.'),
+      ('Is GST included in the price?', 'No. The big price is the fee; 18% GST is added, and the total with GST is shown under it.'),
+      ('Can I start monthly and switch to 3 months?', 'Yes. Within 30 days of starting, move to the 3-month plan by paying only the difference.'),
       ('Is there a scholarship?', 'Yes. The free scholarship test can take up to ₹3,000 off your first month.'),
-      ('Can I pay monthly?', 'Yes, on Plan 3: 3 instalments of ₹10,000 + GST (₹30,000 + GST in all), or ₹28,000 + GST upfront.'),
+      ('Can I pay monthly?', 'Yes. ₹9,999 + GST a month, one stage a month, and you decide each month whether to carry on. 3 months together is ₹27,999 + GST.'),
       ('What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day.'),
       ('Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (5th Floor, Gravity Mall, Mechanic Nagar).'),
-      ('What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in Plan 2 and Plan 3, so you can practise outside class.'),
+      ('What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in every plan, so you can practise outside class.'),
       ('What if I miss a class?', 'Every plan includes access to the recorded lectures, and doubt support to catch up.'),
-      ('Which plan should I choose?', 'Plan 1 if you want to start learning now. Plan 2 if you want your own kit. Plan 3 if you also want placement assistance.'),
+      ('Which plan should I choose?', 'Monthly if you want to start now and decide as you go. 3 months together if you are sure you want the whole journey and placement assistance; it costs less.'),
     ];
     return Container(
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5E8EE))),
@@ -552,12 +546,12 @@ class _PlansPageState extends State<PlansPage> {
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text('From ${inr(withGst(_offerOn ? _plans.first.offer : _plans.first.standard))}', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
-                      Text('incl. GST', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
+                      Text('From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)}', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                      Text('+ GST a month', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
                     ]),
                   ),
                   ElevatedButton(
-                    onPressed: () => _enrol(_plans.last),
+                    onPressed: () => _enrol(_plans.firstWhere((p) => p.recommended, orElse: () => _plans.first)),
                     style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13)),
                     child: Text('Enrol now', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                   ),
@@ -595,7 +589,7 @@ class _PlansPageState extends State<PlansPage> {
                       _faq(),
                       _closing(),
                       const SizedBox(height: 28),
-                      Text('Prices are in Indian rupees and include 18% GST. © Altrobyte Automation Pvt. Ltd.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _muted, fontSize: 12)),
+                      Text('Prices are in Indian rupees; 18% GST is added. © Altrobyte Automation Pvt. Ltd.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _muted, fontSize: 12)),
                     ]),
                   ),
                 ),
