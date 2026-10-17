@@ -99,32 +99,35 @@
   .result { margin-top: 14px; padding: 16px; border-radius: 12px; background: #EEF5FF; display: none; }
   .result h3 { color: var(--navy); font-size: 18px; }
 
-  /* roadmap */
-  .stage { background: #fff; border: 1px solid var(--line); border-radius: 16px; margin-top: 14px; overflow: hidden; }
-  .stage.here { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-  .stage > button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 18px 20px; }
-  .stage .n { width: 44px; height: 44px; border-radius: 12px; background: var(--navy); color: #fff; display: grid; place-items: center; font: 800 18px Poppins; }
-  .stage h3 { font-size: 17px; color: var(--navy); }
-  .stage .tag { font-size: 13px; color: var(--muted); }
+  /* roadmap: every stage open, each in its own colour */
+  .currbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+  .currbar span { flex: 1; min-width: 220px; color: var(--muted); font-weight: 600; font-size: 14px; }
+  .stage { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--sc, var(--navy)); border-radius: 16px; margin-top: 16px; overflow: hidden; box-shadow: 0 10px 30px -24px rgba(11,36,80,.5); }
+  .stage.here { box-shadow: 0 0 0 2px var(--accent); }
+  .stage > button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 20px 22px 14px; }
+  .stage .n { width: 48px; height: 48px; border-radius: 14px; background: var(--sc, var(--navy)); color: #fff; display: grid; place-items: center; font: 800 20px Poppins; }
+  .stage .month { font: 800 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--sc, var(--accent)); }
+  .stage h3 { font-size: 19px; color: var(--navy); margin: 2px 0 4px; }
+  .stage .tag { font-size: 14px; color: var(--muted); }
+  .stage .lcount { margin-left: 8px; font: 600 11.5px Inter; color: var(--muted); }
   .stage .chev { transition: transform .2s; color: var(--muted); }
   .stage.open .chev { transform: rotate(180deg); }
-  .stage .body { display: none; padding: 0 20px 20px; }
+  .stage .body { display: none; padding: 0 22px 20px; }
   .stage.open .body { display: block; }
-  .phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  @media (max-width: 760px) { .phases { grid-template-columns: minmax(0, 1fr); } }
-  .phase { background: var(--bg); border-radius: 12px; padding: 12px 14px; }
-  .phase b { display: block; font-size: 13.5px; color: var(--navy); margin-bottom: 6px; }
-  .phase li { font-size: 13.5px; }
-  details.topic { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; margin-top: 6px; }
-  details.topic summary { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; justify-content: space-between; gap: 8px; }
-  details.topic .cnt { font-size: 11.5px; font-weight: 500; color: var(--muted); white-space: nowrap; }
-  details.topic ul { margin: 8px 0 0; padding-left: 18px; }
-  .phase ul, .outs { margin: 0; padding-left: 18px; }
-  .outs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; margin-top: 12px; }
+  .phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 860px) { .phases { grid-template-columns: minmax(0, 1fr); } }
+  .phase { background: var(--bg); border-radius: 14px; padding: 14px; }
+  .phase > b { display: block; font-size: 13px; letter-spacing: .02em; color: var(--sc, var(--navy)); margin-bottom: 8px; text-transform: uppercase; }
+  .topic { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+  .topic .tt { font-size: 14.5px; font-weight: 700; color: var(--ink); display: flex; justify-content: space-between; gap: 8px; }
+  .topic .cnt { font-size: 11.5px; font-weight: 700; color: var(--sc, var(--muted)); background: var(--bg); border-radius: 99px; padding: 1px 8px; white-space: nowrap; align-self: flex-start; }
+  .topic ul { margin: 6px 0 0; padding-left: 0; list-style: none; }
+  .topic li { font-size: 13.5px; color: var(--muted); padding: 2px 0 2px 16px; position: relative; line-height: 1.45; }
+  .topic li::before { content: ""; position: absolute; left: 3px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--sc, var(--accent)); opacity: .7; }
+  .outwrap { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .outwrap > span { font: 800 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+  .outs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; margin: 0; }
   .outs li { background: #E9F6EF; color: var(--ok); border-radius: 20px; padding: 4px 11px; font-size: 12.5px; font-weight: 600; }
-  .locked { position: relative; }
-  .locked .phases { filter: blur(5px); user-select: none; pointer-events: none; }
-  .locked::after { content: "Sign in with WhatsApp above to open the full syllabus"; position: absolute; inset: 0 0 auto 0; top: 30px; text-align: center; font-weight: 700; color: var(--navy); }
   .inplans { display: inline-block; margin-left: 6px; font: 600 11.5px Inter; color: var(--navy); background: #EEF2F8; padding: 3px 9px; border-radius: 20px; }
   .herehint { display: none; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
   .stage.here .herehint { display: inline-block; }
@@ -320,35 +323,11 @@
     <h2>Four stages. One product at a time.</h2>
     <p class="sub">You do not study UART or ADC in isolation — you meet each idea because the product you are building needs it.</p>
 
-    <div style="margin-top:22px;max-width:620px">
-      <div class="card gate" id="gate">
-        <h3 style="color:var(--navy)">Get your full roadmap and syllabus PDF</h3>
-        <p class="small" style="margin:6px 0 0">Sign in with WhatsApp: your number, then the code we send. Takes 30 seconds.</p>
-        <form class="f" id="leadForm">
-          <div class="row">
-            <input id="lName" name="name" placeholder="Your name" autocomplete="name" required>
-            <input id="lPhone" name="phone" placeholder="WhatsApp number" inputmode="tel" autocomplete="tel" required>
-          </div>
-          <button class="btn primary" type="submit" id="sendOtp" style="justify-content:center">Continue with WhatsApp</button>
-          <div id="otpBox" class="hidden">
-            <p class="small" style="margin:4px 0 6px">We sent a 6-digit code to your WhatsApp.</p>
-            <div class="otp-row">
-              <input id="lOtp" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
-              <button class="btn primary" type="button" id="verifyOtp">Open roadmap</button>
-            </div>
-            <p class="small" style="margin-top:8px">No code? <a href="#" id="resend">Send again</a> · <a href="#talk" id="callInstead">Ask for a call instead</a></p>
-          </div>
-          <div class="msg" id="leadMsg"></div>
-          <p class="small">Signing in creates your free Altrobyte account. We never share your number.</p>
-        </form>
-        <div id="unlocked" class="hidden">
-          <p class="msg ok" id="hello">Your roadmap is open below.</p>
-          <a class="btn ghost" id="pdfBtn" href="https://edu.altrobytelab.com/roadmaps/product-engineering/pdf" target="_blank" rel="noopener">⬇ Download the syllabus PDF</a>
-        </div>
-      </div>
-
-</div>
-
+    <div class="currbar">
+      <span>4 stages · 12 phases · 200+ milestones · about a month per stage</span>
+      <a class="btn ghost" id="pdfBtn" href="https://edu.altrobytelab.com/roadmaps/product-engineering/pdf" target="_blank" rel="noopener" data-track="admissions_pdf">⬇ Download the syllabus (PDF)</a>
+      <a class="btn wa" href="#talk" data-track="admissions_curriculum_mentor">Talk to a mentor</a>
+    </div>
     <div id="stages" style="margin-top:10px"></div>
     <div style="margin-top:22px">
       <div class="card" id="profile">
@@ -569,7 +548,7 @@
   const siteSignedIn = () => ['flutter.student_token', 'flutter.token', 'flutter.jwt_token'].some((k) => {
     const v = store.get(k); try { return v && JSON.parse(v); } catch (_) { return false; }
   });
-  const unlocked = () => store.get('adm_lead') === '1' || siteSignedIn();
+  const unlocked = () => true;          // the whole roadmap is open to everyone; anyone who wants to talk, reaches out
 
   async function postLead(body) {
     const r = await fetch(API + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -624,69 +603,30 @@
     $('stages').innerHTML = '<p class="small">The roadmap could not load. <a href="/curriculum/product-engineering">Open it here</a>.</p>';
   });
 
+  const STAGE_COLOURS = ['#2D6CDF', '#1E9D66', '#E08A2E', '#7C4DFF'];
   function renderStages() {
     if (!roadmap) return;
-    const open = unlocked();
     $('stages').innerHTML = (roadmap.steps || []).map((s, i) => {
       const kids = s.children || [];
       const outs = kids.find((c) => /outcome/i.test(c.title));
       const phases = kids.filter((c) => c !== outs);
       const [title, ...rest] = fix(s.title).split('—');
       const tagline = fix(s.description || s.subtitle || '').split('\n')[0];
-      return `<div class="stage ${i === 0 ? 'open' : ''} ${startStage === i + 1 ? 'here' : ''}" data-i="${i}">
-        <button type="button" aria-expanded="${i === 0}"><span class="n">${i + 1}</span>
-          <span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3><span class="inplans">${['In every plan', 'In Plan 2 and Plan 3', 'In Plan 3', 'In Plan 3'][i] || ''}</span><br><span class="tag">${esc(tagline)}</span></span>
+      const lessons = phases.reduce((n, p) => n + (p.children || []).reduce((m, t) => m + (t.children || []).length, 0), 0);
+      return `<div class="stage open ${startStage === i + 1 ? 'here' : ''}" data-i="${i}" style="--sc:${STAGE_COLOURS[i] || 'var(--navy)'}">
+        <button type="button" aria-expanded="true"><span class="n">${i + 1}</span>
+          <span><span class="month">Month ${i + 1}</span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
+            <span class="tag">${esc(tagline)}</span><br><span class="inplans">${['In every plan', 'In Plan 2 and Plan 3', 'In Plan 3', 'In Plan 3'][i] || ''}</span><span class="lcount">${lessons} lessons</span></span>
           <span class="chev">▾</span></button>
-        <div class="body ${open ? '' : 'locked'}">
-          <div class="phases">${phases.map((p) => `<div class="phase"><b>${esc(p.title)}</b>${(p.children || []).map((t) => `<details class="topic"><summary>${esc(t.title)}<span class="cnt">${(t.children || []).length} lessons</span></summary><ul>${(t.children || []).map((l) => `<li>${esc(l.title)}</li>`).join('')}</ul></details>`).join('')}</div>`).join('')}</div>
-          ${outs ? `<ul class="outs">${(outs.children || []).map((o) => `<li>${esc(o.title)}</li>`).join('')}</ul>` : ''}
+        <div class="body">
+          <div class="phases">${phases.map((p) => `<div class="phase"><b>${esc(p.title)}</b>${(p.children || []).map((t) => `<div class="topic"><div class="tt">${esc(t.title)}<span class="cnt">${(t.children || []).length}</span></div><ul>${(t.children || []).map((l) => `<li>${esc(l.title)}</li>`).join('')}</ul></div>`).join('')}</div>`).join('')}</div>
+          ${outs ? `<div class="outwrap"><span>You walk out with</span><ul class="outs">${(outs.children || []).map((o) => `<li>${esc(o.title)}</li>`).join('')}</ul></div>` : ''}
         </div></div>`;
     }).join('');
     for (const el of document.querySelectorAll('.stage > button')) {
       el.onclick = () => { const st = el.parentElement; st.classList.toggle('open'); el.setAttribute('aria-expanded', st.classList.contains('open')); };
     }
   }
-
-  function showUnlocked(name) {
-    $('leadForm').classList.add('hidden'); $('unlocked').classList.remove('hidden');
-    if (name) $('hello').textContent = `Thanks, ${name.split(' ')[0]}! Your full roadmap is open below.`;
-    renderStages();
-  }
-  if (unlocked()) showUnlocked(store.get('adm_name') || '');
-
-  // Sign in with WhatsApp: the number is proved by the code, and the account is the one the website and the app use.
-  const digits = (v) => v.replace(/\D/g, '').slice(-10);
-  async function askOtp() {
-    const name = $('lName').value.trim(), phone = digits($('lPhone').value);
-    if (!name) { $('leadMsg').className = 'msg bad'; $('leadMsg').textContent = 'Tell us your name.'; return; }
-    if (phone.length !== 10) { $('leadMsg').className = 'msg bad'; $('leadMsg').textContent = 'Enter your 10-digit WhatsApp number.'; return; }
-    $('leadMsg').className = 'msg'; $('leadMsg').textContent = 'Sending the code…';
-    try {
-      const r = await fetch(API + '/student/standalone/request-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.detail || 'Could not send the code. Try again, or ask for a call.');
-      $('otpBox').classList.remove('hidden'); $('sendOtp').classList.add('hidden');
-      $('leadMsg').className = 'msg ok'; $('leadMsg').textContent = 'Code sent. Check WhatsApp.'; $('lOtp').focus();
-      track('admissions_otp_sent');
-    } catch (err) { $('leadMsg').className = 'msg bad'; $('leadMsg').textContent = err.message; }
-  }
-  $('leadForm').onsubmit = (e) => { e.preventDefault(); askOtp(); };
-  $('resend').onclick = (e) => { e.preventDefault(); askOtp(); };
-  $('callInstead').onclick = () => { $('tName').value = $('lName').value; $('tPhone').value = $('lPhone').value; };
-  $('verifyOtp').onclick = async () => {
-    const name = $('lName').value.trim(), phone = digits($('lPhone').value), otp = $('lOtp').value.trim();
-    if (otp.length < 4) { $('leadMsg').className = 'msg bad'; $('leadMsg').textContent = 'Enter the code from WhatsApp.'; return; }
-    $('leadMsg').className = 'msg'; $('leadMsg').textContent = 'Checking…';
-    try {
-      const r = await fetch(API + '/student/standalone/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp, name }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.detail || 'That code did not work. Check it, or send it again.');
-      store.set('adm_lead', '1'); store.set('adm_name', j.name || name); store.set('adm_phone', phone);
-      if (j.token) store.set('adm_token', j.token);
-      track('admissions_signed_in'); showUnlocked(j.name || name);
-      document.querySelector('.stage')?.scrollIntoView({ block: 'start' });
-    } catch (err) { $('leadMsg').className = 'msg bad'; $('leadMsg').textContent = err.message; }
-  };
 
   // ── analyse my profile ──
   const answers = {};
@@ -710,7 +650,7 @@
       startStage = d.start_stage || 1;
       $('result').style.display = 'block';
       $('result').innerHTML = `<h3>Stage ${startStage}: ${esc(d.headline)}</h3><p style="margin:6px 0 0">${esc(d.detail || '')}</p>
-        <p class="small" style="margin-top:8px">${d.answered_yes || 0} of ${d.total || 6} already done. ${unlocked() ? '' : 'Sign in with WhatsApp to open your full roadmap.'}</p>`;
+        <p class="small" style="margin-top:8px">${d.answered_yes || 0} of ${d.total || 6} already done.</p>`;
       track('admissions_profile'); renderStages();
     } catch (_) { $('result').style.display = 'block'; $('result').textContent = 'Could not analyse just now. Please try again.'; }
   };
