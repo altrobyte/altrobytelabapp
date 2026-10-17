@@ -582,7 +582,8 @@
   function tick() {
     if (!running) return;
     if (Date.now() >= rotateAt) return renew();
-    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
+    // ...but never while a question on the board waits for their answer
+    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !(checkShown && !checkDone) && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
       nudged = true;
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
