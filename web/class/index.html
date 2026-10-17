@@ -112,6 +112,10 @@
   .round { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 19px; display: grid; place-items: center; }
   .round.off { background: #fff; color: var(--ink); }
   .resume { background: var(--orange); color: #fff; padding: 11px 18px; font-weight: 700; }
+  .endbtn { background: #C62828; color: #fff; padding: 11px 16px; font-weight: 700; border-radius: 99px; }
+  .endbtn.hidden { display: none; }
+  .seat { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: #FFF7EC; border: 1px solid #f3d7b4; border-radius: 14px; padding: 12px 14px; }
+  .seat a { background: var(--orange); color: #fff; border-radius: 10px; padding: 10px 14px; font-weight: 700; text-decoration: none; }
   .tx { flex: 1; min-height: 0; overflow: auto; margin: 4px 14px 14px; font-size: 13px; color: #c9d5e6; display: none; }
   .tx.on { display: block; }
   .tx p { margin: 0 0 6px; } .tx p b { color: #fff; }
@@ -188,6 +192,7 @@
       <button class="round" id="mic" type="button" title="Mute">🎙️</button>
       <button class="resume hidden" id="resume" type="button">▶ Continue</button>
       <button class="round" id="pause" type="button" title="Pause">⏸</button>
+      <button class="endbtn" id="endBtn" type="button">End</button>
     </div>
     <button class="txbtn" id="txbtn" type="button">Show what was said ▾</button>
     <div class="tx" id="tx"></div>
@@ -331,7 +336,7 @@
     return true;
   }
   function answer(k) {               // the page checks: the model never knows the answer before this
-    const s = klass.sections[at]; showCheck();
+    const s = klass.sections[at]; showCheck(); lastHuman = Date.now();
     const btns = document.querySelectorAll('#checkHost .opts button');
     const correct = k === s.check.answer;
     btns.forEach((b, i) => { b.classList.toggle('wrong', i === k && !correct); if (correct) { b.disabled = true; b.classList.toggle('right', i === k); } });
@@ -408,6 +413,8 @@
     $('endHost').innerHTML = `<div style="margin-top:12px"><h3 style="margin:0 0 4px">Your path${rec ? ': ' + esc(rec) : ''}</h3>
       ${why ? `<p style="margin:0 0 10px;color:var(--soft)">${esc(why)}</p>` : ''}
       ${cards ? `<div class="plans">${cards}</div>` : ''}
+      <div class="seat"><div><b>Not ready to pay the fee today?</b><div class="small">Book your seat in the next batch for ₹999 with GST. It is adjusted in your fee.</div></div>
+        <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'program-enrolment')}?plan=token">Book my seat · ₹999</a></div>
       <p style="margin:12px 0 4px;color:var(--soft)">Not sure yet? A mentor answers on WhatsApp, no pressure.</p>
       <a class="mentor" href="https://wa.me/${WA}?text=${text}" target="_blank" rel="noopener">💬 Talk to a mentor</a></div>`;
     $('endHost').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -418,6 +425,11 @@
   let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = true, ticker = null;
   let setup = null, wsUrl = '', handle = null, playing = [], nextAt = 0, tutorLine = '', youLine = '', lastActive = Date.now();
   let conn = null, rotateAt = 0, firstStart = true, heard = '', lastState = '';
+  // Someone who starts a walkthrough and walks away must not leave Altron talking to an empty room: only the learner's
+  // voice or taps count as them being there. After the closing counselling the session ends by itself.
+  let lastHuman = Date.now(), ending = false, endAt = 0;
+  const AWAY_S = 180;
+  let askedThem = false;            // Altron's last turn ended on a question: wait for the answer, never nudge past it
   // A walkthrough is a talk: when Altron stops and the learner stays quiet, it is told to carry on (once per pause).
   let waitingForThem = false, nudged = false;
   function status(text, cls) {
@@ -517,7 +529,8 @@
       } else if (c.name === 'save_counselling') {
         try { await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) }); } catch (_) {}
         showEnd(a.plan, a.why); track('class_counselling_done');
-        r = { saved: true, screen: 'the plans are on their screen now, the suggested one marked, with Book my seat and Talk to a mentor buttons' };
+        r = { saved: true, screen: 'the plans are on their screen now, the suggested one marked, with a Rs 999 seat booking and a Talk to a mentor button. Say your two sentences and goodbye; the session then ends.' };
+        ending = true; endAt = Date.now() + 45000;          // ends after the goodbye (or in 45 s at the latest)
       } else r = { error: 'Unknown tool.' };
       responses.push({ id: c.id, name: c.name, response: r });
     }
@@ -535,7 +548,9 @@
       if (m.setupComplete) {
         me.__ready = true; status('listening', 'live');
         const name = (store.get('adm_name') || '').split(' ')[0];
-        if (kind === 'first') note(`The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
+        if (kind === 'first') note(isDemo
+          ? `The demo has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence and begin the opening counselling: ask what they do now.`
+          : `The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
         else if (kind === 'continue') note('[The learner is back after a pause. Welcome them back in a few words and carry on from section ' + (at + 1) + ': ' + JSON.stringify(sectionFor(at)) + ']');
       }
       if (m.toolCall) onTools(m.toolCall.functionCalls);
@@ -545,9 +560,9 @@
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
         if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.slice(-320); }
-        if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
+        if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); lastHuman = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
         if (sc.turnComplete) {
-          if (tutorLine.trim()) { waitingForThem = true; nudged = false; }
+          if (tutorLine.trim()) { waitingForThem = true; nudged = false; askedThem = /\?\s*$/.test(tutorLine.trim()); if (ending) endAt = Math.min(endAt, Date.now() + 2500); }
           if (youLine.trim()) txLine('You', youLine.trim()); if (tutorLine.trim()) txLine('Altron', tutorLine.trim()); tutorLine = ''; youLine = '';
         }
       }
@@ -574,7 +589,7 @@
     await startMic();
     outCtx = outCtx || new AudioContext(); if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
     running = true; conn = newConn(t); rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
-    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now();
+    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now(); lastHuman = Date.now();
     clearInterval(ticker); ticker = setInterval(tick, 1000);
     $('resume').classList.add('hidden'); $('pause').classList.remove('hidden'); $('mic').classList.remove('hidden');
     if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';
@@ -583,7 +598,10 @@
     if (!running) return;
     if (Date.now() >= rotateAt) return renew();
     // ...but never while a question on the board waits for their answer
-    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !(checkShown && !checkDone) && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
+    if (ending && Date.now() >= endAt && !playing.length) return finish();
+    if (klass && klass.mode === 'walkthrough' && !playing.length && (Date.now() - lastHuman) / 1000 >= AWAY_S)
+      return pause('Paused because you seem to be away. Tap Continue when you are back.');
+    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !ending && !askedThem && !(checkShown && !checkDone) && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
       nudged = true;
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
@@ -596,6 +614,15 @@
     if (message) { $('smsg').textContent = message; $('smsg').style.color = bad ? '#ffb3b3' : '#ffd8bd'; }
   }
   function pause(message) { stop(message || 'Paused. Tap Continue when you are ready.'); }
+  // The end: Altron stops, and the demo's plans and seat booking stay on the screen.
+  function finish(message) {
+    cleanup(); status('finished', ''); ending = false;
+    $('resume').classList.add('hidden'); $('pause').classList.add('hidden'); $('mic').classList.add('hidden'); $('endBtn').classList.add('hidden');
+    $('smsg').textContent = message || (isDemo ? 'Demo finished. Your plan and seat booking are below.' : 'Class ended.'); $('smsg').style.color = '#ffd8bd';
+    if (isDemo && !$('endHost').innerHTML) showEnd('', '');
+    track('class_ended');
+  }
+  $('endBtn').onclick = () => finish(isDemo ? 'Demo ended. Your plans and seat booking are below.' : 'Class ended.');
   $('pause').onclick = () => pause();
   $('resume').onclick = async () => { try { await begin(); } catch (e) { stop(e.message, !e.out); } };
   $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
