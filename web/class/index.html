@@ -325,10 +325,18 @@
     $('prev').disabled = at === 0; $('next').disabled = at >= klass.sections.length - 1;
     document.querySelector('.boardwrap').scrollTop = 0;
   }
+  // The CRM line says how far into the demo they got (one report each time they reach a further part).
+  let furthest = -1;
+  function reachedPart() {
+    if (!isDemo || at <= furthest || !token()) return;
+    furthest = at;
+    try { fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...authH() },
+                                     body: JSON.stringify({ what: 'demo', detail: `${at + 1} of ${klass.sections.length}` }) }); } catch (_) {}
+  }
   let movedAt = 0, spokeHere = true;      // when the board last moved, and whether Altron has spoken since
   function go(i, byLearner) {
     if (i < 0 || i >= klass.sections.length) return false;
-    done.add(at); at = i; render(); movedAt = Date.now(); spokeHere = !!byLearner;
+    done.add(at); at = i; render(); movedAt = Date.now(); spokeHere = !!byLearner; reachedPart();
     if (byLearner) tell('[Screen] The learner moved the board to section ' + (i + 1) + '. Teach it: ' + JSON.stringify(sectionFor(i)));
     if (klass.sections[at].kind === 'summary') { done.add(at); if (!isDemo && at === klass.sections.length - 1) showDone(); }
     saveProgress();
@@ -611,7 +619,7 @@
     await startMic();
     outCtx = outCtx || new AudioContext(); if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
     running = true; conn = newConn(t); rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
-    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now(); lastHuman = Date.now();
+    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now(); lastHuman = Date.now(); reachedPart();
     clearInterval(ticker); ticker = setInterval(tick, 1000);
     $('resume').classList.add('hidden'); $('pause').classList.remove('hidden'); $('mic').classList.remove('hidden');
     if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';

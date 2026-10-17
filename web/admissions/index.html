@@ -554,10 +554,19 @@
     const v = store.get(k); try { return v && JSON.parse(v); } catch (_) { return false; }
   });
   const unlocked = () => true;          // the whole roadmap is open to everyone; anyone who wants to talk, reaches out
-  // Someone signed in on the website opened the roadmap: the CRM shows it on their row. Anonymous visitors stay anonymous.
+  // Someone signed in (on the website, or for the demo) opened the roadmap: the CRM shows it on their row, with the
+  // furthest section they scrolled to. Anonymous visitors stay anonymous.
   (() => {
-    let tok = ''; try { tok = JSON.parse(store.get('flutter.student_token') || 'null') || ''; } catch (_) {}
-    if (tok) fetch(API + '/crm/seen', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ what: 'roadmap' }) }).catch(() => {});
+    const tok = () => { let t = store.get('adm_token') || ''; if (!t) { try { t = JSON.parse(store.get('flutter.student_token') || 'null') || ''; } catch (_) {} } return t; };
+    const seen = (detail) => { const t = tok(); if (t) fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ what: 'roadmap', detail }) }).catch(() => {}); };
+    seen('');
+    const order = [['build', 'What you build'], ['roadmap', 'Curriculum'], ['howlearn', 'How it works'], ['reviews', 'Reviews'], ['fees', 'Fees'], ['faq', 'FAQ']];
+    let deepest = -1;
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) {
+        const i = order.findIndex(([id]) => id === e.target.id); if (i > deepest) { deepest = i; seen(order[i][1]); } } }, { threshold: 0.2 });
+      for (const [id] of order) { const el = document.getElementById(id); if (el) io.observe(el); }
+    }
   })();
 
   async function postLead(body) {
