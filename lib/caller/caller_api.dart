@@ -106,6 +106,15 @@ class CallerApi {
     return (r as Map).cast<String, dynamic>();
   }
 
+  /// The institute owner's WhatsApp code: sent to the number on the account (auth.py request_otp / verify_otp).
+  Future<void> requestOtp(String phone) =>
+      _send('POST', '/auth/request-otp?phone=${Uri.encodeQueryComponent(phone.trim())}');
+
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async => ((await _send('POST',
+          '/auth/verify-otp?phone=${Uri.encodeQueryComponent(phone.trim())}&otp=${Uri.encodeQueryComponent(otp.trim())}'))
+      as Map)
+      .cast<String, dynamic>();
+
   // ── the queue and leads ──
   Future<Map<String, dynamic>> myQueue({String owner = ''}) async =>
       ((await _send('GET', '/crm/my-queue${owner.isEmpty ? '' : '?owner=${Uri.encodeQueryComponent(owner)}'}')) as Map)

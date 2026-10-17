@@ -17,6 +17,8 @@ const stages = {
   'contacted': 'Contacted',
   'interested': 'Interested',
   'demo_booked': 'Demo booked',
+  'demo_done': 'Demo done',
+  'token_paid': 'Token paid',
   'enrolled': 'Enrolled',
   'lost': 'Lost',
 };

@@ -129,9 +129,27 @@ class CallerController extends ChangeNotifier {
 
   // ── signing in ──
 
-  Future<String?> signIn(String email, String password, {bool admin = false}) async {
+  Future<String?> signIn(String email, String password, {bool admin = false}) async =>
+      _signInWith(() => api.login(email, password, admin: admin));
+
+  /// Sends the WhatsApp code; returns what to tell the person.
+  Future<String> requestOtp(String phone) async {
     try {
-      final r = await api.login(email, password, admin: admin);
+      await api.requestOtp(phone);
+      return 'If this number is on the account, a code is on its way on WhatsApp.';
+    } on CallerError catch (e) {
+      return e.message;
+    }
+  }
+
+  Future<String?> signInWithOtp(String phone, String otp) async {
+    final said = await _signInWith(() => api.verifyOtp(phone, otp));
+    return said == 'That email or password is not right.' ? 'That code is not right, or it has expired.' : said;
+  }
+
+  Future<String?> _signInWith(Future<Map<String, dynamic>> Function() login) async {
+    try {
+      final r = await login();
       final token = '${r['jwt_token'] ?? r['token'] ?? ''}';
       if (token.isEmpty) return 'That login did not work. Please try again.';
       api.token = token;

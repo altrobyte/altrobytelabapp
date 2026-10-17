@@ -21,6 +21,8 @@ const _stageLabels = {
   'contacted': 'Contacted',
   'interested': 'Interested',
   'demo_booked': 'Demo booked',
+  'demo_done': 'Demo done',
+  'token_paid': 'Token paid',
   'enrolled': 'Enrolled',
   'lost': 'Lost',
 };
@@ -30,6 +32,8 @@ const _stageColors = {
   'contacted': Color(0xFF0277BD),
   'interested': Color(0xFF6A1B9A),
   'demo_booked': Color(0xFFAD1457),
+  'demo_done': Color(0xFFE65100),
+  'token_paid': Color(0xFF00838F),
   'enrolled': Color(0xFF2E7D32),
   'lost': Color(0xFFB71C1C),
 };
