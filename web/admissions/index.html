@@ -690,11 +690,24 @@
   }).catch(() => $('reviews').classList.add('hidden'));
 
   // ── gallery: stories and lab work ──
-  fetch(API + '/showcase').then((r) => r.json()).then((d) => {
-    const items = (d.items || []).filter((x) => x.cover_url).slice(0, 6);
-    $('gal').innerHTML = items.map((x) => `<a href="${esc(x.cta_url || 'https://www.youtube.com/@pawanmeena.official')}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(x.cover_url)}" alt="${esc(x.title)}"><span>${esc(x.title)}</span></a>`).join('');
-    if (!items.length) $('gal').classList.add('hidden');
-  }).catch(() => $('gal').classList.add('hidden'));
+  // Every published story and lab set-up: the picture is the cover, else the first photo, else a video's thumbnail.
+  const ytId = (u) => (String(u || '').match(/(?:shorts\/|youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/) || [])[1];
+  const pic = (x) => {
+    if (x.cover_url) return x.cover_url;
+    for (const m of x.media || []) {
+      const id = ytId(m.url); if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+      if (/\/uploads\/image\/|\.(png|jpe?g|webp|gif)(\?|$)/i.test(m.url || '')) return m.url;
+    }
+    return '';
+  };
+  const link = (x) => x.cta_url || ((x.media || []).find((m) => ytId(m.url)) || {}).url || 'https://www.youtube.com/@pawanmeena.official';
+  Promise.all(['story', 'lab_setup'].map((k) => fetch(API + '/showcase?kind=' + k).then((r) => r.json()).then((d) => d.items || []).catch(() => [])))
+    .then(([stories, labs]) => {
+      const items = [...stories, ...labs.map((l) => ({ ...l, title: l.title + (l.price_label ? ` · ₹${Number(l.price_label).toLocaleString('en-IN')}` : ''), cta_url: l.cta_url || '#kit' }))]
+        .filter((x) => pic(x)).slice(0, 8);
+      $('gal').innerHTML = items.map((x) => { const href = link(x); return `<a href="${esc(href)}"${href.startsWith('#') ? '' : ' target="_blank" rel="noopener"'}><img loading="lazy" src="${esc(pic(x))}" alt="${esc(x.title)}"><span>${esc(x.title)}</span></a>`; }).join('');
+      if (!items.length) $('gal').classList.add('hidden');
+    });
 
   // ── who trains with us ──
   const people = [
