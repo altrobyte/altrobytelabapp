@@ -48,6 +48,7 @@ class _CrmScreenState extends State<CrmScreen> {
   Map<String, dynamic> _funnel = {};
   bool _needsCall = false;
   bool _recent = true; // the funnel for the last 30 days, or for everyone
+  bool _showPipeline = false; // the list comes first; the pipeline and totals open on a tap
   String _query = '';
   bool _loading = true;
   final _searchCtrl = TextEditingController();
@@ -236,133 +237,161 @@ class _CrmScreenState extends State<CrmScreen> {
               icon: const Icon(Icons.refresh_rounded, size: 21)),
         ],
       ),
-      body: Column(children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-          child: Column(children: [
-            _funnelCard(),
-            const SizedBox(height: 10),
-            Row(children: [
-              _Stat(label: 'Total', value: '${_summary['total'] ?? '—'}'),
-              _Stat(label: 'Registered', value: '${_summary['linked_students'] ?? '—'}'),
-              _Stat(label: 'Active 24h', value: '${_summary['active_24h'] ?? '—'}'),
-              _Stat(
-                  label: 'Opted out',
-                  value: '${_summary['opted_out'] ?? '—'}',
-                  warn: (_summary['opted_out'] ?? 0) is int &&
-                      (_summary['opted_out'] ?? 0) > 0),
-            ]),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: 'Search name or number',
-                prefixIcon: const Icon(Icons.search_rounded, size: 19),
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      // The list is the screen: one slim bar (search, who to call, the pipeline behind a button), one row of filters,
+      // then the people. Everything above the list scrolls away with it.
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: CustomScrollView(slivers: [
+          SliverToBoxAdapter(child: _topBar()),
+          if (_showPipeline)
+            SliverToBoxAdapter(
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                child: Column(children: [
+                  _funnelCard(),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    _Stat(label: 'Total', value: '${_summary['total'] ?? '—'}'),
+                    _Stat(label: 'Registered', value: '${_summary['linked_students'] ?? '—'}'),
+                    _Stat(label: 'Active 24h', value: '${_summary['active_24h'] ?? '—'}'),
+                    _Stat(
+                        label: 'Opted out',
+                        value: '${_summary['opted_out'] ?? '—'}',
+                        warn: (_summary['opted_out'] ?? 0) is int && (_summary['opted_out'] ?? 0) > 0),
+                  ]),
+                ]),
               ),
-              onSubmitted: (v) {
-                setState(() {
-                  _query = v.trim();
-                  _loading = true;
-                });
-                _load();
-              },
             ),
-            const SizedBox(height: 10),
-            // Who to talk to first. Worked out from what each person did; hottest first in every view.
-            SizedBox(
-              height: 32,
-              child: ListView(scrollDirection: Axis.horizontal, children: [
-                for (final h in _heatLabels.keys)
-                  _StageChip(
-                    label: _heatLabels[h]!,
-                    count: h.isEmpty
-                        ? _heatCounts.values.fold<int>(0, (a, b) => a + (b is int ? b : 0))
-                        : (_heatCounts[h] as int?) ?? 0,
-                    selected: _heat == h,
-                    color: _heatColors[h]!,
-                    onTap: () {
-                      setState(() {
-                        _heat = h;
-                        _loading = true;
-                      });
-                      _load();
-                    },
+          SliverToBoxAdapter(child: _filters()),
+          if (_loading)
+            const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))
+          else if (_leads.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    _query.isNotEmpty || _stage.isNotEmpty || _heat.isNotEmpty || _needsCall
+                        ? 'No leads match that.'
+                        : 'No leads yet. They appear here the moment someone messages the WhatsApp number or signs up.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5),
                   ),
-              ]),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 32,
-              child: ListView(scrollDirection: Axis.horizontal, children: [
-                _StageChip(
-                  label: 'All',
-                  count: _counts.values.fold<int>(
-                      0, (a, b) => a + (b is int ? b : 0)),
-                  selected: _stage.isEmpty,
-                  color: AppColors.primary,
-                  onTap: () {
-                    setState(() {
-                      _stage = '';
-                      _loading = true;
-                    });
-                    _load();
-                  },
                 ),
-                for (final s in _stageLabels.keys)
-                  _StageChip(
-                    label: _stageLabels[s]!,
-                    count: (_counts[s] as int?) ?? 0,
-                    selected: _stage == s,
-                    color: _stageColors[s]!,
-                    onTap: () {
-                      setState(() {
-                        _stage = s;
-                        _loading = true;
-                      });
-                      _load();
-                    },
-                  ),
-              ]),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+              sliver: SliverList.separated(
+                itemCount: _leads.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, i) => _LeadRow(
+                  lead: _leads[i] as Map<String, dynamic>,
+                  onTap: () => _open(_leads[i] as Map<String, dynamic>),
+                ),
+              ),
             ),
-          ]),
-        ),
+        ]),
+      ),
+    );
+  }
+
+  int get _waiting => ((Map<String, dynamic>.from((_funnel['recent'] as Map?) ?? const {}))['needs_call'] as num?)?.toInt() ?? 0;
+
+  void _reload(VoidCallback change) {
+    setState(() {
+      change();
+      _loading = true;
+    });
+    _load();
+  }
+
+  Widget _topBar() {
+    final waiting = _waiting;
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Row(children: [
         Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _leads.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          _query.isNotEmpty || _stage.isNotEmpty || _heat.isNotEmpty
-                              ? 'No leads match that.'
-                              : 'No leads yet. They appear here the moment '
-                                  'someone messages the WhatsApp number.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                              color: AppColors.textSecondary, height: 1.5),
-                        ),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _load,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _leads.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) => _LeadRow(
-                          lead: _leads[i] as Map<String, dynamic>,
-                          onTap: () => _open(_leads[i] as Map<String, dynamic>),
-                        ),
-                      ),
-                    ),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: 'Search name or number',
+              prefixIcon: const Icon(Icons.search_rounded, size: 19),
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onSubmitted: (v) => _reload(() => _query = v.trim()),
+          ),
+        ),
+        if (waiting > 0) ...[
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Warm and hot leads nobody has called yet',
+            child: FilterChip(
+              avatar: Icon(Icons.phone_in_talk_rounded, size: 16, color: _needsCall ? Colors.white : const Color(0xFFD84315)),
+              label: Text('Call first · $waiting'),
+              labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12, color: _needsCall ? Colors.white : const Color(0xFF8A3305)),
+              selected: _needsCall,
+              showCheckmark: false,
+              selectedColor: const Color(0xFFD84315),
+              backgroundColor: const Color(0xFFFFF1EA),
+              side: BorderSide.none,
+              onSelected: (_) => _reload(() {
+                _needsCall = !_needsCall;
+                _heat = '';
+                _stage = '';
+              }),
+            ),
+          ),
+        ],
+        const SizedBox(width: 6),
+        IconButton(
+          tooltip: _showPipeline ? 'Hide the pipeline' : 'Show the pipeline and totals',
+          onPressed: () => setState(() => _showPipeline = !_showPipeline),
+          icon: Icon(_showPipeline ? Icons.insights_rounded : Icons.insights_outlined, color: _showPipeline ? AppColors.primary : null),
         ),
       ]),
     );
   }
+
+  // Temperature and stage in one row: who to talk to first, then where they are.
+  Widget _filters() => Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+            height: 32,
+            child: ListView(scrollDirection: Axis.horizontal, children: [
+              for (final h in _heatLabels.keys)
+                _StageChip(
+                  label: _heatLabels[h]!,
+                  count: h.isEmpty ? _heatCounts.values.fold<int>(0, (a, b) => a + (b is int ? b : 0)) : (_heatCounts[h] as int?) ?? 0,
+                  selected: _heat == h,
+                  color: _heatColors[h]!,
+                  onTap: () => _reload(() => _heat = h),
+                ),
+              Container(width: 1, margin: const EdgeInsets.fromLTRB(2, 6, 9, 6), color: Colors.black12),
+              for (final st in _stageLabels.keys)
+                _StageChip(
+                  label: _stageLabels[st]!,
+                  count: (_counts[st] as int?) ?? 0,
+                  selected: _stage == st,
+                  color: _stageColors[st]!,
+                  onTap: () => _reload(() => _stage = _stage == st ? '' : st),
+                ),
+            ]),
+          ),
+          if (!_loading) ...[
+            const SizedBox(height: 6),
+            Text('${_leads.length} ${_leads.length == 1 ? 'person' : 'people'}${_stage.isNotEmpty ? ' · ${_stageLabels[_stage]}' : ''}${_needsCall ? ' · to call first' : ''}',
+                style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          ],
+        ]),
+      );
 }
 
 class _Stat extends StatelessWidget {
@@ -554,7 +583,21 @@ class _LeadRow extends StatelessWidget {
               ],
             ]),
           ),
-          const SizedBox(width: 8),
+          if (lead['reachable'] == true) ...[
+            IconButton(
+              tooltip: 'Call',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => launchUrl(Uri.parse('tel:+91${lead['phone']}')),
+              icon: const Icon(Icons.call_rounded, size: 19, color: Color(0xFF2E7D32)),
+            ),
+            IconButton(
+              tooltip: 'WhatsApp',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => launchUrl(Uri.parse('https://wa.me/91${lead['phone']}'), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.chat_rounded, size: 18, color: Color(0xFF128C7E)),
+            ),
+          ],
+          const SizedBox(width: 4),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             _HeatBadge(temp),
             const SizedBox(height: 4),
