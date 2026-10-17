@@ -14,11 +14,13 @@ import '../../constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import 'crm_chat_screen.dart';
+import 'crm_team_screen.dart';
 
 const _stageLabels = {
   'new': 'New',
   'contacted': 'Contacted',
   'interested': 'Interested',
+  'demo_booked': 'Demo booked',
   'enrolled': 'Enrolled',
   'lost': 'Lost',
 };
@@ -27,6 +29,7 @@ const _stageColors = {
   'new': Color(0xFF757575),
   'contacted': Color(0xFF0277BD),
   'interested': Color(0xFF6A1B9A),
+  'demo_booked': Color(0xFFAD1457),
   'enrolled': Color(0xFF2E7D32),
   'lost': Color(0xFFB71C1C),
 };
@@ -223,6 +226,10 @@ class _CrmScreenState extends State<CrmScreen> {
         title: Text('CRM',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         actions: [
+          IconButton(
+              tooltip: 'Calling team: leaderboard, unassigned leads, labels, export',
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmTeamScreen())),
+              icon: const Icon(Icons.headset_mic_rounded, size: 21)),
           IconButton(
               tooltip: 'Scholarship test candidates',
               onPressed: () => context.push('/scholars'),
@@ -1158,6 +1165,11 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context, _changed)),
           title: Text('Lead', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary)),
           actions: [
+            IconButton(
+                tooltip: 'Timeline: every call, note and WhatsApp message',
+                onPressed: () => Navigator.push(
+                    context, MaterialPageRoute(builder: (_) => CrmTimelineScreen(phone: widget.phone, name: '${lead?['name'] ?? ''}'))),
+                icon: const Icon(Icons.timeline_rounded)),
             IconButton(tooltip: 'Refresh', onPressed: () { setState(() => _loading = true); _load(); }, icon: const Icon(Icons.refresh_rounded)),
           ],
         ),

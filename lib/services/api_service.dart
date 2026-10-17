@@ -1020,6 +1020,67 @@ class ApiService {
     _parse(res);
   }
 
+  // ── CRM: the calling team (crm_calls.py) ──
+  static Future<dynamic> _crmCall(String method, String path, [Object? body]) async {
+    final token = await _token();
+    final uri = Uri.parse('${ApiConstants.baseUrl}$path');
+    final res = switch (method) {
+      'PUT' => await http.put(uri, headers: _headers(token), body: jsonEncode(body)),
+      'POST' => await http.post(uri, headers: _headers(token), body: jsonEncode(body)),
+      _ => await http.get(uri, headers: _headers(token)),
+    };
+    return _parse(res);
+  }
+
+  /// Per caller over the last [days]: calls, connected %, talk time, follow-ups done and missed, interest, conversions.
+  static Future<Map<String, dynamic>> crmTeamStats(int days) async =>
+      Map<String, dynamic>.from(await _crmCall('GET', '/crm/team-stats?days=$days'));
+
+  static Future<List<dynamic>> crmTeam() async => ((await _crmCall('GET', '/crm/team'))['team'] as List?) ?? [];
+
+  /// A telecaller login for Altrobyte Caller (a manager of this institute).
+  static Future<void> crmAddMember(String name, String email, String password, {bool teamLead = false}) =>
+      _crmCall('POST', '/crm/team', {'name': name, 'email': email, 'password': password, 'team_lead': teamLead});
+
+  static Future<void> crmEditMember(String login, {bool? teamLead, bool? active}) => _crmCall('PUT', '/crm/team/$login', {
+        if (teamLead != null) 'team_lead': teamLead,
+        if (active != null) 'active': active,
+      });
+
+  static Future<List<dynamic>> crmUnassigned() async => ((await _crmCall('GET', '/crm/unassigned'))['leads'] as List?) ?? [];
+
+  static Future<Map<String, dynamic>> crmAssign(List<String> phones, {String? owner, List<String>? roundRobin}) async =>
+      Map<String, dynamic>.from(await _crmCall('PUT', '/crm/assign', {
+        'phones': phones,
+        if (owner != null) 'owner': owner,
+        if (roundRobin != null) 'round_robin': roundRobin,
+      }));
+
+  /// Every call, note and WhatsApp message for a lead, newest first.
+  static Future<Map<String, dynamic>> crmTimeline(String phone) async =>
+      Map<String, dynamic>.from(await _crmCall('GET', '/crm/leads/$phone/timeline'));
+
+  static Future<List<String>> crmLabels() async =>
+      (((await _crmCall('GET', '/crm/labels'))['labels'] as List?) ?? []).map((e) => '$e').toList();
+
+  static Future<List<String>> crmSetLabels(List<String> labels) async =>
+      (((await _crmCall('PUT', '/crm/labels', {'labels': labels}))['labels'] as List?) ?? []).map((e) => '$e').toList();
+
+  /// The CSV the CRM exports (what = leads or calls), as bytes to save.
+  static Future<Uint8List> crmExportCsv({String what = 'leads', int days = 0}) async {
+    final token = await _token();
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/export.csv?what=$what&days=$days'),
+        headers: _headers(token));
+    if (res.statusCode >= 400) _parse(res);
+    return res.bodyBytes;
+  }
+
+  static Future<Map<String, dynamic>> crmSetCallsSheet(String sheetId) async =>
+      Map<String, dynamic>.from(await _crmCall('PUT', '/crm/export/sheet', {'sheet_id': sheetId}));
+
+  static Future<Map<String, dynamic>> crmPushCallsSheet() async =>
+      Map<String, dynamic>.from(await _crmCall('POST', '/crm/export/sheet', {}));
+
   static Future<void> crmAddNote(String phone, String text) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');

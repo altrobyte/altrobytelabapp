@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing for the APK handed to the team (android/key.properties, never committed). Without it a release build
+// is signed with the debug key, which is fine on one test phone and wrong for the team: see docs/altrobyte_caller.md.
+val keyProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -30,11 +39,35 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (keyProps.isNotEmpty()) {
+                storeFile = file(keyProps.getProperty("storeFile"))
+                storePassword = keyProps.getProperty("storePassword")
+                keyAlias = keyProps.getProperty("keyAlias")
+                keyPassword = keyProps.getProperty("keyPassword")
+            }
+        }
+    }
+
+    // Two apps from one Flutter project. "lab" is the app this project always built. "caller" is Altrobyte Caller, the
+    // telecallers' app (entry point lib/caller/caller_main.dart, native code and permissions in src/caller), installed
+    // from a signed APK, never the Play Store.
+    flavorDimensions += "app"
+    productFlavors {
+        create("lab") {
+            dimension = "app"
+        }
+        create("caller") {
+            dimension = "app"
+            applicationId = "com.altrobyte.caller"
+            minSdk = 26
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keyProps.isNotEmpty()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
 }
