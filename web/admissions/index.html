@@ -536,7 +536,7 @@
 <div class="proof" id="proof" role="status" aria-live="polite"><span class="i">⚡</span><span class="w" id="proofT"></span><button type="button" id="proofX" aria-label="Close">×</button></div>
 <div class="bar">
   <div class="t"><b id="barT">Admissions open</b> · ₹9,999 + GST a month, lab kit included</div>
-  <a class="btn ghost" href="#talk">Talk to mentor</a>
+  <button class="btn ghost" type="button" data-altron data-track="admissions_altron_bar">🎙 Free demo</button>
   <a class="btn primary" href="#fees">Enrol now</a>
 </div>
 
@@ -811,7 +811,8 @@
   .altron-panel iframe { flex: 1; border: 0; width: 100%; }
   body.altron-open { margin-right: min(440px, 100vw); }
   @media (max-width: 860px) {
-    .altron-panel { top: auto; left: 0; width: 100%; height: 80vh; border-radius: 18px 18px 0 0; overflow: hidden; }
+    .altron-panel { top: auto; left: 0; width: 100%; height: 62vh; border-radius: 18px 18px 0 0; overflow: hidden; }
+    .altron-fab { display: none !important; }           /* the bottom bar carries "Free demo" on a phone */
     body.altron-open { margin-right: 0; }
   }
 </style>
