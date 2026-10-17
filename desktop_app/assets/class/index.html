@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Altron Live Class</title>
+<title>Altron · Program walkthrough</title>
 <meta name="description" content="A free 10-minute live class with Altron, the AI teacher of Altrobyte Lab: see how a real smart product works and find the path that fits you.">
 <meta property="og:title" content="Free live class with Altron, AI teacher — Altrobyte Lab">
 <meta property="og:description" content="10 minutes, by voice, on a board: how a smart product works, from a sensor to your phone, and your roadmap.">
@@ -148,13 +148,13 @@
 <div class="intro" id="intro">
   <div class="card">
     <div class="orb-big"></div>
-    <div class="kick" id="kick">FREE LIVE CLASS · 10 MINUTES</div>
-    <h1 id="ttl">How a smart product works, with Altron</h1>
-    <p id="lead">Altron, our AI teacher, teaches you live by voice on a board. Ask anything, interrupt any time, answer by speaking or tapping.</p>
+    <div class="kick" id="kick">PROGRAM WALKTHROUGH · ABOUT 10 MINUTES</div>
+    <h1 id="ttl">The Live Engineering Program, explained by Altron</h1>
+    <p id="lead">Altron, our AI mentor, walks you through the program by voice on a board. Ask anything, interrupt any time.</p>
     <ul>
-      <li>See a real smart bulb: sensor, ESP32 brain, relay, app</li>
-      <li>Try a small practical on the board</li>
-      <li>Find the path that fits you, at the end</li>
+      <li>What we cover in each of the four stages</li>
+      <li>Why it matters for your career, and how we teach it</li>
+      <li>A few questions at the end, to suggest the plan that fits you</li>
     </ul>
     <div class="signin hidden" id="signin">
       <b>Sign in with WhatsApp to start</b>
@@ -164,7 +164,7 @@
       <div class="msg" id="sMsg"></div>
     </div>
     <div class="langs" id="langs"><button type="button" data-l="en">English</button><button type="button" data-l="hi">Hinglish</button></div>
-    <button class="go" id="start" type="button">▶ Start the class</button>
+    <button class="go" id="start" type="button">▶ Start the walkthrough</button>
     <div class="fine">Use earphones if you can. Your microphone is used only while the class runs; the camera is not used.</div>
     <div class="fine" id="introMsg"></div>
   </div>
@@ -252,7 +252,7 @@
         practical: prac ? { answer: prac.dataset.answer, text: prac.textContent.trim() } : null,
       };
     });
-    return { lead: lead ? lead.textContent.trim() : '', sections };
+    return { lead: lead ? lead.textContent.trim() : '', mode: art.dataset ? (art.dataset.mode || 'class') : 'class', sections };
   }
   async function loadClass() {
     const r = noteId ? await fetch(API + '/trainer/class-notes/' + noteId, { headers: authH() }) : await fetch(API + '/classes/' + encodeURIComponent(classId));
@@ -418,6 +418,8 @@
   let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = true, ticker = null;
   let setup = null, wsUrl = '', handle = null, playing = [], nextAt = 0, tutorLine = '', youLine = '', lastActive = Date.now();
   let conn = null, rotateAt = 0, firstStart = true, heard = '', lastState = '';
+  // A walkthrough is a talk: when Altron stops and the learner stays quiet, it is told to carry on (once per pause).
+  let waitingForThem = false, nudged = false;
   function status(text, cls) {
     $('status').textContent = text;
     $('orb').className = 'orb' + (cls === 'talk' ? ' talk' : cls === 'live' ? '' : ' off');
@@ -543,8 +545,11 @@
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
         if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.slice(-320); }
-        if (sc.inputTranscription && sc.inputTranscription.text) { youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
-        if (sc.turnComplete) { if (youLine.trim()) txLine('You', youLine.trim()); if (tutorLine.trim()) txLine('Altron', tutorLine.trim()); tutorLine = ''; youLine = ''; }
+        if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
+        if (sc.turnComplete) {
+          if (tutorLine.trim()) { waitingForThem = true; nudged = false; }
+          if (youLine.trim()) txLine('You', youLine.trim()); if (tutorLine.trim()) txLine('Altron', tutorLine.trim()); tutorLine = ''; youLine = '';
+        }
       }
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
       if (m.goAway) renew();
@@ -577,6 +582,11 @@
   function tick() {
     if (!running) return;
     if (Date.now() >= rotateAt) return renew();
+    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
+      nudged = true;
+      note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
+      return;
+    }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
   }
   function cleanup() { running = false; if (ws) { ws.__retired = true; try { ws.close(); } catch (_) {} ws = null; } endConn(); clearInterval(ticker); hush(); stopMic(); }
