@@ -82,27 +82,30 @@ class CallStateReceiver : BroadcastReceiver() {
         event.put("expected", expected)
         store.setPendingCall(event.toString())
 
-        val known = expected || store.directoryEntry(phone) != null
+        val entry = store.directoryEntry(phone)
+        val lead = expected || entry != null
+        val saved = event.optString("contact_name").isNotBlank()
         val type = event.optString("type")
         Handler(Looper.getMainLooper()).post {
             val activity = CallerActivity.live
             if (activity != null) activity.deliverPending()
-            if (known && type != "missed") {
-                // Back to the app, where the log sheet is waiting. Android lets an app that may draw over others do
-                // this from the background; without that permission the sheet opens when the caller next opens the app.
-                if (Settings.canDrawOverlays(ctx) || activity != null) {
-                    ctx.startActivity(Intent(ctx, CallerActivity::class.java).addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-                }
-            } else if (!known && type == "in" && event.optInt("duration_s") > 0) {
-                offerToAdd(ctx, phone)
+            // The after-call card, like a caller-ID app's: for a lead, or a number nobody has saved (it may be a new
+            // enquiry). Not for a missed ring, and not for the caller's own saved contacts.
+            val worthACard = type != "missed" && (lead || !saved)
+            when {
+                worthACard && activity?.onScreen == true -> Unit // the sheet opens in the app itself
+                worthACard && Settings.canDrawOverlays(ctx) -> Overlay.showAfterCall(ctx, event, entry)
+                worthACard && activity != null -> ctx.startActivity(Intent(ctx, CallerActivity::class.java).addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                !lead && !saved && type == "in" && event.optInt("duration_s") > 0 -> offerToAdd(ctx, phone)
             }
         }
     }
 
     private fun fromCallLog(ctx: Context, since: Long): JSONObject? {
         if (ctx.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) return null
-        val cols = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DURATION, CallLog.Calls.DATE)
+        val cols = arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DURATION, CallLog.Calls.DATE,
+            CallLog.Calls.CACHED_NAME)
         ctx.contentResolver.query(CallLog.Calls.CONTENT_URI, cols, "${CallLog.Calls.DATE} >= ?", arrayOf(since.toString()),
             "${CallLog.Calls.DATE} DESC")?.use { c ->
             if (!c.moveToFirst()) return null
@@ -112,7 +115,7 @@ class CallStateReceiver : BroadcastReceiver() {
                 else -> "missed"
             }
             return JSONObject().put("phone", c.getString(0) ?: "").put("type", type).put("duration_s", c.getLong(2))
-                .put("started_at_ms", c.getLong(3)).put("known", true)
+                .put("started_at_ms", c.getLong(3)).put("known", true).put("contact_name", c.getString(4) ?: "")
         }
         return null
     }

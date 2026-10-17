@@ -2,6 +2,7 @@ package com.altrobyte.caller
 
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -122,6 +123,120 @@ object Overlay {
             view = card
         } catch (e: Exception) {
             view = null
+        }
+    }
+
+    // ── after the call ──────────────────────────────────────────────────────
+
+    private var afterView: View? = null
+
+    /** The card that comes up when a call ends: who it was, how it went, and one tap to mark it (interested, call back,
+     *  not interested) or add details. Any button opens the log sheet already filled in with that choice. */
+    fun showAfterCall(ctx: Context, event: JSONObject, entry: JSONObject?) {
+        hideAfterCall()
+        val phone = last10(event.optString("phone"))
+        val name = entry?.optString("name")?.takeIf { it.isNotBlank() }
+            ?: event.optString("contact_name").takeIf { it.isNotBlank() } ?: phone
+        val talked = event.optInt("duration_s")
+        val how = when {
+            !event.optBoolean("known", true) -> "How did it go?"
+            talked > 0 -> "Talked ${if (talked >= 60) "${talked / 60}m " else ""}${talked % 60}s"
+            else -> "Not picked up"
+        }
+        val card = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, 18), dp(ctx, 14), dp(ctx, 18), dp(ctx, 12))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(ctx, 18).toFloat()
+                setStroke(dp(ctx, 2), Color.parseColor("#1A3C5E"))
+            }
+            elevation = dp(ctx, 10).toFloat()
+        }
+        fun text(t: String, size: Float, color: String, bold: Boolean = false) = TextView(ctx).apply {
+            text = t
+            textSize = size
+            setTextColor(Color.parseColor(color))
+            maxLines = 2
+            if (bold) setTypeface(typeface, Typeface.BOLD)
+        }
+        val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        top.addView(text("Altrobyte Caller · call ended", 12f, "#6B7280"),
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        top.addView(text("✕", 18f, "#6B7280").apply {
+            setPadding(dp(ctx, 12), 0, 0, 0)
+            setOnClickListener { hideAfterCall() }
+        })
+        card.addView(top)
+        card.addView(text(name, 20f, "#1F2937", bold = true))
+        val sub = listOfNotNull(how,
+            entry?.let { "${it.optString("temperature").replaceFirstChar { c -> c.uppercase() }} ${it.optInt("pct")}%" },
+            entry?.optString("stage")?.takeIf { it.isNotBlank() },
+            if (entry == null) "Not a lead yet" else null).joinToString("  ·  ")
+        card.addView(text(sub, 14f, "#1A3C5E"))
+        entry?.optString("last_note")?.takeIf { it.isNotBlank() }?.let { card.addView(text(it, 13f, "#374151")) }
+
+        fun button(label: String, preset: String, color: String) = TextView(ctx).apply {
+            text = label
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor(color))
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(dp(ctx, 8), dp(ctx, 10), dp(ctx, 8), dp(ctx, 10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(ctx, 12).toFloat()
+                setColor(Color.parseColor("#F3F4F6"))
+            }
+            setOnClickListener { openLog(ctx, preset) }
+        }
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(ctx, 10), 0, 0) }
+        for ((label, preset, color) in listOf(Triple("🔥 Interested", "interested", "#C62828"),
+                Triple("⏰ Call back", "call_back", "#1A3C5E"), Triple("✖ Not interested", "not_interested", "#6B7280"))) {
+            row.addView(button(label, preset, color), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginEnd = dp(ctx, 6) })
+        }
+        card.addView(row)
+        card.addView(button(if (entry == null) "➕ Add as lead / add details" else "✎ Add details", "", "#FFFFFF").apply {
+            (background as GradientDrawable).setColor(Color.parseColor("#D4500A"))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { topMargin = dp(ctx, 8) })
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT).apply {
+            gravity = Gravity.CENTER
+            horizontalMargin = 0.03f
+        }
+        try {
+            ctx.getSystemService(WindowManager::class.java).addView(card, params)
+            afterView = card
+        } catch (e: Exception) {
+            afterView = null
+        }
+    }
+
+    /** Opens the app on the log sheet for this call, with the card's choice in it. */
+    private fun openLog(ctx: Context, preset: String) {
+        val store = CallerStore(ctx)
+        store.takePendingCall()?.let { raw ->
+            store.setPendingCall(JSONObject(raw).put("preset", preset).toString())
+        }
+        hideAfterCall()
+        ctx.startActivity(Intent(ctx, CallerActivity::class.java).addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+    }
+
+    fun hideAfterCall() {
+        val v = afterView ?: return
+        afterView = null
+        main.post {
+            try {
+                v.context.getSystemService(WindowManager::class.java).removeView(v)
+            } catch (e: Exception) {
+                // Already gone.
+            }
         }
     }
 

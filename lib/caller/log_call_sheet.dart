@@ -78,6 +78,18 @@ class _LogCallSheetState extends State<LogCallSheet> {
     _labels = {...widget.lead.labels};
     final c = widget.call;
     if (c != null && c.known) _pickOutcome(c.connected ? 'connected' : 'no_answer');
+    // The choice tapped on the after-call card.
+    switch (c?.preset) {
+      case 'interested':
+        _pickOutcome('connected');
+        _interest = 'hot';
+        if (!_stageTouched && const {'new', 'contacted'}.contains(widget.lead.stage)) _stage = 'interested';
+      case 'call_back':
+        _pickOutcome('call_back');
+      case 'not_interested':
+        _pickOutcome(_outcome ?? 'connected');
+        _interest = 'not_interested';
+    }
   }
 
   @override

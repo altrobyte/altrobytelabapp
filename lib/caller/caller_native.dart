@@ -14,6 +14,10 @@ class CallEnded {
   final DateTime startedAt;
   final bool expected; // the app dialled it
   final bool known; // read from the call log; without it the phone cannot tell a ring-out from a conversation
+  /// What the caller tapped on the after-call card: interested, call_back, not_interested, or '' for Add details.
+  /// Null when the card was not used.
+  final String? preset;
+  final String contactName;
 
   const CallEnded(
       {required this.phone,
@@ -21,7 +25,9 @@ class CallEnded {
       required this.type,
       required this.startedAt,
       this.expected = false,
-      this.known = true});
+      this.known = true,
+      this.preset,
+      this.contactName = ''});
 
   bool get connected => durationS > 0;
 
@@ -32,6 +38,8 @@ class CallEnded {
         startedAt: DateTime.fromMillisecondsSinceEpoch((m['started_at_ms'] as num?)?.toInt() ?? 0, isUtc: true),
         expected: m['expected'] == true,
         known: m['known'] != false,
+        preset: m['preset'] is String ? m['preset'] as String : null,
+        contactName: '${m['contact_name'] ?? ''}',
       );
 }
 

@@ -22,6 +22,7 @@ void main() {
       {'phone': '9811100003', 'name': '', 'type': 'missed', 'duration_s': 0, 'started_at_ms': now.subtract(const Duration(days: 2)).millisecondsSinceEpoch},
       {'phone': '9811100004', 'name': 'Old', 'type': 'in', 'duration_s': 30, 'started_at_ms': now.subtract(const Duration(days: 9)).millisecondsSinceEpoch},
       {'phone': '1234', 'name': 'Bank', 'type': 'in', 'duration_s': 10, 'started_at_ms': now.subtract(const Duration(hours: 3)).millisecondsSinceEpoch},
+      {'phone': '9811100006', 'name': 'Friend', 'type': 'out', 'duration_s': 600, 'started_at_ms': now.subtract(const Duration(hours: 4)).millisecondsSinceEpoch},
     ];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'recentCalls') return phoneLog;
@@ -41,7 +42,15 @@ void main() {
               sent.add(body);
               return http.Response(jsonEncode({'synced': (body['calls'] as List).length, 'new_leads': 1}), 200);
             }
-            return http.Response(jsonEncode({'me': {'login': 'asha@team.in'}, 'leads': []}), 200);
+            // Tanya is saved in the phone and is a CRM lead; Friend is saved and is not.
+            return http.Response(
+                jsonEncode({
+                  'me': {'login': 'asha@team.in'},
+                  'leads': [
+                    {'phone': '9811100001', 'name': 'Tanya', 'heat': {'temperature': 'warm', 'score': 30}}
+                  ]
+                }),
+                200);
           }),
           hosts: ['https://crm.test']),
       clock: () => now,
@@ -55,7 +64,9 @@ void main() {
     await prefs.remove('caller_synced_upto_ms'); // as on first run, after marking Mom personal
     await c.syncDeviceCalls();
     final calls = (sent.single['calls'] as List).cast<Map>();
-    expect(calls.map((x) => x['phone']), ['9811100003', '+91 98111 00001']); // oldest first; no Mom, no 9-day-old, no 1234
+    // Oldest first. Not Mom (marked personal), not Friend (a saved contact who is not a lead: never leaves the phone),
+    // not the 9-day-old call, not 1234. Tanya is saved too, but she is a CRM lead, so her call goes.
+    expect(calls.map((x) => x['phone']), ['9811100003', '+91 98111 00001']);
     expect(calls.first['missed'], isTrue);
     expect(calls.first['direction'], 'in');
     expect(calls.last['contact_name'], 'Tanya');
@@ -67,7 +78,7 @@ void main() {
     expect(sent, isEmpty); // nothing new: nothing sent
 
     await c.setAutoAdd(false);
-    phoneLog.insert(0, {'phone': '9811100005', 'name': 'X', 'type': 'out', 'duration_s': 5, 'started_at_ms': now.millisecondsSinceEpoch});
+    phoneLog.insert(0, {'phone': '9811100005', 'name': '', 'type': 'out', 'duration_s': 5, 'started_at_ms': now.millisecondsSinceEpoch});
     await c.syncDeviceCalls();
     expect(sent.single['add_new'], isFalse);
     c.dispose();

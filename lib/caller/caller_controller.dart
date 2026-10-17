@@ -338,8 +338,9 @@ class CallerController extends ChangeNotifier {
     }
     if (lead == null) {
       final talkedIn = e.type == 'in' && e.connected && now.difference(e.startedAt) <= const Duration(minutes: 30);
-      if (!talkedIn && !expected) return;
-      pendingLog = PendingLog(Lead(phone: p), call: e, isNew: true);
+      // A tap on the after-call card is the caller asking: always open the sheet then.
+      if (!talkedIn && !expected && e.preset == null) return;
+      pendingLog = PendingLog(Lead(phone: p, name: e.contactName), call: e, isNew: true);
     } else {
       pendingLog = PendingLog(lead, call: e);
     }
@@ -431,6 +432,30 @@ class CallerController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Numbers that are leads in the CRM (the whole CRM for a team lead, a caller's own otherwise), read once a session.
+  Set<String> knownLeadPhones = {};
+  bool _knownLoaded = false;
+
+  Future<void> _loadKnownLeads() async {
+    knownLeadPhones.addAll(leads.map((l) => l.phone));
+    if (_knownLoaded) return;
+    try {
+      final r = await api.browse();
+      knownLeadPhones.addAll(((r['leads'] as List?) ?? const []).whereType<Map>().map((e) => '${e['phone']}'));
+      _knownLoaded = true;
+    } on CallerError {
+      // Offline: the queue's leads are enough to go on; saved contacts simply wait.
+    }
+  }
+
+  /// Someone saved in this phone's contacts who is not a CRM lead: the caller's own person. Their calls stay on the
+  /// phone and out of the Calls tab's lead view.
+  bool isPersonal(DeviceCall d) {
+    final p = last10(d.phone);
+    if (ignored.contains(p)) return true;
+    return d.contactName.trim().isNotEmpty && !knownLeadPhones.contains(p) && leadFor(p) == null;
+  }
+
   /// Spam: never sent again from this phone, and if it already became a lead, out of the whole team's queue.
   Future<void> markSpam(String phone) async {
     await setPersonal(phone, true);
@@ -464,9 +489,11 @@ class CallerController extends ChangeNotifier {
         callSyncSaid = 'Allow "Read the call log" (menu > Permissions) so your calls reach the CRM by themselves.';
         return 0;
       }
+      await _loadKnownLeads();
       final fresh = calls
           .where((d) => d.at.millisecondsSinceEpoch > upto)
           .where((d) => !d.refused && last10(d.phone).length == 10 && !ignored.contains(last10(d.phone)))
+          .where((d) => !isPersonal(d)) // a saved contact's call never leaves the phone, unless they are a lead
           .toList()
         ..sort((a, b) => a.at.compareTo(b.at));
       for (var i = 0; i < fresh.length; i += 50) {
@@ -523,6 +550,7 @@ class CallerController extends ChangeNotifier {
   Future<void> loadDeviceCalls() async {
     final prefs = await SharedPreferences.getInstance();
     _loggedKeys = (prefs.getStringList('caller_logged_calls') ?? const []).toSet();
+    await _loadKnownLeads();
     final calls = await native.recentCalls();
     callLogAllowed = calls != null;
     deviceCalls = calls ?? const [];

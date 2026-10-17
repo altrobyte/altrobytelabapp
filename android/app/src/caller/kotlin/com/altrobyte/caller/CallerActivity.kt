@@ -51,6 +51,19 @@ class CallerActivity : FlutterActivity() {
         deliverPending()
     }
 
+    /** On screen right now: a call that ends opens the log sheet here, so no card is needed over it. */
+    @Volatile var onScreen = false
+
+    override fun onResume() {
+        super.onResume()
+        onScreen = true
+    }
+
+    override fun onPause() {
+        onScreen = false
+        super.onPause()
+    }
+
     override fun onDestroy() {
         if (live === this) live = null
         super.onDestroy()
@@ -67,7 +80,10 @@ class CallerActivity : FlutterActivity() {
         if (!dartReady) return
         val store = CallerStore(this)
         store.takePendingOpen()?.let { ch.invokeMethod("openLead", it) }
-        store.takePendingCall()?.let { ch.invokeMethod("callEnded", jsonToMap(JSONObject(it))) }
+        store.takePendingCall()?.let {
+            Overlay.hideAfterCall() // the log sheet is opening in the app: the card has done its job
+            ch.invokeMethod("callEnded", jsonToMap(JSONObject(it)))
+        }
     }
 
     private fun onCall(call: MethodCall, result: MethodChannel.Result) {

@@ -162,6 +162,22 @@ void main() {
     expect(find.text('Sent on WhatsApp.'), findsOneWidget);
   });
 
+  testWidgets('a tap on the after-call card fills the sheet in with that choice', (tester) async {
+    final got = await open(tester,
+        call: CallEnded(phone: '9800000001', durationS: 120, type: 'out', startedAt: now.toUtc(), preset: 'interested'));
+    expect(selected(tester, 'outcome_connected'), isTrue);
+    expect(selected(tester, 'interest_hot'), isTrue);
+    expect(selected(tester, 'stage_interested'), isTrue);
+    await tap(tester, 'save');
+    expect([got.log!.outcome, got.log!.interest, got.log!.stage], ['connected', 'hot', 'interested']);
+  });
+
+  testWidgets('call back on the card means call back tomorrow at 11', (tester) async {
+    await open(tester, call: CallEnded(phone: '9800000001', durationS: 40, type: 'in', startedAt: now.toUtc(), preset: 'call_back'));
+    expect(selected(tester, 'outcome_call_back'), isTrue);
+    expect(selected(tester, 'follow_Tomorrow 11 am'), isTrue);
+  });
+
   testWidgets('swiping the sheet away logs nothing', (tester) async {
     final got = await open(tester);
     await tester.tapAt(const Offset(10, 10));

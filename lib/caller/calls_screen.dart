@@ -18,7 +18,8 @@ class CallsScreen extends StatefulWidget {
 }
 
 class _CallsScreenState extends State<CallsScreen> with WidgetsBindingObserver {
-  bool _onlyLeads = false;
+  /// Personal calls (saved contacts who are not leads) are hidden unless asked for.
+  bool _showPersonal = false;
 
   @override
   void initState() {
@@ -63,7 +64,8 @@ class _CallsScreenState extends State<CallsScreen> with WidgetsBindingObserver {
         ),
       );
     }
-    final shown = _onlyLeads ? calls.where((d) => c.leadFor(d.phone) != null).toList() : calls;
+    final work = calls.where((d) => !c.isPersonal(d)).toList();
+    final shown = _showPersonal ? calls : work;
     return RefreshIndicator(
       onRefresh: c.loadDeviceCalls,
       child: ListView.builder(
@@ -73,8 +75,14 @@ class _CallsScreenState extends State<CallsScreen> with WidgetsBindingObserver {
             return Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
               child: Wrap(spacing: 8, children: [
-                ChoiceChip(label: Text('All calls (${calls.length})'), selected: !_onlyLeads, onSelected: (_) => setState(() => _onlyLeads = false)),
-                ChoiceChip(label: const Text('Only leads'), selected: _onlyLeads, onSelected: (_) => setState(() => _onlyLeads = true)),
+                ChoiceChip(
+                    label: Text('Leads & new numbers (${work.length})'),
+                    selected: !_showPersonal,
+                    onSelected: (_) => setState(() => _showPersonal = false)),
+                ChoiceChip(
+                    label: Text('All calls, with personal (${calls.length})'),
+                    selected: _showPersonal,
+                    onSelected: (_) => setState(() => _showPersonal = true)),
               ]),
             );
           }
@@ -145,8 +153,8 @@ class CallRow extends StatelessWidget {
       subtitle: Text([
         when,
         detail,
-        if (personal) 'Personal, not sent',
-        if (lead == null && !personal) 'Not a lead yet',
+        if (c.isPersonal(call)) 'Personal, stays on this phone',
+        if (lead == null && !c.isPersonal(call)) 'Not a lead yet',
         if (lead != null) stages[lead.stage] ?? lead.stage,
       ].join(' · ')),
       trailing: logged
