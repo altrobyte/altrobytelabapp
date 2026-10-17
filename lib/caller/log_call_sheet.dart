@@ -77,6 +77,7 @@ class _LogCallSheetState extends State<LogCallSheet> {
     _stage = widget.lead.stage;
     _labels = {...widget.lead.labels};
     final c = widget.call;
+    _name.text = c?.typedName.isNotEmpty == true ? c!.typedName : (widget.isNew ? widget.lead.name : '');
     if (c != null && c.known) _pickOutcome(c.connected ? 'connected' : 'no_answer');
     // The choice tapped on the after-call card.
     switch (c?.preset) {
@@ -191,7 +192,7 @@ class _LogCallSheetState extends State<LogCallSheet> {
               ),
               if (!widget.isNew) HeatBadge(lead.heat, converted: lead.converted),
             ]),
-            if (widget.isNew) ...[
+            if (widget.isNew || widget.lead.name.trim().isEmpty) ...[
               const SizedBox(height: 10),
               TextField(
                 key: const ValueKey('name'),

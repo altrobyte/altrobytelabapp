@@ -13,12 +13,15 @@ import android.os.Looper
 import android.provider.CallLog
 import android.provider.Settings
 import android.telephony.TelephonyManager
+import android.util.Log
 import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /** Watches the phone's call state. While a lead is ringing, shows who it is (Overlay). When a call ends, reads the call
  *  log for how long it lasted and whether anyone picked up, and hands that to the app, which opens "Log this call".
  *  Nothing is recorded: only the number, the direction and the length of the call. */
+private const val TAG = "AltroCaller"
+
 class CallStateReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,6 +33,7 @@ class CallStateReceiver : BroadcastReceiver() {
         val store = CallerStore(ctx)
         val prev = store.lastState
         val now = System.currentTimeMillis()
+        Log.i(TAG, "phone state $prev -> $state (number ${if (number == null) "hidden" else "given"})")
         // With the call log permission Android sends each change twice, once with the number and once without.
         when (state) {
             TelephonyManager.EXTRA_STATE_RINGING -> {
@@ -64,6 +68,7 @@ class CallStateReceiver : BroadcastReceiver() {
                         ended(ctx, store, prev)
                     } catch (e: Exception) {
                         // A call we could not read is a call the caller logs by hand.
+                        Log.w(TAG, "call end not read: $e")
                     } finally {
                         pending.finish()
                     }
@@ -76,7 +81,10 @@ class CallStateReceiver : BroadcastReceiver() {
         val since = store.callStartedAt.takeIf { it > 0 } ?: (System.currentTimeMillis() - 3600_000L)
         val event = fromCallLog(ctx, since - 60_000L) ?: guess(store, prev, since)
         val phone = event.optString("phone")
-        if (last10(phone).length != 10) return
+        if (last10(phone).length != 10) {
+            Log.i(TAG, "call ended: no usable number (${phone.length} chars), nothing to show")
+            return
+        }
         val expected = store.expected() == last10(phone)
         if (expected) store.clearExpected()
         event.put("expected", expected)
@@ -92,6 +100,8 @@ class CallStateReceiver : BroadcastReceiver() {
             // The after-call card, like a caller-ID app's: for a lead, or a number nobody has saved (it may be a new
             // enquiry). Not for a missed ring, and not for the caller's own saved contacts.
             val worthACard = type != "missed" && (lead || !saved)
+            Log.i(TAG, "call ended: type=$type talked=${event.optInt("duration_s")}s lead=$lead saved=$saved " +
+                "card=$worthACard overlay=${Settings.canDrawOverlays(ctx)} appOnScreen=${activity?.onScreen == true}")
             when {
                 worthACard && activity?.onScreen == true -> Unit // the sheet opens in the app itself
                 worthACard && Settings.canDrawOverlays(ctx) -> Overlay.showAfterCall(ctx, event, entry)

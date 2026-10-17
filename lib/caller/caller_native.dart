@@ -19,6 +19,9 @@ class CallEnded {
   final String? preset;
   final String contactName;
 
+  /// A name typed into the after-call card.
+  final String typedName;
+
   const CallEnded(
       {required this.phone,
       required this.durationS,
@@ -27,7 +30,8 @@ class CallEnded {
       this.expected = false,
       this.known = true,
       this.preset,
-      this.contactName = ''});
+      this.contactName = '',
+      this.typedName = ''});
 
   bool get connected => durationS > 0;
 
@@ -40,6 +44,7 @@ class CallEnded {
         known: m['known'] != false,
         preset: m['preset'] is String ? m['preset'] as String : null,
         contactName: '${m['contact_name'] ?? ''}',
+        typedName: '${m['typed_name'] ?? ''}',
       );
 }
 

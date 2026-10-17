@@ -13,6 +13,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.json.JSONObject
@@ -176,6 +177,58 @@ object Overlay {
         card.addView(text(sub, 14f, "#1A3C5E"))
         entry?.optString("last_note")?.takeIf { it.isNotBlank() }?.let { card.addView(text(it, 13f, "#374151")) }
 
+        // A name, typed right here, for a number the CRM has no name for.
+        val needsName = entry == null || entry.optString("name").isBlank() || entry.optString("name") == phone
+        val nameBox = if (!needsName) null else EditText(ctx).apply {
+            hint = "Their name"
+            textSize = 15f
+            setSingleLine()
+            setText(event.optString("contact_name"))
+            setTextColor(Color.parseColor("#1F2937"))
+            setPadding(dp(ctx, 12), dp(ctx, 8), dp(ctx, 12), dp(ctx, 8))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(ctx, 10).toFloat()
+                setStroke(dp(ctx, 1), Color.parseColor("#9CA3AF"))
+            }
+        }
+        val said = text("", 13f, "#1E8E3E").apply { visibility = View.GONE }
+        if (nameBox != null) {
+            val nameRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(ctx, 8), 0, 0)
+            }
+            nameRow.addView(nameBox, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            nameRow.addView(TextView(ctx).apply {
+                text = "✓ Save"
+                textSize = 15f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                setPadding(dp(ctx, 14), dp(ctx, 10), dp(ctx, 14), dp(ctx, 10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(ctx, 10).toFloat()
+                    setColor(Color.parseColor("#1E8E3E"))
+                }
+                setOnClickListener {
+                    val typed = nameBox.text.toString().trim()
+                    if (typed.isEmpty()) {
+                        nameBox.error = "Type a name"
+                        return@setOnClickListener
+                    }
+                    said.visibility = View.VISIBLE
+                    said.text = "Saving…"
+                    saveName(ctx, event, typed) { ok ->
+                        said.text = if (ok) "Saved: $typed ✓" else "Could not save now. Tap Add details to save it in the app."
+                        said.setTextColor(Color.parseColor(if (ok) "#1E8E3E" else "#C62828"))
+                        if (ok) main.postDelayed({ hideAfterCall() }, 1500)
+                    }
+                }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { marginStart = dp(ctx, 8) })
+            card.addView(nameRow)
+            card.addView(said)
+        }
+
         fun button(label: String, preset: String, color: String) = TextView(ctx).apply {
             text = label
             textSize = 14f
@@ -187,7 +240,7 @@ object Overlay {
                 cornerRadius = dp(ctx, 12).toFloat()
                 setColor(Color.parseColor("#F3F4F6"))
             }
-            setOnClickListener { openLog(ctx, preset) }
+            setOnClickListener { openLog(ctx, preset, nameBox?.text?.toString()?.trim() ?: "") }
         }
         val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(ctx, 10), 0, 0) }
         for ((label, preset, color) in listOf(Triple("🔥 Interested", "interested", "#C62828"),
@@ -201,27 +254,71 @@ object Overlay {
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             .apply { topMargin = dp(ctx, 8) })
 
+        // Focusable only when there is a name to type (the keyboard needs it); touches outside the card still reach the
+        // screen below. At the top, so the keyboard does not cover it.
+        val focus = if (nameBox != null) WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        else WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            focus or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT).apply {
-            gravity = Gravity.CENTER
+            gravity = Gravity.TOP
+            y = dp(ctx, 70)
             horizontalMargin = 0.03f
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         }
         try {
             ctx.getSystemService(WindowManager::class.java).addView(card, params)
             afterView = card
+            android.util.Log.i("AltroCaller", "after-call card shown")
         } catch (e: Exception) {
             afterView = null
+            android.util.Log.w("AltroCaller", "after-call card not shown: $e")
         }
     }
 
-    /** Opens the app on the log sheet for this call, with the card's choice in it. */
-    private fun openLog(ctx: Context, preset: String) {
+    /** Saves the name typed on the card, with this call, straight to the CRM (the same call the phone's sync sends, so
+     *  it is one call there, not two). A new number becomes the caller's lead with that name. */
+    private fun saveName(ctx: Context, event: JSONObject, name: String, done: (Boolean) -> Unit) {
+        val store = CallerStore(ctx)
+        val phone = last10(event.optString("phone"))
+        val started = event.optLong("started_at_ms")
+        thread {
+            val ok = try {
+                if (store.token.isEmpty() || store.baseUrl.isEmpty() || phone.length != 10) false else {
+                    val talked = event.optInt("duration_s")
+                    val body = JSONObject()
+                        .put("client_id", "dev-$phone-$started")
+                        .put("started_at", java.time.Instant.ofEpochMilli(started).toString())
+                        .put("duration_s", talked)
+                        .put("direction", if (event.optString("type") == "out") "out" else "in")
+                        .put("outcome", if (talked > 0) "connected" else "no_answer")
+                        .put("name", name)
+                    val c = URL("${store.baseUrl}/crm/leads/$phone/calls").openConnection() as HttpURLConnection
+                    c.requestMethod = "POST"
+                    c.doOutput = true
+                    c.connectTimeout = 8000
+                    c.readTimeout = 15000
+                    c.setRequestProperty("Content-Type", "application/json")
+                    c.setRequestProperty("Authorization", "Bearer ${store.token}")
+                    c.outputStream.use { it.write(body.toString().toByteArray()) }
+                    val code = c.responseCode
+                    c.disconnect()
+                    code in 200..299
+                }
+            } catch (e: Exception) {
+                false
+            }
+            main.post { done(ok) }
+        }
+    }
+
+    /** Opens the app on the log sheet for this call, with the card's choice (and any name typed) in it. */
+    private fun openLog(ctx: Context, preset: String, typedName: String = "") {
         val store = CallerStore(ctx)
         store.takePendingCall()?.let { raw ->
-            store.setPendingCall(JSONObject(raw).put("preset", preset).toString())
+            store.setPendingCall(JSONObject(raw).put("preset", preset).put("typed_name", typedName).toString())
         }
         hideAfterCall()
         ctx.startActivity(Intent(ctx, CallerActivity::class.java).addFlags(
