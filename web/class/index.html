@@ -135,6 +135,17 @@
   .plan.rec a { background: var(--orange); }
   .mentor { display: inline-block; margin-top: 4px; background: #25d366; color: #fff; text-decoration: none; padding: 11px 16px; border-radius: 12px; font-weight: 700; }
 
+  /* inside the roadmap page: one column, a slim Altron bar on top, no captions */
+  html.embed .room.on { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  html.embed .side { order: -1; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  html.embed .who { flex: 1; padding: 8px 12px; }
+  html.embed .caption, html.embed .tx, html.embed .txbtn { display: none !important; }
+  html.embed .ctrls { padding: 6px 10px; }
+  html.embed .smsg { width: 100%; margin: 0 12px 6px; }
+  html.embed .intro { align-items: flex-start; padding: 16px 14px; }
+  html.embed .intro h1 { font-size: 24px; }
+  html.embed .orb-big { width: 56px; height: 56px; }
+  html.embed .boardwrap { padding: 10px 12px; }
   @media (max-width: 860px) {
     .room.on { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
     .side { order: -1; }
@@ -204,6 +215,11 @@
   const API = 'https://edu.altrobytelab.com';
   const WA = '917222977927';
   const P = new URLSearchParams(location.search);
+  // Opened inside the roadmap page: compact layout, and plan / mentor links open the whole page, not the frame.
+  if (P.get('embed') === '1') {
+    document.documentElement.classList.add('embed');
+    const base = document.createElement('base'); base.target = '_top'; document.head.appendChild(base);
+  }
   const $ = (id) => document.getElementById(id);
   const classId = P.get('id') || (P.get('note') ? null : 'demo');
   const noteId = P.get('note') ? Number(P.get('note')) : null;
