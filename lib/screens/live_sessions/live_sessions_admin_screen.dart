@@ -605,6 +605,24 @@ class _AttendeeCard extends StatelessWidget {
     ));
   }
 
+  Future<void> _downloadInvoice(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final token = (await SharedPreferences.getInstance()).getString('token') ?? '';
+      final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/live-sessions/admin/registrations/${attendee['id']}/invoice'),
+          headers: {'Authorization': 'Bearer $token'});
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode != 200) {
+        messenger.showSnackBar(SnackBar(content: Text('${body['detail'] ?? 'Could not make the invoice.'}')));
+        return;
+      }
+      html.window.open('${body['pdf_url']}', '_blank');
+      messenger.showSnackBar(SnackBar(content: Text('Invoice ${body['invoice_no']} is ready, and listed in Invoices.')));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not make the invoice. Please try again.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = attendee;
@@ -661,6 +679,13 @@ class _AttendeeCard extends StatelessWidget {
           // built for exactly the moment they are least likely to act — the
           // second after paying. Making it again here means the reach does
           // not depend on them remembering.
+          // A paid registration gets its GST invoice here: made once (and listed in Invoices), then downloaded.
+          if (status == 'paid')
+            IconButton(
+              icon: const Icon(Icons.receipt_long_rounded, size: 18, color: AppColors.primary),
+              tooltip: 'Download GST invoice',
+              onPressed: () => _downloadInvoice(context),
+            ),
           IconButton(
             icon: const Icon(Icons.ios_share_rounded,
                 size: 18, color: AppColors.primary),
