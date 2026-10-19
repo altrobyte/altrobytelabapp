@@ -231,7 +231,7 @@
   const isDemo = classId === 'demo';
   const IDLE_S = 120;
   let lang = P.get('lang') || (isDemo ? 'hi' : 'en');   // ad leads are most at ease in Hinglish
-  if (isDemo) $('start').textContent = '▶ Start free demo';
+  if (isDemo) $('start').textContent = '▶ Start live demo';
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
   const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
   function track(e) { try { if (window.gtag) gtag('event', e); } catch (_) {} }
