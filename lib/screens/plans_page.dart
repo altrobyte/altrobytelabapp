@@ -365,7 +365,7 @@ class _PlansPageState extends State<PlansPage> {
             const SizedBox(width: 14),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text('Pay month by month', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 17, color: _ink)),
-              Text('Month 1 you design your PCB; month 2 it is in your hands', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
+              Text('Month 1 your first device and its PCB design; month 2 it goes online', style: GoogleFonts.inter(color: _muted, fontSize: 13)),
             ]),
           ]),
           Container(
