@@ -290,7 +290,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           Row(children: [
             Expanded(child: TextField(controller: _email, decoration: _dec('Email'))),
             const SizedBox(width: 10),
-            Expanded(child: TextField(controller: _gstin, decoration: _dec('Customer GSTIN (if any)'))),
+            Expanded(child: TextField(controller: _gstin, textCapitalization: TextCapitalization.characters, maxLength: 15, decoration: _dec('Customer GSTIN, 15 characters (leave empty for students)'))),
           ]),
           const SizedBox(height: 12),
           TextField(controller: _address, decoration: _dec('Address'), minLines: 1, maxLines: 3),
