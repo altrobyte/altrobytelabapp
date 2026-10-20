@@ -238,7 +238,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
     });
   }
 
-  Future<void> _register({String paymentRef = '', bool booking = false}) async {
+  Future<void> _register({String paymentRef = '', bool booking = false, bool payLater = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() { _submitting = true; _actionError = null; });
     final forceNew = _forceNewOnNextRegister;
@@ -249,7 +249,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
           college: _collegeCtrl.text.trim(), branch: _branchCtrl.text.trim(),
           address: _addressCtrl.text.trim(), city: _cityCtrl.text.trim(),
           couponCode: _appliedCouponCode ?? '', forceNew: forceNew,
-          occupation: _occupation, paymentRef: paymentRef, booking: booking,
+          occupation: _occupation, paymentRef: paymentRef, booking: booking, payLater: payLater,
           returnUrl: '${Uri.base.origin}/live-sessions/${widget.sessionId}');
       if (!mounted) return;
       _registeredName = _nameCtrl.text.trim();
@@ -265,7 +265,7 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
         _openPaymentPage();
       } else {
         setState(() { _regState = _RegState.registered; _submitting = false; });
-        _showSuccessCard(claimedPaid: result['status'] == 'claimed_paid');
+        _showSuccessCard(claimedPaid: result['status'] == 'claimed_paid' || result['status'] == 'pay_later');
       }
     } catch (e) {
       if (!mounted) return;
@@ -1032,10 +1032,20 @@ class _LiveSessionDetailScreenState extends State<LiveSessionDetailScreen> {
                       fontWeight: FontWeight.w600, fontSize: 13.5)),
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: TextButton(
+              onPressed: _submitting ? null : () => _register(payLater: true),
+              child: Text("I'll pay later", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
               'Paid already by UPI or bank transfer? Give us the payment '
-              'reference and we will confirm your seat after checking it.',
+              'reference and we will confirm your seat after checking it. '
+              'Paying later? Your seat is held and our team will confirm it once you pay.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                   fontSize: 11, height: 1.4, color: AppColors.textSecondary)),

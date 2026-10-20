@@ -3189,6 +3189,7 @@ class ApiService {
     String occupation = '',
     String paymentRef = '', // set when the person says they have already paid
     bool booking = false,
+    bool payLater = false, // hold the seat; an admin marks it paid when the money comes in
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('student_token');
@@ -3200,6 +3201,7 @@ class ApiService {
         'college': college, 'branch': branch, 'address': address, 'city': city,
         'occupation': occupation, 'company': occupation == 'professional' ? college : '',
         if (paymentRef.isNotEmpty) ...{'already_paid': true, 'payment_ref': paymentRef},
+        if (payLater) 'pay_later': true,
         'booking': booking,
         'coupon_code': couponCode,
         'force_new': forceNew,
