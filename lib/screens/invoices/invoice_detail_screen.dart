@@ -111,6 +111,18 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
     }
   }
 
+  Future<void> _duplicate() async {
+    final res = await Navigator.push<Invoice>(
+      context,
+      MaterialPageRoute(
+          builder: (_) => InvoiceFormScreen(instituteId: widget.instituteId, settings: widget.settings, copyFrom: _inv)),
+    );
+    if (res != null) {
+      _changed = true;
+      _toast('Copy saved as ${res.invoiceNo}');
+    }
+  }
+
   Future<void> _cancel() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -350,6 +362,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
                           _action(Icons.open_in_new_rounded, 'Open', _openLink),
                           if (!inv.isCancelled && !inv.isPaid) _action(Icons.payments_rounded, 'Record payment', _recordPayment, color: AppColors.success),
                           if (inv.canEdit) _action(Icons.edit_rounded, 'Edit', _edit),
+                          _action(Icons.copy_all_rounded, 'Duplicate', _duplicate),
                           if (!inv.isCancelled && inv.amountPaid <= 0) _action(Icons.block_rounded, 'Cancel invoice', _cancel, color: AppColors.error),
                         ])),
                         _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -11,7 +11,9 @@ class InvoiceFormScreen extends StatefulWidget {
   final int instituteId;
   final InvoiceSettings settings;
   final Invoice? existing;
-  const InvoiceFormScreen({super.key, required this.instituteId, required this.settings, this.existing});
+  /// Duplicate: a new invoice filled from this one (customer, items, notes), dated today with a new number.
+  final Invoice? copyFrom;
+  const InvoiceFormScreen({super.key, required this.instituteId, required this.settings, this.existing, this.copyFrom});
 
   @override
   State<InvoiceFormScreen> createState() => _InvoiceFormScreenState();
@@ -57,7 +59,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   @override
   void initState() {
     super.initState();
-    final e = widget.existing;
+    final e = widget.existing ?? widget.copyFrom;
     _state = e?.customerState ?? widget.settings['state'];
     if (e != null) {
       _name.text = e.customerName;
@@ -69,8 +71,12 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       _discount.text = e.discount > 0 ? '${e.discount}' : '';
       _include = e.pricesIncludeTax;
       _studentId = e.studentId;
-      _issue = DateTime.tryParse(e.issueDate) ?? _issue;
-      _due = e.dueDate == null ? null : DateTime.tryParse(e.dueDate!);
+      if (widget.existing != null) {
+        _issue = DateTime.tryParse(e.issueDate) ?? _issue;
+        _due = e.dueDate == null ? null : DateTime.tryParse(e.dueDate!);
+      } else {
+        _due = DateTime.now().add(const Duration(days: 7));      // a copy is a new invoice: today, due in a week
+      }
       for (final i in e.items) {
         final r = _addRow(notify: false);
         r.desc.text = i.description;
