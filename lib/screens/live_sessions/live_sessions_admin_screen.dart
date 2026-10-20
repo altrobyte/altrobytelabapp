@@ -390,6 +390,29 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                   child: Text('Attendees — ${session['title']} (${attendees.length})',
                       style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
                 ),
+                // Every paid attendee without an invoice gets one (new payments get theirs automatically).
+                TextButton.icon(
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(ctx);
+                    try {
+                      final token = (await SharedPreferences.getInstance()).getString('token') ?? '';
+                      final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/live-sessions/admin/$sessionId/invoices'),
+                          headers: {'Authorization': 'Bearer $token'});
+                      final body = jsonDecode(res.body) as Map<String, dynamic>;
+                      final made = (body['made'] as List?) ?? const [];
+                      messenger.showSnackBar(SnackBar(
+                          content: Text(res.statusCode != 200
+                              ? '${body['detail'] ?? 'Could not make the invoices.'}'
+                              : made.isEmpty
+                                  ? 'Every paid attendee already has an invoice. They are in Invoices.'
+                                  : 'Made ${made.length} invoice${made.length == 1 ? '' : 's'}: ${made.join(', ')}. They are in Invoices.')));
+                    } catch (_) {
+                      messenger.showSnackBar(const SnackBar(content: Text('Could not make the invoices. Please try again.')));
+                    }
+                  },
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: const Text('Invoices for all paid'),
+                ),
                 TextButton.icon(
                   onPressed: () => _exportCsv(sessionId),
                   icon: const Icon(Icons.download_rounded, size: 18),
