@@ -455,6 +455,10 @@
       <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
     </div>
     <div class="grid3" id="plans" style="margin-top:26px"></div>
+    <div class="card emi" style="margin-top:16px;background:#F3F7FF;border-color:#cfdcf5">
+      <div><div style="font-weight:700;color:var(--navy)">Prefer to learn on your own? Self-paced: ₹4,999 + GST a month</div><div class="small">Every module, Altron the AI mentor teaching each lesson by voice, a weekly group doubt call. Kit optional, from ₹2,999.</div></div>
+      <a class="btn ghost" href="/pricing" data-track="admissions_selfpaced">See self-paced</a>
+    </div>
     <div class="card emi" style="background:#FFF7EC;border-color:#f3d7b4">
       <div><div style="font-weight:700;color:var(--navy)">Not ready to pay the fee today?</div><div class="small">Book your seat in the next batch for ₹999 (with GST). It is adjusted in your fee.</div></div>
       <a class="btn primary" id="seatBtn" href="/enroll/program-enrolment?plan=token" data-track="admissions_seat_booking">Book my seat · ₹999</a>
@@ -624,6 +628,11 @@
   });
 
   const STAGE_COLOURS = ['#2D6CDF', '#1E9D66', '#E08A2E', '#7C4DFF'];
+  // Stage 1 is open to everyone; Stages 2-4 open after a free WhatsApp sign-in, the same one the live demo uses, so the
+  // CRM knows who is reading the roadmap.
+  const roadmapOpen = () => !!store.get('adm_token') || siteSignedIn();
+  window.addEventListener('storage', (e) => { if (e.key === 'adm_token' && roadmap) renderStages(); });   // signed in for the demo
+  window.renderStagesAgain = () => { if (roadmap) renderStages(); };
   function renderStages() {
     if (!roadmap) return;
     $('stages').innerHTML = (roadmap.steps || []).map((s, i) => {
@@ -633,7 +642,9 @@
       const [title, ...rest] = fix(s.title).split('—');
       const tagline = fix(s.description || s.subtitle || '').split('\n')[0];
       const lessons = phases.reduce((n, p) => n + (p.children || []).reduce((m, t) => m + (t.children || []).length, 0), 0);
-      return `<div class="stage open ${startStage === i + 1 ? 'here' : ''}" data-i="${i}" style="--sc:${STAGE_COLOURS[i] || 'var(--navy)'}">
+      const locked = i > 0 && !roadmapOpen();
+      return `<div class="stage open ${startStage === i + 1 ? 'here' : ''} ${locked ? 'locked' : ''}" data-i="${i}" style="--sc:${STAGE_COLOURS[i] || 'var(--navy)'}">
+        ${locked ? '<div class="unlock"><button type="button" class="btn primary" data-unlock>🔓 See the full roadmap · free WhatsApp sign-in</button></div>' : ''}
         <button type="button" aria-expanded="true"><span class="n">${i + 1}</span>
           <span><span class="month">Month ${i + 1}</span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
             <span class="tag">${esc(tagline)}</span><br><span class="lcount">${lessons} lessons</span></span>
@@ -643,6 +654,7 @@
           ${outs ? `<div class="outwrap"><span>You walk out with</span><ul class="outs">${(outs.children || []).map((o) => `<li>${esc(o.title)}</li>`).join('')}</ul></div>` : ''}
         </div></div>`;
     }).join('');
+    for (const el of document.querySelectorAll('[data-unlock]')) el.onclick = () => window.openSignin();
     for (const el of document.querySelectorAll('.stage > button')) {
       el.onclick = () => { const st = el.parentElement; st.classList.toggle('open'); el.setAttribute('aria-expanded', st.classList.contains('open')); };
     }
@@ -800,6 +812,60 @@
   for (const a of document.querySelectorAll('a[href^="/enroll/"]')) a.addEventListener('click', () => track('admissions_enrol'));
   for (const a of document.querySelectorAll('a[data-track]')) a.addEventListener('click', () => track(a.dataset.track));
   document.addEventListener('click', (e) => { const a = e.target.closest('a[data-plan]'); if (a) track('admissions_enrol_' + a.dataset.plan); });
+})();
+</script>
+<style>
+  .stage.locked { position: relative; }
+  .stage.locked .body { filter: blur(5px); pointer-events: none; user-select: none; max-height: 220px; overflow: hidden; }
+  .stage .unlock { position: absolute; left: 0; right: 0; bottom: 70px; display: flex; justify-content: center; z-index: 2; padding: 0 12px; }
+  .signin-sheet { position: fixed; inset: 0; z-index: 80; background: rgba(11,36,80,.55); display: none; align-items: center; justify-content: center; padding: 16px; }
+  .signin-sheet.on { display: flex; }
+  .signin-sheet .box { background: #fff; border-radius: 18px; padding: 20px; width: min(420px, 100%); }
+  .signin-sheet input { width: 100%; box-sizing: border-box; font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; margin-top: 8px; }
+  .signin-sheet .msg { font-size: 13px; min-height: 18px; margin-top: 8px; color: var(--muted); }
+</style>
+<div class="signin-sheet" id="signinSheet" role="dialog" aria-label="Sign in with WhatsApp">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--navy);font-size:18px">See the full roadmap</b><button type="button" id="siClose" style="border:0;background:none;font-size:20px;cursor:pointer">✕</button></div>
+    <p class="small" style="margin:6px 0 4px">Free. Sign in with WhatsApp once and the full roadmap and the live demo open for you.</p>
+    <input id="siName" placeholder="Your name" autocomplete="name">
+    <input id="siPhone" placeholder="WhatsApp number" inputmode="tel" autocomplete="tel">
+    <button type="button" class="btn primary" id="siSend" style="margin-top:10px;width:100%">Send code on WhatsApp</button>
+    <div id="siOtpRow" style="display:none"><input id="siOtp" placeholder="Code from WhatsApp" inputmode="numeric"><button type="button" class="btn primary" id="siVerify" style="margin-top:10px;width:100%">Open the roadmap</button></div>
+    <div class="msg" id="siMsg"></div>
+  </div>
+</div>
+<script>
+(() => {
+  const API = 'https://edu.altrobytelab.com', $ = (id) => document.getElementById(id);
+  const put = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+  const digits = (v) => String(v || '').replace(/[^0-9]/g, '').slice(-10);
+  const msg = (t, bad) => { $('siMsg').textContent = t; $('siMsg').style.color = bad ? '#c62828' : ''; };
+  window.openSignin = () => { $('signinSheet').classList.add('on'); $('siName').focus(); try { if (window.gtag) gtag('event', 'admissions_unlock_open'); } catch (_) {} };
+  $('siClose').onclick = () => $('signinSheet').classList.remove('on');
+  $('siSend').onclick = async () => {
+    const name = $('siName').value.trim(), phone = digits($('siPhone').value);
+    if (!name) return msg('Please write your name.', true);
+    if (phone.length !== 10) return msg('Please enter your 10-digit WhatsApp number.', true);
+    msg('Sending…');
+    try { const r = await fetch(API + '/student/standalone/request-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name }) });
+          const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || 'Could not send the code. Try again.');
+          $('siOtpRow').style.display = ''; msg('Code sent. Check WhatsApp.'); $('siOtp').focus(); }
+    catch (e) { msg(e.message, true); }
+  };
+  $('siVerify').onclick = async () => {
+    const name = $('siName').value.trim(), phone = digits($('siPhone').value), otp = $('siOtp').value.trim();
+    if (otp.length < 4) return msg('Enter the code from WhatsApp.', true);
+    msg('Checking…');
+    try { const r = await fetch(API + '/student/standalone/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp, name }) });
+          const j = await r.json().catch(() => ({})); if (!r.ok || !j.token) throw new Error(j.detail || 'That code did not work. Check it, or send it again.');
+          put('adm_lead', '1'); put('adm_name', j.name || name); put('adm_phone', phone); put('adm_token', j.token);
+          $('signinSheet').classList.remove('on'); msg('');
+          try { if (window.gtag) gtag('event', 'admissions_unlocked'); } catch (_) {}
+          fetch(API + '/crm/seen', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + j.token }, body: JSON.stringify({ what: 'roadmap', detail: 'Unlocked the full roadmap' }) }).catch(() => {});
+          if (window.renderStagesAgain) window.renderStagesAgain(); }
+    catch (e) { msg(e.message, true); }
+  };
 })();
 </script>
 <!-- Altron beside the roadmap: a side panel on a laptop, a bottom sheet on a phone. The frame is made on open and removed on
