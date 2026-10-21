@@ -142,6 +142,9 @@ class _TrainerUsageScreenState extends State<TrainerUsageScreen> {
                         Text('${live['minutes'] ?? 0} minutes', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
                         Text('≈ ₹${live['inr'] ?? 0} in all', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFB4470A))),
                         Text('≈ ₹${live['inr_per_learner'] ?? 0} per learner', style: GoogleFonts.inter(fontSize: 13)),
+                        if ((((_data?['team'] as Map?) ?? const {})['minutes'] ?? 0) as num > 0)
+                          Text('Team testing (not counted): ${(_data?['team'] as Map)['minutes']} min · ≈ ₹${(_data?['team'] as Map)['inr']}',
+                              style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
                         Text('Estimate at Google list prices; the Google Cloud bill is the final word.',
                             style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
                       ]),
