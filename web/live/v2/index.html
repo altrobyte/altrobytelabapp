@@ -145,6 +145,8 @@
     const body = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
     if (r.status === 429) throw Object.assign(new Error(body.detail || "Today's talking time is used up. It comes back tomorrow."), { out: true });
+    // Altron as a trainer is part of Self-paced; the free tastes never get here
+    if (r.status === 402) throw Object.assign(new Error(String(body.detail || '').replace(/^ACCESS_NEEDED:\s*/, '') || 'Altron as your trainer is part of Self-paced.'), { out: true });
     if (!r.ok) throw new Error(body.detail || 'Altron could not start. Try again in a minute.');
     return body;
   }

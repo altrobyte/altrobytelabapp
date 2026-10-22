@@ -207,7 +207,9 @@ class LinkedSessionInfo {
 class AiLabInfo {
   final int id;
   final String title;
-  const AiLabInfo({required this.id, required this.title});
+  /// The note the experiment was made from: the app shows it inside that note's lesson.
+  final int? contentId;
+  const AiLabInfo({required this.id, required this.title, this.contentId});
 }
 
 class TrainingModule {
@@ -267,7 +269,7 @@ class TrainingModule {
         locked: j['locked'] ?? false,
         loginRequired: j['login_required'] ?? false,
         aiLabEnabled: j['ai_lab_enabled'] == true,
-        aiLabs: [for (final l in (j['ai_labs'] as List? ?? const [])) AiLabInfo(id: (l['id'] as num).toInt(), title: '${l['title']}')],
+        aiLabs: [for (final l in (j['ai_labs'] as List? ?? const [])) AiLabInfo(id: (l['id'] as num).toInt(), title: '${l['title']}', contentId: (l['content_id'] as num?)?.toInt())],
         linkedSession: j['linked_session'] != null
             ? LinkedSessionInfo.fromJson(Map<String, dynamic>.from(j['linked_session']))
             : null,

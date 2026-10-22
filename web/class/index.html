@@ -476,6 +476,7 @@
     // A Google account has no WhatsApp number: Altron asks for the WhatsApp sign-in, so the team can follow up.
     if (r.status === 403 && String(b.detail || '').startsWith('PHONE_NEEDED')) throw Object.assign(new Error(String(b.detail).replace(/^PHONE_NEEDED:\s*/, '')), { signin: true });
     if (r.status === 429) throw Object.assign(new Error(b.detail || 'Your class time is used up for today.'), { out: true });
+    if (r.status === 402) throw Object.assign(new Error(String(b.detail || '').replace(/^ACCESS_NEEDED:\s*/, '') || 'Altron as your trainer is part of Self-paced.'), { out: true });
     if (!r.ok) throw new Error(b.detail || 'Altron could not start. Try again in a minute.');
     return b;
   }

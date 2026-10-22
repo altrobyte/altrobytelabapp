@@ -4,6 +4,7 @@
 // that module, and a note's page is written to a temporary file only when it is opened. Nothing is stored in the app.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../models/training_module_model.dart';
@@ -114,6 +115,129 @@ class _ModulesPanelState extends State<ModulesPanel> {
     );
   }
 
+  /// The code item: shown to read and type, with a copy button. The learner types it into their own project.
+  Future<void> _code(ContentItem it) async {
+    final code = it.htmlContent ?? '';
+    await showDialog<void>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(it.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+        content: SizedBox(
+          width: 640,
+          child: SingleChildScrollView(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(10)),
+              child: SelectableText(code, style: GoogleFonts.robotoMono(fontSize: 12.5, color: const Color(0xFFE2E8F0), height: 1.5)),
+            ),
+          ),
+        ),
+        actions: [
+          Text('Type it into your project yourself; copying is for checking.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+          TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied')));
+              },
+              child: const Text('Copy')),
+          FilledButton(onPressed: () => Navigator.pop(d), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  /// The GitHub project: open it, or copy the clone command for the terminal in VS Code.
+  Future<void> _github(ContentItem it) async {
+    final url = it.resourceUrl ?? '';
+    await showDialog<void>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(it.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Open the project to read it, or clone it into your workspace from the terminal in VS Code:', style: GoogleFonts.inter(fontSize: 13)),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(8)),
+            child: SelectableText('git clone $url', style: GoogleFonts.robotoMono(fontSize: 12.5, color: const Color(0xFFE2E8F0))),
+          ),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: 'git clone $url'));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clone command copied')));
+              },
+              child: const Text('Copy clone command')),
+          FilledButton(
+              onPressed: () {
+                Navigator.pop(d);
+                _link(url);
+              },
+              child: const Text('Open on GitHub')),
+        ],
+      ),
+    );
+  }
+
+  Widget _step(String n, String label, Color color) => Container(
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+        child: Text('$n  $label', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+      );
+
+  Widget _action(IconData icon, String title, String action, VoidCallback? onTap, {bool locked = false, bool primary = false}) => ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.only(left: 4),
+        leading: Icon(locked ? Icons.lock_outline_rounded : icon, size: 20, color: locked ? Colors.grey : (primary ? AppColors.accent : AppColors.primary)),
+        title: Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: primary ? FontWeight.w600 : FontWeight.w400)),
+        trailing: locked
+            ? Text('Self-paced', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary))
+            : onTap == null
+                ? null
+                : primary
+                    ? ElevatedButton(onPressed: onTap, child: Text(action))
+                    : TextButton(onPressed: onTap, child: Text(action)),
+      );
+
+  /// One subtopic as a lesson. Items the lesson does not know (a video, a resource) stay below, as before.
+  Widget _lesson(String title, List<ContentItem> items, List<AiLabInfo> labs) {
+    final notes = items.where((i) => i.type == 'notes').toList();
+    final codes = items.where((i) => i.type == 'code').toList();
+    final gits = items.where((i) => i.type == 'github').toList();
+    final tests = items.where((i) => i.type == 'test').toList();
+    final others = items.where((i) => !const {'notes', 'code', 'github', 'test'}.contains(i.type)).toList();
+    final noteIds = notes.map((n) => n.id).toSet();
+    final myLabs = labs.where((l) => l.contentId != null && noteIds.contains(l.contentId)).toList();
+    final hasBuild = myLabs.isNotEmpty || codes.isNotEmpty || gits.isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
+      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.black.withValues(alpha: 0.06))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 4),
+        Wrap(children: [
+          if (notes.isNotEmpty) _step('1', 'Learn', AppColors.primary),
+          if (hasBuild) _step('2', 'Build & prove', AppColors.accent),
+          if (tests.isNotEmpty) _step('3', 'Test', const Color(0xFF2E7D32)),
+        ]),
+        for (final n in notes)
+          _action(Icons.record_voice_over_rounded, n.title, 'Learn with Altron',
+              (n.htmlContent ?? '').isNotEmpty ? () => _note(n) : null, locked: n.locked),
+        for (final l in myLabs)
+          _action(Icons.science_rounded, 'Experiment: ${l.title}', 'Start', widget.canStart ? () => widget.onStartLab(l.id) : null, primary: true),
+        for (final c in codes) _action(Icons.code_rounded, c.title, 'See code', () => _code(c), locked: c.locked),
+        for (final g in gits) _action(Icons.hub_rounded, g.title, 'Project', () => _github(g), locked: g.locked),
+        for (final t in tests)
+          _action(Icons.quiz_outlined, t.title, 'Take the test', t.testId == null ? null : () => _link('https://altrobytelab.com/test/${t.testId}'), locked: t.locked),
+        for (final o in others) _item(o),
+      ]),
+    );
+  }
+
   Widget _moduleBody(TrainingModule m) {
     if (_loading.contains(m.id)) {
       return const Padding(padding: EdgeInsets.all(14), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
@@ -131,10 +255,12 @@ class _ModulesPanelState extends State<ModulesPanel> {
     final d = _detail[m.id];
     if (d == null) return const SizedBox.shrink();
     final labs = m.aiLabs.isNotEmpty ? m.aiLabs : d.aiLabs;
+    final noteIds = {for (final t in d.topics) for (final st in t.subtopics) for (final it in st.contentItems) if (it.type == 'notes') it.id};
+    final loose = labs.where((l) => l.contentId == null || !noteIds.contains(l.contentId)).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (labs.isNotEmpty) ...[
+      if (loose.isNotEmpty) ...[
         Padding(padding: const EdgeInsets.fromLTRB(8, 4, 0, 2), child: Text('Hands-on experiments', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12.5))),
-        for (final l in labs)
+        for (final l in loose)
           ListTile(
             dense: true,
             contentPadding: const EdgeInsets.only(left: 8),
@@ -146,12 +272,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
           ),
       ],
       for (final t in d.topics) ...[
-        Padding(padding: const EdgeInsets.fromLTRB(8, 10, 0, 0), child: Text(t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13))),
-        for (final st in t.subtopics) ...[
-          if (st.title.isNotEmpty && st.title != t.title)
-            Padding(padding: const EdgeInsets.fromLTRB(8, 4, 0, 0), child: Text(st.title, style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary))),
-          for (final it in st.contentItems) _item(it),
-        ],
+        Padding(padding: const EdgeInsets.fromLTRB(8, 12, 0, 0), child: Text(t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5))),
+        for (final st in t.subtopics)
+          if (st.contentItems.isNotEmpty) _lesson(st.title.isNotEmpty ? st.title : t.title, st.contentItems, labs),
       ],
       if (d.topics.isEmpty) Padding(padding: const EdgeInsets.all(12), child: Text('This module has no lessons yet.', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary))),
     ]);
