@@ -468,7 +468,19 @@
     if (text !== lastState) { lastState = text; try { if (host) host.postMessage(JSON.stringify({ type: 'state', state: cls || 'idle' })); } catch (_) {} }
   }
   function txLine(who, text) { const p = document.createElement('p'); p.innerHTML = `<b>${who}:</b> ${esc(text)}`; $('tx').appendChild(p); $('tx').scrollTop = 1e9; }
+  // The demo starts without a sign-in: a three-minute preview (the server's guest token), then the WhatsApp sign-in, and
+  // Altron carries on from where it stopped.
+  let guest = false, guestEnd = 0, guestWarned = false, guestDone = false;
   async function fetchToken(resume) {
+    if (isDemo && !token()) {
+      if (guestDone) throw Object.assign(new Error('Sign in with your WhatsApp number to carry on.'), { signin: true });
+      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: 'demo', lang }) });
+      const gb = await g.json().catch(() => ({}));
+      if (!g.ok) { guestDone = true; throw Object.assign(new Error(gb.detail || 'Sign in with your WhatsApp number to start.'), { signin: true }); }
+      guest = true; guestEnd = Date.now() + (gb.seconds || 180) * 1000; guestWarned = false; track('class_guest_started');
+      return gb;
+    }
+    guest = false;
     const r = await fetch(API + '/trainer/live/token', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() },
       body: JSON.stringify({ class_id: classId, content_id: noteId, lang, resume: !!resume }) });
     const b = await r.json().catch(() => ({}));
@@ -621,6 +633,10 @@
     wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
     await startMic();
     outCtx = outCtx || new AudioContext(); if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
+    if (outCtx.state !== 'running') {
+      $('smsg').textContent = 'Tap anywhere to hear Altron.';
+      document.addEventListener('pointerdown', () => { outCtx.resume().catch(() => {}); $('smsg').textContent = ''; }, { once: true });
+    }
     running = true; conn = newConn(t); rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
     connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now(); lastHuman = Date.now(); reachedPart();
     clearInterval(ticker); ticker = setInterval(tick, 1000);
@@ -629,6 +645,20 @@
   }
   function tick() {
     if (!running) return;
+    if (guest) {
+      if (!guestWarned && Date.now() > guestEnd - 20000) {
+        guestWarned = true;
+        note('[The free preview is over. In two warm sentences, ask them to sign in with their WhatsApp number on the screen to carry on with the full demo and their plan. Then wait.]');
+      }
+      if (Date.now() >= guestEnd && !playing.length) {
+        guest = false; guestDone = true; cleanup(); status('paused', '');
+        $('room').classList.remove('on'); $('intro').classList.remove('hidden'); $('start').classList.add('hidden');
+        $('signin').classList.remove('hidden'); $('introMsg').textContent = 'Sign in with WhatsApp and Altron carries on from where it stopped.';
+        track('class_guest_ended');
+        return;
+      }
+      if (Date.now() >= rotateAt) return;               // a preview is never renewed
+    }
     if (Date.now() >= rotateAt) return renew();
     // ...but never while a question on the board waits for their answer
     if (ending && Date.now() >= endAt && !playing.length) return finish();
@@ -694,7 +724,7 @@
   for (const b of $('langs').children) b.onclick = () => { lang = b.dataset.l; paintLangs(); };
   paintLangs();
   async function startClass() {
-    if (!token()) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
+    if (!token() && !(isDemo && !guestDone)) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
     $('start').disabled = true; $('introMsg').textContent = '';
     try {
       outCtx = new AudioContext();                          // made on the tap, so phones allow the sound
@@ -710,7 +740,12 @@
     }
   }
   $('start').onclick = startClass;
-  loadClass().catch((e) => { $('introMsg').textContent = e.message; });
+  loadClass().then(() => {
+    if (!isDemo || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((st) => { st.getTracks().forEach((t) => t.stop()); track('class_mic_allowed'); startClass(); })
+      .catch(() => { track('class_mic_refused'); });
+  }).catch((e) => { $('introMsg').textContent = e.message; });
 })();
 </script>
 </body>
