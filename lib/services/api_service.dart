@@ -944,6 +944,13 @@ class ApiService {
     return _parse(res);
   }
 
+  /// The lead's own roadmap + live demo link (a code, never the number).
+  static Future<Map<String, dynamic>> crmDemoLink(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/leads/${Uri.encodeComponent(phone)}/demo-link'), headers: _headers(prefs.getString('token')));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> crmSummary() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');

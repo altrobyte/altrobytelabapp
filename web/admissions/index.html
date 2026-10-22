@@ -562,7 +562,13 @@
   // furthest section they scrolled to. Anonymous visitors stay anonymous.
   (() => {
     const tok = () => { let t = store.get('adm_token') || ''; if (!t) { try { t = JSON.parse(store.get('flutter.student_token') || 'null') || ''; } catch (_) {} } return t; };
-    const seen = (detail) => { const t = tok(); if (t) fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ what: 'roadmap', detail }) }).catch(() => {}); };
+    // A lead's own link (?l=CODE, sent on WhatsApp) says who is reading, without any sign-in.
+    const lead = (() => { const l = new URLSearchParams(location.search).get('l'); if (l) store.set('altron_lead', l); return l || store.get('altron_lead') || ''; })();
+    const seen = (detail) => {
+      const t = tok();
+      if (t) fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify({ what: 'roadmap', detail }) }).catch(() => {});
+      else if (lead) fetch(API + '/public/lead/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead, what: 'roadmap', detail }) }).catch(() => {});
+    };
     seen('');
     const order = [['build', 'What you build'], ['roadmap', 'Curriculum'], ['howlearn', 'How it works'], ['reviews', 'Reviews'], ['fees', 'Fees'], ['faq', 'FAQ']];
     let deepest = -1;
@@ -896,7 +902,8 @@
   function open() {
     if (!panel.querySelector('iframe')) {
       const f = document.createElement('iframe');
-      f.src = '/class/?id=demo&embed=1'; f.allow = 'microphone; autoplay'; f.title = 'Altron';
+      let lead = ''; try { lead = new URLSearchParams(location.search).get('l') || localStorage.getItem('altron_lead') || ''; } catch (_) {}
+      f.src = '/class/?id=demo&embed=1' + (lead ? '&l=' + encodeURIComponent(lead) : ''); f.allow = 'microphone; autoplay'; f.title = 'Altron';
       panel.appendChild(f);
     }
     panel.classList.add('on'); document.body.classList.add('altron-open'); fab.style.display = 'none';

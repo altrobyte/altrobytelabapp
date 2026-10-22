@@ -8,6 +8,7 @@
 
 import '../../widgets/lead_import_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
@@ -731,6 +732,19 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   }
 
   // The model reads this lead and says where they stand, what to do, and a message to send.
+  Future<void> _copyDemoLink() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final r = await ApiService.crmDemoLink(widget.phone);
+      final url = '${r['url'] ?? ''}';
+      if (url.isEmpty) throw Exception('no link');
+      await Clipboard.setData(ClipboardData(text: url));
+      messenger.showSnackBar(SnackBar(content: Text('Copied: $url')));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not make the demo link. Please try again.')));
+    }
+  }
+
   Future<void> _askAi() async {
     setState(() => _asking = true);
     try {
@@ -961,6 +975,13 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                 ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.auto_awesome_rounded, size: 18),
             label: Text(_asking ? 'Reading…' : 'Ask AI'),
+            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+          // Their own roadmap + live demo link: whatever they do there lands on this page, without a sign-in.
+          OutlinedButton.icon(
+            onPressed: _copyDemoLink,
+            icon: const Icon(Icons.link_rounded, size: 18),
+            label: const Text('Copy demo link'),
             style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
           ),
         ]),

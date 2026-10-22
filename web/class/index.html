@@ -327,11 +327,15 @@
   }
   // The CRM line says how far into the demo they got (one report each time they reach a further part).
   let furthest = -1;
+  const leadCode = (() => { const l = P.get('l'); if (l) store.set('altron_lead', l); return l || store.get('altron_lead') || ''; })();
   function reachedPart() {
-    if (!isDemo || at <= furthest || !token()) return;
+    if (!isDemo || at <= furthest || (!token() && !leadCode)) return;
     furthest = at;
-    try { fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...authH() },
-                                     body: JSON.stringify({ what: 'demo', detail: `${at + 1} of ${klass.sections.length}` }) }); } catch (_) {}
+    const detail = `${at + 1} of ${klass.sections.length}`;
+    try {
+      if (token()) fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ what: 'demo', detail }) });
+      else fetch(API + '/public/lead/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead: leadCode, what: 'demo', detail }) });
+    } catch (_) {}
   }
   let movedAt = 0, spokeHere = true;      // when the board last moved, and whether Altron has spoken since
   function go(i, byLearner) {
@@ -574,7 +578,10 @@
           heard = '';
         }
       } else if (c.name === 'save_counselling') {
-        try { await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) }); } catch (_) {}
+        try {
+          if (token()) await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) });
+          else if (leadCode) await fetch(API + '/public/lead/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead: leadCode, ...a }) });
+        } catch (_) {}
         showEnd(a.plan, a.why); track('class_counselling_done');
         r = { saved: true, screen: 'the plans are on their screen now, the suggested one marked, with a Rs 999 seat booking and a Talk to a mentor button. Say your two sentences and goodbye; the session then ends.' };
         ending = true; endAt = Date.now() + 45000;          // ends after the goodbye (or in 45 s at the latest)
