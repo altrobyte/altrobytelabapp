@@ -439,14 +439,14 @@
         <div class="small">${esc(p.period || '')} · ${inr(gst(price))} incl. GST</div><div class="small">${esc((p.features || [])[0] || '')}</div>
         <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'product-engineering')}?plan=${encodeURIComponent(p.key)}">Book my seat</a></div>`;
     }).join('');
-    const text = encodeURIComponent(`Hi, I just took the free Altron class.${rec ? ' Altron suggested ' + rec + '.' : ''} I want to know more.`);
+    const text = encodeURIComponent(`Hi, I just took the free Altron demo.${rec ? ' Altron suggested: ' + rec + '.' : ''}${why ? ' (' + why + ')' : ''} Please send me my plan and the next batch details.`);
     $('endHost').innerHTML = `<div style="margin-top:12px"><h3 style="margin:0 0 4px">Your path${rec ? ': ' + esc(rec) : ''}</h3>
       ${why ? `<p style="margin:0 0 10px;color:var(--soft)">${esc(why)}</p>` : ''}
       ${cards ? `<div class="plans">${cards}</div>` : ''}
       <div class="seat"><div><b>Not ready to pay the fee today?</b><div class="small">Book your seat in the next batch for ₹999 with GST. It is adjusted in your fee.</div></div>
         <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'program-enrolment')}?plan=token">Book my seat · ₹999</a></div>
       <p style="margin:12px 0 4px;color:var(--soft)">Not sure yet? A mentor answers on WhatsApp, no pressure.</p>
-      <a class="mentor" href="https://wa.me/${WA}?text=${text}" target="_blank" rel="noopener">💬 Talk to a mentor</a></div>`;
+      <a class="mentor" href="https://wa.me/${WA}?text=${text}" target="_blank" rel="noopener" style="font-size:16px;padding:13px 18px">💬 Get my plan on WhatsApp</a></div>`;
     $('endHost').scrollIntoView({ behavior: 'smooth', block: 'start' });
     track('class_plans_shown');
   }
@@ -468,16 +468,18 @@
     if (text !== lastState) { lastState = text; try { if (host) host.postMessage(JSON.stringify({ type: 'state', state: cls || 'idle' })); } catch (_) {} }
   }
   function txLine(who, text) { const p = document.createElement('p'); p.innerHTML = `<b>${who}:</b> ${esc(text)}`; $('tx').appendChild(p); $('tx').scrollTop = 1e9; }
-  // The demo starts without a sign-in: a three-minute preview (the server's guest token), then the WhatsApp sign-in, and
-  // Altron carries on from where it stopped.
-  let guest = false, guestEnd = 0, guestWarned = false, guestDone = false;
+  // The demo runs whole without a sign-in (the server's guest token, renewed like any session); leads come from WhatsApp,
+  // so the plan at the end is sent to us there. A visitor id on this device keeps the daily minutes fair.
+  let guest = false, guestDone = false;
+  const visitorId = (() => { let v = store.get('altron_vid'); if (!v) { v = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('altron_vid', v); } return v; })();
   async function fetchToken(resume) {
     if (isDemo && !token()) {
       if (guestDone) throw Object.assign(new Error('Sign in with your WhatsApp number to carry on.'), { signin: true });
-      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: 'demo', lang }) });
+      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: 'demo', lang, visitor: visitorId }) });
       const gb = await g.json().catch(() => ({}));
+      if (g.status === 429) throw Object.assign(new Error(gb.detail || "You have had today's free demo."), { out: true });
       if (!g.ok) { guestDone = true; throw Object.assign(new Error(gb.detail || 'Sign in with your WhatsApp number to start.'), { signin: true }); }
-      guest = true; guestEnd = Date.now() + (gb.seconds || 180) * 1000; guestWarned = false; track('class_guest_started');
+      guest = true; track('class_guest_started');
       return gb;
     }
     guest = false;
@@ -645,20 +647,7 @@
   }
   function tick() {
     if (!running) return;
-    if (guest) {
-      if (!guestWarned && Date.now() > guestEnd - 20000) {
-        guestWarned = true;
-        note('[The free preview is over. In two warm sentences, ask them to sign in with their WhatsApp number on the screen to carry on with the full demo and their plan. Then wait.]');
-      }
-      if (Date.now() >= guestEnd && !playing.length) {
-        guest = false; guestDone = true; cleanup(); status('paused', '');
-        $('room').classList.remove('on'); $('intro').classList.remove('hidden'); $('start').classList.add('hidden');
-        $('signin').classList.remove('hidden'); $('introMsg').textContent = 'Sign in with WhatsApp and Altron carries on from where it stopped.';
-        track('class_guest_ended');
-        return;
-      }
-      if (Date.now() >= rotateAt) return;               // a preview is never renewed
-    }
+
     if (Date.now() >= rotateAt) return renew();
     // ...but never while a question on the board waits for their answer
     if (ending && Date.now() >= endAt && !playing.length) return finish();
