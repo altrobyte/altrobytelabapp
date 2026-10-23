@@ -3102,7 +3102,7 @@ class _RoadmapCard extends StatelessWidget {
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Text(
-                      'Build 3-4 real industrial products — PCB in your hand, '
+                      'Build 3-4 real industrial products — your own PCB design, '
                       'cloud, AI, portfolio',
                       style: GoogleFonts.inter(
                           color: Colors.white.withValues(alpha: 0.85),
