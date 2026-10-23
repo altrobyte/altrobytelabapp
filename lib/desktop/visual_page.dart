@@ -113,8 +113,25 @@ const noteBridgeScript = r"""
       r.run[0].classList.add('altro-first');
       lit = r.run.slice();
     }
-    if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); follow(lit); }
   };
+  // While Altron talks about a section, the page drifts slowly through it at about reading speed, so the learner never
+  // has to scroll. Any scroll of their own (wheel, touch, keys) stops the drift until the next section.
+  var drift = null;
+  function stopDrift() { if (drift) { clearInterval(drift); drift = null; } }
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) { window.addEventListener(ev, stopDrift, { passive: true }); });
+  function follow(blocks) {
+    stopDrift();
+    if (!blocks || !blocks.length) return;
+    var endEl = blocks[blocks.length - 1];
+    setTimeout(function () {                    // after the smooth jump to the heading has settled
+      drift = setInterval(function () {
+        var bottom = endEl.getBoundingClientRect().bottom;
+        if (bottom <= window.innerHeight - 40) { stopDrift(); return; }
+        window.scrollBy(0, 1);
+      }, 40);                                   // about 25 pixels a second
+    }, 2500);
+  }
   function tapSelects() {
     var sels = document.querySelectorAll('select:not([multiple])');
     for (var s = 0; s < sels.length; s++) (function (sel) {
