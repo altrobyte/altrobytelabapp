@@ -55,6 +55,8 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   String? _newVersion; // a newer installer exists
   int _shown = 0;
   bool _showLog = false; // the whole conversation instead of the step on screen now
+  bool _module0Open = false; // Module 0 folds to one line once every lesson in it is done
+  bool _setupOpen = false; // the computer check folds to one line once the tools are ready
 
   @override
   void initState() {
@@ -496,6 +498,20 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           ])
         else if (_courses.isEmpty)
           Text('Loading your courses…', style: GoogleFonts.inter(color: AppColors.textSecondary))
+        else if (next == null && !_module0Open)
+          InkWell(
+            onTap: () => setState(() => _module0Open = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.success),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Done: all ${_courses.length} lessons. Your modules are below.', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13))),
+                Text('Show', style: GoogleFonts.inter(color: AppColors.primary, fontSize: 12.5)),
+              ]),
+            ),
+          )
         else
           for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),
         const SizedBox(height: 20),
@@ -589,6 +605,23 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     final r = c.setupReport;
     final items = [for (final i in (r?['items'] as List? ?? const [])) Map<String, dynamic>.from(i as Map)];
     final ready = r?['ready'] == true;
+    bool isBoard(Map<String, dynamic> i) => '${i['id']}' == 'board' || '${i['label']}'.toLowerCase().contains('board on usb');
+    final toolsReady = r != null && items.isNotEmpty && items.where((i) => !isBoard(i)).every((i) => '${i['state']}' == 'ok');
+    final boardIn = items.where(isBoard).every((i) => '${i['state']}' == 'ok');
+    if (toolsReady && !_setupOpen && !c.settingUp) {
+      return _card(
+        'Your computer',
+        Row(children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(boardIn ? 'Ready, board connected.' : 'Ready. Plug in your ESP32 when an experiment starts.',
+                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(onPressed: () => setState(() => _setupOpen = true), child: const Text('Details')),
+        ]),
+      );
+    }
     return _card(
       'Is my computer ready?',
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

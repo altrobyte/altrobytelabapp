@@ -9,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../models/training_module_model.dart';
 import '../services/api_service.dart';
+import 'class_screen.dart';
+import 'local_tools.dart';
 import 'note_tutor_screen.dart';
 import 'visual_page.dart';
 
@@ -77,9 +79,18 @@ class _ModulesPanelState extends State<ModulesPanel> {
     if (mounted) setState(() {});
   }
 
-  /// A note opens inside the app, with the tutor beside it.
+  /// A note opens as the live class (the board and Altron's voice) when it has its class version; otherwise the
+  /// reading tutor. Only one of them talks.
   Future<void> _note(ContentItem item) async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush, prepare: widget.prepare)));
+    bool live = false;
+    try {
+      live = await ApiService.hasClassVersion(item.id);
+    } catch (_) {}
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => live
+            ? ClassScreen(noteId: item.id, title: item.title)
+            : NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush, prepare: widget.prepare)));
   }
 
   Future<void> _link(String? url) async {
@@ -146,7 +157,23 @@ class _ModulesPanelState extends State<ModulesPanel> {
     );
   }
 
-  /// The GitHub project: open it, or copy the clone command for the terminal in VS Code.
+  /// The GitHub project, one tap: downloaded into Documents\Altrobyte\projects and opened in VS Code.
+  Future<void> _openProject(ContentItem it) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text('Getting "${it.title}" ready in VS Code…'), duration: const Duration(seconds: 20)));
+    try {
+      final folder = await fetchGithubProject(it.resourceUrl ?? '');
+      final ok = await openFolderInVsCode(folder);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(
+          content: Text(ok ? 'Opened in VS Code: $folder' : 'Downloaded to $folder, but VS Code did not open. Install it from the "Your computer" card.')));
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(e is String ? e : 'Could not get the project ready. Try again.')));
+    }
+  }
+
+  /// The GitHub project's other ways: open it on GitHub, or copy the clone command.
   Future<void> _github(ContentItem it) async {
     final url = it.resourceUrl ?? '';
     await showDialog<void>(
@@ -230,7 +257,19 @@ class _ModulesPanelState extends State<ModulesPanel> {
         for (final l in myLabs)
           _action(Icons.science_rounded, 'Experiment: ${l.title}', 'Start', widget.canStart ? () => widget.onStartLab(l.id) : null, primary: true),
         for (final c in codes) _action(Icons.code_rounded, c.title, 'See code', () => _code(c), locked: c.locked),
-        for (final g in gits) _action(Icons.hub_rounded, g.title, 'Project', () => _github(g), locked: g.locked),
+        for (final g in gits)
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.only(left: 4),
+            leading: Icon(g.locked ? Icons.lock_outline_rounded : Icons.hub_rounded, size: 20, color: g.locked ? Colors.grey : AppColors.accent),
+            title: Text(g.title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            trailing: g.locked
+                ? Text('Self-paced', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary))
+                : Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(tooltip: 'More: GitHub, clone command', onPressed: () => _github(g), icon: const Icon(Icons.more_horiz_rounded, size: 18)),
+                    ElevatedButton.icon(onPressed: () => _openProject(g), icon: const Icon(Icons.open_in_new_rounded, size: 16), label: const Text('Open in VS Code')),
+                  ]),
+          ),
         for (final t in tests)
           _action(Icons.quiz_outlined, t.title, 'Take the test', t.testId == null ? null : () => _link('https://altrobytelab.com/test/${t.testId}'), locked: t.locked),
         for (final o in others) _item(o),

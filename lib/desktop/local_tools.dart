@@ -3,6 +3,8 @@
 
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
+
 /// A ready folder under Documents, so a learner never has to find or pick one to begin.
 String? starterFolder({Map<String, String>? env}) {
   try {
@@ -42,6 +44,50 @@ String? projectRootOf(String file, {bool Function(String path)? exists}) {
     if (has('$dir${sep}platformio.ini')) return dir;
   }
   return null;
+}
+
+/// "owner/repo" and the branch (null = the repository's default) of a GitHub link, or null when it is not one.
+({String owner, String repo, String? branch})? githubRepoOf(String url) {
+  final m = RegExp(r'github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?(?:/tree/([^/?#]+))?(?:[/?#].*)?$').firstMatch(url.trim());
+  if (m == null) return null;
+  return (owner: m.group(1)!, repo: m.group(2)!, branch: m.group(3));
+}
+
+/// A module's GitHub project, ready on this computer: downloaded once into Documents\Altrobyte\projects\<repo> (no git
+/// needed: GitHub's zip, unpacked with Windows' own tar), then the same folder on later taps, so the learner's own changes
+/// are never overwritten. Returns the folder, or throws a message a learner can read.
+Future<String> fetchGithubProject(String url, {Map<String, String>? env}) async {
+  final r = githubRepoOf(url);
+  if (r == null) throw 'That is not a GitHub project link.';
+  final e = env ?? Platform.environment;
+  final home = e['USERPROFILE'] ?? e['HOME'];
+  if (home == null || home.isEmpty) throw 'Could not find your Documents folder.';
+  final sep = Platform.pathSeparator;
+  final root = Directory('$home${sep}Documents${sep}Altrobyte${sep}projects')..createSync(recursive: true);
+  final target = Directory('${root.path}$sep${r.repo}');
+  if (target.existsSync() && target.listSync().isNotEmpty) return target.path;      // already here: keep their work
+
+  final zipUrl = r.branch == null
+      ? 'https://github.com/${r.owner}/${r.repo}/archive/HEAD.zip'
+      : 'https://github.com/${r.owner}/${r.repo}/archive/refs/heads/${r.branch}.zip';
+  final res = await http.get(Uri.parse(zipUrl)).timeout(const Duration(minutes: 3));
+  if (res.statusCode != 200) {
+    throw res.statusCode == 404 ? 'This project is private or no longer on GitHub. Ask your mentor.' : 'Could not download the project. Check your internet.';
+  }
+  final tmp = Directory('${root.path}$sep.download-${DateTime.now().millisecondsSinceEpoch}')..createSync();
+  try {
+    final zip = File('${tmp.path}${sep}project.zip')..writeAsBytesSync(res.bodyBytes);
+    final x = await Process.run('tar', ['-xf', zip.path, '-C', tmp.path], runInShell: true).timeout(const Duration(minutes: 2));
+    if (x.exitCode != 0) throw 'Could not unpack the project.';
+    zip.deleteSync();
+    final inside = tmp.listSync().whereType<Directory>().toList();
+    if (inside.isEmpty) throw 'The project was empty.';
+    if (target.existsSync()) target.deleteSync(recursive: true);
+    inside.first.renameSync(target.path);
+    return target.path;
+  } finally {
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+  }
 }
 
 /// Opens a whole project folder in VS Code. False when VS Code could not be started.

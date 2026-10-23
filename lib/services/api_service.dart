@@ -2181,6 +2181,19 @@ class ApiService {
     return _parse(res)['modules'] as List? ?? [];
   }
 
+  /// Whether a note has its class version (taught live on the board). A missing one answers 404.
+  static Future<bool> hasClassVersion(int contentId) async {
+    final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/trainer/class-notes/$contentId'), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) return false;
+    try {
+      final j = jsonDecode(res.body);
+      return j is Map && '${j['html'] ?? j['class_html'] ?? ''}'.contains('altro-class');
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// One module with its topics and notes, fetched only when the learner opens it.
   static Future<Map<String, dynamic>> desktopModule(int id) async {
     final res = await http.get(Uri.parse(ApiConstants.trainingModule(id)), headers: _headers(await _learnerToken()))
