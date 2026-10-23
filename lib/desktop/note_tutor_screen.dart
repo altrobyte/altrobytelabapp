@@ -98,6 +98,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _messages = _web.webMessage.listen(_onPageMessage);
       await _web.loadStringContent(tutorPage(t.html));
       if (mounted) setState(() => _webReady = true);
+      // Altron teaches the note at once: one voice, the section it talks about glowing on the page.
+      if (mounted && _cam == null) _openCamera();
       // The first section was introduced while the page was still loading: point at it now.
       Future<void>.delayed(const Duration(milliseconds: 700), () {
         if (mounted && t.current.isNotEmpty) _show(t.current, false);
@@ -359,8 +361,14 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       await cam.setBackgroundColor(const Color(0xFF0D1726));
       await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       // One voice: the note tutor's lines go to Altron Live to say, instead of being spoken on top of it.
-      t.relay = (text) => cam.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
-      await loadLive(cam, noteId: widget.contentId, lang: t.lang); // talks at once; the camera stays off until the learner turns it on
+      t.relay = null;                                  // Altron teaches; the reading tutor's lines are not passed on
+      t.liveTeaching = true;
+      cam.webMessage.listen((m) {
+        final msg = liveMessage(m);
+        final part = (msg?['part'] as num?)?.toInt();
+        if (msg?['type'] == 'section' && part != null && part >= 1) t.reading('s${part - 1}', bring: true);
+      });
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {
@@ -377,6 +385,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _camReady = false;
     });
     t.relay = null;
+    t.liveTeaching = false;
     cam?.dispose(); // ends the session and lets go of the camera
     if (_voiceBefore == true && !t.voice) t.setVoice(true);
     _voiceBefore = null;
@@ -403,7 +412,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
               child: Row(children: [
                 const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
                 const SizedBox(width: 6),
-                Expanded(child: Text('Altron · camera', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
+                Expanded(child: Text('Altron', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
                 Text('one voice: Altron', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
                 IconButton(
                   tooltip: _camBig ? 'Smaller' : 'Bigger',

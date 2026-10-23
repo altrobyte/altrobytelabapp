@@ -115,7 +115,25 @@ const noteBridgeScript = r"""
     }
     if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   };
-  function start() { collect(); inView(); }
+  function tapSelects() {
+    var sels = document.querySelectorAll('select:not([multiple])');
+    for (var s = 0; s < sels.length; s++) (function (sel) {
+      if (sel.__altroTap) return; sel.__altroTap = true;
+      var row = document.createElement('div');
+      row.style.cssText = 'display:inline-flex;flex-wrap:wrap;gap:6px;margin:4px 6px 4px 0;vertical-align:middle';
+      function paint() { for (var b = 0; b < row.children.length; b++) { var on = row.children[b].__v === sel.value;
+        row.children[b].style.background = on ? '#14343F' : '#fff'; row.children[b].style.color = on ? '#fff' : '#14343F'; } }
+      for (var o = 0; o < sel.options.length; o++) (function (opt) {
+        var btn = document.createElement('button'); btn.type = 'button'; btn.textContent = opt.text; btn.__v = opt.value;
+        btn.style.cssText = 'font:inherit;font-size:14px;padding:6px 12px;border:1px solid #14343F;border-radius:8px;cursor:pointer';
+        btn.onclick = function () { sel.value = opt.value; sel.dispatchEvent(new Event('input', { bubbles: true }));
+          sel.dispatchEvent(new Event('change', { bubbles: true })); paint(); };
+        row.appendChild(btn);
+      })(sel.options[o]);
+      sel.style.display = 'none'; sel.parentNode.insertBefore(row, sel.nextSibling); paint();
+    })(sels[s]);
+  }
+  function start() { collect(); inView(); try { tapSelects(); } catch (e) {} }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
@@ -127,8 +145,12 @@ String showSectionScript(int index, {bool bring = false}) => 'window.__altroShow
 /// A note for the tutor view: the same closed page as [lessonPage], plus the small script that reports where the learner is.
 String tutorPage(String html) {
   final page = lessonPage(html);
-  final at = page.toLowerCase().lastIndexOf('</body>');
-  return at < 0 ? '$page$noteBridgeScript' : page.replaceRange(at, at, noteBridgeScript);
+  // Right after the security line in the head: a note's own script may hold the text "</body>" (a template it builds),
+  // and putting the bridge there once broke the note's buttons and showed the bridge as text.
+  final at = page.indexOf('<meta http-equiv="Content-Security-Policy"');
+  if (at < 0) return '$noteBridgeScript$page';
+  final end = page.indexOf('>', at) + 1;
+  return page.replaceRange(end, end, noteBridgeScript);
 }
 
 /// Opens a lesson page in the default browser. False when there is nothing to show or it could not be opened.

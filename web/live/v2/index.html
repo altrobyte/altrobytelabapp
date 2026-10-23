@@ -140,7 +140,7 @@
     if (!t) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
     const r = await fetch(API + '/trainer/live/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', lang, resume: !!resume }),
+      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', lang, resume: !!resume }),
     });
     const body = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
@@ -291,7 +291,11 @@
     const responses = [];
     for (const call of calls || []) {
       let response;
-      if (call.name === 'ask_camera') {
+      if (call.name === 'show_part') {
+        // the note is open in the app: the app scrolls to that section and makes it glow
+        tellHost({ type: 'section', part: Number(call.args && call.args.part) || 1 });
+        response = { shown: true };
+      } else if (call.name === 'ask_camera') {
         if (camOn) response = { camera: 'already on' };
         else {
           $('askT').textContent = (call.args && call.args.reason) ? 'Altron: ' + String(call.args.reason).slice(0, 90) : 'Altron wants to see your board';
@@ -322,7 +326,9 @@
         status('listening', 'live');
         if (kind === 'first') {
           const camLine = 'My camera is off.';
-          const opener = (course || P.get('steps') === '1')
+          const opener = P.get('teach') === '1'
+            ? 'The note is open on my screen. Greet me in one short sentence, then call show_part 1 and teach section 1.'
+            : (course || P.get('steps') === '1')
             ? 'The session has started. ' + camLine + ' Call get_current_step, then greet me in one short sentence and teach that step.'
             : 'The session has started. ' + camLine + ' Greet me in one short sentence, say what we will look at today and ask what I am working on.';
           note(opener);
