@@ -1,9 +1,10 @@
 // The founder's Altron as its own small Android app (24 Oct 2026). No login screen: the app carries its own key, built
 // in at build time, and trades it for a sign-in each time it opens.
 //
-// It listens for "Altron" all the time (WakeService, offline, on the phone). Saying it opens a card over whatever app is
-// open: Altron's live voice (the /live/v2 page in founder mode) answers about the leads and the course. When the talk
-// is over (the page rests after a quiet spell, or the founder taps outside the card) the card steps aside, the
+// It listens for "Altron" all the time (WakeService, offline, on the phone). Saying it brings a thin glowing strip along
+// the top of the screen, nothing else (founder, 25 Oct 2026): Altron's live voice (the /live/v2 page in founder mode,
+// running out of sight under the strip) answers about the leads and the course. The strip glows brighter while Altron
+// speaks. When the talk is over (the page rests after a quiet spell, or the founder taps the strip) it steps aside, the
 // microphone is let go, and listening starts again.
 //
 // Built from this entry point only, so none of the website's browser-only code comes in:
@@ -14,7 +15,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -47,11 +47,19 @@ class _Card extends StatefulWidget {
   State<_Card> createState() => _CardState();
 }
 
-class _CardState extends State<_Card> {
+class _CardState extends State<_Card> with SingleTickerProviderStateMixin {
   String? _token;
   String? _problem;
   WebViewController? _web;
   bool _talking = false;
+  bool _speaking = false;                  // Altron is talking: the strip glows brighter
+  late final _glow = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+
+  @override
+  void dispose() {
+    _glow.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -86,14 +94,19 @@ class _CardState extends State<_Card> {
 
   Future<void> _talk() async {
     final t = _token;
-    if (t == null) return;
+    if (t == null || _talking) return;
     final web = WebViewController(onPermissionRequest: (req) => req.grant())
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF0F2530))
       ..addJavaScriptChannel('AltronHost', onMessageReceived: (m) {
         try {
           final msg = jsonDecode(m.message) as Map;
-          if (msg['type'] == 'state' && (msg['state'] == 'paused' || msg['state'] == 'error' || msg['state'] == 'out_of_minutes')) _rest();
+          if (msg['type'] != 'state') return;
+          if (msg['state'] == 'paused' || msg['state'] == 'error' || msg['state'] == 'out_of_minutes') {
+            _rest();
+          } else if (mounted) {
+            setState(() => _speaking = msg['state'] == 'talk');
+          }
         } catch (_) {}
       });
     final p = web.platform;
@@ -111,6 +124,7 @@ class _CardState extends State<_Card> {
     await _web?.loadRequest(Uri.parse('about:blank'));
     setState(() {
       _talking = false;
+      _speaking = false;
       _web = null;
     });
     try {
@@ -120,51 +134,44 @@ class _CardState extends State<_Card> {
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
+    // The window itself is only a strip tall (AltronActivity); the voice page runs under the light, out of sight.
+    final bad = _problem != null;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(children: [
-        // Tapping outside the card ends the talk.
-        Positioned.fill(child: GestureDetector(onTap: _rest, child: Container(color: Colors.black.withValues(alpha: 0.35)))),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Container(
-            height: h * 0.62,
-            margin: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F2530),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 24)],
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: bad ? _open : _rest,
+        child: Stack(children: [
+          if (_web != null) Positioned.fill(child: Opacity(opacity: 0.01, child: WebViewWidget(controller: _web!))),
+          Align(
+            alignment: Alignment.topCenter,
+            child: AnimatedBuilder(
+              animation: _glow,
+              builder: (_, __) {
+                final t = _glow.value;
+                final colors = bad
+                    ? const [Color(0xFFFF5252), Color(0xFFFF8A80), Color(0xFFFF5252)]
+                    : const [Color(0xFF00E5FF), Color(0xFF76FF03), Color(0xFF00E5FF)];
+                final strong = bad || _speaking;
+                return Container(
+                  height: strong ? 6 : 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: colors,
+                      begin: Alignment(-1 + 2 * t - 1, 0),
+                      end: Alignment(1 + 2 * t - 1, 0),
+                      tileMode: TileMode.mirror,
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: colors[1].withValues(alpha: strong ? 0.9 : 0.55), blurRadius: strong ? 18 : 10, spreadRadius: strong ? 2 : 0),
+                    ],
+                  ),
+                );
+              },
             ),
-            child: Column(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 10, 6, 0),
-                child: Row(children: [
-                  Text('Altron', style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-                  const Spacer(),
-                  IconButton(tooltip: 'Done', onPressed: _rest, icon: const Icon(Icons.close_rounded, color: Colors.white70)),
-                ]),
-              ),
-              Expanded(
-                child: _problem != null
-                    ? Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Text(_problem!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: Colors.white, fontSize: 15)),
-                          const SizedBox(height: 14),
-                          FilledButton(onPressed: _open, child: const Text('Try again')),
-                        ]),
-                      )
-                    : _web == null
-                        ? Center(
-                            child: Text(_talking ? '' : 'Say "Altron"', style: GoogleFonts.inter(color: Colors.white70, fontSize: 15)))
-                        : WebViewWidget(controller: _web!),
-              ),
-            ]),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 }

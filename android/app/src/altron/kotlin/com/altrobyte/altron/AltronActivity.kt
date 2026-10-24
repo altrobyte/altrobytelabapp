@@ -8,22 +8,34 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.Gravity
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-/** The Altron card: a see-through Flutter screen (the card is drawn by Dart, lib/founder_main.dart) that opens over any
+/** The Altron strip: a see-through Flutter screen (the strip is drawn by Dart, lib/founder_main.dart) that opens over any
  *  app when WakeService hears "Altron". One channel, altron/native:
  *    setup        asks once for what a wake needs (notifications, drawing over other apps, no battery limits), starts listening
  *    listening    whether WakeService is on
- *    rest         the talk is over: listening again, and the card steps aside
+ *    rest         the talk is over: listening again, and the strip steps aside
  *    stop         listening off
- *  and tells Dart "woke" when a wake brings an already open card back. */
+ *  and tells Dart "woke" when a wake or the launcher brings it back. */
 class AltronActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
 
     override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
+
+    /** Altron is a thin glowing strip along the top of the screen, nothing more: the window is only that tall, and a
+     *  touch anywhere else goes to the app underneath. */
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.setGravity(Gravity.TOP)
+        window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, (40 * resources.displayMetrics.density).toInt())
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -51,7 +63,7 @@ class AltronActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getBooleanExtra("woke", false)) channel?.invokeMethod("woke", null)
+        channel?.invokeMethod("woke", null)        // a wake, or the founder opening the app: the strip comes back
     }
 
     private fun setup() {
@@ -59,7 +71,7 @@ class AltronActivity : FlutterActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 51)
         }
-        // A wake opens the card over other apps: Android allows that only to an app that may draw over them.
+        // A wake opens the strip over other apps: Android allows that only to an app that may draw over them.
         if (!Settings.canDrawOverlays(this)) {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
         }
