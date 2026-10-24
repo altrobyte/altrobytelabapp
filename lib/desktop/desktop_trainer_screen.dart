@@ -474,7 +474,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       }
     }
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (_newVersion != null)
           Container(
@@ -939,6 +939,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         final tools = ListView(padding: const EdgeInsets.all(12), children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]);
         return Scaffold(
           key: _scaffold,
+          backgroundColor: c.started ? null : const Color(0xFFF6F8FB),
           endDrawer: c.started ? null : Drawer(width: 480, child: SafeArea(child: tools)),
           appBar: AppBar(
             backgroundColor: AppColors.primary,
@@ -968,7 +969,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
             ],
           ),
           body: !c.started
-              ? Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 980), child: _courseHome()))
+              ? Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1180), child: _courseHome()))
               : Padding(
             padding: const EdgeInsets.all(16),
             child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

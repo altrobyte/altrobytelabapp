@@ -8,8 +8,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
 import '../models/training_module_model.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'class_screen.dart';
 import 'local_tools.dart';
@@ -51,6 +53,20 @@ class _ModulesPanelState extends State<ModulesPanel> {
   // Progress, the website's own record: what is done in each module, out of how many items.
   final Map<int, Set<int>> _done = {};
   final Map<int, int> _total = {};
+  // A module opens on a page of its own; that page redraws whenever this panel does.
+  final _tick = ValueNotifier<int>(0);
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _tick.value++;
+  }
+
+  @override
+  void dispose() {
+    _tick.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -421,41 +437,242 @@ class _ModulesPanelState extends State<ModulesPanel> {
     ]);
   }
 
-  /// "4 of 12 done" with a bar, under each module's name; the description when there is nothing to show yet.
-  Widget? _progressLine(TrainingModule m) {
-    final total = _total[m.id] ?? 0;
-    final done = (_done[m.id]?.length ?? 0).clamp(0, total);
-    if (m.locked || total == 0) {
-      return m.description.isEmpty ? null : Text(m.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11.5));
+  Color _colorOf(TrainingModule m) {
+    final hex = m.color.replaceAll('#', '');
+    final v = int.tryParse(hex.length == 6 ? 'FF$hex' : hex, radix: 16);
+    return v == null ? AppColors.primary : Color(v);
+  }
+
+  int _totalOf(TrainingModule m) => _total[m.id] ?? m.totalContentItemsFromApi ?? 0;
+  int _doneOf(TrainingModule m) => (_done[m.id]?.length ?? 0).clamp(0, _totalOf(m));
+
+  /// The next thing to learn: the first lesson not done in the module they are part-way through (else the first module
+  /// not finished). Known only for modules whose lessons are on this computer, which after the first start is all of them.
+  (TrainingModule, ContentItem)? _next() {
+    final open = [for (final m in _modules ?? const <TrainingModule>[]) if (!m.locked && _detail[m.id] != null) m];
+    final started = open.where((m) => _doneOf(m) > 0 && _doneOf(m) < _totalOf(m));
+    for (final m in [...started, ...open.where((m) => _doneOf(m) < _totalOf(m) || _totalOf(m) == 0)]) {
+      for (final t in _detail[m.id]!.topics) {
+        for (final st in t.subtopics) {
+          for (final it in st.contentItems) {
+            if (!it.locked && it.type == 'notes' && (it.htmlContent ?? '').isNotEmpty && !_isDone(m.id, it)) return (m, it);
+          }
+        }
+      }
     }
-    final finished = done >= total;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(value: done / total, minHeight: 6, backgroundColor: const Color(0xFFE8EDF3),
-                color: finished ? AppColors.success : AppColors.accent),
+    return null;
+  }
+
+  void _openModule(TrainingModule m) {
+    if (!m.locked) _open(m);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: const Color(0xFFF6F8FB),
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          title: Text(m.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
+        ),
+        body: ValueListenableBuilder<int>(
+          valueListenable: _tick,
+          builder: (_, __, ___) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 980),
+              child: ListView(padding: const EdgeInsets.all(24), children: [
+                _moduleHeader(m),
+                const SizedBox(height: 16),
+                if (m.locked)
+                  Text('This module is not unlocked for your account yet. Get it on altrobytelab.com and it opens here.',
+                      style: GoogleFonts.inter(fontSize: 13.5))
+                else
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE6EAF0))),
+                    child: _moduleBody(m),
+                  ),
+              ]),
+            ),
           ),
         ),
-        const SizedBox(width: 10),
-        Text(finished ? 'Completed' : '$done of $total done',
-            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: finished ? AppColors.success : AppColors.textSecondary)),
+      ),
+    ));
+  }
+
+  Widget _moduleHeader(TrainingModule m) {
+    final total = _totalOf(m), done = _doneOf(m);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [_colorOf(m), Color.lerp(_colorOf(m), Colors.black, 0.35)!]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(m.title, style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)),
+        if (m.description.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(m.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.4)),
+        ],
+        if (total > 0) ...[
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(value: done / total, minHeight: 8, backgroundColor: Colors.white24, color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('${(done * 100 / total).round()}% · $done of $total', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
+          ]),
+        ],
       ]),
+    );
+  }
+
+  Widget _stat(IconData icon, String value, String label) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE6EAF0))),
+          child: Row(children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, size: 20, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(value, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(label, style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+            ]),
+          ]),
+        ),
+      );
+
+  Widget _continueCard((TrainingModule, ContentItem) next) {
+    final (m, it) = next;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFF14343F), Color(0xFF1E5A6B)]),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('CONTINUE LEARNING', style: GoogleFonts.inter(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+            const SizedBox(height: 6),
+            Text(it.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(m.title, style: GoogleFonts.inter(color: Colors.white70, fontSize: 12.5)),
+          ]),
+        ),
+        const SizedBox(width: 16),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16)),
+          onPressed: () {
+            _mark(m.id, it);
+            _note(it);
+          },
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: Text('Learn with Altron', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        ),
+      ]),
+    );
+  }
+
+  Widget _moduleCard(TrainingModule m, double width) {
+    final total = _totalOf(m), done = _doneOf(m);
+    final finished = total > 0 && done >= total;
+    final (label, chip) = m.locked
+        ? ('Locked', Colors.grey)
+        : finished
+            ? ('Completed', AppColors.success)
+            : done > 0
+                ? ('In progress', AppColors.accent)
+                : ('Not started', AppColors.primary);
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _openModule(m),
+          child: Container(
+            height: 178,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE6EAF0))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(height: 6, decoration: BoxDecoration(color: m.locked ? Colors.grey.shade300 : _colorOf(m), borderRadius: const BorderRadius.vertical(top: Radius.circular(14)))),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(m.locked ? Icons.lock_outline_rounded : Icons.menu_book_rounded, size: 20, color: m.locked ? Colors.grey : _colorOf(m)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(color: chip.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(99)),
+                        child: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: chip)),
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+                    Text(m.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.5, height: 1.3)),
+                    const Spacer(),
+                    if (!m.locked && total > 0) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(value: done / total, minHeight: 6, backgroundColor: const Color(0xFFE8EDF3),
+                            color: finished ? AppColors.success : AppColors.accent),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('$done of $total lessons · ${(done * 100 / total).round()}%', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    ] else
+                      Text(m.locked ? 'Unlock on altrobytelab.com' : 'Open to see the lessons', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final modules = _modules;
+    final name = (context.watch<AuthProvider>().instituteName ?? '').trim().split(' ').first;
+    final open = [for (final m in modules ?? const <TrainingModule>[]) if (!m.locked) m];
+    final allTotal = open.fold<int>(0, (a, m) => a + _totalOf(m));
+    final allDone = open.fold<int>(0, (a, m) => a + _doneOf(m));
+    final next = _next();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text('Your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15))),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name.isEmpty ? 'Welcome back' : 'Welcome back, $name', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 22)),
+            const SizedBox(height: 2),
+            Text('Learn with Altron, build the project, take the test. Your progress is saved as you go.',
+                style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+          ]),
+        ),
         IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded, size: 20)),
       ]),
-      Text('Learn with Altron, build the project, take the test. Your progress is saved as you go.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-      const SizedBox(height: 8),
+      const SizedBox(height: 18),
+      if (open.isNotEmpty) ...[
+        Row(children: [
+          _stat(Icons.library_books_outlined, '${open.length}', 'My modules'),
+          const SizedBox(width: 12),
+          _stat(Icons.task_alt_rounded, '$allDone / $allTotal', 'Lessons done'),
+          const SizedBox(width: 12),
+          _stat(Icons.insights_rounded, allTotal == 0 ? '0%' : '${(allDone * 100 / allTotal).round()}%', 'Overall progress'),
+        ]),
+        const SizedBox(height: 18),
+      ],
+      if (next != null) ...[_continueCard(next), const SizedBox(height: 24)],
+      Text('My modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+      const SizedBox(height: 10),
       if (modules == null)
         Text('Loading your modules…', style: GoogleFonts.inter(color: AppColors.textSecondary))
       else if (_problem != null)
@@ -466,34 +683,16 @@ class _ModulesPanelState extends State<ModulesPanel> {
       else if (modules.isEmpty)
         Text('No modules yet. Enrol in one on altrobytelab.com and it will appear here.', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12.5))
       else
-        for (final m in modules)
-          Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 8),
-            color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.black.withValues(alpha: 0.08))),
-            child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                onExpansionChanged: (open) {
-                  if (open && !m.locked) _open(m);
-                },
-                leading: Icon(m.locked ? Icons.lock_outline_rounded : Icons.menu_book_rounded, color: m.locked ? Colors.grey : AppColors.primary),
-                title: Text(m.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                subtitle: _progressLine(m),
-                childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-                children: [
-                  if (m.locked)
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text('This module is not unlocked for your account yet. Get it on altrobytelab.com and it opens here.', style: GoogleFonts.inter(fontSize: 12.5)),
-                    )
-                  else
-                    _moduleBody(m),
-                ],
-              ),
-            ),
-          ),
+        LayoutBuilder(builder: (_, box) {
+          final cols = box.maxWidth > 860 ? 3 : (box.maxWidth > 560 ? 2 : 1);
+          final w = (box.maxWidth - 14 * (cols - 1)) / cols;
+          // Open modules first, those part-way through at the top; locked ones last.
+          final sorted = [...modules]..sort((a, b) {
+              int rank(TrainingModule m) => m.locked ? 3 : (_doneOf(m) > 0 && _doneOf(m) < _totalOf(m) ? 0 : (_doneOf(m) == 0 ? 1 : 2));
+              return rank(a).compareTo(rank(b));
+            });
+          return Wrap(spacing: 14, runSpacing: 14, children: [for (final m in sorted) _moduleCard(m, w)]);
+        }),
     ]);
   }
 }
