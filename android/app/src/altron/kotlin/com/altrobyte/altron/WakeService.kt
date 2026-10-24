@@ -16,6 +16,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.ContactsContract
+import org.json.JSONArray
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -200,11 +202,52 @@ class WakeService : Service(), RecognitionListener {
                     else glow?.speaking = st == "talk"
                 }
             }
+
+            /** Altron asked to phone someone: a number, or a name from the contacts. Answers what happened, for Altron
+             *  to say. One match calls at once; several come back as names for Altron to ask which. */
+            @JavascriptInterface
+            fun call(name: String, phone: String): String = placeCall(name.trim(), phone.trim())
         }, "AltronHost")
         w.alpha = 0.01f                            // the voice page runs out of sight, under the light
         box.addView(w, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         w.loadUrl("$PAGE#t=${Uri.encode(token)}")
         web = w
+    }
+
+    private fun placeCall(name: String, phone: String): String {
+        if (checkSelfPermission(android.Manifest.permission.CALL_PHONE) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            return JSONObject().put("error", "Calls are not allowed for Altron yet. Open the Altron app once to allow them.").toString()
+        var number = phone.filter { it.isDigit() || it == '+' }
+        var who = name
+        if (number.length < 6) {
+            if (name.isEmpty()) return JSONObject().put("error", "Say whom to call.").toString()
+            if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                return JSONObject().put("error", "Altron cannot read the contacts yet. Open the Altron app once to allow it.").toString()
+            val found = linkedMapOf<String, String>()          // name -> first number
+            contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?", arrayOf("%$name%"),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC")?.use { c ->
+                while (c.moveToNext() && found.size < 8) {
+                    val n = c.getString(0) ?: continue
+                    if (!found.containsKey(n)) found[n] = c.getString(1) ?: ""
+                }
+            }
+            val exact = found.keys.firstOrNull { it.equals(name, ignoreCase = true) }
+            when {
+                found.isEmpty() -> return JSONObject().put("found", 0).put("say", "No contact named $name.").toString()
+                exact == null && found.size > 1 -> return JSONObject().put("found", found.size)
+                    .put("ask_which", JSONArray(found.keys.take(5))).toString()
+            }
+            who = exact ?: found.keys.first()
+            number = found[who]!!.filter { it.isDigit() || it == '+' }
+        }
+        main.post {
+            endTalk()                               // the call needs the microphone; listening comes back after
+            startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            main.postDelayed({ listen() }, 3000)
+        }
+        return JSONObject().put("calling", who.ifEmpty { number }).toString()
     }
 
     private fun endTalk() {

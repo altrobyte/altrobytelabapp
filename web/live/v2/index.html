@@ -301,7 +301,14 @@
     const responses = [];
     for (const call of calls || []) {
       let response;
-      if (FOUNDER) {
+      if (FOUNDER && call.name === 'place_call') {
+        // the phone dials: only the Altron app can (its contacts, its call permission)
+        try {
+          response = window.AltronHost && window.AltronHost.call
+            ? JSON.parse(window.AltronHost.call(String((call.args && call.args.name) || ''), String((call.args && call.args.phone) || '')))
+            : { error: 'Calls work only in the Altron phone app.' };
+        } catch (_) { response = { error: 'Could not place the call.' }; }
+      } else if (FOUNDER) {
         // the founder's tools read the CRM and the notes on the server, with the admin's own sign-in
         try {
           const r = await fetch(API + '/founder/tool', { method: 'POST',

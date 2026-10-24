@@ -42,6 +42,8 @@ class _StartState extends State<_Start> {
       setState(() => _line = 'Altron needs the microphone. Allow it in Settings → Apps → Altron → Permissions, then open Altron again.');
       return;
     }
+    // For "Altron, Ravi ko call karo". Saying no only means Altron cannot place calls.
+    await [Permission.contacts, Permission.phone].request();
     try {
       final r = await _native.invokeMethod('start', {'key': _key, 'api': ApiConstants.baseUrl});
       if (r == 'needs_overlay' && mounted) setState(() => _line = 'Turn on "Display over other apps" for Altron, then come back.');
