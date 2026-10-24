@@ -95,7 +95,8 @@
   const labId = P.get('lab') ? Number(P.get('lab')) : null;
   const QUIET_S = 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
   let quietNudges = 0;
-  const IDLE_S = FOUNDER ? 45 : 120;                                       // nobody spoke for this long: pause, so an open app costs nothing
+  const IDLE_S = FOUNDER ? 5 : 120;                        // the founder's Altron sleeps 5 s after the talk; "Altron" wakes it
+  let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then                                       // nobody spoke for this long: pause, so an open app costs nothing
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
@@ -366,10 +367,10 @@
           $('capT').textContent = tutorLine.slice(-260); $('cap').classList.add('on');
         }
         if (sc.inputTranscription && sc.inputTranscription.text) {
-          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0;
+          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true;
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
         }
-        if (sc.turnComplete) { tutorLine = ''; youLine = ''; }
+        if (sc.turnComplete) { tutorLine = ''; youLine = ''; replyDue = false; lastActive = Date.now(); }
       }
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
       if (m.goAway) renew();
@@ -437,7 +438,7 @@
       note('[The learner is listening quietly and did not answer. Do not wait and do not ask whether they are there: give the answer yourself in two or three sentences, then carry on teaching.]');
       return;
     }
-    if (!playing.length && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Altron" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
+    if (!playing.length && !replyDue && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Altron" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
   }
 
   function cleanup() {
