@@ -112,7 +112,10 @@
     }
     return null;
   }
-  function tellHost(o) { try { if (host) host.postMessage(JSON.stringify(o)); } catch (_) {} }
+  function tellHost(o) {
+    try { if (host) host.postMessage(JSON.stringify(o)); } catch (_) {}
+    try { if (window.AltronHost) window.AltronHost.postMessage(JSON.stringify(o)); } catch (_) {}   // the Altron phone app
+  }
 
   // ── what the learner sees ──
   function say(text, bad) { $('msg').innerHTML = text; $('msg').classList.toggle('bad', !!bad); $('msg').classList.add('on'); }

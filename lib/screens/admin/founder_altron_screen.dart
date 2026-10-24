@@ -31,8 +31,7 @@ Future<void> openFounderAltron(BuildContext context) async {
 
 class FounderAltronScreen extends StatefulWidget {
   final String token;
-  final VoidCallback? onSignOut;      // the Altron app's own sign-out; none inside the CRM
-  const FounderAltronScreen({super.key, required this.token, this.onSignOut});
+  const FounderAltronScreen({super.key, required this.token});
 
   @override
   State<FounderAltronScreen> createState() => _FounderAltronScreenState();
@@ -73,7 +72,6 @@ class _FounderAltronScreenState extends State<FounderAltronScreen> {
         title: Text('Altron', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(tooltip: 'Start again', onPressed: () => _web?.reload(), icon: const Icon(Icons.refresh_rounded)),
-          if (widget.onSignOut != null) IconButton(tooltip: 'Sign out', onPressed: widget.onSignOut, icon: const Icon(Icons.logout_rounded)),
         ],
       ),
       body: _problem != null

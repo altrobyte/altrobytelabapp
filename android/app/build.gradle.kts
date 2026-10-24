@@ -73,6 +73,7 @@ android {
 
     buildTypes {
         release {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (keyProps.isNotEmpty()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
@@ -80,4 +81,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Altron listens for its name offline (WakeService): Vosk, only in the altron app.
+    "altronImplementation"("net.java.dev.jna:jna:5.13.0@aar")
+    "altronImplementation"("com.alphacephei:vosk-android:0.3.47@aar")
 }

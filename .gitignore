@@ -48,3 +48,4 @@ metal_detector/
 # Firebase deploy cache
 .firebase/
 dist/
+android/app/src/altron/assets/model-en-in/

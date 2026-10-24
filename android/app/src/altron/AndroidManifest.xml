@@ -14,5 +14,35 @@
     <uses-feature android:name="android.hardware.bluetooth_le" tools:node="remove" />
     <uses-feature android:name="android.hardware.camera" tools:node="remove" />
 
-    <application android:label="Altron" tools:replace="android:label" />
+    <!-- Listening for "Altron" all the time (WakeService) and opening the card over other apps. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <application android:label="Altron" tools:replace="android:label">
+        <activity android:name=".MainActivity" tools:node="remove" />
+
+        <activity
+            android:name="com.altrobyte.altron.AltronActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.altrobyte.altron"
+            android:excludeFromRecents="false"
+            android:theme="@style/AltronTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="com.altrobyte.altron.WakeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+    </application>
 </manifest>
