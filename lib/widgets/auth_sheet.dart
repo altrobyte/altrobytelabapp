@@ -33,7 +33,9 @@ Future<bool> showAuthSheet(BuildContext context,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _AuthSheet(reason: reason, phoneOnly: phoneOnly),
+    // Learners sign in with their WhatsApp number only (24 Oct 2026): a Google sign-in made a second account for the
+    // same person, and what they paid for sat on the one they were not using.
+    builder: (_) => _AuthSheet(reason: reason, phoneOnly: true),
   );
   return ok == true;
 }

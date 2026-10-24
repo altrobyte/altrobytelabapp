@@ -2035,11 +2035,11 @@ class ApiService {
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}'), headers: _headers()));
   }
 
-  /// Sends a filled form with the person's Google ID token; the server checks the token itself.
+  /// Sends a filled form as the signed-in learner (WhatsApp sign-in); the server checks who they are itself.
   static Future<Map<String, dynamic>> submitEnrolment(String slug, String idToken, String phone, Map<String, dynamic> answers, {String? plan}) async {
     final res = await http.post(
       Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/submit'),
-      headers: _headers(),
+      headers: _headers(await _learnerToken()),
       body: jsonEncode({'id_token': idToken, 'phone': phone, 'answers': answers, if (plan != null) 'plan': plan}),
     );
     return _parse(res);
@@ -2056,7 +2056,7 @@ class ApiService {
   /// "I have paid": the reference from the receipt, kept with the enrolment for the team to check.
   static Future<Map<String, dynamic>> enrolPaid(String slug, String idToken, String reference) async => _parse(await http.post(
         Uri.parse('${ApiConstants.baseUrl}/enroll/${Uri.encodeComponent(slug)}/paid'),
-        headers: _headers(),
+        headers: _headers(await _learnerToken()),
         body: jsonEncode({'id_token': idToken, 'payment_ref': reference}),
       ));
 

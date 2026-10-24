@@ -321,7 +321,7 @@ class _PricingScreenState extends State<PricingScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Sign in with Google'),
+            child: const Text('Sign in with WhatsApp'),
           ),
         ],
       ),

@@ -1,13 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
+import '../../widgets/auth_sheet.dart';
 import 'plan_pay.dart';
 
 /// The page behind an enrolment form's link (/enroll/<slug>). Public: anyone with the link can open it, and fills it
-/// after signing in with Google. The server checks the Google sign-in itself; this page never decides who someone is.
+/// after signing in with their WhatsApp number. The server checks the sign-in itself; this page never decides who someone is.
 class EnrolScreen extends StatefulWidget {
   final String slug;
 
@@ -22,7 +22,7 @@ class EnrolScreen extends StatefulWidget {
 class _EnrolScreenState extends State<EnrolScreen> {
   Map<String, dynamic>? _form;
   String? _loadError;
-  User? _user;
+  bool _signedIn = false;
   final _phone = TextEditingController();
   final Map<String, TextEditingController> _text = {};
   final Map<String, String?> _choice = {};
@@ -35,7 +35,9 @@ class _EnrolScreenState extends State<EnrolScreen> {
   @override
   void initState() {
     super.initState();
-    _user = FirebaseAuth.instance.currentUser;
+    ApiService.learnerToken().then((t) {
+      if (mounted && t != null && t.isNotEmpty) setState(() => _signedIn = true);
+    });
     final plan = widget.plan;
     if (plan != null && plan.isNotEmpty) {
       ApiService.programCheckout(plan).then((c) {
@@ -68,37 +70,26 @@ class _EnrolScreenState extends State<EnrolScreen> {
       _error = null;
     });
     try {
-      await FirebaseAuth.instance.signOut(); // always let them choose which Google account
-      final cred = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-      _user = cred.user;
-    } on FirebaseAuthException catch (e) {
-      _error = switch (e.code) {
-        'popup-blocked' => 'Your browser blocked the Google window. Allow popups for this page and try again.',
-        'popup-closed-by-user' || 'cancelled-popup-request' => 'Google sign-in was cancelled.',
-        'network-request-failed' => 'Network problem. Check your connection and try again.',
-        _ => 'Google sign-in did not complete (${e.code}).',
-      };
+      _signedIn = await showAuthSheet(context, reason: 'to fill the enrolment form', phoneOnly: true);
     } catch (_) {
-      _error = 'Google sign-in did not complete. Please try again.';
+      _error = 'Sign-in did not complete. Please try again.';
     }
     if (mounted) setState(() => _busy = false);
   }
 
   Future<void> _submit() async {
-    final user = _user;
-    if (user == null) return;
+    if (!_signedIn) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final token = await user.getIdToken(true);
       final answers = <String, dynamic>{
         for (final e in _text.entries) e.key: e.value.text.trim(),
         for (final e in _choice.entries) e.key: e.value ?? '',
         for (final e in _multi.entries) e.key: e.value.toList(),
       };
-      _done = await ApiService.submitEnrolment(widget.slug, token ?? '', _phone.text.trim(), answers, plan: _checkout == null ? null : widget.plan);
+      _done = await ApiService.submitEnrolment(widget.slug, '', _phone.text.trim(), answers, plan: _checkout == null ? null : widget.plan);
     } catch (e) {
       _error = e.toString().replaceFirst('Exception: ', '');
     }
@@ -158,8 +149,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
         PlanPaySection(
           checkout: checkout,
           onPaid: (reference) async {
-            final token = await _user?.getIdToken(true);
-            final r = await ApiService.enrolPaid(widget.slug, token ?? '', reference);
+            final r = await ApiService.enrolPaid(widget.slug, '', reference);
             return '${r['message'] ?? 'Thank you! We have your payment reference.'}';
           },
         ),
@@ -210,8 +200,8 @@ class _EnrolScreenState extends State<EnrolScreen> {
       const SizedBox(height: 20),
       if (form['is_open'] != true)
         Text('This form is not accepting responses right now.', style: GoogleFonts.inter(color: AppColors.error, fontWeight: FontWeight.w600))
-      else if (_user == null) ...[
-        Text('Sign in with Google to fill this form.', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      else if (!_signedIn) ...[
+        Text('Sign in with your WhatsApp number to fill this form.', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
@@ -219,7 +209,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
           child: OutlinedButton.icon(
             onPressed: _busy ? null : _signIn,
             icon: const Icon(Icons.login_rounded),
-            label: Text(_busy ? 'Opening Google…' : 'Sign in with Google'),
+            label: Text(_busy ? 'Opening…' : 'Sign in with WhatsApp'),
           ),
         ),
       ] else ...[
@@ -229,13 +219,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
           child: Row(children: [
             const Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
             const SizedBox(width: 10),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_user!.displayName ?? '', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                Text(_user!.email ?? '', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-              ]),
-            ),
-            TextButton(onPressed: _busy ? null : _signIn, child: const Text('Switch')),
+            Expanded(child: Text('Signed in with your WhatsApp number', style: GoogleFonts.inter(fontWeight: FontWeight.w600))),
           ]),
         ),
         const SizedBox(height: 14),
@@ -261,7 +245,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
           ),
         ),
       ],
-      if (_user == null && _error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13))),
+      if (!_signedIn && _error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13))),
     ]);
   }
 
