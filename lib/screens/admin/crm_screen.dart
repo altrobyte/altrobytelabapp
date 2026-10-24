@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
+import 'founder_altron_screen.dart';
 import 'crm_chat_screen.dart';
 import 'crm_team_screen.dart';
 
@@ -231,6 +232,11 @@ class _CrmScreenState extends State<CrmScreen> {
         title: Text('CRM',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
         actions: [
+          // The founder's voice assistant: ask about leads and the course by voice.
+          TextButton.icon(
+              onPressed: () => openFounderAltron(context),
+              icon: const Icon(Icons.graphic_eq_rounded, size: 20),
+              label: const Text('Altron')),
           IconButton(
               tooltip: 'Calling team: leaderboard, unassigned leads, labels, export',
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmTeamScreen())),

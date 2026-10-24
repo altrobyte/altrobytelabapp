@@ -63,6 +63,12 @@ android {
             applicationId = "com.altrobyte.caller"
             minSdk = 26
         }
+        // Altron, the founder's voice assistant: lib/founder_main.dart, manifest in src/altron.
+        create("altron") {
+            dimension = "app"
+            applicationId = "com.altrobyte.altron"
+            minSdk = 26
+        }
     }
 
     buildTypes {

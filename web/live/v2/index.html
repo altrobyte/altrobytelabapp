@@ -88,13 +88,14 @@
 (() => {
   const API = 'https://edu.altrobytelab.com';
   const P = new URLSearchParams(location.search);
+  const FOUNDER = P.get('founder') === '1';                // the founder's own Altron: the CRM and the notes, admin sign-in
   const $ = (id) => document.getElementById(id);
   const course = P.get('course') || null;
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const labId = P.get('lab') ? Number(P.get('lab')) : null;
   const QUIET_S = 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
   let quietNudges = 0;
-  const IDLE_S = 120;                                       // nobody spoke for this long: pause, so an open app costs nothing
+  const IDLE_S = FOUNDER ? 45 : 120;                                       // nobody spoke for this long: pause, so an open app costs nothing
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
@@ -106,7 +107,7 @@
   } catch (_) {}
   function token() {
     try { const t = sessionStorage.getItem('altron_t'); if (t) return t; } catch (_) {}
-    for (const k of ['flutter.student_token', 'flutter.token']) {
+    for (const k of FOUNDER ? ['flutter.token'] : ['flutter.student_token', 'flutter.token']) {
       try { const v = localStorage.getItem(k); if (v) { const t = JSON.parse(v); if (t) return t; } } catch (_) {}
     }
     return null;
@@ -140,7 +141,10 @@
   async function fetchToken(resume) {
     const t = token();
     if (!t) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
-    const r = await fetch(API + '/trainer/live/token', {
+    const r = FOUNDER
+      ? await fetch(API + '/founder/live/token', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+          body: JSON.stringify({ lang }) })
+      : await fetch(API + '/trainer/live/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
       body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', lang, resume: !!resume }),
     });
@@ -293,7 +297,15 @@
     const responses = [];
     for (const call of calls || []) {
       let response;
-      if (call.name === 'show_part') {
+      if (FOUNDER) {
+        // the founder's tools read the CRM and the notes on the server, with the admin's own sign-in
+        try {
+          const r = await fetch(API + '/founder/tool', { method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+            body: JSON.stringify({ name: call.name, args: call.args || {} }) });
+          response = await r.json();
+        } catch (_) { response = { error: 'Could not reach the server.' }; }
+      } else if (call.name === 'show_part') {
         // the note is open in the app: the app scrolls to that section and makes it glow
         tellHost({ type: 'section', part: Number(call.args && call.args.part) || 1 });
         response = { shown: true };
@@ -328,7 +340,9 @@
         status('listening', 'live');
         if (kind === 'first') {
           const camLine = 'My camera is off.';
-          const opener = P.get('teach') === '1'
+          const opener = FOUNDER
+            ? (P.get('q') ? 'I just said: ' + P.get('q').slice(0, 300) : 'I called you by name. Say "Haan boliye" or similar in two words and listen.')
+            : P.get('teach') === '1'
             ? 'The note is open on my screen. Greet me in one short sentence, then call show_part 1 and teach section 1.'
             : (course || P.get('steps') === '1')
             ? 'The session has started. ' + camLine + ' Call get_current_step, then greet me in one short sentence and teach that step.'
@@ -420,7 +434,7 @@
       note('[The learner is listening quietly and did not answer. Do not wait and do not ask whether they are there: give the answer yourself in two or three sentences, then carry on teaching.]');
       return;
     }
-    if (!playing.length && quiet >= IDLE_S) pause('Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
+    if (!playing.length && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Altron" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
   }
 
   function cleanup() {
