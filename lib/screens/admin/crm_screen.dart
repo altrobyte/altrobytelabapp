@@ -836,6 +836,63 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     }
   }
 
+  /// Paid students' course access, in one place: Token paid or Enrolled opens every module and the Altron trainer when
+  /// they sign in with this WhatsApp number (the server decides; see live_tutor.has_trainer_access).
+  Widget _accessBox(String stage) {
+    final on = stage == 'token_paid' || stage == 'enrolled';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: on ? AppColors.success.withValues(alpha: 0.08) : const Color(0xFFF6F8FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: on ? AppColors.success.withValues(alpha: 0.35) : Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: Row(children: [
+        Icon(on ? Icons.lock_open_rounded : Icons.lock_outline_rounded, color: on ? AppColors.success : AppColors.textSecondary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(on ? 'Course access: ON' : 'Course access: off',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: on ? AppColors.success : AppColors.textPrimary)),
+            Text(
+                on
+                    ? 'All notes, projects, tests and the Altron trainer open when they sign in with WhatsApp +91 ${widget.phone}.'
+                    : 'Paid the fee or the seat? Give access: everything opens when they sign in with WhatsApp +91 ${widget.phone}.',
+                style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary, height: 1.4)),
+          ]),
+        ),
+        const SizedBox(width: 12),
+        if (on)
+          TextButton(onPressed: () => _confirmAccess(false), child: const Text('Remove access'))
+        else
+          FilledButton.icon(
+            onPressed: () => _confirmAccess(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.success, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+            icon: const Icon(Icons.verified_rounded, size: 18),
+            label: const Text('Give paid access'),
+          ),
+      ]),
+    );
+  }
+
+  Future<void> _confirmAccess(bool give) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(give ? 'Give full course access?' : 'Remove course access?'),
+        content: Text(give
+            ? 'Marks them Enrolled. Every module, project, test and the Altron trainer opens for +91 ${widget.phone}.'
+            : 'Moves them back to Demo done. Paid modules lock again unless they paid online.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(give ? 'Give access' : 'Remove')),
+        ],
+      ),
+    );
+    if (ok == true) await _setStage(give ? 'enrolled' : 'demo_done');
+  }
+
   Future<void> _setStage(String stage) async {
     try {
       await ApiService.crmUpdateLead(widget.phone, {'stage': stage});
@@ -1072,6 +1129,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
         ]),
+        const SizedBox(height: 16),
+        _accessBox(stage),
       ]),
     );
   }
