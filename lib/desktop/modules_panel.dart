@@ -3,6 +3,8 @@
 // Light on purpose: only the list of modules is fetched when the page opens. A module's notes are fetched when the learner opens
 // that module, and a note's page is written to a temporary file only when it is opened. Nothing is stored in the app.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +13,7 @@ import '../models/training_module_model.dart';
 import '../services/api_service.dart';
 import 'class_screen.dart';
 import 'local_tools.dart';
+import 'module_cache.dart';
 import 'note_tutor_screen.dart';
 import 'visual_page.dart';
 
@@ -55,17 +58,71 @@ class _ModulesPanelState extends State<ModulesPanel> {
     _load();
   }
 
+  ModuleCache? _cache;
+
+  /// The account the cache belongs to: the id inside the sign-in token (the token itself changes at every sign-in).
+  static String accountOf(String token) {
+    try {
+      final part = token.split('.')[1];
+      final body = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(part)))) as Map;
+      return '${body['sub'] ?? body['student_id'] ?? body['user_id'] ?? body['id'] ?? token}';
+    } catch (_) {
+      return token;
+    }
+  }
+
+  List<TrainingModule> _parseList(List raw) => [for (final m in raw) TrainingModule.fromJson(Map<String, dynamic>.from(m as Map))];
+
+  void _applyProgress(Map p, int id) {
+    _done[id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
+    _total[id] = (p['total_items'] as num?)?.toInt() ?? 0;
+  }
+
+  /// What this computer kept from last time shows at once; the fresh copy follows from the internet.
   Future<void> _load() async {
     setState(() => _problem = null);
+    _cache ??= ModuleCache(accountOf(await ApiService.learnerToken() ?? ''));
+    final c = _cache!;
+    if (_modules == null) {
+      final kept = c.read('modules');
+      if (kept is List) {
+        try {
+          _modules = _parseList(kept);
+          for (final m in _modules!) {
+            final p = c.read('progress-${m.id}');
+            if (p is Map) _applyProgress(p, m.id);
+            final d = c.read('module-${m.id}');
+            if (d is Map) _detail[m.id] = TrainingModule.fromJson(Map<String, dynamic>.from(d));
+          }
+          if (mounted) setState(() {});
+        } catch (_) {}
+      }
+    }
     try {
       final raw = await ApiService.desktopModules();
-      _modules = [for (final m in raw) TrainingModule.fromJson(Map<String, dynamic>.from(m as Map))];
+      _modules = _parseList(raw);
+      c.write('modules', raw);
       _loadProgress();
+      _prefetch();
     } catch (e) {
-      _problem = modulesProblem(e);
+      if (_modules == null || _modules!.isEmpty) _problem = modulesProblem(e);   // with a kept copy on screen, stay quiet
       _modules ??= [];
     }
     if (mounted) setState(() {});
+  }
+
+  /// Every open module's lessons fetched in the background, one at a time, so opening one never waits.
+  Future<void> _prefetch() async {
+    for (final m in List<TrainingModule>.of(_modules ?? const [])) {
+      if (m.locked || !mounted) continue;
+      try {
+        final raw = await ApiService.desktopModule(m.id);
+        _detail[m.id] = TrainingModule.fromJson(raw);
+        _detailProblem.remove(m.id);
+        _cache?.write('module-${m.id}', raw);
+        if (mounted) setState(() {});
+      } catch (_) {}
+    }
   }
 
   Future<void> _loadProgress() async {
@@ -73,8 +130,8 @@ class _ModulesPanelState extends State<ModulesPanel> {
       for (final m in _modules ?? const <TrainingModule>[])
         if (!m.locked)
           ApiService.desktopProgress(m.id).then((p) {
-            _done[m.id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
-            _total[m.id] = (p['total_items'] as num?)?.toInt() ?? 0;
+            _applyProgress(p, m.id);
+            _cache?.write('progress-${m.id}', {'completed_item_ids': _done[m.id]!.toList(), 'total_items': _total[m.id]});
           }).catchError((_) {}),
     ]);
     if (mounted) setState(() {});
@@ -84,6 +141,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
   void _mark(int moduleId, ContentItem it) {
     if (_done.putIfAbsent(moduleId, () => {}).add(it.id)) {
       setState(() {});
+      _cache?.write('progress-$moduleId', {'completed_item_ids': _done[moduleId]!.toList(), 'total_items': _total[moduleId] ?? 0});
       ApiService.desktopComplete(it.id).catchError((_) {});
     }
   }
@@ -97,7 +155,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
       _detailProblem.remove(m.id);
     });
     try {
-      _detail[m.id] = TrainingModule.fromJson(await ApiService.desktopModule(m.id));
+      final raw = await ApiService.desktopModule(m.id);
+      _detail[m.id] = TrainingModule.fromJson(raw);
+      _cache?.write('module-${m.id}', raw);
     } catch (e) {
       _detailProblem[m.id] = modulesProblem(e);
     }
