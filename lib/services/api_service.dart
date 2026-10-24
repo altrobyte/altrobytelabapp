@@ -980,11 +980,44 @@ class ApiService {
 
   /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
   /// One WhatsApp message (the update template, each lead's own name) to many leads at once.
-  static Future<Map<String, dynamic>> crmBulk(List<String> phones, String text) async {
+  static Future<Map<String, dynamic>> crmBulk(List<String> phones, String text, {DateTime? sendAt}) async {
     final prefs = await SharedPreferences.getInstance();
     final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/bulk'),
-        headers: _headers(prefs.getString('token')), body: jsonEncode({'phones': phones, 'text': text}));
+        headers: _headers(prefs.getString('token')),
+        body: jsonEncode({'phones': phones, 'text': text, if (sendAt != null) 'send_at': sendAt.toUtc().toIso8601String()}));
     return _parse(res);
+  }
+
+  /// Bulk messages waiting to go (and the last ones sent), and cancelling one that has not gone yet.
+  static Future<Map<String, dynamic>> crmBulkJobs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/bulk/jobs'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<void> crmBulkCancel(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    _parse(await http.delete(Uri.parse('${ApiConstants.baseUrl}/crm/bulk/jobs/$id'), headers: _headers(prefs.getString('token'))));
+  }
+
+  /// The automatic WhatsApp follow-ups: each sequence, on or off, with its words.
+  static Future<Map<String, dynamic>> crmAuto() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/auto'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<void> crmAutoSet(String seq, bool on, Map<String, String> texts) async {
+    final prefs = await SharedPreferences.getInstance();
+    _parse(await http.put(Uri.parse('${ApiConstants.baseUrl}/crm/auto/$seq'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'on': on, 'texts': texts})));
+  }
+
+  /// Altron the WhatsApp counsellor on a made-up conversation: nothing is sent or saved.
+  static Future<Map<String, dynamic>> crmCounselTry(List<String> messages) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http
+        .post(Uri.parse('${ApiConstants.baseUrl}/crm/counsel/try'),
+            headers: _headers(prefs.getString('token')), body: jsonEncode({'messages': messages}))
+        .timeout(const Duration(minutes: 2)));
   }
 
   static Future<Map<String, dynamic>> crmSend(String phone, String text) async {

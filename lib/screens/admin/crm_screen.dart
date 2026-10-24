@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
+import 'crm_automation_screen.dart';
 import 'founder_altron_screen.dart';
 import 'crm_chat_screen.dart';
 import 'crm_team_screen.dart';
@@ -237,6 +238,10 @@ class _CrmScreenState extends State<CrmScreen> {
               onPressed: () => openFounderAltron(context),
               icon: const Icon(Icons.graphic_eq_rounded, size: 20),
               label: const Text('Altron')),
+          TextButton.icon(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmAutomationScreen())),
+              icon: const Icon(Icons.auto_mode_rounded, size: 20),
+              label: const Text('Automation')),
           IconButton(
               tooltip: 'Calling team: leaderboard, unassigned leads, labels, export',
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmTeamScreen())),
@@ -336,6 +341,7 @@ class _CrmScreenState extends State<CrmScreen> {
       return;
     }
     final box = TextEditingController();
+    DateTime? later;                                   // null = send now
     final first = '${people.first['name'] ?? ''}'.trim().split(' ').first;
     final go = await showDialog<bool>(
       context: context,
@@ -364,13 +370,35 @@ class _CrmScreenState extends State<CrmScreen> {
                 decoration: BoxDecoration(color: const Color(0xFFDCF8C6), borderRadius: BorderRadius.circular(8)),
                 child: Text('Hi ${first.isEmpty ? 'there' : first}, ${box.text.trim()}', style: GoogleFonts.inter(fontSize: 13)),
               ),
+              const SizedBox(height: 10),
+              Row(children: [
+                Icon(Icons.schedule_rounded, size: 18, color: later == null ? Colors.black38 : AppColors.accent),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(later == null ? 'Sends now' : 'Sends ${MaterialLocalizations.of(ctx).formatMediumDate(later!)} at ${TimeOfDay.fromDateTime(later!).format(ctx)}',
+                      style: GoogleFonts.inter(fontSize: 12.5)),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final day = await showDatePicker(context: ctx, firstDate: now, lastDate: now.add(const Duration(days: 30)), initialDate: now);
+                    if (day == null || !ctx.mounted) return;
+                    final t = await showTimePicker(context: ctx, initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))));
+                    if (t == null) return;
+                    final at = DateTime(day.year, day.month, day.day, t.hour, t.minute);
+                    redraw(() => later = at.isAfter(now) ? at : null);
+                  },
+                  child: Text(later == null ? 'Send later' : 'Change'),
+                ),
+                if (later != null) TextButton(onPressed: () => redraw(() => later = null), child: const Text('Now')),
+              ]),
             ]),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
             ElevatedButton(
                 onPressed: box.text.trim().length < 3 ? null : () => Navigator.pop(ctx, true),
-                child: Text('Send to ${people.length}')),
+                child: Text(later == null ? 'Send to ${people.length}' : 'Schedule for ${people.length}')),
           ],
         ),
       ),
@@ -378,8 +406,11 @@ class _CrmScreenState extends State<CrmScreen> {
     if (go != true || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final r = await ApiService.crmBulk([for (final l in people) '${l['phone']}'], box.text.trim());
-      messenger.showSnackBar(SnackBar(content: Text('Sending to ${r['queued']} people. Each one shows in their chat with a note.')));
+      final r = await ApiService.crmBulk([for (final l in people) '${l['phone']}'], box.text.trim(), sendAt: later);
+      messenger.showSnackBar(SnackBar(
+          content: Text(r['scheduled'] != null
+              ? 'Scheduled for ${r['scheduled']} people. See or cancel it in Automation → Scheduled.'
+              : 'Sending to ${r['queued']} people. Each one shows in their chat with a note.')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Could not send: ${e.toString().replaceFirst('Exception: ', '')}')));
     }
