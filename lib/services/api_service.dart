@@ -2182,6 +2182,18 @@ class ApiService {
     return prefs.getString('student_token') ?? prefs.getString('token');
   }
 
+  /// Which items of a module this learner has done (the same record the website keeps).
+  static Future<Map<String, dynamic>> desktopProgress(int moduleId) async {
+    final res = await http.get(Uri.parse(ApiConstants.moduleProgress(moduleId)), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 20));
+    return _parse(res);
+  }
+
+  static Future<void> desktopComplete(int contentId) async {
+    await http.post(Uri.parse(ApiConstants.markContentComplete(contentId)), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 20));
+  }
+
   /// The learner's published training modules (a light list: no notes yet).
   static Future<List<dynamic>> desktopModules() async {
     final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/student/training-modules'), headers: _headers(await _learnerToken()))

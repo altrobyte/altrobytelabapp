@@ -5,7 +5,6 @@
 // computer the note opens in the browser instead and the tutor still works: the learner picks the section they are reading.
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';

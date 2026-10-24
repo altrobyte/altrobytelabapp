@@ -45,6 +45,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
   final Map<int, TrainingModule> _detail = {};
   final Map<int, String> _detailProblem = {};
   final Set<int> _loading = {};
+  // Progress, the website's own record: what is done in each module, out of how many items.
+  final Map<int, Set<int>> _done = {};
+  final Map<int, int> _total = {};
 
   @override
   void initState() {
@@ -57,12 +60,35 @@ class _ModulesPanelState extends State<ModulesPanel> {
     try {
       final raw = await ApiService.desktopModules();
       _modules = [for (final m in raw) TrainingModule.fromJson(Map<String, dynamic>.from(m as Map))];
+      _loadProgress();
     } catch (e) {
       _problem = modulesProblem(e);
       _modules ??= [];
     }
     if (mounted) setState(() {});
   }
+
+  Future<void> _loadProgress() async {
+    await Future.wait([
+      for (final m in _modules ?? const <TrainingModule>[])
+        if (!m.locked)
+          ApiService.desktopProgress(m.id).then((p) {
+            _done[m.id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
+            _total[m.id] = (p['total_items'] as num?)?.toInt() ?? 0;
+          }).catchError((_) {}),
+    ]);
+    if (mounted) setState(() {});
+  }
+
+  /// Opening an item counts it as done, as on the website; the bar moves at once.
+  void _mark(int moduleId, ContentItem it) {
+    if (_done.putIfAbsent(moduleId, () => {}).add(it.id)) {
+      setState(() {});
+      ApiService.desktopComplete(it.id).catchError((_) {});
+    }
+  }
+
+  bool _isDone(int moduleId, ContentItem it) => _done[moduleId]?.contains(it.id) ?? false;
 
   Future<void> _open(TrainingModule m) async {
     if (_detail.containsKey(m.id) || _loading.contains(m.id)) return;
@@ -106,7 +132,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
         _ => Icons.article_outlined,
       };
 
-  Widget _item(ContentItem it) {
+  Widget _item(int moduleId, ContentItem it) {
     final locked = it.locked;
     final String action = it.type == 'notes' ? 'Read with tutor' : it.type == 'video' ? 'Watch' : it.type == 'resource' ? 'Download' : 'Open on the website';
     VoidCallback? onTap;
@@ -115,10 +141,19 @@ class _ModulesPanelState extends State<ModulesPanel> {
       if (it.type == 'video') onTap = () => _link(it.youtubeUrl);
       if (it.type == 'resource') onTap = () => _link(it.resourceUrl);
     }
+    final open = onTap;
+    if (open != null) {
+      onTap = () {
+        _mark(moduleId, it);
+        open();
+      };
+    }
+    final done = _isDone(moduleId, it);
     return ListTile(
       dense: true,
       contentPadding: const EdgeInsets.only(left: 8),
-      leading: Icon(locked ? Icons.lock_outline_rounded : _icon(it.type), size: 20, color: locked ? Colors.grey : AppColors.primary),
+      leading: Icon(locked ? Icons.lock_outline_rounded : (done ? Icons.check_circle_rounded : _icon(it.type)), size: 20,
+          color: locked ? Colors.grey : (done ? AppColors.success : AppColors.primary)),
       title: Text(it.title, style: GoogleFonts.inter(fontSize: 13)),
       trailing: onTap == null
           ? Text(locked ? 'Upgrade on the website' : 'Website', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary))
@@ -215,10 +250,11 @@ class _ModulesPanelState extends State<ModulesPanel> {
         child: Text('$n  $label', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
       );
 
-  Widget _action(IconData icon, String title, String action, VoidCallback? onTap, {bool locked = false, bool primary = false}) => ListTile(
+  Widget _action(IconData icon, String title, String action, VoidCallback? onTap, {bool locked = false, bool primary = false, bool done = false}) => ListTile(
         dense: true,
         contentPadding: const EdgeInsets.only(left: 4),
-        leading: Icon(locked ? Icons.lock_outline_rounded : icon, size: 20, color: locked ? Colors.grey : (primary ? AppColors.accent : AppColors.primary)),
+        leading: Icon(locked ? Icons.lock_outline_rounded : (done ? Icons.check_circle_rounded : icon), size: 20,
+            color: locked ? Colors.grey : (done ? AppColors.success : (primary ? AppColors.accent : AppColors.primary))),
         title: Text(title, style: GoogleFonts.inter(fontSize: 13, fontWeight: primary ? FontWeight.w600 : FontWeight.w400)),
         trailing: locked
             ? Text('Self-paced', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary))
@@ -230,7 +266,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
       );
 
   /// One subtopic as a lesson. Items the lesson does not know (a video, a resource) stay below, as before.
-  Widget _lesson(String title, List<ContentItem> items, List<AiLabInfo> labs) {
+  Widget _lesson(int moduleId, String title, List<ContentItem> items, List<AiLabInfo> labs) {
     final notes = items.where((i) => i.type == 'notes').toList();
     final codes = items.where((i) => i.type == 'code').toList();
     final gits = items.where((i) => i.type == 'github').toList();
@@ -239,6 +275,10 @@ class _ModulesPanelState extends State<ModulesPanel> {
     final noteIds = notes.map((n) => n.id).toSet();
     final myLabs = labs.where((l) => l.contentId != null && noteIds.contains(l.contentId)).toList();
     final hasBuild = myLabs.isNotEmpty || codes.isNotEmpty || gits.isNotEmpty;
+    VoidCallback doing(ContentItem it, VoidCallback go) => () {
+          _mark(moduleId, it);
+          go();
+        };
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.fromLTRB(10, 8, 6, 6),
@@ -253,26 +293,28 @@ class _ModulesPanelState extends State<ModulesPanel> {
         ]),
         for (final n in notes)
           _action(Icons.record_voice_over_rounded, n.title, 'Learn with Altron',
-              (n.htmlContent ?? '').isNotEmpty ? () => _note(n) : null, locked: n.locked),
+              (n.htmlContent ?? '').isNotEmpty ? doing(n, () => _note(n)) : null, locked: n.locked, done: _isDone(moduleId, n)),
         for (final l in myLabs)
           _action(Icons.science_rounded, 'Experiment: ${l.title}', 'Start', widget.canStart ? () => widget.onStartLab(l.id) : null, primary: true),
-        for (final c in codes) _action(Icons.code_rounded, c.title, 'See code', () => _code(c), locked: c.locked),
+        for (final c in codes) _action(Icons.code_rounded, c.title, 'See code', doing(c, () => _code(c)), locked: c.locked, done: _isDone(moduleId, c)),
         for (final g in gits)
           ListTile(
             dense: true,
             contentPadding: const EdgeInsets.only(left: 4),
-            leading: Icon(g.locked ? Icons.lock_outline_rounded : Icons.hub_rounded, size: 20, color: g.locked ? Colors.grey : AppColors.accent),
+            leading: Icon(g.locked ? Icons.lock_outline_rounded : (_isDone(moduleId, g) ? Icons.check_circle_rounded : Icons.hub_rounded), size: 20,
+                color: g.locked ? Colors.grey : (_isDone(moduleId, g) ? AppColors.success : AppColors.accent)),
             title: Text(g.title, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             trailing: g.locked
                 ? Text('Self-paced', style: GoogleFonts.inter(fontSize: 11, color: AppColors.textSecondary))
                 : Row(mainAxisSize: MainAxisSize.min, children: [
                     IconButton(tooltip: 'More: GitHub, clone command', onPressed: () => _github(g), icon: const Icon(Icons.more_horiz_rounded, size: 18)),
-                    ElevatedButton.icon(onPressed: () => _openProject(g), icon: const Icon(Icons.open_in_new_rounded, size: 16), label: const Text('Open in VS Code')),
+                    ElevatedButton.icon(onPressed: doing(g, () => _openProject(g)), icon: const Icon(Icons.open_in_new_rounded, size: 16), label: const Text('Open in VS Code')),
                   ]),
           ),
         for (final t in tests)
-          _action(Icons.quiz_outlined, t.title, 'Take the test', t.testId == null ? null : () => _link('https://altrobytelab.com/test/${t.testId}'), locked: t.locked),
-        for (final o in others) _item(o),
+          _action(Icons.quiz_outlined, t.title, 'Take the test', t.testId == null ? null : doing(t, () => _link('https://altrobytelab.com/test/${t.testId}')),
+              locked: t.locked, done: _isDone(moduleId, t)),
+        for (final o in others) _item(moduleId, o),
       ]),
     );
   }
@@ -313,10 +355,35 @@ class _ModulesPanelState extends State<ModulesPanel> {
       for (final t in d.topics) ...[
         Padding(padding: const EdgeInsets.fromLTRB(8, 12, 0, 0), child: Text(t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5))),
         for (final st in t.subtopics)
-          if (st.contentItems.isNotEmpty) _lesson(st.title.isNotEmpty ? st.title : t.title, st.contentItems, labs),
+          if (st.contentItems.isNotEmpty) _lesson(m.id, st.title.isNotEmpty ? st.title : t.title, st.contentItems, labs),
       ],
       if (d.topics.isEmpty) Padding(padding: const EdgeInsets.all(12), child: Text('This module has no lessons yet.', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary))),
     ]);
+  }
+
+  /// "4 of 12 done" with a bar, under each module's name; the description when there is nothing to show yet.
+  Widget? _progressLine(TrainingModule m) {
+    final total = _total[m.id] ?? 0;
+    final done = (_done[m.id]?.length ?? 0).clamp(0, total);
+    if (m.locked || total == 0) {
+      return m.description.isEmpty ? null : Text(m.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11.5));
+    }
+    final finished = done >= total;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(value: done / total, minHeight: 6, backgroundColor: const Color(0xFFE8EDF3),
+                color: finished ? AppColors.success : AppColors.accent),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(finished ? 'Completed' : '$done of $total done',
+            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: finished ? AppColors.success : AppColors.textSecondary)),
+      ]),
+    );
   }
 
   @override
@@ -327,7 +394,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
         Expanded(child: Text('Your modules', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15))),
         IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded, size: 20)),
       ]),
-      Text('Your notes, videos and experiments. Each module loads only when you open it.', style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+      Text('Learn with Altron, build the project, take the test. Your progress is saved as you go.', style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
       const SizedBox(height: 8),
       if (modules == null)
         Text('Loading your modules…', style: GoogleFonts.inter(color: AppColors.textSecondary))
@@ -353,7 +420,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
                 },
                 leading: Icon(m.locked ? Icons.lock_outline_rounded : Icons.menu_book_rounded, color: m.locked ? Colors.grey : AppColors.primary),
                 title: Text(m.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                subtitle: m.description.isEmpty ? null : Text(m.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 11.5)),
+                subtitle: _progressLine(m),
                 childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
                 children: [
                   if (m.locked)
