@@ -92,6 +92,8 @@
   const course = P.get('course') || null;
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const labId = P.get('lab') ? Number(P.get('lab')) : null;
+  const QUIET_S = 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
+  let quietNudges = 0;
   const IDLE_S = 120;                                       // nobody spoke for this long: pause, so an open app costs nothing
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
@@ -347,7 +349,7 @@
           $('capT').textContent = tutorLine.slice(-260); $('cap').classList.add('on');
         }
         if (sc.inputTranscription && sc.inputTranscription.text) {
-          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now();
+          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0;
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
         }
         if (sc.turnComplete) { tutorLine = ''; youLine = ''; }
@@ -411,6 +413,13 @@
     if (!running) return;
     if (Date.now() >= rotateAt) return renew();
     const quiet = (Date.now() - lastActive) / 1000;
+    // Many learners would rather listen than answer. In a note class, a question left unanswered for a few seconds is
+    // answered by Altron, who carries on; after several in a row with no word from them, the usual pause takes over.
+    if (P.get('teach') === '1' && !playing.length && quiet >= QUIET_S && quietNudges < QUIET_MAX) {
+      quietNudges++;
+      note('[The learner is listening quietly and did not answer. Do not wait and do not ask whether they are there: give the answer yourself in two or three sentences, then carry on teaching.]');
+      return;
+    }
     if (!playing.length && quiet >= IDLE_S) pause('Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
   }
 
