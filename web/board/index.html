@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Altron Board</title>
+<!--
+  The projector board (25 Oct 2026). Open full screen on the projector: altrobytelab.com/board/?c=<board code>.
+  Altron (the founder's phone) draws a circuit; this page asks for the latest one every 1.5 s and draws it itself:
+  each symbol is ours, so the board looks the same every time. Dark on purpose: on a table or a wall the lines glow.
+-->
+<style>
+  :root { --bg: #05080c; --line: #e8f4ff; --accent: #2ee6c8; --warm: #ffb547; --muted: #7d8fa3; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--line); font-family: system-ui, Segoe UI, Roboto, sans-serif; overflow: hidden; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  svg { width: 100vw; height: 100vh; }
+  #wait { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: var(--muted); font-size: 22px; text-align: center; padding: 16px; }
+  #wait b { color: var(--accent); font-size: 30px; }
+  #full { position: fixed; right: 14px; bottom: 12px; background: transparent; color: var(--muted); border: 1px solid #23303d; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="wait"><b>Altron board</b><span id="waitT">Say "Altron, board pe ek LED aur resistor ka circuit dikhao".</span></div>
+<div id="wrap"></div>
+<button id="full" onclick="document.documentElement.requestFullscreen && document.documentElement.requestFullscreen()">Full screen</button>
+<script>
+(function () {
+  const API = 'https://edu.altrobytelab.com';
+  const code = new URLSearchParams(location.search).get('c') || '';
+  if (!code) { document.getElementById('waitT').textContent = 'Open this page with the board code: altrobytelab.com/board/?c=<code> (CRM settings: board_code).'; return; }
+  let last = '';
+
+  const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const W = 'stroke="var(--line)" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+
+  // Each symbol drawn horizontally, centred on 0,0, its leads ending at -60 and +60.
+  const SYM = {
+    battery: () => `<line x1="-60" y1="0" x2="-10" y2="0" ${W}/><line x1="-10" y1="-34" x2="-10" y2="34" ${W}/>
+      <line x1="10" y1="-18" x2="10" y2="18" ${W} stroke-width="9"/><line x1="10" y1="0" x2="60" y2="0" ${W}/>
+      <text x="-28" y="-40" fill="var(--warm)" font-size="26">+</text>`,
+    resistor: () => `<polyline points="-60,0 -40,0 -32,-18 -16,18 0,-18 16,18 32,-18 40,0 60,0" ${W}/>`,
+    led: () => `<line x1="-60" y1="0" x2="-18" y2="0" ${W}/><polygon points="-18,-22 -18,22 16,0" ${W} fill="rgba(255,90,90,.25)"/>
+      <line x1="16" y1="-22" x2="16" y2="22" ${W}/><line x1="16" y1="0" x2="60" y2="0" ${W}/>
+      <path d="M2,-30 L16,-48 M10,-48 L16,-48 L16,-42 M18,-26 L32,-44 M26,-44 L32,-44 L32,-38" ${W} stroke-width="3" stroke="var(--warm)"/>`,
+    diode: () => `<line x1="-60" y1="0" x2="-18" y2="0" ${W}/><polygon points="-18,-22 -18,22 16,0" ${W}/>
+      <line x1="16" y1="-22" x2="16" y2="22" ${W}/><line x1="16" y1="0" x2="60" y2="0" ${W}/>`,
+    switch: () => `<line x1="-60" y1="0" x2="-24" y2="0" ${W}/><circle cx="-24" cy="0" r="5" fill="var(--line)"/>
+      <line x1="-24" y1="0" x2="22" y2="-26" ${W}/><circle cx="24" cy="0" r="5" fill="var(--line)"/><line x1="24" y1="0" x2="60" y2="0" ${W}/>`,
+    capacitor: () => `<line x1="-60" y1="0" x2="-8" y2="0" ${W}/><line x1="-8" y1="-28" x2="-8" y2="28" ${W}/>
+      <line x1="8" y1="-28" x2="8" y2="28" ${W}/><line x1="8" y1="0" x2="60" y2="0" ${W}/>`,
+    lamp: () => `<line x1="-60" y1="0" x2="-26" y2="0" ${W}/><circle cx="0" cy="0" r="26" ${W}/>
+      <path d="M-18,-18 L18,18 M-18,18 L18,-18" ${W} stroke-width="3"/><line x1="26" y1="0" x2="60" y2="0" ${W}/>`,
+    buzzer: () => `<line x1="-60" y1="0" x2="-24" y2="0" ${W}/><path d="M-24,10 A24,24 0 0 1 24,10 Z" ${W}/><line x1="24" y1="0" x2="60" y2="0" ${W}/>`,
+    motor: () => `<line x1="-60" y1="0" x2="-26" y2="0" ${W}/><circle cx="0" cy="0" r="26" ${W}/>
+      <text x="-12" y="11" fill="var(--line)" font-size="30" font-weight="700">M</text><line x1="26" y1="0" x2="60" y2="0" ${W}/>`,
+  };
+
+  function draw(f) {
+    const parts = f.parts || [];
+    const X0 = 250, X1 = 950, Y0 = 170, Y1 = 520;
+    const top = X1 - X0, side = Y1 - Y0, L = top * 2 + side;
+    const pos = (t) => t < top ? [X0 + t, Y0, 0] : t < top + side ? [X1, Y0 + (t - top), 90] : [X1 - (t - top - side), Y1, 180];
+    let svg = `<rect x="${X0}" y="${Y0}" width="${top}" height="${side}" ${W}/>`;
+    const at = (x, y, rot, part, i) => {
+      const lbl = esc([part.label, part.label && part.value && part.label !== part.value ? part.value : (part.label ? '' : part.value)].filter(Boolean).join('  '));
+      const off = rot === 90 ? [70, 6] : rot === -90 ? [-150, 6] : rot === 180 ? [-40, -52] : [-40, -52];
+      return `<g transform="translate(${x},${y})"><rect x="-66" y="-36" width="132" height="72" fill="var(--bg)" transform="rotate(${rot})"/>
+        <g transform="rotate(${rot})">${(SYM[part.type] || SYM.resistor)()}</g>
+        <text x="${off[0]}" y="${off[1]}" fill="var(--accent)" font-size="24" font-weight="600">${lbl}</text></g>`;
+    };
+    const bat = parts.find((p) => p.type === 'battery') || { type: 'battery', label: '' };
+    svg += at(X0, (Y0 + Y1) / 2, -90, bat);
+    const rest = parts.filter((p) => p !== bat);
+    rest.forEach((p, i) => { const [x, y, r] = pos(L * (i + 0.5) / rest.length); svg += at(x, y, r, p, i); });
+    let y = 620;
+    const lines = [...(f.numbers || []).map((t) => ['var(--warm)', t]), ...(f.explain || []).map((t) => ['var(--muted)', t])];
+    for (const [c, t] of lines.slice(0, 5)) { svg += `<text x="600" y="${y}" fill="${c}" font-size="28" text-anchor="middle">${esc(t)}</text>`; y += 42; }
+    svg = `<svg viewBox="0 0 1200 820" xmlns="http://www.w3.org/2000/svg">
+      <text x="600" y="90" fill="var(--line)" font-size="44" font-weight="700" text-anchor="middle">${esc(f.title)}</text>${svg}</svg>`;
+    document.getElementById('wrap').innerHTML = svg;
+    document.getElementById('wait').style.display = 'none';
+  }
+
+  async function tick() {
+    try {
+      const r = await fetch(API + '/board/' + encodeURIComponent(code) + '/latest', { cache: 'no-store' });
+      if (r.ok) {
+        const b = await r.json();
+        if (b.at !== last) { last = b.at; draw(b.frame || {}); }
+      }
+    } catch (_) {}
+    setTimeout(tick, 1500);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
