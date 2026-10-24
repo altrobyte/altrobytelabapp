@@ -251,10 +251,6 @@ class _CrmScreenState extends State<CrmScreen> {
                   }),
               icon: const Icon(Icons.upload_file_rounded, size: 21)),
           IconButton(
-              tooltip: 'WhatsApp everyone in this list',
-              onPressed: _bulk,
-              icon: const Icon(Icons.campaign_outlined, size: 21)),
-          IconButton(
               onPressed: () {
                 setState(() => _loading = true);
                 _load();
@@ -491,8 +487,18 @@ class _CrmScreenState extends State<CrmScreen> {
           ),
           if (!_loading) ...[
             const SizedBox(height: 6),
-            Text('${_shown.length} ${_shown.length == 1 ? 'person' : 'people'}${_did.isNotEmpty ? ' · ${_didLabels[_did]}' : ''}${_stage.isNotEmpty ? ' · ${_stageLabels[_stage]}' : ''}${_needsCall ? ' · to call first' : ''}',
-                style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+            Row(children: [
+              Expanded(
+                child: Text('${_shown.length} ${_shown.length == 1 ? 'person' : 'people'}${_did.isNotEmpty ? ' · ${_didLabels[_did]}' : ''}${_stage.isNotEmpty ? ' · ${_stageLabels[_stage]}' : ''}${_needsCall ? ' · to call first' : ''}',
+                    style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              ),
+              // Pick a filter (e.g. Registered), then message everyone it shows.
+              OutlinedButton.icon(
+                onPressed: _shown.isEmpty ? null : _bulk,
+                icon: const Icon(Icons.campaign_outlined, size: 18, color: Color(0xFF128C7E)),
+                label: Text('WhatsApp these ${_shown.length}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: const Color(0xFF128C7E))),
+              ),
+            ]),
           ],
         ]),
       );
