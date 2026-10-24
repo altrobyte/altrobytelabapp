@@ -124,13 +124,22 @@ const noteBridgeScript = r"""
     stopDrift();
     if (!blocks || !blocks.length) return;
     var endEl = blocks[blocks.length - 1];
+    // Paced to Altron's talk, not a fixed speed: explaining a section in depth takes about 2.5 times as long as reading
+    // it aloud (2.2 words a second), and never under a minute and a half; the page reaches its end as Altron does.
+    var words = 0;
+    for (var w = 0; w < blocks.length; w++) words += (blocks[w].innerText || '').split(/\s+/).length;
+    var seconds = Math.max(90, words / 2.2 * 2.5);
     setTimeout(function () {                    // after the smooth jump to the heading has settled
+      var distance = endEl.getBoundingClientRect().bottom - (window.innerHeight - 40);
+      if (distance <= 0) return;
+      var perTick = distance / (seconds * 10), owed = 0;
       drift = setInterval(function () {
         var bottom = endEl.getBoundingClientRect().bottom;
         if (bottom <= window.innerHeight - 40) { stopDrift(); return; }
-        window.scrollBy(0, 1);
-      }, 40);                                   // about 25 pixels a second
-    }, 2500);
+        owed += perTick;
+        if (owed >= 1) { window.scrollBy(0, Math.floor(owed)); owed -= Math.floor(owed); }
+      }, 100);
+    }, 8000);                                   // Altron first says what the section is about
   }
   function tapSelects() {
     var sels = document.querySelectorAll('select:not([multiple])');
