@@ -53,6 +53,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
   // Progress, the website's own record: what is done in each module, out of how many items.
   final Map<int, Set<int>> _done = {};
   final Map<int, int> _total = {};
+  final Map<int, String> _score = {};          // note id -> "2/3", the end-of-note check
   // A module opens on a page of its own; that page redraws whenever this panel does.
   final _tick = ValueNotifier<int>(0);
 
@@ -92,6 +93,10 @@ class _ModulesPanelState extends State<ModulesPanel> {
   void _applyProgress(Map p, int id) {
     _done[id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
     _total[id] = (p['total_items'] as num?)?.toInt() ?? 0;
+    for (final e in ((p['scores'] as Map?) ?? const {}).entries) {
+      final k = int.tryParse('${e.key}');
+      if (k != null) _score[k] = '${e.value}';
+    }
   }
 
   /// What this computer kept from last time shows at once; the fresh copy follows from the internet.
@@ -147,7 +152,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
         if (!m.locked)
           ApiService.desktopProgress(m.id).then((p) {
             _applyProgress(p, m.id);
-            _cache?.write('progress-${m.id}', {'completed_item_ids': _done[m.id]!.toList(), 'total_items': _total[m.id]});
+            _cache?.write('progress-${m.id}', p);
           }).catchError((_) {}),
     ]);
     if (mounted) setState(() {});
@@ -368,7 +373,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
           if (tests.isNotEmpty) _step('3', 'Test', const Color(0xFF2E7D32)),
         ]),
         for (final n in notes)
-          _action(Icons.record_voice_over_rounded, n.title, 'Learn with Altron',
+          _action(Icons.record_voice_over_rounded, _score[n.id] == null ? n.title : '${n.title}  ·  check ${_score[n.id]}', 'Learn with Altron',
               (n.htmlContent ?? '').isNotEmpty ? doing(n, () => _note(n)) : null, locked: n.locked, done: _isDone(moduleId, n)),
         for (final l in myLabs)
           _action(Icons.science_rounded, 'Experiment: ${l.title}', 'Start', widget.canStart ? () => widget.onStartLab(l.id) : null, primary: true),

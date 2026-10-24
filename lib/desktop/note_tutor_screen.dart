@@ -365,9 +365,14 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       cam.webMessage.listen((m) {
         final msg = liveMessage(m);
         final part = (msg?['part'] as num?)?.toInt();
-        if (msg?['type'] == 'section' && part != null && part >= 1) t.reading('s${part - 1}', bring: true);
+        if (msg?['type'] == 'section' && part != null && part >= 1) {
+          t.reading('s${part - 1}', bring: true);
+          // Where Altron got to: opening this note again carries on from here.
+          SharedPreferences.getInstance().then((p) => p.setInt('note_part_${widget.contentId}', part));
+        }
       });
-      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true); // teaches at once; the camera stays off
+      final from = (await SharedPreferences.getInstance()).getInt('note_part_${widget.contentId}') ?? 0;
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {

@@ -150,7 +150,7 @@
           body: JSON.stringify({ lang }) })
       : await fetch(API + '/trainer/live/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', lang, resume: !!resume }),
+      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', from_part: Number(P.get('from')) || 0, lang, resume: !!resume }),
     });
     const body = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
@@ -316,6 +316,16 @@
             body: JSON.stringify({ name: call.name, args: call.args || {} }) });
           response = await r.json();
         } catch (_) { response = { error: 'Could not reach the server.' }; }
+      } else if (call.name === 'save_score') {
+        // the end-of-note check: kept with the learner's progress
+        const right = Math.max(0, Math.min(3, Number(call.args && call.args.right) || 0));
+        try {
+          const r = await fetch(API + '/trainer/live/note-score', { method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+            body: JSON.stringify({ content_id: noteId, right }) });
+          response = await r.json();
+        } catch (_) { response = { kept: false }; }
+        tellHost({ type: 'score', right });
       } else if (call.name === 'show_part') {
         // the note is open in the app: the app scrolls to that section and makes it glow
         tellHost({ type: 'section', part: Number(call.args && call.args.part) || 1 });
@@ -354,7 +364,9 @@
           const opener = FOUNDER
             ? (P.get('q') ? 'I just said: ' + P.get('q').slice(0, 300) : 'I called you by name. Say "Haan boliye" or similar in two words and listen.')
             : P.get('teach') === '1'
-            ? 'The note is open on my screen. Greet me in one short sentence, then call show_part 1 and teach section 1.'
+            ? (Number(P.get('from')) > 1
+                ? 'The note is open on my screen again. Welcome me back in one line, recap briefly, then call show_part ' + Number(P.get('from')) + ' and carry on from there.'
+                : 'The note is open on my screen. Greet me in one short sentence, then call show_part 1 and teach section 1.')
             : (course || P.get('steps') === '1')
             ? 'The session has started. ' + camLine + ' Call get_current_step, then greet me in one short sentence and teach that step.'
             : 'The session has started. ' + camLine + ' Greet me in one short sentence, say what we will look at today and ask what I am working on.';
