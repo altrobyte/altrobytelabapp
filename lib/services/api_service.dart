@@ -979,6 +979,14 @@ class ApiService {
   }
 
   /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
+  /// One WhatsApp message (the update template, each lead's own name) to many leads at once.
+  static Future<Map<String, dynamic>> crmBulk(List<String> phones, String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/bulk'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'phones': phones, 'text': text}));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> crmSend(String phone, String text) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');

@@ -251,6 +251,10 @@ class _CrmScreenState extends State<CrmScreen> {
                   }),
               icon: const Icon(Icons.upload_file_rounded, size: 21)),
           IconButton(
+              tooltip: 'WhatsApp everyone in this list',
+              onPressed: _bulk,
+              icon: const Icon(Icons.campaign_outlined, size: 21)),
+          IconButton(
               onPressed: () {
                 setState(() => _loading = true);
                 _load();
@@ -319,6 +323,64 @@ class _CrmScreenState extends State<CrmScreen> {
         ]),
       ),
     );
+  }
+
+  /// One WhatsApp message to everyone the filters show now (e.g. Registered). It goes as the approved update template,
+  /// "Hi <their name>, <your message>", so it reaches people outside the 24-hour window too.
+  Future<void> _bulk() async {
+    final people = [for (final l in _shown) if ('${l['phone'] ?? ''}'.length >= 10) l];
+    if (people.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No one in this list to message.')));
+      return;
+    }
+    final box = TextEditingController();
+    final first = '${people.first['name'] ?? ''}'.trim().split(' ').first;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, redraw) => AlertDialog(
+          title: Text('WhatsApp ${people.length} ${people.length == 1 ? 'person' : 'people'}'),
+          content: SizedBox(
+            width: 460,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Everyone in the list you are looking at now. Each gets their own name.',
+                  style: GoogleFonts.inter(fontSize: 12.5, color: Colors.black54)),
+              const SizedBox(height: 10),
+              TextField(
+                controller: box,
+                maxLines: 5,
+                maxLength: 900,
+                onChanged: (_) => redraw(() {}),
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(), hintText: 'e.g. our free live demo is this Saturday at 6 pm. Reply YES to get the link.'),
+              ),
+              Text('They will read:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFDCF8C6), borderRadius: BorderRadius.circular(8)),
+                child: Text('Hi ${first.isEmpty ? 'there' : first}, ${box.text.trim()}', style: GoogleFonts.inter(fontSize: 13)),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: box.text.trim().length < 3 ? null : () => Navigator.pop(ctx, true),
+                child: Text('Send to ${people.length}')),
+          ],
+        ),
+      ),
+    );
+    if (go != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final r = await ApiService.crmBulk([for (final l in people) '${l['phone']}'], box.text.trim());
+      messenger.showSnackBar(SnackBar(content: Text('Sending to ${r['queued']} people. Each one shows in their chat with a note.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not send: ${e.toString().replaceFirst('Exception: ', '')}')));
+    }
   }
 
   List<Map<String, dynamic>> get _shown => [
