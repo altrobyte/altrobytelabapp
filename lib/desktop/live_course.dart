@@ -187,11 +187,14 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
   String _lang = 'en';
   bool _wasBusy = false;
   int _toldUpTo = -1; // the last learner line Altron already knows about
+  int _serialSeen = 0; // serial monitor lines already looked at
+  DateTime _serialToldAt = DateTime(2000);
 
   @override
   void initState() {
     super.initState();
     _toldUpTo = c.chat.lastIndexWhere((b) => b.role == 'learner');
+    _serialSeen = c.monitorLines.length;
     c.addListener(_onCourse);
     _open();
   }
@@ -233,8 +236,24 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
     await _web?.executeScript('window.altronToolResult && window.altronToolResult(${jsonEncode(id)}, ${jsonEncode(jsonEncode(result))})');
   }
 
+  /// The board printed a crash, a reset or an error on the serial monitor: Altron hears the lines and explains them aloud
+  /// (at most once every 20 seconds, so a boot loop does not drown the lesson).
+  void _onSerial() {
+    final lines = c.monitorLines;
+    if (lines.length < _serialSeen) _serialSeen = 0;          // the monitor was restarted
+    final fresh = lines.sublist(_serialSeen);
+    _serialSeen = lines.length;
+    final bad = fresh.where((l) => serialTrouble.hasMatch(l)).toList();
+    if (bad.isEmpty || DateTime.now().difference(_serialToldAt) < const Duration(seconds: 20)) return;
+    _serialToldAt = DateTime.now();
+    final text = 'The board just printed this on the serial monitor:\n${bad.take(6).join('\n')}\n'
+        'Explain in two short sentences what it means and what the learner should check, then carry on.';
+    _web?.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
+  }
+
   // A turn just ended. If the learner tapped or typed it (not Altron answering for them), Altron hears what happened.
   void _onCourse() {
+    _onSerial();
     final busy = c.busy;
     if (_wasBusy && !busy) {
       final i = c.chat.lastIndexWhere((b) => b.role == 'learner');
@@ -317,3 +336,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
     );
   }
 }
+
+/// Lines on an ESP32's serial monitor that mean trouble: a crash, a reset, a brownout, an error.
+final serialTrouble = RegExp(r'Guru Meditation|Backtrace|Brownout|brownout|panic|abort\(\)|rst:0x|WDT|watchdog|'
+    r'\bE \(\d+\)|\berror\b|\bfailed\b|exception', caseSensitive: false);
