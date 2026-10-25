@@ -55,6 +55,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
   final Map<int, Set<int>> _done = {};
   final Map<int, int> _total = {};
   final Map<int, String> _score = {};          // note id -> "2/3", the end-of-note check
+  bool _unlockAll = false;                       // the team: every lesson open for testing
   // A module opens on a page of its own; that page redraws whenever this panel does.
   final _tick = ValueNotifier<int>(0);
 
@@ -94,6 +95,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
   void _applyProgress(Map p, int id) {
     _done[id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
     _total[id] = (p['total_items'] as num?)?.toInt() ?? 0;
+    if (p['unlock_all'] == true) _unlockAll = true;
     for (final e in ((p['scores'] as Map?) ?? const {}).entries) {
       final k = int.tryParse('${e.key}');
       if (k != null) _score[k] = '${e.value}';
@@ -124,8 +126,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
       final raw = await ApiService.desktopModules();
       _modules = _parseList(raw);
       c.write('modules', raw);
-      _loadProgress();
-      _prefetch();
+      // Light first: the list and the progress. Lessons come when a module is opened; only the one they are on is
+      // fetched ahead (for Continue learning), a moment later.
+      _loadProgress().then((_) => Future.delayed(const Duration(seconds: 2), _prefetchCurrent));
     } catch (e) {
       if (_modules == null || _modules!.isEmpty) _problem = modulesProblem(e);   // with a kept copy on screen, stay quiet
       _modules ??= [];
@@ -133,18 +136,28 @@ class _ModulesPanelState extends State<ModulesPanel> {
     if (mounted) setState(() {});
   }
 
-  /// Every open module's lessons fetched in the background, one at a time, so opening one never waits.
-  Future<void> _prefetch() async {
-    for (final m in List<TrainingModule>.of(_modules ?? const [])) {
-      if (m.locked || !mounted) continue;
-      try {
-        final raw = await ApiService.desktopModule(m.id);
-        _detail[m.id] = TrainingModule.fromJson(raw);
-        _detailProblem.remove(m.id);
-        _cache?.write('module-${m.id}', raw);
-        if (mounted) setState(() {});
-      } catch (_) {}
-    }
+  /// Only the module they are part-way through (else the first open one) is fetched ahead, for Continue learning.
+  /// Fetching every module's notes at start made a slow line wait for all of them (26 Oct 2026).
+  Future<void> _prefetchCurrent() async {
+    if (!mounted) return;
+    final open = [for (final m in _modules ?? const <TrainingModule>[]) if (!m.locked) m];
+    if (open.isEmpty) return;
+    final current = open.firstWhere((m) => _doneOf(m) > 0 && _doneOf(m) < _totalOf(m), orElse: () => open.first);
+    await _fetchDetail(current);
+  }
+
+  final Set<int> _fresh = {};      // modules fetched from the server this time (a kept copy may be older)
+
+  Future<void> _fetchDetail(TrainingModule m) async {
+    if (_fresh.contains(m.id)) return;
+    try {
+      final raw = await ApiService.desktopModule(m.id);
+      _detail[m.id] = TrainingModule.fromJson(raw);
+      _detailProblem.remove(m.id);
+      _fresh.add(m.id);
+      _cache?.write('module-${m.id}', raw);
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   Future<void> _loadProgress() async {
@@ -171,7 +184,11 @@ class _ModulesPanelState extends State<ModulesPanel> {
   bool _isDone(int moduleId, ContentItem it) => _done[moduleId]?.contains(it.id) ?? false;
 
   Future<void> _open(TrainingModule m) async {
-    if (_detail.containsKey(m.id) || _loading.contains(m.id)) return;
+    if (_detail.containsKey(m.id)) {
+      _fetchDetail(m);                         // the kept copy shows at once; a fresh one replaces it quietly
+      return;
+    }
+    if (_loading.contains(m.id)) return;
     setState(() {
       _loading.add(m.id);
       _detailProblem.remove(m.id);
@@ -474,6 +491,45 @@ class _ModulesPanelState extends State<ModulesPanel> {
     );
   }
 
+  /// The lessons one after another (26 Oct 2026, founder: complete the steps to unlock the next): the first lesson is
+  /// open; each next one opens when everything in the one before it is done (its note, project, test...).
+  List<Widget> _lessonsInOrder(int moduleId, TrainingModule d, List<AiLabInfo> labs) {
+    final out = <Widget>[];
+    String? waitingFor;                                      // the lesson that must be finished first
+    for (final t in d.topics) {
+      final lessons = [for (final st in t.subtopics) if (st.contentItems.isNotEmpty) st];
+      if (lessons.isEmpty) continue;
+      out.add(Padding(padding: const EdgeInsets.fromLTRB(8, 12, 0, 0),
+          child: Text(t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5))));
+      for (final st in lessons) {
+        final title = st.title.isNotEmpty ? st.title : t.title;
+        if (waitingFor != null && !_unlockAll) {
+          out.add(_lockedLesson(title, waitingFor));
+          continue;
+        }
+        out.add(_lesson(moduleId, title, st.contentItems, labs));
+        final open = st.contentItems.where((i) => !i.locked);
+        if (open.any((i) => !_isDone(moduleId, i))) waitingFor = title;
+      }
+    }
+    return out;
+  }
+
+  Widget _lockedLesson(String title, String after) => Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(color: const Color(0xFFF1F3F6), borderRadius: BorderRadius.circular(12)),
+        child: Row(children: [
+          const Icon(Icons.lock_outline_rounded, size: 18, color: Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black45))),
+          Flexible(
+            child: Text('Finish "$after" to unlock', textAlign: TextAlign.right,
+                style: GoogleFonts.inter(fontSize: 11.5, color: AppColors.textSecondary)),
+          ),
+        ]),
+      );
+
   Widget _moduleBody(TrainingModule m) {
     if (_loading.contains(m.id)) {
       return const Padding(padding: EdgeInsets.all(14), child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
@@ -507,11 +563,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
             ]),
           ),
       ],
-      for (final t in d.topics) ...[
-        Padding(padding: const EdgeInsets.fromLTRB(8, 12, 0, 0), child: Text(t.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5))),
-        for (final st in t.subtopics)
-          if (st.contentItems.isNotEmpty) _lesson(m.id, st.title.isNotEmpty ? st.title : t.title, st.contentItems, labs),
-      ],
+      ..._lessonsInOrder(m.id, d, labs),
       if (d.topics.isEmpty) Padding(padding: const EdgeInsets.all(12), child: Text('This module has no lessons yet.', style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary))),
     ]);
   }
