@@ -475,7 +475,7 @@
       note('[The learner is listening quietly and did not answer. Do not wait and do not ask whether they are there: give the answer yourself in two or three sentences, then carry on teaching.]');
       return;
     }
-    if (!playing.length && !replyDue && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Hey Jarvis" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
+    if (!playing.length && !replyDue && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Jarvis" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');
   }
 
   function cleanup() {

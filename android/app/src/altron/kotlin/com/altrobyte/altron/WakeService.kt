@@ -40,9 +40,12 @@ import java.net.URL
 /** Jarvis, the founder's assistant, on the phone, all of it in one place (named Jarvis on 25 Oct 2026; the learners'
  *  trainer stays Altron).
  *
- *  Listening: Vosk, offline, Indian English model in assets/model-en-in. The wake phrase is "hey jarvis": both words,
- *  each at confidence 0.8 or more. "jarvis" is a real word in the model, which "altron" never was; alone it also woke on
- *  "the service" and "Travis" in tests, so the two-word phrase is used (only "hey Travis" still matched).
+ *  Listening: Vosk, offline, Indian English model in assets/model-en-in. Saying "Jarvis" wakes it (founder: also
+ *  "Jarvish", "Jaarvis", with or without "hey"). The grammar holds "jarvis" plus look-alike words (service, Travis,
+ *  nervous, harvest, serve, office, purpose): those sounds land on their own word instead of on "jarvis", and a wake
+ *  needs "jarvis" at confidence 0.8 or more. In tests every Jarvis / Jarvish / Jaarvis / Hey Jarvis woke it and none of
+ *  service, Travis, nervous, harvest, serve, "call Ravi" did. Adding near-twins (jervis, jarvi) split the confidence and
+ *  lost the real word, so they are left out.
  *
  *  Talking: on a wake the microphone is let go and a thin glowing strip appears along the top of the screen, over any
  *  app (a system overlay, so it stays when the founder moves between apps). Under the strip, out of sight, one WebView
@@ -57,7 +60,8 @@ class WakeService : Service(), RecognitionListener {
         const val ACTION_STOP = "com.altrobyte.altron.STOP"
         private const val CHANNEL = "altron_listening"
         private const val NOTE_ID = 7
-        private const val GRAMMAR = "[\"hey jarvis\", \"[unk]\"]"
+        private const val GRAMMAR = "[\"jarvis\", \"service\", \"travis\", \"nervous\", \"harvest\", \"serve\", " +
+            "\"office\", \"purpose\", \"[unk]\"]"
         private const val MIN_CONF = 0.8
         private const val PAGE = "https://altrobytelab.com/live/v2/index.html?founder=1&lang=hi&compact=1&autostart=1"
         @Volatile var running = false
@@ -139,11 +143,9 @@ class WakeService : Service(), RecognitionListener {
 
     private fun heard(json: String?) {
         val words = try { JSONObject(json ?: "{}").optJSONArray("result") } catch (e: Exception) { null } ?: return
-        for (i in 0 until words.length() - 1) {
-            val a = words.getJSONObject(i)
-            val b = words.getJSONObject(i + 1)
-            if (a.optString("word") == "hey" && b.optString("word") == "jarvis" &&
-                a.optDouble("conf") >= MIN_CONF && b.optDouble("conf") >= MIN_CONF) {
+        for (i in 0 until words.length()) {
+            val w = words.getJSONObject(i)
+            if (w.optString("word") == "jarvis" && w.optDouble("conf") >= MIN_CONF) {
                 main.post { talk() }
                 return
             }
@@ -302,7 +304,7 @@ class WakeService : Service(), RecognitionListener {
             PendingIntent.FLAG_IMMUTABLE)
         val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else @Suppress("DEPRECATION") Notification.Builder(this)
         val note = b.setContentTitle("Jarvis is listening")
-            .setContentText("Say \"Hey Jarvis\". Stop turns it off completely.")
+            .setContentText("Say \"Jarvis\". Stop turns it off completely.")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .setContentIntent(talkNow)
