@@ -2765,6 +2765,13 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Moves a content item into another subtopic (it lands last there).
+  static Future<void> moveContent(int contentId, int subtopicId) async {
+    final token = await _token();
+    _parse(await http.put(Uri.parse('${ApiConstants.trainingModuleContentItem(contentId)}/move'),
+        headers: _headers(token), body: jsonEncode({'subtopic_id': subtopicId})));
+  }
+
   static Future<void> deleteContent(int contentId) async {
     final token = await _token();
     final res = await http.delete(

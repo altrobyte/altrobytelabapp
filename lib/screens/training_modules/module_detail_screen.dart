@@ -982,6 +982,52 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     _reorder(() => context.read<TrainingModuleProvider>().reorderContent(subtopicId, o, _fixIndex(o, n)));
   }
 
+  /// Moves a note (or any item) into another subtopic of this module: pick it from the list, it goes there as the last item.
+  Future<void> _moveContent(int fromSubtopicId, ContentItem item) async {
+    final provider = context.read<TrainingModuleProvider>();
+    final module = provider.currentModule;
+    if (module == null) return;
+    final target = await showDialog<int>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('Move "${item.title}" to', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+        content: SizedBox(
+          width: 460,
+          child: ListView(shrinkWrap: true, children: [
+            for (final t in module.topics) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+                child: Text(t.title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+              for (final st in t.subtopics)
+                ListTile(
+                  dense: true,
+                  enabled: st.id != fromSubtopicId,
+                  leading: Icon(st.id == fromSubtopicId ? Icons.check_rounded : Icons.subdirectory_arrow_right_rounded, size: 18),
+                  title: Text(st.title.isEmpty ? '(untitled)' : st.title),
+                  subtitle: st.id == fromSubtopicId ? const Text('It is here now') : null,
+                  onTap: () => Navigator.pop(d, st.id),
+                ),
+            ],
+          ]),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel'))],
+      ),
+    );
+    if (target == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiService.moveContent(item.id, target);
+      await provider.loadModuleDetail(module.id);
+      _expandedSubtopics.add(target);
+      if (mounted) setState(() {});
+      messenger.showSnackBar(SnackBar(content: Text('Moved "${item.title}"')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not move it: ${e.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: AppColors.error));
+    }
+  }
+
   Future<void> _deleteContent(
       int topicId, int subtopicId, int contentId) async {
     final provider = context.read<TrainingModuleProvider>();
@@ -1131,6 +1177,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                           _editContent(topic.id, subtopicId, item, color),
                       onDeleteContent: (subtopicId, contentId) =>
                           _deleteContent(topic.id, subtopicId, contentId),
+                      onMoveContent: _moveContent,
                     );
                   },
                 ),
@@ -1158,6 +1205,7 @@ class _TopicCard extends StatelessWidget {
   final void Function(int subtopicId, int oldIndex, int newIndex) onReorderContent;
   final Function(int subtopicId, ContentItem item) onEditContent;
   final Function(int subtopicId, int contentId) onDeleteContent;
+  final void Function(int subtopicId, ContentItem item) onMoveContent;
 
   const _TopicCard({
     super.key,
@@ -1178,6 +1226,7 @@ class _TopicCard extends StatelessWidget {
     required this.onEditContent,
     required this.onDeleteContent,
     required this.onDeleteSubtopic,
+    required this.onMoveContent,
   });
 
   @override
@@ -1291,6 +1340,7 @@ class _TopicCard extends StatelessWidget {
                               onEditContent(topic.subtopics[i].id, item),
                           onDeleteContent: (contentId) =>
                               onDeleteContent(topic.subtopics[i].id, contentId),
+                          onMoveContent: (item) => onMoveContent(topic.subtopics[i].id, item),
                           onDelete: () => onDeleteSubtopic(topic.subtopics[i].id),
                         ),
                     ],
@@ -1339,6 +1389,7 @@ class _SubtopicTile extends StatelessWidget {
   final void Function(int oldIndex, int newIndex) onReorderContent;
   final ValueChanged<ContentItem> onEditContent;
   final ValueChanged<int> onDeleteContent;
+  final ValueChanged<ContentItem> onMoveContent;
   final VoidCallback onDelete;
 
   const _SubtopicTile({
@@ -1353,6 +1404,7 @@ class _SubtopicTile extends StatelessWidget {
     required this.onReorderContent,
     required this.onEditContent,
     required this.onDeleteContent,
+    required this.onMoveContent,
     required this.onDelete,
   });
 
@@ -1452,6 +1504,13 @@ class _SubtopicTile extends StatelessWidget {
                       child: _DragGrip(color: Colors.grey),
                     ),
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.drive_file_move_outline, size: 16),
+                  color: Colors.grey,
+                  tooltip: 'Move to another subtopic',
+                  onPressed: () => onMoveContent(item),
+                  visualDensity: VisualDensity.compact,
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_rounded, size: 15),
