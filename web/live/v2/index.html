@@ -316,6 +316,20 @@
             body: JSON.stringify({ name: call.name, args: call.args || {} }) });
           response = await r.json();
         } catch (_) { response = { error: 'Could not reach the server.' }; }
+      } else if (call.name === 'look_at_screen') {
+        // only the desktop app can see the screen: it sends one picture, which goes into the talk as a frame
+        if (!host) response = { error: 'Seeing the screen works only in the Altrobyte desktop app.' };
+        else {
+          const shot = await new Promise((done) => {
+            const t = setTimeout(() => done(null), 8000);
+            window.altronScreen = (b64) => { clearTimeout(t); done(b64 || null); };
+            tellHost({ type: 'screen' });
+          });
+          if (shot && ws && ws.readyState === 1) {
+            ws.send(JSON.stringify({ realtimeInput: { video: { data: shot, mimeType: 'image/jpeg' } } }));
+            response = { seen: 'The picture of their screen was just sent to you: describe what matters on it and help.' };
+          } else response = { error: 'Could not take a picture of the screen just now.' };
+        }
       } else if (call.name === 'save_score') {
         // the end-of-note check: kept with the learner's progress
         const right = Math.max(0, Math.min(3, Number(call.args && call.args.right) || 0));

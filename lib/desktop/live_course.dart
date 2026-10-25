@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 import 'helper_controller.dart';
+import 'screen_shot.dart';
 import 'live_tutor_screen.dart';
 
 /// Text as it should be said: no markdown marks.
@@ -225,6 +226,11 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
 
   Future<void> _onPage(dynamic raw) async {
     final m = liveMessage(raw);
+    if (m != null && m['type'] == 'screen') {          // Altron asked to see the screen
+      final shot = await screenshotJpegBase64();
+      await _web?.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');
+      return;
+    }
     if (m == null || m['type'] != 'tool') return;
     final id = '${m['id']}';
     Map<String, dynamic> result;

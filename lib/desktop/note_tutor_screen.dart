@@ -5,6 +5,7 @@
 // computer the note opens in the browser instead and the tutor still works: the learner picks the section they are reading.
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ import 'chat_text.dart';
 import 'help_button.dart';
 import 'class_screen.dart';
 import 'live_tutor_screen.dart';
+import 'screen_shot.dart';
 import 'note_tutor.dart';
 import 'tutor_feel.dart';
 import 'visual_page.dart';
@@ -362,8 +364,13 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       // One voice: the note tutor's lines go to Altron Live to say, instead of being spoken on top of it.
       t.relay = null;                                  // Altron teaches; the reading tutor's lines are not passed on
       t.liveTeaching = true;
-      cam.webMessage.listen((m) {
+      cam.webMessage.listen((m) async {
         final msg = liveMessage(m);
+        if (msg?['type'] == 'screen') {                // Altron asked to see the screen
+          final shot = await screenshotJpegBase64();
+          await cam.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');
+          return;
+        }
         final part = (msg?['part'] as num?)?.toInt();
         if (msg?['type'] == 'section' && part != null && part >= 1) {
           t.reading('s${part - 1}', bring: true);
