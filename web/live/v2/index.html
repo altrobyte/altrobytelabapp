@@ -96,7 +96,8 @@
   const QUIET_S = 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
   let quietNudges = 0;
   const IDLE_S = FOUNDER ? 12 : 120;                       // the founder's assistant sleeps 12 s after the talk; its name wakes it
-  let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then                                       // nobody spoke for this long: pause, so an open app costs nothing
+  let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
+  let lastWords = Date.now();                              // the last time words were understood, from either side
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
@@ -211,7 +212,7 @@
       // assistant fall asleep in the middle of a question).
       let sum = 0;
       for (const v of e.data) { pcm.push(v); sum += v * v; }
-      if (e.data.length && Math.sqrt(sum / e.data.length) > 0.02) lastActive = Date.now();
+      if (e.data.length && Math.sqrt(sum / e.data.length) > 0.06) lastActive = Date.now();   // speech, not a fan or a TV
       if (pcm.length >= 1600) {
         const out = new Int16Array(pcm.length);
         for (let i = 0; i < pcm.length; i++) { const s = Math.max(-1, Math.min(1, pcm[i])); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
@@ -400,11 +401,12 @@
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
         if (sc.outputTranscription && sc.outputTranscription.text) {
+          lastWords = Date.now();
           tutorLine += sc.outputTranscription.text;
           $('capT').textContent = tutorLine.slice(-260); $('cap').classList.add('on');
         }
         if (sc.inputTranscription && sc.inputTranscription.text) {
-          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true;
+          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true; lastWords = Date.now();
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
         }
         if (sc.turnComplete) { tutorLine = ''; youLine = ''; replyDue = false; lastActive = Date.now(); }
@@ -473,6 +475,11 @@
     if (P.get('teach') === '1' && !playing.length && quiet >= QUIET_S && quietNudges < QUIET_MAX) {
       quietNudges++;
       note('[The learner is listening quietly and did not answer. Do not wait and do not ask whether they are there: give the answer yourself in two or three sentences, then carry on teaching.]');
+      return;
+    }
+    // The founder's assistant: 25 s with no words understood from anyone ends the talk, whatever the room sounds like.
+    if (FOUNDER && !playing.length && (Date.now() - lastWords) / 1000 >= 25) {
+      pause('Resting. Say "Jarvis" or tap ▶.');
       return;
     }
     if (!playing.length && !replyDue && quiet >= IDLE_S) pause(FOUNDER ? 'Resting. Say "Jarvis" or tap ▶.' : 'Paused because nobody spoke for two minutes. Tap ▶ to carry on.');

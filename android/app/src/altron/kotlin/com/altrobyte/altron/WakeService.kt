@@ -53,7 +53,8 @@ import java.net.URL
  *  rests (5 s of quiet) or the strip is tapped, the WebView is destroyed (the voice and its bill stop with it) and
  *  listening starts again.
  *
- *  Off: the × on the strip, Stop in the notification, or swiping the app away ends everything: no listening, no voice. */
+ *  The × on the strip ends the talk and listening goes on (founder, 25 Oct: after closing, "Jarvis" must still wake it).
+ *  Off: Stop in the notification, or swiping the app away, ends everything: no listening, no voice. */
 class WakeService : Service(), RecognitionListener {
     companion object {
         const val ACTION_TALK = "com.altrobyte.altron.TALK"
@@ -275,7 +276,7 @@ class WakeService : Service(), RecognitionListener {
         val close = TextView(this).apply {
             text = "✕"; setTextColor(Color.WHITE); textSize = 13f; gravity = Gravity.CENTER
             setBackgroundColor(Color.argb(150, 15, 37, 48))
-            setOnClickListener { off() }
+            setOnClickListener { endTalk(); listen() }   // ends this talk; "Jarvis" still wakes it (Stop in the notification = off)
         }
         box.addView(close, FrameLayout.LayoutParams((30 * d).toInt(), (24 * d).toInt(), Gravity.TOP or Gravity.END).apply {
             topMargin = (6 * d).toInt(); rightMargin = (8 * d).toInt()
