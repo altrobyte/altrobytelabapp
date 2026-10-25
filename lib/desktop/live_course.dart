@@ -310,7 +310,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
             const Icon(Icons.graphic_eq_rounded, color: Color(0xFFFF9A5A), size: 18),
             const SizedBox(width: 6),
             Expanded(child: Text('Altron Live · talk, interrupt, ask anything', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12))),
-            for (final (code, label) in const [('en', 'English'), ('hi', 'Hinglish')])
+            for (final (code, label) in const [('en', 'English'), ('hi', 'Hinglish'), ('hd', 'हिंदी')])
               Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: InkWell(
