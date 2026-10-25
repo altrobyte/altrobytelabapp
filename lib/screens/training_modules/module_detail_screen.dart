@@ -343,6 +343,27 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _ContentTypeCard(
+                    icon: Icons.developer_board_rounded,
+                    label: 'Project task',
+                    subtitle: 'Learner creates it: by themselves or from Altron\'s template',
+                    color: const Color(0xFF00897B),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addProjectContent(subtopic);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(child: SizedBox()),
+                const SizedBox(width: 12),
+                const Expanded(child: SizedBox()),
+              ],
+            ),
             const SizedBox(height: 16),
           ],
         ),
@@ -595,6 +616,26 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// A project task: in the desktop app the learner creates it by themselves or from Altron's template (written from
+  /// this subtopic's notes), in PlatformIO or ESP-IDF. No GitHub repo needed.
+  Future<void> _addProjectContent(ModuleSubtopic subtopic) async {
+    final res = await _formDialog('Add Project task', const Color(0xFF00897B), [
+      (label: 'Title', value: '', lines: 1),
+      (label: 'Task for the learner (what the project must do)', value: '', lines: 6),
+      (label: 'Board (PlatformIO name)', value: 'esp32dev', lines: 1),
+    ]);
+    if (res == null || !mounted || res[0].trim().isEmpty || res[1].trim().isEmpty) return;
+    _createContent(subtopic, ContentItem(
+      id: 0,
+      subtopicId: subtopic.id,
+      type: 'project',
+      title: res[0].trim(),
+      htmlContent: res[1].trim(),
+      resourceUrl: res[2].trim().isEmpty ? 'esp32dev' : res[2].trim(),
+      order: subtopic.contentItems.length,
+    ));
   }
 
   void _addCodeContent(int topicId, ModuleSubtopic subtopic) {
@@ -942,14 +983,16 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       if (item.type == 'resource' || item.type == 'github')
         (label: item.type == 'github' ? 'Repository URL' : 'Resource URL', value: item.resourceUrl ?? '', lines: 1),
       if (item.type == 'code') (label: 'Code', value: item.htmlContent ?? '', lines: 14),
+      if (item.type == 'project') (label: 'Task for the learner', value: item.htmlContent ?? '', lines: 6),
+      if (item.type == 'project') (label: 'Board (PlatformIO name)', value: item.resourceUrl ?? 'esp32dev', lines: 1),
     ];
     final res = await _formDialog('Edit Content', color, fields);
     if (res == null || !mounted) return;
     final updated = item.copyWith(
       title: res[0],
       youtubeUrl: item.type == 'video' ? res[1] : null,
-      resourceUrl: (item.type == 'resource' || item.type == 'github') ? res[1] : null,
-      htmlContent: item.type == 'code' ? res[1] : null,
+      resourceUrl: (item.type == 'resource' || item.type == 'github') ? res[1] : (item.type == 'project' ? res[2] : null),
+      htmlContent: (item.type == 'code' || item.type == 'project') ? res[1] : null,
     );
     final provider = context.read<TrainingModuleProvider>();
     if (!await provider.updateContentItem(updated)) {
@@ -1422,6 +1465,8 @@ class _SubtopicTile extends StatelessWidget {
         return 'Code';
       case 'github':
         return 'GitHub repo';
+      case 'project':
+        return 'Project task · ${item.resourceUrl ?? 'esp32dev'}';
       default:
         return item.type;
     }
@@ -1441,6 +1486,8 @@ class _SubtopicTile extends StatelessWidget {
         return Icons.code_rounded;
       case 'github':
         return FontAwesomeIcons.github.data;
+      case 'project':
+        return Icons.developer_board_rounded;
       default:
         return Icons.description_rounded;
     }
@@ -1460,6 +1507,8 @@ class _SubtopicTile extends StatelessWidget {
         return const Color(0xFF7C4DFF);
       case 'github':
         return Colors.black87;
+      case 'project':
+        return const Color(0xFF00897B);
       default:
         return Colors.grey;
     }

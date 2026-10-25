@@ -90,6 +90,26 @@ Future<String> fetchGithubProject(String url, {Map<String, String>? env}) async 
   }
 }
 
+/// Writes a lesson's project into Documents\Altrobyte\projects\<name> and returns the folder. A folder that is already
+/// there is kept as it is (the learner's own work is never overwritten). Only plain relative paths are written.
+String writeLessonProject(String name, List files, {Map<String, String>? env}) {
+  final e = env ?? Platform.environment;
+  final home = e['USERPROFILE'] ?? e['HOME'];
+  if (home == null || home.isEmpty) throw 'Could not find your Documents folder.';
+  final sep = Platform.pathSeparator;
+  final safeName = name.replaceAll(RegExp(r'[^A-Za-z0-9_\-]'), '_');
+  final dir = Directory('$home${sep}Documents${sep}Altrobyte${sep}projects$sep$safeName');
+  if (dir.existsSync() && dir.listSync().isNotEmpty) return dir.path;
+  for (final f in files) {
+    final path = '${(f as Map)['path']}';
+    if (path.isEmpty || path.startsWith('/') || path.contains('..') || path.contains(':')) continue;
+    final file = File('${dir.path}$sep${path.replaceAll('/', sep)}');
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync('${f['content']}');
+  }
+  return dir.path;
+}
+
 /// Opens a whole project folder in VS Code. False when VS Code could not be started.
 Future<bool> openFolderInVsCode(String folder) async {
   for (final exe in codeCandidates()) {

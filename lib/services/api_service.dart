@@ -2227,6 +2227,15 @@ class ApiService {
         .timeout(const Duration(seconds: 20));
   }
 
+  /// A lesson's project files: blank (by yourself) or Altron's template, for PlatformIO or ESP-IDF.
+  static Future<Map<String, dynamic>> desktopProject(int contentId, {required String framework, required String mode}) async {
+    final res = await http
+        .get(Uri.parse('${ApiConstants.baseUrl}/training-modules/content/$contentId/project?framework=$framework&mode=$mode'),
+            headers: _headers(await _learnerToken()))
+        .timeout(const Duration(minutes: 2));
+    return _parse(res);
+  }
+
   /// The learner's published training modules (a light list: no notes yet).
   static Future<List<dynamic>> desktopModules() async {
     final res = await http.get(Uri.parse('${ApiConstants.baseUrl}/student/training-modules'), headers: _headers(await _learnerToken()))

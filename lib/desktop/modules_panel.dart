@@ -289,6 +289,69 @@ class _ModulesPanelState extends State<ModulesPanel> {
     }
   }
 
+  /// A project task: by themselves or from Altron's template, in PlatformIO or ESP-IDF; written and opened in VS Code.
+  Future<void> _createProject(int moduleId, ContentItem it) async {
+    var mode = 'blank', framework = 'platformio';
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (d) => StatefulBuilder(
+        builder: (d, redraw) => AlertDialog(
+          title: Text(it.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+          content: SizedBox(
+            width: 480,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if ((it.htmlContent ?? '').isNotEmpty) ...[
+                Text('Your task', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                const SizedBox(height: 4),
+                Text(it.htmlContent!, style: GoogleFonts.inter(fontSize: 13, height: 1.4)),
+                const SizedBox(height: 14),
+              ],
+              Text('How do you want to start?', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12.5)),
+              RadioListTile<String>(
+                value: 'blank', groupValue: mode, onChanged: (v) => redraw(() => mode = v!), contentPadding: EdgeInsets.zero,
+                title: const Text('By yourself'), subtitle: const Text('An empty project with your task written at the top'),
+              ),
+              RadioListTile<String>(
+                value: 'template', groupValue: mode, onChanged: (v) => redraw(() => mode = v!), contentPadding: EdgeInsets.zero,
+                title: const Text('Use template'), subtitle: const Text("Altron's ready project, made from this lesson's notes"),
+              ),
+              const SizedBox(height: 6),
+              Text('Framework', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12.5)),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [ButtonSegment(value: 'platformio', label: Text('PlatformIO')), ButtonSegment(value: 'espidf', label: Text('ESP-IDF'))],
+                selected: {framework},
+                onSelectionChanged: (s) => redraw(() => framework = s.first),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+            FilledButton.icon(onPressed: () => Navigator.pop(d, true), icon: const Icon(Icons.open_in_new_rounded, size: 18), label: const Text('Create & open in VS Code')),
+          ],
+        ),
+      ),
+    );
+    if (go != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(
+        content: Text(mode == 'template' ? 'Altron is preparing your project…' : 'Creating your project…'), duration: const Duration(seconds: 30)));
+    try {
+      final r = await ApiService.desktopProject(it.id, framework: framework, mode: mode);
+      final folder = writeLessonProject('${r['name']}', (r['files'] as List?) ?? const []);
+      _mark(moduleId, it);
+      final ok = await openFolderInVsCode(folder);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(ok ? 'Opened in VS Code: $folder' : 'Created in $folder, but VS Code did not open.')));
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      final t = '$e';
+      messenger.showSnackBar(SnackBar(content: Text(e is String ? e : (t.contains('402') || t.toLowerCase().contains('self-paced'))
+          ? 'The ready template is part of Self-paced. Start "By yourself", or upgrade.'
+          : 'Could not create the project just now. Try again in a minute.')));
+    }
+  }
+
   /// The GitHub project's other ways: open it on GitHub, or copy the clone command.
   Future<void> _github(ContentItem it) async {
     final url = it.resourceUrl ?? '';
@@ -352,10 +415,11 @@ class _ModulesPanelState extends State<ModulesPanel> {
     final codes = items.where((i) => i.type == 'code').toList();
     final gits = items.where((i) => i.type == 'github').toList();
     final tests = items.where((i) => i.type == 'test').toList();
-    final others = items.where((i) => !const {'notes', 'code', 'github', 'test'}.contains(i.type)).toList();
+    final projects = items.where((i) => i.type == 'project').toList();
+    final others = items.where((i) => !const {'notes', 'code', 'github', 'test', 'project'}.contains(i.type)).toList();
     final noteIds = notes.map((n) => n.id).toSet();
     final myLabs = labs.where((l) => l.contentId != null && noteIds.contains(l.contentId)).toList();
-    final hasBuild = myLabs.isNotEmpty || codes.isNotEmpty || gits.isNotEmpty;
+    final hasBuild = myLabs.isNotEmpty || codes.isNotEmpty || gits.isNotEmpty || projects.isNotEmpty;
     VoidCallback doing(ContentItem it, VoidCallback go) => () {
           _mark(moduleId, it);
           go();
@@ -378,6 +442,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
         for (final l in myLabs)
           _action(Icons.science_rounded, 'Experiment: ${l.title}', 'Start', widget.canStart ? () => widget.onStartLab(l.id) : null, primary: true),
         for (final c in codes) _action(Icons.code_rounded, c.title, 'See code', doing(c, () => _code(c)), locked: c.locked, done: _isDone(moduleId, c)),
+        for (final p in projects)
+          _action(Icons.developer_board_rounded, 'Project: ${p.title}', 'Create project', () => _createProject(moduleId, p),
+              locked: p.locked, primary: true, done: _isDone(moduleId, p)),
         for (final g in gits)
           ListTile(
             dense: true,
