@@ -927,7 +927,19 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
         ],
       ),
     );
-    if (ok == true) await _setStage(give ? 'enrolled' : 'demo_done');
+    if (ok != true) return;
+    // The same switch as the Access screen (access.py); the stage still says where they are in the pipeline.
+    try {
+      if (give) {
+        await ApiService.accessGrant(widget.phone, note: 'from the CRM');
+        await _setStage('enrolled');
+      } else {
+        await ApiService.accessRemove(widget.phone);
+        await _setStage('demo_done');
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Not saved: ${e.toString().replaceFirst('Exception: ', '')}')));
+    }
   }
 
   Future<void> _setStage(String stage) async {

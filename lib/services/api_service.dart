@@ -980,6 +980,42 @@ class ApiService {
 
   /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
   /// One WhatsApp message (the update template, each lead's own name) to many leads at once.
+  // ── Access: who can open the course (access.py) ──
+  static Future<Map<String, dynamic>> accessOverview() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<Map<String, dynamic>> accessCheck(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access/check?phone=${Uri.encodeQueryComponent(phone)}'),
+        headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<Map<String, dynamic>> accessGrant(String phone, {String note = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/grant'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone, 'note': note})));
+  }
+
+  static Future<Map<String, dynamic>> accessRemove(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/remove'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone})));
+  }
+
+  static Future<void> accessIgnore(int requestId) async {
+    final prefs = await SharedPreferences.getInstance();
+    _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/requests/$requestId/ignore'), headers: _headers(prefs.getString('token'))));
+  }
+
+  /// A learner asks the team for full access (from a locked module in the desktop app).
+  static Future<Map<String, dynamic>> requestAccess(String what) async {
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/access/request'),
+        headers: _headers(await _learnerToken()), body: jsonEncode({'what': what}));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> crmBulk(List<String> phones, String text, {DateTime? sendAt}) async {
     final prefs = await SharedPreferences.getInstance();
     final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/crm/bulk'),

@@ -560,8 +560,23 @@ class _ModulesPanelState extends State<ModulesPanel> {
                 _moduleHeader(m),
                 const SizedBox(height: 16),
                 if (m.locked)
-                  Text('This module is not unlocked for your account yet. Get it on altrobytelab.com and it opens here.',
-                      style: GoogleFonts.inter(fontSize: 13.5))
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('This module is not unlocked for your account yet.', style: GoogleFonts.inter(fontSize: 13.5)),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          final r = await ApiService.requestAccess(m.title);
+                          messenger.showSnackBar(SnackBar(content: Text('${r['message'] ?? 'Asked. The team will give you access soon.'}')));
+                        } catch (_) {
+                          messenger.showSnackBar(const SnackBar(content: Text('Could not ask just now. Try again in a minute.')));
+                        }
+                      },
+                      icon: const Icon(Icons.front_hand_rounded, size: 18),
+                      label: const Text('Request access'),
+                    ),
+                  ])
                 else
                   Container(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 14),

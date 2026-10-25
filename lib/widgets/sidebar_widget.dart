@@ -121,6 +121,8 @@ class _Nav extends StatelessWidget {
       // thing to manage, and a separate tab for them was always empty.
       _NavItem(Icons.event_available_rounded, 'Booked Calls', '/bookings'),
       _NavItem(Icons.contact_phone_rounded, 'CRM & Users', '/crm'),
+      // Who can open the course: requests, who has access and why, give or remove (access.py).
+      _NavItem(Icons.lock_open_rounded, 'Access', '/access'),
       // Next to the CRM: a review comes from somebody already in it.
       _NavItem(Icons.format_quote_rounded, 'Reviews', '/reviews-admin'),
       _NavItem(Icons.handshake_rounded, 'Clients & Projects', '/company-admin'),
