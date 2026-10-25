@@ -40,3 +40,18 @@ founder can do. Everything else Claude can build and ship alone (tested, deploye
 ## Order after the sell sprint (from 1 Nov)
 
 A1 → A2 → B1 → A3 → A4 → B3 → B5 → A9 → A10, then the rest.
+
+## Status, 25 Oct 2026 (night)
+
+Done, tested and live (backend 812 tests pass):
+- WhatsApp counsellor (wa_counselor.py): qualifies, never quotes prices, hands hot leads / fee questions to the team
+  (alert to sales_alert_phones + wa.me link to 7222977927). Answers only counsel_test_phones until the agent is on.
+- Auto follow-ups (after demo, new lead) — OFF until switched on in CRM → Automation. Scheduled bulk + cancel.
+- A2 founder usage line · A3 actions after "haan" · A4 9 AM brief (team only) · A5 money/learners · A6 bulk by voice
+- A7 call prep · A9 projector board (altrobytelab.com/board/?c=<board_code>) · A10 PC agent (Desktop "Altron PC.bat")
+- A12 draft test by voice · B3 spend alert (team only) · B4 resume from section · B5 3-question check + score
+- B6 serial errors explained · B7 "Altron, dekho" screen picture (Windows GDI) · B8 weekly learner message — OFF
+- B12 Hindi (Devanagari) language
+
+Needs the founder: A1 billing · A8 call confirm (optional) · A11 wake-word report · B1 lesson test · B2 installer
+· B9 note review · B10 GitHub repos · B11 decide. Desktop build waits to be copied (app was open).
