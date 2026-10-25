@@ -26,6 +26,9 @@ LOG = pathlib.Path(os.environ.get("APPDATA", HOME)) / "Altrobyte" / "pc_agent.lo
 ALLOWED = ["Read(./**)", "Edit(./**)", "Glob", "Grep",
            "Bash(pio:*)", "Bash(platformio:*)", "Bash(code:*)", "Bash(git:*)", "Bash(mkdir:*)", "Bash(ls:*)"]
 GUIDE = ("\n\nWork inside the current folder (the founder's projects folder); make a new sub-folder for a new project. "
+         "Create and change files with your own file tools (Write / Edit), never with shell or PowerShell commands; "
+         "the only commands you may run are pio, platformio, code, git, mkdir and ls. Do the work yourself: never reply "
+         "with instructions for someone else to run. "
          "For ESP32 or other boards use PlatformIO. When done, open the project in VS Code with `code <folder>`. "
          "Finish with exactly two short lines: the first starts with DONE: or FAILED: and says what you did, "
          "the second gives the folder.")
@@ -54,7 +57,10 @@ def call(path, body=None, token="", key=""):
 def run_claude(task: str) -> tuple:
     WORK.mkdir(parents=True, exist_ok=True)
     exe = "claude.cmd" if os.name == "nt" else "claude"
-    cmd = [exe, "-p", task + GUIDE, "--permission-mode", "acceptEdits", "--allowedTools", *ALLOWED]
+    # One line: on Windows claude.cmd cuts its arguments at a line break, and everything after it (the permission
+    # flags) was lost, so Claude Code could not write and answered with commands instead.
+    prompt = " ".join((task + GUIDE).split())
+    cmd = [exe, "-p", prompt, "--permission-mode", "acceptEdits", "--allowedTools", *ALLOWED]
     try:
         p = subprocess.run(cmd, cwd=str(WORK), capture_output=True, text=True, encoding="utf-8", errors="replace",
                            timeout=20 * 60)
@@ -65,7 +71,8 @@ def run_claude(task: str) -> tuple:
     out = (p.stdout or "").strip()
     lines = [l for l in out.splitlines() if l.strip()]
     tail = lines[-2:]
-    failed = p.returncode != 0 or not lines or any(l.strip().upper().startswith("FAILED") for l in tail)
+    # Only an answer that says DONE counts: instructions or an excuse instead of the work is a failure.
+    failed = p.returncode != 0 or not any(l.strip().upper().startswith("DONE") for l in tail)
     return not failed, ("\n".join(tail) if lines else (p.stderr or "no answer")[-400:])
 
 
