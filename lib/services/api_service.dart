@@ -2307,7 +2307,7 @@ class ApiService {
   /// A note to read with the tutor: the page as written, its sections, and the tutor's guide for each, in English or Hindi.
   static Future<Map<String, dynamic>> noteTutor(int contentId, String lang) async => _parse(await http
       .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId?lang=$lang'), headers: _headers(await _learnerToken()))
-      .timeout(const Duration(seconds: 45)));
+      .timeout(const Duration(seconds: 90)));      // a slow line or a server waking up: 45 s cut good answers off
 
   static Future<Map<String, dynamic>> noteGuide(int contentId, String lang) async => _parse(await http
       .get(Uri.parse('${ApiConstants.baseUrl}/trainer/notes/$contentId/guide?lang=$lang'), headers: _headers(await _learnerToken()))

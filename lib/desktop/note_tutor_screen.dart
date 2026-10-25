@@ -32,7 +32,11 @@ class NoteTutorScreen extends StatefulWidget {
 
   /// Makes sentences ready ahead of time on this computer, so saying them starts at once.
   final void Function(List<String> texts)? prepare;
-  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare});
+
+  /// The note's own page, already on this computer with the module: shown when the server is slow to answer, so a
+  /// learner on a slow line still reads the note (the tutor joins when the server answers next time).
+  final String? fallbackHtml;
+  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -41,8 +45,23 @@ class NoteTutorScreen extends StatefulWidget {
 class _NoteTutorScreenState extends State<NoteTutorScreen> {
   late NoteTutor t = _tutorIn('en');
 
+  /// The note from the server, tried twice; when it cannot be had, the copy that came with the module.
+  Future<Map<String, dynamic>> _loadNote(int id, String lang) async {
+    Object? last;
+    for (var i = 0; i < 2; i++) {
+      try {
+        return await ApiService.noteTutor(id, lang);
+      } catch (e) {
+        last = e;
+      }
+    }
+    final html = widget.fallbackHtml ?? '';
+    if (html.trim().isEmpty) throw last ?? 'Could not load the note.';
+    return {'title': widget.title, 'html': html, 'sections': const [], 'guide': const {}, 'guide_ready': true};
+  }
+
   NoteTutor _tutorIn(String lang) => NoteTutor(widget.contentId,
-      loadNote: ApiService.noteTutor,
+      loadNote: _loadNote,
       loadGuide: ApiService.noteGuide,
       checkQuiz: ApiService.noteQuiz,
       askTutor: ApiService.noteAsk,

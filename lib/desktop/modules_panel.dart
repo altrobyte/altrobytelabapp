@@ -198,7 +198,8 @@ class _ModulesPanelState extends State<ModulesPanel> {
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => live
             ? ClassScreen(noteId: item.id, title: item.title)
-            : NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush, prepare: widget.prepare)));
+            : NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush, prepare: widget.prepare,
+                fallbackHtml: item.htmlContent)));
   }
 
   Future<void> _link(String? url) async {
