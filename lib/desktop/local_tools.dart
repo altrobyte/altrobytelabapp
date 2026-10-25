@@ -47,10 +47,15 @@ String? projectRootOf(String file, {bool Function(String path)? exists}) {
 }
 
 /// "owner/repo" and the branch (null = the repository's default) of a GitHub link, or null when it is not one.
-({String owner, String repo, String? branch})? githubRepoOf(String url) {
-  final m = RegExp(r'github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?(?:/tree/([^/?#]+))?(?:[/?#].*)?$').firstMatch(url.trim());
+/// "owner/repo", the branch (null = the default) and a folder inside the repo (null = all of it) of a GitHub link.
+/// A folder link (github.com/altrobyte/lab-projects/tree/main/digital-input) lets one public repo hold every lesson's
+/// project, each in its own folder (25 Oct 2026: new projects are only a folder and a push, no new repo each time).
+({String owner, String repo, String? branch, String? folder})? githubRepoOf(String url) {
+  final m = RegExp(r'github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?(?:/tree/([^/?#]+)(?:/([^?#]+?))?)?/?(?:[?#].*)?$')
+      .firstMatch(url.trim());
   if (m == null) return null;
-  return (owner: m.group(1)!, repo: m.group(2)!, branch: m.group(3));
+  final folder = m.group(4);
+  return (owner: m.group(1)!, repo: m.group(2)!, branch: m.group(3), folder: (folder == null || folder.isEmpty) ? null : folder);
 }
 
 /// A module's GitHub project, ready on this computer: downloaded once into Documents\Altrobyte\projects\<repo> (no git
@@ -64,7 +69,9 @@ Future<String> fetchGithubProject(String url, {Map<String, String>? env}) async 
   if (home == null || home.isEmpty) throw 'Could not find your Documents folder.';
   final sep = Platform.pathSeparator;
   final root = Directory('$home${sep}Documents${sep}Altrobyte${sep}projects')..createSync(recursive: true);
-  final target = Directory('${root.path}$sep${r.repo}');
+  // A lesson folder of a shared repo is its own project folder here, named after the lesson folder.
+  final name = r.folder == null ? r.repo : r.folder!.split('/').last;
+  final target = Directory('${root.path}$sep$name');
   if (target.existsSync() && target.listSync().isNotEmpty) return target.path;      // already here: keep their work
 
   final zipUrl = r.branch == null
@@ -82,8 +89,13 @@ Future<String> fetchGithubProject(String url, {Map<String, String>? env}) async 
     zip.deleteSync();
     final inside = tmp.listSync().whereType<Directory>().toList();
     if (inside.isEmpty) throw 'The project was empty.';
+    var source = inside.first;
+    if (r.folder != null) {
+      source = Directory('${source.path}$sep${r.folder!.replaceAll('/', sep)}');
+      if (!source.existsSync()) throw 'This project folder is not on GitHub any more. Ask your mentor.';
+    }
     if (target.existsSync()) target.deleteSync(recursive: true);
-    inside.first.renameSync(target.path);
+    source.renameSync(target.path);
     return target.path;
   } finally {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
