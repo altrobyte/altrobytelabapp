@@ -24,7 +24,10 @@ KEY_FILE = pathlib.Path(os.environ.get("APPDATA", HOME)) / "Altrobyte" / "founde
 LOG = pathlib.Path(os.environ.get("APPDATA", HOME)) / "Altrobyte" / "pc_agent.log"
 # Edit(./**) covers every file-editing tool inside the projects folder (a plain "Write" rule is not honoured headless).
 ALLOWED = ["Read(./**)", "Edit(./**)", "Glob", "Grep",
-           "Bash(pio:*)", "Bash(platformio:*)", "Bash(code:*)", "Bash(git:*)", "Bash(mkdir:*)", "Bash(ls:*)"]
+           "Bash(pio:*)", "Bash(platformio:*)", "Bash(code:*)", "Bash(git:*)", "Bash(mkdir:*)", "Bash(ls:*)",
+           # on Windows Claude Code runs commands through PowerShell: the same few, there too
+           "PowerShell(pio:*)", "PowerShell(platformio:*)", "PowerShell(code:*)", "PowerShell(git:*)", "PowerShell(mkdir:*)",
+           "PowerShell(ls:*)"]
 GUIDE = ("\n\nWork inside the current folder (the founder's projects folder); make a new sub-folder for a new project. "
          "Create and change files with your own file tools (Write / Edit), never with shell or PowerShell commands; "
          "the only commands you may run are pio, platformio, code, git, mkdir and ls. Do the work yourself: never reply "
