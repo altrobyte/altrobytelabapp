@@ -3,6 +3,7 @@
 // Light on purpose: only the list of modules is fetched when the page opens. A module's notes are fetched when the learner opens
 // that module, and a note's page is written to a temporary file only when it is opened. Nothing is stored in the app.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -345,10 +346,15 @@ class _ModulesPanelState extends State<ModulesPanel> {
       messenger.showSnackBar(SnackBar(content: Text(ok ? 'Opened in VS Code: $folder' : 'Created in $folder, but VS Code did not open.')));
     } catch (e) {
       messenger.hideCurrentSnackBar();
-      final t = '$e';
-      messenger.showSnackBar(SnackBar(content: Text(e is String ? e : (t.contains('402') || t.toLowerCase().contains('self-paced'))
-          ? 'The ready template is part of Self-paced. Start "By yourself", or upgrade.'
-          : 'Could not create the project just now. Try again in a minute.')));
+      // The server's own sentence when there is one (it is written for learners); a plain one otherwise.
+      final text = e is String
+          ? e
+          : e is ApiException && e.message.trim().isNotEmpty
+              ? e.message
+              : e is TimeoutException
+                  ? 'Altron took too long to prepare it. Try again, or start "By yourself".'
+                  : 'Could not create the project just now. Try again in a minute.';
+      messenger.showSnackBar(SnackBar(content: Text(text)));
     }
   }
 
