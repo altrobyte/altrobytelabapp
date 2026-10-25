@@ -39,16 +39,16 @@ class _StartState extends State<_Start> {
 
   Future<void> _go() async {
     if (!(await Permission.microphone.request()).isGranted) {
-      setState(() => _line = 'Altron needs the microphone. Allow it in Settings → Apps → Altron → Permissions, then open Altron again.');
+      setState(() => _line = 'Jarvis needs the microphone. Allow it in Settings → Apps → Jarvis → Permissions, then open Jarvis again.');
       return;
     }
     // For "Altron, Ravi ko call karo". Saying no only means Altron cannot place calls.
     await [Permission.contacts, Permission.phone].request();
     try {
       final r = await _native.invokeMethod('start', {'key': _key, 'api': ApiConstants.baseUrl});
-      if (r == 'needs_overlay' && mounted) setState(() => _line = 'Turn on "Display over other apps" for Altron, then come back.');
+      if (r == 'needs_overlay' && mounted) setState(() => _line = 'Turn on "Display over other apps" for Jarvis, then come back.');
     } catch (_) {
-      if (mounted) setState(() => _line = 'Altron could not start. Open it again.');
+      if (mounted) setState(() => _line = 'Jarvis could not start. Open it again.');
     }
   }
 

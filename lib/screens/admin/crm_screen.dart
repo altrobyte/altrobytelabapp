@@ -237,7 +237,7 @@ class _CrmScreenState extends State<CrmScreen> {
           TextButton.icon(
               onPressed: () => openFounderAltron(context),
               icon: const Icon(Icons.graphic_eq_rounded, size: 20),
-              label: const Text('Altron')),
+              label: const Text('Jarvis')),
           TextButton.icon(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmAutomationScreen())),
               icon: const Icon(Icons.auto_mode_rounded, size: 20),

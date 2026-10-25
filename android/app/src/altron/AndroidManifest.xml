@@ -24,7 +24,7 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
 
-    <application android:label="Altron" tools:replace="android:label">
+    <application android:label="Jarvis" tools:replace="android:label">
         <activity android:name=".MainActivity" tools:node="remove" />
 
         <activity
