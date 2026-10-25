@@ -246,9 +246,10 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   void _addContent(int topicId, ModuleSubtopic subtopic) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,                       // three rows of choices: taller than the default half screen
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
+      builder: (ctx) => SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
