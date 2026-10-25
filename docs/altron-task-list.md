@@ -37,6 +37,7 @@ founder can do. Everything else Claude can build and ship alone (tested, deploye
 | B10 | GitHub project per lesson (LED blink first) linked in each module | **Yes** (repos) | per lesson |
 | B11 | Mobile app for learners (needs the web-only code split from Android) | Decide later | 3–5 days |
 | B12 | Altron in Hindi script captions as an option | No | 2 h |
+| B13 | **Code-along and practice in VS Code (founder idea, 26 Oct):** (1) Altron types the lesson's own code (note or GitHub) into VS Code chunk by chunk, explains each by voice, builds and flashes 2-3 times on the way, then asks the learner to build; (2) practice mode: the learner writes, Altron shows the next line as grey text (Tab to accept, like Copilot) and gives voice hints when stuck. Chunks + explanations made once per project and kept. Needs a new VS Code extension version | Go-ahead | 3–4 days |
 
 ## Order after the sell sprint (from 1 Nov)
 
