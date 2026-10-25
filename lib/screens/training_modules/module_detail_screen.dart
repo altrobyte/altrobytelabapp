@@ -1506,7 +1506,7 @@ class _SubtopicTile extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.drive_file_move_outline, size: 16),
+                  icon: const Icon(Icons.drive_file_move, size: 17),
                   color: Colors.grey,
                   tooltip: 'Move to another subtopic',
                   onPressed: () => onMoveContent(item),
