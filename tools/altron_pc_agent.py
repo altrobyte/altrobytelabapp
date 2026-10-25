@@ -22,11 +22,13 @@ HOME = pathlib.Path(os.environ.get("USERPROFILE") or pathlib.Path.home())
 WORK = HOME / "Documents" / "Altrobyte" / "projects"
 KEY_FILE = pathlib.Path(os.environ.get("APPDATA", HOME)) / "Altrobyte" / "founder_key.txt"
 LOG = pathlib.Path(os.environ.get("APPDATA", HOME)) / "Altrobyte" / "pc_agent.log"
-ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep",
+# Edit(./**) covers every file-editing tool inside the projects folder (a plain "Write" rule is not honoured headless).
+ALLOWED = ["Read(./**)", "Edit(./**)", "Glob", "Grep",
            "Bash(pio:*)", "Bash(platformio:*)", "Bash(code:*)", "Bash(git:*)", "Bash(mkdir:*)", "Bash(ls:*)"]
 GUIDE = ("\n\nWork inside the current folder (the founder's projects folder); make a new sub-folder for a new project. "
          "For ESP32 or other boards use PlatformIO. When done, open the project in VS Code with `code <folder>`. "
-         "Finish with exactly two short lines: what you did, and the folder.")
+         "Finish with exactly two short lines: the first starts with DONE: or FAILED: and says what you did, "
+         "the second gives the folder.")
 
 
 def log(*a):
@@ -62,7 +64,9 @@ def run_claude(task: str) -> tuple:
         return False, "It took more than 20 minutes and was stopped."
     out = (p.stdout or "").strip()
     lines = [l for l in out.splitlines() if l.strip()]
-    return p.returncode == 0, ("\n".join(lines[-2:]) if lines else (p.stderr or "no answer")[-400:])
+    tail = lines[-2:]
+    failed = p.returncode != 0 or not lines or any(l.strip().upper().startswith("FAILED") for l in tail)
+    return not failed, ("\n".join(tail) if lines else (p.stderr or "no answer")[-400:])
 
 
 def main():
