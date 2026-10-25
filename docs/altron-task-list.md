@@ -19,6 +19,7 @@ founder can do. Everything else Claude can build and ship alone (tested, deploye
 | A10 | Altron → Claude Code on the PC: "PlatformIO ka naya ESP32 project banao" (helper on PC, "haan" first) | PC helper install | 1 day |
 | A11 | Better wake word (openWakeWord "Altron" model) if Vosk wakes wrongly | Your report | 2 days |
 | A12 | Content by voice: "PWM ka 10 sawaal ka test bana do" | No | 1 day |
+| A13 | **Later (founder's choice, 25 Oct):** Jarvis reads the phone screen and acts on it through an Accessibility service (reads any app's text, taps for you: "WhatsApp kholo, Ravi ko ye bhejo"). Powerful permission: needs Gemini on the paid tier first, a clear on/off, and no reading of banking/OTP apps | Yes (go-ahead, paid tier) | 1–2 days |
 
 ## B. Altron AI Trainer (learners, desktop + web)
 
