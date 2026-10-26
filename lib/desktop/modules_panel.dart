@@ -215,8 +215,9 @@ class _ModulesPanelState extends State<ModulesPanel> {
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => live
             ? ClassScreen(noteId: item.id, title: item.title)
-            : NoteTutorScreen(contentId: item.id, title: item.title, speak: widget.speak, hush: widget.hush, prepare: widget.prepare,
-                fallbackHtml: item.htmlContent)));
+            // One voice only (26 Oct 2026, founder): Altron Live (Gemini) teaches the note; the reading tutor's own spoken
+            // voice is off, or it read section lines in English over Altron each time a section lit up.
+            : NoteTutorScreen(contentId: item.id, title: item.title, fallbackHtml: item.htmlContent)));
   }
 
   Future<void> _link(String? url) async {
