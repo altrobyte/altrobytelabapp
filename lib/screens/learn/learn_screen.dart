@@ -76,8 +76,8 @@ class _LearnScreenState extends State<LearnScreen> {
 
   /// The modules the server gives away: the first five published, in course order (training_modules._free_module_ids).
   Set<int> _free(List<TrainingModule> mods) {
-    final pub = mods.where((m) => m.isPublished).map((m) => m.id).toList()..sort();
-    return pub.take(freeModules).toSet();
+    // The list comes in the server's course order (order_index, then id), the same order it picks the free ones in.
+    return mods.where((m) => m.isPublished).map((m) => m.id).take(freeModules).toSet();
   }
 
   void _start(TrainingModule m) {
