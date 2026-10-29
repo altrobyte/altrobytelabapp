@@ -392,6 +392,7 @@
     ws = me;
     me.onopen = () => me.send(JSON.stringify(msg));
     me.onmessage = async (ev) => {
+      if (me.__retired || me !== ws) return;            // a connection being replaced never speaks over the new one
       const text = typeof ev.data === 'string' ? ev.data : await ev.data.text();
       let m; try { m = JSON.parse(text); } catch (_) { return; }
       if (m.setupComplete) {
@@ -455,6 +456,7 @@
     if (!running || renewing) return;
     renewing = true; status('reconnecting…');
     const old = ws; if (old) { old.__retired = true; try { old.close(); } catch (_) {} }
+    hush();                                               // what the old connection was still saying stops now
     endConn();
     try {
       const t = await fetchToken(true);
