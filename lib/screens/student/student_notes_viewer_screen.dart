@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
+import '../../widgets/auth_sheet.dart';
 
 /// Full-screen HTML notes viewer for students. Renders via a sandboxed
 /// iframe (srcdoc) so any HTML/CSS pasted by an admin (including full
@@ -14,8 +18,12 @@ class StudentNotesViewerScreen extends StatefulWidget {
   final String htmlContent;
   final String moduleColor;
 
+  /// The note's id: with it, Altron (the AI trainer) can explain this note by voice on the website.
+  final int? contentId;
+
   const StudentNotesViewerScreen({
     super.key,
+    this.contentId,
     required this.title,
     required this.htmlContent,
     this.moduleColor = '#7C4DFF',
@@ -55,6 +63,48 @@ class _StudentNotesViewerScreenState extends State<StudentNotesViewerScreen> {
       ..srcdoc = _wrap(widget.htmlContent, _fontSizes[_fontSizeIndex]);
     ui_web.platformViewRegistry
         .registerViewFactory(_viewId, (int viewId) => _iframe);
+  }
+
+  // ── Altron explains the note: the Live page in a slim strip under it (29 Oct 2026, free start on the web) ──
+  String? _liveView;
+  StreamSubscription<html.MessageEvent>? _messages;
+
+  Future<void> _explain() async {
+    final prefs = await SharedPreferences.getInstance();
+    if ((prefs.getString('student_token') ?? '').isEmpty) {
+      if (!mounted) return;
+      final ok = await showAuthSheet(context, reason: 'to learn with Altron', phoneOnly: true);
+      if (!ok || !mounted) return;
+    }
+    final id = 'altron-live-${identityHashCode(this)}-${DateTime.now().millisecondsSinceEpoch}';
+    final frame = html.IFrameElement()
+      ..style.border = 'none'
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..allow = 'microphone; autoplay'
+      ..src = '/live/v2/index.html?note=${widget.contentId}&teach=1&strip=1&lang=en&compact=1&autostart=1';
+    ui_web.platformViewRegistry.registerViewFactory(id, (int _) => frame);
+    _messages ??= html.window.onMessage.listen((e) {
+      if (e.origin != html.window.location.origin || e.data is! String) return;
+      Map? m;
+      try {
+        m = jsonDecode(e.data as String) as Map?;
+      } catch (_) {
+        return;
+      }
+      if (m?['type'] == 'state' && m?['state'] == 'done') {     // the lesson is complete: the strip goes away
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => _liveView = null);
+        });
+      }
+    });
+    setState(() => _liveView = id);
+  }
+
+  @override
+  void dispose() {
+    _messages?.cancel();
+    super.dispose();
   }
 
   void _cycleFontSize() {
@@ -101,6 +151,16 @@ class _StudentNotesViewerScreenState extends State<StudentNotesViewerScreen> {
                 fontWeight: FontWeight.w600,
                 fontSize: 16)),
         actions: [
+          if (widget.contentId != null && _liveView == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: FilledButton.icon(
+                onPressed: _explain,
+                style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: color),
+                icon: const Icon(Icons.record_voice_over_rounded, size: 18),
+                label: const Text('Explain with Altron'),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.text_increase_rounded,
                 color: Colors.white70),
@@ -109,7 +169,24 @@ class _StudentNotesViewerScreenState extends State<StudentNotesViewerScreen> {
           ),
         ],
       ),
-      body: HtmlElementView(viewType: _viewId),
+      body: Column(children: [
+        Expanded(child: HtmlElementView(viewType: _viewId)),
+        if (_liveView != null)
+          Material(
+            color: const Color(0xFF0D1726),
+            child: SizedBox(
+              height: 64,
+              child: Row(children: [
+                Expanded(child: HtmlElementView(key: ValueKey(_liveView), viewType: _liveView!)),
+                IconButton(
+                  tooltip: 'Stop Altron',
+                  onPressed: () => setState(() => _liveView = null),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                ),
+              ]),
+            ),
+          ),
+      ]),
     );
   }
 }

@@ -61,6 +61,8 @@ import 'screens/enquiries/partner_enquiry_screen.dart';
 import 'screens/enquiries/enquiries_admin_screen.dart';
 import 'screens/mock_interview/mock_interview_screen.dart';
 import 'screens/pricing/pricing_screen.dart';
+import 'screens/learn/learn_screen.dart';
+import 'screens/learn/unlock_screen.dart';
 import 'screens/program_page.dart';
 import 'screens/plans_page.dart';
 import 'screens/book_call_screen.dart';
@@ -367,6 +369,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         GoRoute(path: '/partner', builder: (_, __) => const PartnerEnquiryScreen()),
         // Pricing — public, no login.
         GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
+        // The roadmap with a free start, and every plan after it: public, no login (29 Oct 2026).
+        GoRoute(path: '/learn', builder: (_, __) => const LearnScreen()),
+        GoRoute(path: '/unlock', builder: (_, __) => const UnlockScreen()),
         // Deliberately not linked from anywhere. Its URL is the product: it is
         // sent directly to someone who asked, while the public pricing page
         // still quotes programmes on request.

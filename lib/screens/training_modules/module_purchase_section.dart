@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/auth_sheet.dart';
 import '../../constants/app_colors.dart';
@@ -284,6 +285,33 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       );
 
+  Widget _planUnlock(bool signIn) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.lock_rounded, color: AppColors.accent, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Unlock to learn', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700))),
+          ]),
+          const SizedBox(height: 6),
+          Text('The first five modules are free. "${widget.module.title}" opens with a plan, with Altron explaining every lesson.',
+              style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textSecondary, height: 1.45)),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: () => GoRouter.of(context).push('/unlock'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+            icon: const Icon(Icons.workspace_premium_rounded),
+            label: const Text('See unlock options'),
+          ),
+          if (signIn) ...[
+            const SizedBox(height: 22),
+            Text('Already enrolled? Sign in to open it.', style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 8),
+            ..._buildSignInPrompt(),
+          ],
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -296,6 +324,8 @@ class _ModulePurchaseSectionState extends State<ModulePurchaseSection> {
     final price = widget.module.price;
     final tax = widget.module.taxPercent;
     final showSignInPrompt = widget.module.loginRequired && _state == _PurchaseState.none;
+    // Not sold on its own (no price): it opens with a plan, after the free modules (29 Oct 2026).
+    if (price <= 0) return _planUnlock(showSignInPrompt);
 
     return Padding(
       padding: const EdgeInsets.all(20),

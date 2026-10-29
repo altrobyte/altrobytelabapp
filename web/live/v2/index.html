@@ -113,9 +113,9 @@
   let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
   let lastWords = Date.now();                              // the last time words were understood, from either side
   let heardAt = 0, nudgedReply = false;                    // when the learner last spoke; whether Altron was reminded
-  let lessonDone = false;
-  let saidSent = 0;
-  let partAt = Math.max(0, Number(P.get('from')) - 1);     // the furthest part taught so far (0: none yet)                                        // when Altron's words were last passed to the note                                  // the score is saved: the goodbye is the last turn
+  let lessonDone = false;                                 // the score is saved: the goodbye is the last turn
+  let saidSent = 0;                                        // when Altron's words were last passed to the note
+  let partAt = Math.max(0, Number(P.get('from')) - 1);     // the furthest part taught so far (0: none yet)
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const STRIP = P.get('strip') === '1';
@@ -137,6 +137,7 @@
   function tellHost(o) {
     try { if (host) host.postMessage(JSON.stringify(o)); } catch (_) {}
     try { if (window.AltronHost) window.AltronHost.postMessage(JSON.stringify(o)); } catch (_) {}   // the Altron phone app
+    try { if (!host && window.parent !== window) window.parent.postMessage(JSON.stringify(o), location.origin); } catch (_) {}   // the website's note page
   }
 
   // ── what the learner sees ──

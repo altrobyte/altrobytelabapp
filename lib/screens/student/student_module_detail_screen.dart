@@ -130,6 +130,7 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => StudentNotesViewerScreen(
+              contentId: item.id,
               title: item.title,
               htmlContent: item.htmlContent ?? '',
               moduleColor: widget.module.color,
