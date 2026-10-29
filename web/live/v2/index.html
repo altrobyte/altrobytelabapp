@@ -114,6 +114,7 @@
   let lastWords = Date.now();                              // the last time words were understood, from either side
   let heardAt = 0, nudgedReply = false;                    // when the learner last spoke; whether Altron was reminded
   let lessonDone = false;                                 // the score is saved: the goodbye is the last turn
+  let partSince = 0, partWords = 0;                       // when the current part was shown, and Altron's words since
   let saidSent = 0;                                        // when Altron's words were last passed to the note
   let partAt = Math.max(0, Number(P.get('from')) - 1);     // the furthest part taught so far (0: none yet)
   let lang = P.get('lang') || 'en';
@@ -372,9 +373,14 @@
         // In order, no jumping ahead (29 Oct 2026: it went to the last section, the checklist, mid-lesson). A jump of more
         // than one part is refused and Altron is told which part comes next; the page does not move.
         const want = Number(call.args && call.args.part) || 1;
+        // And not on before this part is taught (29 Oct 2026: a note of many small parts ran to its end, part after part,
+        // with almost nothing said): the next part opens only after 20 s and about 40 words on this one.
         if (want > partAt + 1) {
           response = { shown: false, error: 'Do not skip ahead. You are on part ' + partAt + '. Teach part ' + (partAt + 1) + ' next: call show_part ' + (partAt + 1) + '.' };
+        } else if (want > partAt && partSince && (Date.now() - partSince < 20000 || partWords < 40)) {
+          response = { shown: false, error: 'Part ' + partAt + ' is not taught yet. Explain it properly first: what it is, why it matters, an example from their work, then one short question. Call show_part ' + want + ' after that.' };
         } else {
+          if (want > partAt) { partSince = Date.now(); partWords = 0; }
           partAt = Math.max(partAt, want);
           tellHost({ type: 'section', part: want });
           response = { shown: true };
@@ -434,6 +440,7 @@
         if (sc.outputTranscription && sc.outputTranscription.text) {
           lastWords = Date.now();
           tutorLine += sc.outputTranscription.text;
+          partWords += sc.outputTranscription.text.split(/\s+/).filter(Boolean).length;
           $('capT').textContent = tutorLine.slice(STRIP ? -140 : -260); $('cap').classList.add('on');
           if (Date.now() - saidSent > 1500) { saidSent = Date.now(); tellHost({ type: 'said', text: tutorLine.slice(-220) }); }   // the note follows
         }
