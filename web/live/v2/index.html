@@ -114,7 +114,8 @@
   let lastWords = Date.now();                              // the last time words were understood, from either side
   let heardAt = 0, nudgedReply = false;                    // when the learner last spoke; whether Altron was reminded
   let lessonDone = false;
-  let saidSent = 0;                                        // when Altron's words were last passed to the note                                  // the score is saved: the goodbye is the last turn
+  let saidSent = 0;
+  let partAt = Math.max(0, Number(P.get('from')) - 1);     // the furthest part taught so far (0: none yet)                                        // when Altron's words were last passed to the note                                  // the score is saved: the goodbye is the last turn
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const STRIP = P.get('strip') === '1';
@@ -367,8 +368,16 @@
         lessonDone = true;
       } else if (call.name === 'show_part') {
         // the note is open in the app: the app scrolls to that section and makes it glow
-        tellHost({ type: 'section', part: Number(call.args && call.args.part) || 1 });
-        response = { shown: true };
+        // In order, no jumping ahead (29 Oct 2026: it went to the last section, the checklist, mid-lesson). A jump of more
+        // than one part is refused and Altron is told which part comes next; the page does not move.
+        const want = Number(call.args && call.args.part) || 1;
+        if (want > partAt + 1) {
+          response = { shown: false, error: 'Do not skip ahead. You are on part ' + partAt + '. Teach part ' + (partAt + 1) + ' next: call show_part ' + (partAt + 1) + '.' };
+        } else {
+          partAt = Math.max(partAt, want);
+          tellHost({ type: 'section', part: want });
+          response = { shown: true };
+        }
       } else if (call.name === 'ask_camera') {
         if (camOn) response = { camera: 'already on' };
         else {

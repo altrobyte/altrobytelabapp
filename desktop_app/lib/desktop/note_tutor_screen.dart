@@ -390,6 +390,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       cam.webMessage.listen((m) async {
         final msg = liveMessage(m);
         if (msg?['type'] == 'state' && msg?['state'] == 'done') {   // the lesson is complete: the strip goes away
+          // Complete: opening it again starts from the top, not from the last section.
+          SharedPreferences.getInstance().then((p) => p.remove('note_part_${widget.contentId}'));
           Future.delayed(const Duration(seconds: 3), () {
             if (!mounted || !identical(_cam, cam)) return;
             _closeCamera();
