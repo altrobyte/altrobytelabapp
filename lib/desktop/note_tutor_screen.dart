@@ -36,7 +36,11 @@ class NoteTutorScreen extends StatefulWidget {
   /// The note's own page, already on this computer with the module: shown when the server is slow to answer, so a
   /// learner on a slow line still reads the note (the tutor joins when the server answers next time).
   final String? fallbackHtml;
-  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml});
+
+  /// The next note of the module: when this lesson is complete, it opens by itself after a short countdown.
+  final String? nextTitle;
+  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml,
+      this.nextTitle});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -165,6 +169,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   void dispose() {
     t.removeListener(_onTutor);
     _messages?.cancel();
+    _tick?.cancel();
     t.dispose();
     _pan.dispose();
     _web.dispose();
@@ -385,7 +390,11 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       cam.webMessage.listen((m) async {
         final msg = liveMessage(m);
         if (msg?['type'] == 'state' && msg?['state'] == 'done') {   // the lesson is complete: the strip goes away
-          Future.delayed(const Duration(seconds: 3), () { if (mounted && identical(_cam, cam)) _closeCamera(); });
+          Future.delayed(const Duration(seconds: 3), () {
+            if (!mounted || !identical(_cam, cam)) return;
+            _closeCamera();
+            _lessonDone();
+          });
           return;
         }
         if (msg?['type'] == 'screen') {                // Altron asked to see the screen
@@ -423,6 +432,66 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     if (_voiceBefore == true && !t.voice) t.setVoice(true);
     _voiceBefore = null;
   }
+
+  int? _countdown;              // seconds left before the next lesson opens; null = no countdown
+  Timer? _tick;
+
+  /// The lesson is complete: a bar says so and, when there is a next note, opens it after five seconds.
+  void _lessonDone() {
+    if (widget.nextTitle == null) {
+      setState(() => _countdown = -1);
+      return;
+    }
+    setState(() => _countdown = 5);
+    _tick?.cancel();
+    _tick = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return t.cancel();
+      if ((_countdown ?? 0) <= 1) {
+        t.cancel();
+        Navigator.of(context).pop('next');
+        return;
+      }
+      setState(() => _countdown = _countdown! - 1);
+    });
+  }
+
+  Widget _doneBar() => Material(
+        color: const Color(0xFF0F5132),
+        child: SizedBox(
+          height: 60,
+          child: Row(children: [
+            const SizedBox(width: 16),
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  widget.nextTitle == null
+                      ? 'Lesson complete. That was the last note of this module.'
+                      : 'Lesson complete. Next: ${widget.nextTitle}, starting in ${_countdown ?? 5} s…',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+            if (widget.nextTitle != null) ...[
+              TextButton(
+                  onPressed: () {
+                    _tick?.cancel();
+                    setState(() => _countdown = null);
+                  },
+                  child: const Text('Stay here', style: TextStyle(color: Colors.white70))),
+              const SizedBox(width: 6),
+              FilledButton(
+                  onPressed: () {
+                    _tick?.cancel();
+                    Navigator.of(context).pop('next');
+                  },
+                  style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF0F5132)),
+                  child: const Text('Start now')),
+            ],
+            const SizedBox(width: 14),
+          ]),
+        ),
+      );
 
   Widget _altronStrip() => Material(
         color: const Color(0xFF0D1726),
@@ -487,6 +556,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                           ? _notePane()
                           : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
                   if (_cam != null) _altronStrip(),
+                  if (_cam == null && _countdown != null) _doneBar(),
                 ]),
     );
   }

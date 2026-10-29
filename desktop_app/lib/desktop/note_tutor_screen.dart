@@ -16,6 +16,7 @@ import 'chat_text.dart';
 import 'help_button.dart';
 import 'class_screen.dart';
 import 'live_tutor_screen.dart';
+import 'screen_shot.dart';
 import 'note_tutor.dart';
 import 'tutor_feel.dart';
 import 'visual_page.dart';
@@ -31,7 +32,15 @@ class NoteTutorScreen extends StatefulWidget {
 
   /// Makes sentences ready ahead of time on this computer, so saying them starts at once.
   final void Function(List<String> texts)? prepare;
-  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare});
+
+  /// The note's own page, already on this computer with the module: shown when the server is slow to answer, so a
+  /// learner on a slow line still reads the note (the tutor joins when the server answers next time).
+  final String? fallbackHtml;
+
+  /// The next note of the module: when this lesson is complete, it opens by itself after a short countdown.
+  final String? nextTitle;
+  const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml,
+      this.nextTitle});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -40,8 +49,23 @@ class NoteTutorScreen extends StatefulWidget {
 class _NoteTutorScreenState extends State<NoteTutorScreen> {
   late NoteTutor t = _tutorIn('en');
 
+  /// The note from the server, tried twice; when it cannot be had, the copy that came with the module.
+  Future<Map<String, dynamic>> _loadNote(int id, String lang) async {
+    Object? last;
+    for (var i = 0; i < 2; i++) {
+      try {
+        return await ApiService.noteTutor(id, lang);
+      } catch (e) {
+        last = e;
+      }
+    }
+    final html = widget.fallbackHtml ?? '';
+    if (html.trim().isEmpty) throw last ?? 'Could not load the note.';
+    return {'title': widget.title, 'html': html, 'sections': const [], 'guide': const {}, 'guide_ready': true};
+  }
+
   NoteTutor _tutorIn(String lang) => NoteTutor(widget.contentId,
-      loadNote: ApiService.noteTutor,
+      loadNote: _loadNote,
       loadGuide: ApiService.noteGuide,
       checkQuiz: ApiService.noteQuiz,
       askTutor: ApiService.noteAsk,
@@ -56,7 +80,6 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   // two voices over one another is noise. Closing the camera brings the note tutor's voice back as it was.
   WebviewController? _cam;
   bool _camReady = false;
-  bool _camBig = false;
   bool? _voiceBefore;
   late final _pan = PanScroller((script) => _web.executeScript(script));
   final _input = TextEditingController();
@@ -98,6 +121,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _messages = _web.webMessage.listen(_onPageMessage);
       await _web.loadStringContent(tutorPage(t.html));
       if (mounted) setState(() => _webReady = true);
+      // Altron teaches the note at once: one voice, the section it talks about glowing on the page.
+      if (mounted && _cam == null) _openCamera();
       // The first section was introduced while the page was still loading: point at it now.
       Future<void>.delayed(const Duration(milliseconds: 700), () {
         if (mounted && t.current.isNotEmpty) _show(t.current, false);
@@ -144,6 +169,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   void dispose() {
     t.removeListener(_onTutor);
     _messages?.cancel();
+    _tick?.cancel();
     t.dispose();
     _pan.dispose();
     _web.dispose();
@@ -359,8 +385,32 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       await cam.setBackgroundColor(const Color(0xFF0D1726));
       await cam.setPopupWindowPolicy(WebviewPopupWindowPolicy.deny);
       // One voice: the note tutor's lines go to Altron Live to say, instead of being spoken on top of it.
-      t.relay = (text) => cam.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
-      await loadLive(cam, noteId: widget.contentId, lang: t.lang); // talks at once; the camera stays off until the learner turns it on
+      t.relay = null;                                  // Altron teaches; the reading tutor's lines are not passed on
+      t.liveTeaching = true;
+      cam.webMessage.listen((m) async {
+        final msg = liveMessage(m);
+        if (msg?['type'] == 'state' && msg?['state'] == 'done') {   // the lesson is complete: the strip goes away
+          Future.delayed(const Duration(seconds: 3), () {
+            if (!mounted || !identical(_cam, cam)) return;
+            _closeCamera();
+            _lessonDone();
+          });
+          return;
+        }
+        if (msg?['type'] == 'screen') {                // Altron asked to see the screen
+          final shot = await screenshotJpegBase64();
+          await cam.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');
+          return;
+        }
+        final part = (msg?['part'] as num?)?.toInt();
+        if (msg?['type'] == 'section' && part != null && part >= 1) {
+          t.reading('s${part - 1}', bring: true);
+          // Where Altron got to: opening this note again carries on from here.
+          SharedPreferences.getInstance().then((p) => p.setInt('note_part_${widget.contentId}', part));
+        }
+      });
+      final from = (await SharedPreferences.getInstance()).getInt('note_part_${widget.contentId}') ?? 0;
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from, strip: true); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {
@@ -377,58 +427,90 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       _camReady = false;
     });
     t.relay = null;
+    t.liveTeaching = false;
     cam?.dispose(); // ends the session and lets go of the camera
     if (_voiceBefore == true && !t.voice) t.setVoice(true);
     _voiceBefore = null;
   }
 
-  Widget _cameraCorner() {
-    final w = _camBig ? 560.0 : 380.0;
-    final h = _camBig ? 560.0 : 420.0;
-    return Positioned(
-      right: 16,
-      bottom: 16,
-      child: Material(
-        elevation: 12,
-        color: const Color(0xFF0D1726),
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
+  int? _countdown;              // seconds left before the next lesson opens; null = no countdown
+  Timer? _tick;
+
+  /// The lesson is complete: a bar says so and, when there is a next note, opens it after five seconds.
+  void _lessonDone() {
+    if (widget.nextTitle == null) {
+      setState(() => _countdown = -1);
+      return;
+    }
+    setState(() => _countdown = 5);
+    _tick?.cancel();
+    _tick = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return t.cancel();
+      if ((_countdown ?? 0) <= 1) {
+        t.cancel();
+        Navigator.of(context).pop('next');
+        return;
+      }
+      setState(() => _countdown = _countdown! - 1);
+    });
+  }
+
+  Widget _doneBar() => Material(
+        color: const Color(0xFF0F5132),
         child: SizedBox(
-          width: w,
-          height: h,
-          child: Column(children: [
-            Container(
-              color: AppColors.primary,
-              padding: const EdgeInsets.only(left: 12),
-              child: Row(children: [
-                const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
-                const SizedBox(width: 6),
-                Expanded(child: Text('Altron · camera', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
-                Text('one voice: Altron', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
-                IconButton(
-                  tooltip: _camBig ? 'Smaller' : 'Bigger',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => setState(() => _camBig = !_camBig),
-                  icon: Icon(_camBig ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded, size: 16, color: Colors.white),
-                ),
-                IconButton(
-                  tooltip: 'Close the camera',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _closeCamera,
-                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
-                ),
-              ]),
+          height: 60,
+          child: Row(children: [
+            const SizedBox(width: 16),
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  widget.nextTitle == null
+                      ? 'Lesson complete. That was the last note of this module.'
+                      : 'Lesson complete. Next: ${widget.nextTitle}, starting in ${_countdown ?? 5} s…',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
             ),
+            if (widget.nextTitle != null) ...[
+              TextButton(
+                  onPressed: () {
+                    _tick?.cancel();
+                    setState(() => _countdown = null);
+                  },
+                  child: const Text('Stay here', style: TextStyle(color: Colors.white70))),
+              const SizedBox(width: 6),
+              FilledButton(
+                  onPressed: () {
+                    _tick?.cancel();
+                    Navigator.of(context).pop('next');
+                  },
+                  style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF0F5132)),
+                  child: const Text('Start now')),
+            ],
+            const SizedBox(width: 14),
+          ]),
+        ),
+      );
+
+  Widget _altronStrip() => Material(
+        color: const Color(0xFF0D1726),
+        child: SizedBox(
+          height: 60,
+          child: Row(children: [
             Expanded(
               child: _camReady && _cam != null
                   ? Webview(_cam!, permissionRequested: (url, kind, userInitiated) => livePermission(url, kind))
-                  : const Center(child: CircularProgressIndicator()),
+                  : const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            IconButton(
+              tooltip: 'Stop Altron',
+              onPressed: _closeCamera,
+              icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
             ),
           ]),
         ),
-      ),
-    );
-  }
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -466,10 +548,15 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                     ElevatedButton(onPressed: _start, child: const Text('Try again')),
                   ]),
                 )
-              : Stack(children: [
-                  Positioned.fill(
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
-                  if (_cam != null) _cameraCorner(),
+              // The note across the whole width, Altron as one slim line under it (26 Oct 2026, founder: the card and the
+              // reading tutor's panel were in the way; its voice was already off). Closed, the panel comes back.
+              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Expanded(
+                      child: _cam != null
+                          ? _notePane()
+                          : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
+                  if (_cam != null) _altronStrip(),
+                  if (_cam == null && _countdown != null) _doneBar(),
                 ]),
     );
   }

@@ -206,18 +206,43 @@ class _ModulesPanelState extends State<ModulesPanel> {
 
   /// A note opens as the live class (the board and Altron's voice) when it has its class version; otherwise the
   /// reading tutor. Only one of them talks.
+  /// The note after this one in its module (course order), with the module it is in; null at the end.
+  (int, ContentItem)? _nextNote(ContentItem item) {
+    for (final e in _detail.entries) {
+      final notes = [
+        for (final t in e.value.topics)
+          for (final st in t.subtopics)
+            for (final it in st.contentItems)
+              if (it.type == 'notes') it
+      ];
+      final i = notes.indexWhere((n) => n.id == item.id);
+      if (i < 0) continue;
+      for (final n in notes.skip(i + 1)) {
+        if (!n.locked && (n.htmlContent ?? '').isNotEmpty) return (e.key, n);
+      }
+      return null;
+    }
+    return null;
+  }
+
   Future<void> _note(ContentItem item) async {
     bool live = false;
     try {
       live = await ApiService.hasClassVersion(item.id);
     } catch (_) {}
     if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(
+    final next = _nextNote(item);
+    final r = await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => live
             ? ClassScreen(noteId: item.id, title: item.title)
             // One voice only (26 Oct 2026, founder): Altron Live (Gemini) teaches the note; the reading tutor's own spoken
             // voice is off, or it read section lines in English over Altron each time a section lit up.
-            : NoteTutorScreen(contentId: item.id, title: item.title, fallbackHtml: item.htmlContent)));
+            : NoteTutorScreen(contentId: item.id, title: item.title, fallbackHtml: item.htmlContent, nextTitle: next?.$2.title)));
+    // The lesson ended and the learner went on (founder, 29 Oct: off at the end, then the next lesson): open the next note.
+    if (r == 'next' && next != null && mounted) {
+      _mark(next.$1, next.$2);
+      await _note(next.$2);
+    }
   }
 
   Future<void> _link(String? url) async {
