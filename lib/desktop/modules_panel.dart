@@ -836,62 +836,123 @@ class _ModulesPanelState extends State<ModulesPanel> {
     );
   }
 
-  Widget _courseCard(TrainingModule m, double width) {
+  /// One step of the path: its number on a line joining the steps, the picture, the title and a line about it, progress,
+  /// and one action. The step being worked on stands out.
+  Widget _courseRow(TrainingModule m, int n, {bool isLast = false}) {
     final total = _totalOf(m), done = _doneOf(m);
     final finished = total > 0 && done >= total;
+    final current = !m.locked && !finished && identical(m, _current());
     final pct = total == 0 ? 0 : (done * 100 / total).round();
-    final action = m.locked ? 'Unlock' : finished ? 'Review' : done > 0 ? 'Continue' : 'Start course';
-    return SizedBox(
-      width: width,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _openModule(m),
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E6EC))),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _thumb(m, 120),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  SizedBox(
-                    height: 42,
-                    child: Text(m.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14.5, height: 1.3)),
+    final action = m.locked ? 'Unlock' : finished ? 'Review' : done > 0 ? 'Continue' : 'Start';
+    final dot = finished ? AppColors.success : (current ? AppColors.accent : (m.locked ? Colors.grey.shade400 : AppColors.primary));
+    final base = m.locked ? Colors.blueGrey.shade300 : _colorOf(m);
+    final meta = m.locked
+        ? 'Not unlocked yet'
+        : [total == 0 ? 'Lessons inside' : '$total lessons', 'with Altron', if (done > 0) '$pct% complete'].join(' · ');
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(
+          width: 44,
+          child: Column(children: [
+            Container(
+              width: 30,
+              height: 30,
+              margin: const EdgeInsets.only(top: 30),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              child: finished
+                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                  : Text('$n', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+            if (!isLast) Expanded(child: Container(width: 2, color: const Color(0xFFDCE2EA))),
+          ]),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _openModule(m),
+                child: Container(
+                  height: 92,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: current ? AppColors.accent : const Color(0xFFE2E6EC), width: current ? 2 : 1),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                      m.locked
-                          ? 'Altrobyte Lab · not unlocked yet'
-                          : 'Altrobyte Lab · ${total == 0 ? 'lessons inside' : '$total lessons'} · with Altron',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-                  const SizedBox(height: 12),
-                  if (!m.locked && total > 0) ...[
+                  child: Row(children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(value: done / total, minHeight: 5, backgroundColor: const Color(0xFFE8EDF3),
-                          color: finished ? AppColors.success : AppColors.accent),
+                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                      child: SizedBox(
+                        width: 150,
+                        height: 92,
+                        child: Stack(fit: StackFit.expand, children: [
+                          Container(
+                              decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [base, Color.lerp(base, const Color(0xFF0B1B2B), 0.55)!]))),
+                          Center(child: Icon(m.locked ? Icons.lock_rounded : _iconOf(m), color: Colors.white.withValues(alpha: 0.9), size: 36)),
+                        ]),
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                  ],
-                  Row(children: [
-                    Text(m.locked ? '' : (done == 0 ? 'Not started' : '$pct% complete'),
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const Spacer(),
-                    Text(action, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: m.locked ? Colors.grey : AppColors.accent)),
-                    Icon(Icons.chevron_right_rounded, size: 18, color: m.locked ? Colors.grey : AppColors.accent),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Flexible(
+                              child: Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15)),
+                            ),
+                            if (current) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+                                child: Text('You are here', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.accent)),
+                              ),
+                            ],
+                          ]),
+                          const SizedBox(height: 3),
+                          Text(meta, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
+                          if (!m.locked && total > 0) ...[
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(99),
+                              child: LinearProgressIndicator(value: done / total, minHeight: 5, backgroundColor: const Color(0xFFE8EDF3),
+                                  color: finished ? AppColors.success : AppColors.accent),
+                            ),
+                          ],
+                        ]),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: current
+                          ? FilledButton(
+                              onPressed: () => _openModule(m),
+                              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+                              child: Text(action))
+                          : OutlinedButton(onPressed: () => _openModule(m), child: Text(action)),
+                    ),
                   ]),
-                ]),
+                ),
               ),
-            ]),
+            ),
           ),
         ),
-      ),
+      ]),
     );
+  }
+
+  /// The step being worked on: the first open module, in course order, not finished.
+  TrainingModule? _current() {
+    for (final m in _modules ?? const <TrainingModule>[]) {
+      if (!m.locked && !(_totalOf(m) > 0 && _doneOf(m) >= _totalOf(m))) return m;
+    }
+    return null;
   }
 
   Widget _tabChip(int i, String label, int count) {
@@ -927,10 +988,8 @@ class _ModulesPanelState extends State<ModulesPanel> {
       final n = _next();
       if (n != null) resume.add(n);
     }
-    final all = [...?modules]..sort((a, b) {
-        int rank(TrainingModule m) => m.locked ? 3 : (started(m) ? 0 : (_doneOf(m) == 0 ? 1 : 2));
-        return rank(a).compareTo(rank(b));
-      });
+    // The course order, as the team set it: one path, followed top to bottom (29 Oct 2026, founder).
+    final all = [...?modules];
     final shown = switch (_tab) { 1 => all.where(started).toList(), 2 => all.where(finished).toList(), _ => all };
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -964,7 +1023,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
         const SizedBox(height: 26),
       ],
       Row(children: [
-        _tabChip(0, 'All courses', all.length),
+        _tabChip(0, 'Learning path', all.length),
         _tabChip(1, 'In progress', all.where(started).length),
         _tabChip(2, 'Completed', all.where(finished).length),
       ]),
@@ -986,11 +1045,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
               style: GoogleFonts.inter(color: AppColors.textSecondary)),
         )
       else
-        LayoutBuilder(builder: (_, box) {
-          final cols = box.maxWidth > 1100 ? 4 : (box.maxWidth > 820 ? 3 : (box.maxWidth > 540 ? 2 : 1));
-          final w = (box.maxWidth - 16 * (cols - 1)) / cols;
-          return Wrap(spacing: 16, runSpacing: 16, children: [for (final m in shown) _courseCard(m, w)]);
-        }),
+        Column(children: [for (final m in shown) _courseRow(m, all.indexOf(m) + 1, isLast: m == shown.last)]),
     ]);
   }
 }
