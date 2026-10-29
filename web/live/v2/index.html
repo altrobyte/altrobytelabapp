@@ -61,6 +61,20 @@
   .hidden { display: none !important; }
   body.full .stage { max-width: 720px; width: calc(100% - 20px); margin: 8px auto; aspect-ratio: 4 / 3; flex: none; }
   body.full .bar, body.full .ask, body.full .msg { max-width: 720px; width: calc(100% - 20px); margin-left: auto; margin-right: auto; }
+  /* strip=1: Altron as one slim line under the note (26 Oct 2026, founder: the big card was in the way) */
+  body.strip { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 0 10px; height: 100vh; overflow: hidden; }
+  body.strip .top { flex: none; padding: 0; gap: 6px; }
+  body.strip #clock, body.strip .langs, body.strip .orb, body.strip .cap small { display: none !important; }
+  body.strip .stage { flex: 1; min-width: 0; height: 44px; margin: 0; background: transparent; border-radius: 8px; justify-content: flex-start; gap: 8px; }
+  body.strip .stage:not(.cam-on) video { display: none; }
+  body.strip video { width: 64px; height: 44px; object-fit: cover; border-radius: 6px; flex: none; }
+  body.strip .cap { position: static; display: block; opacity: 1; background: transparent; padding: 0; margin: 0; max-width: none; flex: 1; min-width: 0;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; transform: none; }
+  body.strip .bar { flex: none; padding: 0; margin: 0; gap: 6px; }
+  body.strip .round { width: 38px; height: 38px; font-size: 15px; }
+  body.strip .go { padding: 8px 14px; font-size: 13px; }
+  body.strip .msg { position: fixed; left: 140px; right: 170px; top: 50%; transform: translateY(-50%); margin: 0; font-size: 12.5px; }
+  body.strip .ask { position: fixed; right: 170px; top: 50%; transform: translateY(-50%); margin: 0; }
 </style>
 </head>
 <body>
@@ -98,8 +112,11 @@
   const IDLE_S = FOUNDER ? 12 : 120;                       // the founder's assistant sleeps 12 s after the talk; its name wakes it
   let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
   let lastWords = Date.now();                              // the last time words were understood, from either side
+  let heardAt = 0, nudgedReply = false;                    // when the learner last spoke; whether Altron was reminded
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
+  const STRIP = P.get('strip') === '1';
+  if (STRIP) document.body.classList.add('strip');
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
 
   // ── sign-in: the app hands it over in the #fragment, which no server receives ──
@@ -403,13 +420,13 @@
         if (sc.outputTranscription && sc.outputTranscription.text) {
           lastWords = Date.now();
           tutorLine += sc.outputTranscription.text;
-          $('capT').textContent = tutorLine.slice(-260); $('cap').classList.add('on');
+          $('capT').textContent = tutorLine.slice(STRIP ? -140 : -260); $('cap').classList.add('on');
         }
         if (sc.inputTranscription && sc.inputTranscription.text) {
-          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true; lastWords = Date.now();
+          youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true; lastWords = Date.now(); heardAt = Date.now(); nudgedReply = false;
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
         }
-        if (sc.turnComplete) { tutorLine = ''; youLine = ''; replyDue = false; lastActive = Date.now(); }
+        if (sc.turnComplete) { tutorLine = ''; youLine = ''; replyDue = false; nudgedReply = false; lastActive = Date.now(); }
       }
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
       if (m.goAway) renew();
@@ -470,6 +487,13 @@
     if (!running) return;
     if (Date.now() >= rotateAt) return renew();
     const quiet = (Date.now() - lastActive) / 1000;
+    // Gemini sometimes goes silent after the learner speaks (26 Oct 2026: "Hello, hello", no answer). After 12 s it is
+    // reminded; after 24 s the connection is renewed, carrying on the same talk.
+    if (replyDue && heardAt && !playing.length) {
+      const waited = (Date.now() - heardAt) / 1000;
+      if (waited >= 24) { replyDue = false; nudgedReply = false; heardAt = 0; renew(); return; }
+      if (waited >= 12 && !nudgedReply) { nudgedReply = true; note('[The learner spoke and is waiting for you. Answer them now, briefly.]'); return; }
+    }
     // Many learners would rather listen than answer. In a note class, a question left unanswered for a few seconds is
     // answered by Altron, who carries on; after several in a row with no word from them, the usual pause takes over.
     if (P.get('teach') === '1' && !playing.length && quiet >= QUIET_S && quietNudges < QUIET_MAX) {

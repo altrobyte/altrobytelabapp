@@ -76,7 +76,6 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   // two voices over one another is noise. Closing the camera brings the note tutor's voice back as it was.
   WebviewController? _cam;
   bool _camReady = false;
-  bool _camBig = false;
   bool? _voiceBefore;
   late final _pan = PanScroller((script) => _web.executeScript(script));
   final _input = TextEditingController();
@@ -398,7 +397,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         }
       });
       final from = (await SharedPreferences.getInstance()).getInt('note_part_${widget.contentId}') ?? 0;
-      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from); // teaches at once; the camera stays off
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from, strip: true); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {
@@ -421,53 +420,24 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     _voiceBefore = null;
   }
 
-  Widget _cameraCorner() {
-    final w = _camBig ? 560.0 : 380.0;
-    final h = _camBig ? 560.0 : 420.0;
-    return Positioned(
-      right: 16,
-      bottom: 16,
-      child: Material(
-        elevation: 12,
+  Widget _altronStrip() => Material(
         color: const Color(0xFF0D1726),
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
         child: SizedBox(
-          width: w,
-          height: h,
-          child: Column(children: [
-            Container(
-              color: AppColors.primary,
-              padding: const EdgeInsets.only(left: 12),
-              child: Row(children: [
-                const Icon(Icons.videocam_rounded, size: 16, color: Colors.white),
-                const SizedBox(width: 6),
-                Expanded(child: Text('Altron', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white))),
-                Text('one voice: Altron', style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white60)),
-                IconButton(
-                  tooltip: _camBig ? 'Smaller' : 'Bigger',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => setState(() => _camBig = !_camBig),
-                  icon: Icon(_camBig ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded, size: 16, color: Colors.white),
-                ),
-                IconButton(
-                  tooltip: 'Close the camera',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _closeCamera,
-                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
-                ),
-              ]),
-            ),
+          height: 60,
+          child: Row(children: [
             Expanded(
               child: _camReady && _cam != null
                   ? Webview(_cam!, permissionRequested: (url, kind, userInitiated) => livePermission(url, kind))
-                  : const Center(child: CircularProgressIndicator()),
+                  : const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            IconButton(
+              tooltip: 'Stop Altron',
+              onPressed: _closeCamera,
+              icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white70),
             ),
           ]),
         ),
-      ),
-    );
-  }
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -505,10 +475,14 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
                     ElevatedButton(onPressed: _start, child: const Text('Try again')),
                   ]),
                 )
-              : Stack(children: [
-                  Positioned.fill(
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
-                  if (_cam != null) _cameraCorner(),
+              // The note across the whole width, Altron as one slim line under it (26 Oct 2026, founder: the card and the
+              // reading tutor's panel were in the way; its voice was already off). Closed, the panel comes back.
+              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Expanded(
+                      child: _cam != null
+                          ? _notePane()
+                          : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Expanded(child: _notePane()), _tutorPanel()])),
+                  if (_cam != null) _altronStrip(),
                 ]),
     );
   }
