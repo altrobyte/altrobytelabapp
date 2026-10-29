@@ -384,6 +384,10 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
       t.liveTeaching = true;
       cam.webMessage.listen((m) async {
         final msg = liveMessage(m);
+        if (msg?['type'] == 'state' && msg?['state'] == 'done') {   // the lesson is complete: the strip goes away
+          Future.delayed(const Duration(seconds: 3), () { if (mounted && identical(_cam, cam)) _closeCamera(); });
+          return;
+        }
         if (msg?['type'] == 'screen') {                // Altron asked to see the screen
           final shot = await screenshotJpegBase64();
           await cam.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');

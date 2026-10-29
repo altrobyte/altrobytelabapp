@@ -113,6 +113,7 @@
   let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
   let lastWords = Date.now();                              // the last time words were understood, from either side
   let heardAt = 0, nudgedReply = false;                    // when the learner last spoke; whether Altron was reminded
+  let lessonDone = false;                                  // the score is saved: the goodbye is the last turn
   let lang = P.get('lang') || 'en';
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const STRIP = P.get('strip') === '1';
@@ -362,6 +363,7 @@
           response = await r.json();
         } catch (_) { response = { kept: false }; }
         tellHost({ type: 'score', right });
+        lessonDone = true;
       } else if (call.name === 'show_part') {
         // the note is open in the app: the app scrolls to that section and makes it glow
         tellHost({ type: 'section', part: Number(call.args && call.args.part) || 1 });
@@ -426,7 +428,14 @@
           youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; replyDue = true; lastWords = Date.now(); heardAt = Date.now(); nudgedReply = false;
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
         }
-        if (sc.turnComplete) { tutorLine = ''; youLine = ''; replyDue = false; nudgedReply = false; lastActive = Date.now(); }
+        if (sc.turnComplete) {
+          tutorLine = ''; youLine = ''; replyDue = false; nudgedReply = false; lastActive = Date.now();
+          // The lesson is over (founder: it must switch off after completion): once the goodbye has been heard, stop.
+          if (lessonDone) {
+            const finish = () => { if (playing.length) return setTimeout(finish, 500); pause('Lesson complete. Great work!'); tellHost({ type: 'state', state: 'done' }); };
+            setTimeout(finish, 1500);
+          }
+        }
       }
       if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) handle = m.sessionResumptionUpdate.newHandle;
       if (m.goAway) renew();
