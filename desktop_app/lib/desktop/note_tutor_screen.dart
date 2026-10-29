@@ -402,6 +402,10 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
           await cam.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');
           return;
         }
+        if (msg?['type'] == 'said' && _webReady) {     // the note scrolls gently to what Altron is talking about
+          _web.executeScript('window.__altroSaid && window.__altroSaid(${jsonEncode(msg?['text'] ?? '')})');
+          return;
+        }
         final part = (msg?['part'] as num?)?.toInt();
         if (msg?['type'] == 'section' && part != null && part >= 1) {
           t.reading('s${part - 1}', bring: true);

@@ -113,8 +113,76 @@ const noteBridgeScript = r"""
       r.run[0].classList.add('altro-first');
       lit = r.run.slice();
     }
-    if (bring) { last = i; h.scrollIntoView({ behavior: 'smooth', block: 'start' }); follow(lit); }
+    // The page follows Altron, gently (29 Oct 2026, founder: it jumped down suddenly; it must follow the trainer slowly).
+    // If the learner scrolled on their own in the last 20 s, nothing moves: a small button offers to go there.
+    if (bring) { last = i; if (learnerBusy()) offerGo(h); else { glide(h, 90); } }
   };
+  // ── following Altron's words ──
+  var userAt = 0, anim = null;
+  function learnerBusy() { return Date.now() - userAt < 20000; }
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { userAt = Date.now(); if (anim) { cancelAnimationFrame(anim); anim = null; } }, { passive: true });
+  });
+  // A slow eased scroll so the element sits `offset` px from the top: about 500 px a second, never a jump.
+  function glide(el, offset) {
+    var from = window.scrollY, to = Math.max(0, from + el.getBoundingClientRect().top - offset), d = to - from;
+    if (Math.abs(d) < 8) return;
+    var ms = Math.min(2600, Math.max(700, Math.abs(d) / 0.5)), t0 = null;
+    if (anim) cancelAnimationFrame(anim);
+    function step(ts) {
+      if (t0 === null) t0 = ts;
+      var p = Math.min(1, (ts - t0) / ms), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      window.scrollTo(0, from + d * e);
+      anim = p < 1 ? requestAnimationFrame(step) : null;
+    }
+    anim = requestAnimationFrame(step);
+  }
+  function wordsOf(s) {
+    return (s || '').toLowerCase().replace(/[^a-z0-9ऀ-ॿ]+/g, ' ').split(' ').filter(function (w) { return w.length > 2; });
+  }
+  var STOP = {the:1,and:1,aur:1,hai:1,hain:1,hum:1,isko:1,iska:1,yeh:1,kya:1,koi:1,jab:1,tab:1,par:1,for:1,you:1,are:1,this:1,that:1,with:1,
+              karte:1,kaise:1,dekhenge:1,hota:1,hoti:1,raha:1,rahe:1,abhi:1,bhi:1,toh:1,agar:1,samajh:1,aaya:1,ek:1,mein:1,liye:1};
+  var saidAt = 0;
+  // Altron's latest words: the line of the lit section they are about is brought into comfortable view, slowly.
+  window.__altroSaid = function (text) {
+    if (!lit.length || learnerBusy() || anim || Date.now() - saidAt < 2500) return;
+    var said = wordsOf(text).slice(-24).filter(function (w) { return !STOP[w]; });
+    if (said.length < 2) return;
+    var bag = {}; said.forEach(function (w) { bag[w] = 1; });
+    var best = null, score = 0;
+    lit.forEach(function (b) {
+      var parts = b.querySelectorAll('p, li, tr, h2, h3, h4, pre, figure, blockquote, img, canvas, svg, button, input');
+      var list = parts.length ? Array.prototype.slice.call(parts) : [b];
+      list.forEach(function (el) {
+        var n = 0, seen = {};
+        wordsOf(el.innerText || el.getAttribute('alt') || '').forEach(function (w) { if (bag[w] && !seen[w]) { seen[w] = 1; n++; } });
+        if (n > score) { score = n; best = el; }
+      });
+    });
+    if (!best || score < 2) return;
+    var r = best.getBoundingClientRect();
+    if (r.top > 70 && r.bottom < window.innerHeight - 70) return;   // already in view: the page stays still
+    saidAt = Date.now();
+    glide(best, Math.round(window.innerHeight * 0.3));
+  };
+  var goBtn = null;
+  function offerGo(h) {
+    if (goBtn) { goBtn.remove(); goBtn = null; }
+    var r = h.getBoundingClientRect();
+    if (r.top >= 0 && r.top < window.innerHeight - 60) return;
+    goBtn = document.createElement('button');
+    var t = (h.innerText || '').trim();
+    goBtn.textContent = 'Altron is on: ' + (t.length > 40 ? t.slice(0, 40) + '…' : t) + (r.top > 0 ? '  ↓' : '  ↑');
+    goBtn.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:9999;padding:10px 16px;border:0;border-radius:22px;' +
+      'background:#0D1726;color:#fff;font:600 14px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer';
+    goBtn.onclick = function () { h.scrollIntoView({ behavior: 'smooth', block: 'start' }); goBtn.remove(); goBtn = null; };
+    document.body.appendChild(goBtn);
+  }
+  window.addEventListener('scroll', function () {
+    if (!goBtn || last < 0) return;
+    var h = heads[last], r = h && h.getBoundingClientRect();
+    if (r && r.top >= 0 && r.top < window.innerHeight - 60) { goBtn.remove(); goBtn = null; }
+  }, { passive: true });
   // While Altron talks about a section, the page drifts slowly through it at about reading speed, so the learner never
   // has to scroll. Any scroll of their own (wheel, touch, keys) stops the drift until the next section.
   var drift = null;
