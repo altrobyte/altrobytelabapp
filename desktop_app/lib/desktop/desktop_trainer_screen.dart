@@ -18,6 +18,7 @@ import 'class_screen.dart';
 import 'lesson_screen.dart';
 import 'live_course.dart';
 import 'help_button.dart';
+import 'industrial_home.dart';
 import 'modules_panel.dart';
 import 'visual_page.dart';
 
@@ -55,6 +56,18 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   String? _newVersion; // a newer installer exists
   int _shown = 0;
   bool _showLog = false; // the whole conversation instead of the step on screen now
+  int _product = 0;          // the home's two products: 0 technical training, 1 industrial training
+  bool _module0Open = false; // Module 0 folds to one line once every lesson in it is done
+  bool _setupOpen = false; // the computer check folds to one line once the tools are ready
+  static const _showModule0 = false; // Module 0 is off the home: the modules are the course
+  final _scaffold = GlobalKey<ScaffoldState>();
+
+  bool get _toolsMissing {
+    final r = c.setupReport;
+    final items = [for (final i in (r?['items'] as List? ?? const [])) Map<String, dynamic>.from(i as Map)];
+    bool isBoard(Map<String, dynamic> i) => '${i['id']}' == 'board' || '${i['label']}'.toLowerCase().contains('board on usb');
+    return r != null && items.isNotEmpty && items.where((i) => !isBoard(i)).any((i) => '${i['state']}' != 'ok');
+  }
 
   @override
   void initState() {
@@ -462,9 +475,17 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         break;
       }
     }
+    if (_product == 1) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_products(), const SizedBox(height: 22), const IndustrialHome()]),
+      );
+    }
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _products(),
+        const SizedBox(height: 22),
         if (_newVersion != null)
           Container(
             margin: const EdgeInsets.only(bottom: 14),
@@ -477,16 +498,21 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
               TextButton(onPressed: () => openExternal(downloadPageUrl), child: const Text('Get it')),
             ]),
           ),
-        Row(children: [
-          const Icon(Icons.school_rounded, size: 30, color: AppColors.primary),
-          const SizedBox(width: 10),
-          Expanded(child: Text('Module 0 · Start here', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600))),
-        ]),
-        const SizedBox(height: 6),
-        Text('A few short lessons before your modules: the program, your laptop, the first ideas and your first program. Then your modules below, lesson by lesson.',
-            style: GoogleFonts.inter(color: AppColors.textSecondary, height: 1.5, fontSize: 13)),
-        const SizedBox(height: 16),
-        if (_courses.isEmpty && _coursesFailed)
+        // The home is the learner's modules and their progress, nothing else (24 Oct 2026, founder). The computer
+        // check, project folder and serial monitor are behind Settings; a line here only when the computer needs setting up.
+        if (_toolsMissing)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)),
+            child: Row(children: [
+              const Icon(Icons.build_circle_outlined, color: AppColors.warning),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Your computer needs a tool or two before the experiments.', style: GoogleFonts.inter(fontSize: 13))),
+              TextButton(onPressed: () => _scaffold.currentState?.openEndDrawer(), child: const Text('Set up')),
+            ]),
+          ),
+        if (_showModule0 && _courses.isEmpty && _coursesFailed)
           Row(children: [
             Expanded(child: Text('Could not load your courses. Check your internet and try again.', style: GoogleFonts.inter(color: AppColors.warning))),
             TextButton(onPressed: () => setState(() {
@@ -494,8 +520,24 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                   _loadCourses();
                 }), child: const Text('Retry')),
           ])
+        else if (!_showModule0)
+          const SizedBox.shrink()
         else if (_courses.isEmpty)
           Text('Loading your courses…', style: GoogleFonts.inter(color: AppColors.textSecondary))
+        else if (next == null && !_module0Open)
+          InkWell(
+            onTap: () => setState(() => _module0Open = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.success),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Done: all ${_courses.length} lessons. Your modules are below.', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13))),
+                Text('Show', style: GoogleFonts.inter(color: AppColors.primary, fontSize: 12.5)),
+              ]),
+            ),
+          )
         else
           for (var i = 0; i < _courses.length; i++) _courseTile(_courses[i], i + 1, identical(_courses[i], next)),
         const SizedBox(height: 20),
@@ -507,37 +549,59 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
           hush: () => c.client.post('/say/stop').then((_) {}, onError: (_) {}),
           prepare: (texts) => _voiceReady().then((_) => c.client.post('/say/prepare', {'texts': texts})).then((_) {}, onError: (_) {}),
         ),
-        const SizedBox(height: 14),
-        _howItFits(),
       ]),
     );
   }
 
-  /// Who does what, in four lines, for someone who has never seen any of it.
-  Widget _howItFits() => Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: const EdgeInsets.only(bottom: 8),
-          title: Text('How the pieces fit together', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-          children: [
-            for (final line in const [
-              ('🏠', 'This app is your home: courses, notes, computer check, and your trainer.'),
-              ('✏️', 'VS Code is where you type your code. The trainer opens it for you at the right line; the </> button opens your project folder.'),
-              ('🔌', 'The Altrobyte extension in VS Code is optional: it shows the same trainer next to your code.'),
-              ('🔗', 'Both use one helper on this computer, so your progress, permissions and board are the same in both. Nothing leaves your computer without you seeing it in the log.'),
-            ])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(line.$1, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(line.$2, style: GoogleFonts.inter(fontSize: 12.5, height: 1.4, color: AppColors.textSecondary))),
+  /// The two products, side by side at the top of the home (29 Oct 2026, founder).
+  Widget _products() {
+    Widget card(int i, IconData icon, String title, String line, {bool premium = false}) {
+      final on = _product == i;
+      final fg = premium && on ? Colors.white : AppColors.textPrimary;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => setState(() => _product = i),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              color: on ? (premium ? IndustrialHome.ink : Colors.white) : Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: on ? (premium ? IndustrialHome.gold : AppColors.accent) : const Color(0xFFE2E6EC), width: on ? 2 : 1),
+            ),
+            child: Row(children: [
+              Icon(icon, size: 28, color: premium ? IndustrialHome.gold : AppColors.accent),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: fg)),
+                    if (premium) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                        decoration: BoxDecoration(color: IndustrialHome.gold, borderRadius: BorderRadius.circular(99)),
+                        child: Text('FOR PLANTS', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: IndustrialHome.ink, letterSpacing: 1)),
+                      ),
+                    ],
+                  ]),
+                  Text(line, style: GoogleFonts.inter(fontSize: 12.5, color: premium && on ? Colors.white70 : AppColors.textSecondary)),
                 ]),
               ),
-          ],
+            ]),
+          ),
         ),
       );
+    }
+
+    return Row(children: [
+      card(0, Icons.memory_rounded, 'Technical Training', 'Embedded, IoT and electronics, with Altron'),
+      const SizedBox(width: 14),
+      card(1, Icons.factory_rounded, 'Industrial Training', 'Safety, SOPs and skills for your workforce', premium: true),
+    ]);
+  }
 
   Widget _courseTile(Map<String, dynamic> k, int number, bool isNext) {
     final p = k['progress'] as Map?;
@@ -589,6 +653,23 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     final r = c.setupReport;
     final items = [for (final i in (r?['items'] as List? ?? const [])) Map<String, dynamic>.from(i as Map)];
     final ready = r?['ready'] == true;
+    bool isBoard(Map<String, dynamic> i) => '${i['id']}' == 'board' || '${i['label']}'.toLowerCase().contains('board on usb');
+    final toolsReady = r != null && items.isNotEmpty && items.where((i) => !isBoard(i)).every((i) => '${i['state']}' == 'ok');
+    final boardIn = items.where(isBoard).every((i) => '${i['state']}' == 'ok');
+    if (toolsReady && !_setupOpen && !c.settingUp) {
+      return _card(
+        'Your computer',
+        Row(children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(boardIn ? 'Ready, board connected.' : 'Ready. Plug in your ESP32 when an experiment starts.',
+                style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(onPressed: () => setState(() => _setupOpen = true), child: const Text('Details')),
+        ]),
+      );
+    }
     return _card(
       'Is my computer ready?',
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -915,7 +996,11 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
       listenable: c,
       builder: (context, _) {
         final st = c.state;
+        final tools = ListView(padding: const EdgeInsets.all(12), children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]);
         return Scaffold(
+          key: _scaffold,
+          backgroundColor: c.started ? null : const Color(0xFFF6F8FB),
+          endDrawer: c.started ? null : Drawer(width: 480, child: SafeArea(child: tools)),
           appBar: AppBar(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
@@ -933,12 +1018,19 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                   icon: const Icon(Icons.restart_alt_rounded, color: Colors.white, size: 18),
                   label: const Text('New session', style: TextStyle(color: Colors.white)),
                 ),
+              if (!c.started)
+                IconButton(
+                    tooltip: 'Settings: your computer, project folder, serial monitor',
+                    onPressed: () => _scaffold.currentState?.openEndDrawer(),
+                    icon: const Icon(Icons.settings_outlined, color: Colors.white)),
               HelpButton(where: _whereNow),
               Center(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(auth.instituteName ?? '', style: GoogleFonts.inter(fontSize: 12.5)))),
               TextButton(onPressed: () => context.read<AuthProvider>().logout(), child: const Text('Sign out', style: TextStyle(color: Colors.white))),
             ],
           ),
-          body: Padding(
+          body: !c.started
+              ? Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1180), child: _courseHome()))
+              : Padding(
             padding: const EdgeInsets.all(16),
             child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(flex: 5, child: _chatPanel()),
@@ -949,9 +1041,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
                   // Altron's voice for a course: outside the list, so scrolling never ends the talk.
                   if (c.started && (c.courseId != null || c.labId != null))
                     LiveCoursePanel(key: ValueKey('live-${c.courseId ?? 'lab${c.labId}'}'), controller: c, course: c.courseId, labId: c.labId),
-                  Expanded(
-                    child: ListView(children: [_progressCard(), _setupCard(), _folderCard(), _monitorCard(), _connectorsCard(), _logCard(), _advancedCard()]),
-                  ),
+                  Expanded(child: tools),
                 ]),
               ),
             ]),

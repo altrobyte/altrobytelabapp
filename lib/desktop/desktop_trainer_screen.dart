@@ -18,6 +18,7 @@ import 'class_screen.dart';
 import 'lesson_screen.dart';
 import 'live_course.dart';
 import 'help_button.dart';
+import 'industrial_home.dart';
 import 'modules_panel.dart';
 import 'visual_page.dart';
 
@@ -55,6 +56,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   String? _newVersion; // a newer installer exists
   int _shown = 0;
   bool _showLog = false; // the whole conversation instead of the step on screen now
+  int _product = 0;          // the home's two products: 0 technical training, 1 industrial training
   bool _module0Open = false; // Module 0 folds to one line once every lesson in it is done
   bool _setupOpen = false; // the computer check folds to one line once the tools are ready
   static const _showModule0 = false; // Module 0 is off the home: the modules are the course
@@ -473,9 +475,17 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         break;
       }
     }
+    if (_product == 1) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_products(), const SizedBox(height: 22), const IndustrialHome()]),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _products(),
+        const SizedBox(height: 22),
         if (_newVersion != null)
           Container(
             margin: const EdgeInsets.only(bottom: 14),
@@ -541,6 +551,56 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         ),
       ]),
     );
+  }
+
+  /// The two products, side by side at the top of the home (29 Oct 2026, founder).
+  Widget _products() {
+    Widget card(int i, IconData icon, String title, String line, {bool premium = false}) {
+      final on = _product == i;
+      final fg = premium && on ? Colors.white : AppColors.textPrimary;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => setState(() => _product = i),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            decoration: BoxDecoration(
+              color: on ? (premium ? IndustrialHome.ink : Colors.white) : Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                  color: on ? (premium ? IndustrialHome.gold : AppColors.accent) : const Color(0xFFE2E6EC), width: on ? 2 : 1),
+            ),
+            child: Row(children: [
+              Icon(icon, size: 28, color: premium ? IndustrialHome.gold : AppColors.accent),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: fg)),
+                    if (premium) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                        decoration: BoxDecoration(color: IndustrialHome.gold, borderRadius: BorderRadius.circular(99)),
+                        child: Text('FOR PLANTS', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: IndustrialHome.ink, letterSpacing: 1)),
+                      ),
+                    ],
+                  ]),
+                  Text(line, style: GoogleFonts.inter(fontSize: 12.5, color: premium && on ? Colors.white70 : AppColors.textSecondary)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Row(children: [
+      card(0, Icons.memory_rounded, 'Technical Training', 'Embedded, IoT and electronics, with Altron'),
+      const SizedBox(width: 14),
+      card(1, Icons.factory_rounded, 'Industrial Training', 'Safety, SOPs and skills for your workforce', premium: true),
+    ]);
   }
 
   Widget _courseTile(Map<String, dynamic> k, int number, bool isNext) {
