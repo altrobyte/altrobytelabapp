@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Industrial Connectivity · Altrobyte Industrial</title>
+<style>
+  :root { --ink:#0E1A2B; --ink2:#16263D; --soft:#5A6675; --paper:#F6F3EC; --line:#E3DCCD; --gold:#D9A441; --hot:#E2581F;
+          --red:#C62828; --green:#2E7D32; --teal:#127A78; --card:#fff; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:var(--paper); font:17px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 22px 18px 70px; }
+  .hero { position:relative; overflow:hidden; border-radius: 22px; color:#fff; padding: 34px 30px 30px;
+          background: radial-gradient(120% 140% at 85% 10%, #3A2414 0%, #1B1410 35%, var(--ink) 70%); }
+  .hero svg.plant { position:absolute; right:-10px; bottom:0; width: 62%; max-width: 560px; opacity:.95; }
+  .hero .tag { font: 700 12px/1 "Segoe UI", sans-serif; letter-spacing: 3px; color: var(--gold); }
+  .hero h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
+  .hero p { margin: 0; color:#D8DEE6; max-width: 470px; position:relative; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; position:relative; max-width: 400px; }
+  .chips span { font-size: 12.5px; font-weight:600; border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:4px 11px; background:rgba(255,255,255,.06); }
+  .meta { display:flex; gap:22px; margin-top: 22px; position:relative; flex-wrap: wrap; }
+  .meta div { font-size: 13px; color:#B9C3CF; } .meta b { display:block; color:#fff; font-size: 20px; }
+  section { background: var(--card); border:1px solid var(--line); border-radius: 18px; padding: 24px 26px; margin-top: 22px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 8px 24px -18px rgba(14,26,43,.35); }
+  h2 { font: 800 25px/1.2 "Segoe UI", sans-serif; margin: 0 0 6px; display:flex; gap:12px; align-items:center; }
+  h2 .n { font: 700 13px/1 "Cascadia Mono", Consolas, monospace; background: var(--ink); color: var(--gold); border-radius: 8px; padding: 6px 9px; }
+  .lead { color: var(--soft); margin-top: 2px; font-size: 16.5px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
+  .tile { border:1px solid var(--line); border-radius: 14px; padding: 13px 15px; background:#FFFDF9; }
+  .tile b { display:block; font-size: 15.5px; margin-bottom: 2px; }
+  .box { padding: 12px 16px; border-radius: 12px; margin: 14px 0; }
+  .def { background:#EAF5F4; border-left: 5px solid var(--teal); }
+  .warn { background:#FCECEA; border-left: 5px solid var(--red); }
+  .story { background:#FBF1DE; border-left: 5px solid var(--gold); }
+  .rule { background: var(--ink); color:#fff; } .rule b { color: var(--gold); }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 12px 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 9px 0 9px 48px; border-bottom: 1px dashed var(--line); }
+  ol.steps li::before { content: counter(s); position:absolute; left:0; top:8px; width:33px; height:33px; border-radius:50%;
+                        background: var(--ink); color: var(--gold); font: 700 14px/33px Consolas, monospace; text-align:center; }
+  .table-wrap { overflow-x:auto; } table { width:100%; border-collapse: collapse; margin: 12px 0; font-size: 15.5px; }
+  th, td { text-align:left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; } th { background:#F3EEE3; }
+  /* widgets */
+  .lab { border-radius: 16px; background: var(--ink); color:#fff; padding: 18px; margin: 16px 0; }
+  .lab .top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom: 10px; }
+  .lab .title { font-weight: 800; letter-spacing:.3px; } .lab .title small { display:block; font-weight:500; color:#9FB0C3; font-size: 13px; }
+  .pill { font: 700 13px Consolas, monospace; background: rgba(217,164,65,.15); color: var(--gold); border-radius: 99px; padding: 5px 12px; }
+  .btn { font: 600 14px "Segoe UI", sans-serif; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); color:#fff;
+         border-radius: 10px; padding: 8px 13px; cursor:pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); } .btn.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+  .btn.good { background: var(--green); border-color: var(--green); } .btn.bad { background: var(--red); border-color: var(--red); }
+  .say { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.07); min-height: 22px; font-size: 15px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; }
+  svg text { font-family: "Segoe UI", sans-serif; }
+  .spot { cursor: pointer; }
+  .spot circle.ring { fill: transparent; stroke: transparent; stroke-width: 4; }
+  .spot.found circle.ring { stroke: #4ADE80; fill: rgba(74,222,128,.18); }
+  .q { border:1px solid var(--line); border-radius: 14px; padding: 13px 16px; margin: 12px 0; }
+  .q p { margin: 0 0 6px; font-weight: 700; } .q ul { margin: 0 0 6px; padding-left: 20px; }
+  .ans { font-size: 14.5px; color: var(--teal); font-weight: 600; }
+  .recap li { margin: 5px 0; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .shake { animation: shake .25s linear 3; }
+  @keyframes flick { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.12)} }
+  .flame { transform-origin: bottom center; animation: flick .5s ease-in-out infinite; transform-box: fill-box; }
+  @media (max-width: 640px) { .hero h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+<div class="hero" style="background: radial-gradient(120% 140% at 85% 10%, #0F3B3A 0%, #0E1A2B 55%, #0A1220 100%);">
+  <svg class="plant" viewBox="0 0 560 300" aria-hidden="true">
+    <g stroke="#127A78" stroke-width="2" opacity=".8"><line x1="300" y1="70" x2="400" y2="140"/><line x1="500" y1="70" x2="400" y2="140"/><line x1="400" y1="140" x2="300" y2="220"/><line x1="400" y1="140" x2="500" y2="220"/><line x1="400" y1="140" x2="400" y2="240"/></g>
+    <circle cx="400" cy="140" r="30" fill="#0E1A2B" stroke="#4ADE80" stroke-width="3"/><text x="400" y="146" text-anchor="middle" fill="#4ADE80" font-size="15" font-weight="700">PLC</text>
+    <rect x="270" y="50" width="60" height="38" rx="6" fill="#22324A" stroke="#D9A441"/><text x="300" y="74" text-anchor="middle" fill="#D9A441" font-size="12">SCADA</text>
+    <rect x="470" y="50" width="60" height="38" rx="6" fill="#22324A" stroke="#D9A441"/><text x="500" y="74" text-anchor="middle" fill="#D9A441" font-size="12">Cloud</text>
+    <circle cx="300" cy="225" r="16" fill="#22324A" stroke="#9FB0C3"/><circle cx="500" cy="225" r="16" fill="#22324A" stroke="#9FB0C3"/><circle cx="400" cy="250" r="16" fill="#22324A" stroke="#9FB0C3"/>
+    <circle r="5" fill="#FFD23F"><animateMotion dur="2.4s" repeatCount="indefinite" path="M300 225 L400 140 L300 70"/></circle>
+    <circle r="5" fill="#FFD23F"><animateMotion dur="3s" repeatCount="indefinite" path="M500 225 L400 140 L500 70"/></circle>
+    <rect x="0" y="270" width="560" height="30" fill="#0A1220"/>
+  </svg>
+  <div class="tag">ALTROBYTE INDUSTRIAL · INDUSTRY 4.0</div>
+  <h1>Industrial connectivity: from sensor to cloud.</h1>
+  <p>How a rolling mill's sensors, PLCs, SCADA and cloud dashboards talk to each other, and how that data turns into fewer breakdowns.</p>
+  <div class="chips"><span>Automation pyramid</span><span>4-20 mA</span><span>Fieldbus</span><span>OPC UA</span><span>MQTT</span><span>Predictive maintenance</span><span>OT security</span></div>
+  <div class="meta"><div><b>7</b>sections</div><div><b>5</b>hands-on drills</div><div><b>8</b>question test</div><div><b>70%</b>to pass</div></div>
+</div>
+
+<section>
+  <h2><span class="n">01</span>The automation pyramid</h2>
+  <p class="lead">Every plant's systems sit in layers. Data flows up, commands flow down. Knowing the layer tells you who owns a problem.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Climb the pyramid<small>Tap each level of a hot strip mill</small></div><div class="pill" id="lvlName">Level 0</div></div>
+    <svg viewBox="0 0 600 300" style="width:100%;max-width:620px;display:block;margin:auto">
+      <g class="lvl" data-i="4" data-say="Level 4 · ERP (for example SAP): orders, stock, cost, dispatch. Plans what the plant makes this month."><polygon points="300,10 350,62 250,62" fill="#C62828"/><text x="300" y="52" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">ERP</text></g>
+      <g class="lvl" data-i="3" data-say="Level 3 · MES: which coil is rolled when, with which recipe; tracks every coil from slab to dispatch, and its quality."><polygon points="250,66 350,66 400,118 200,118" fill="#E2581F"/><text x="300" y="98" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">MES</text></g>
+      <g class="lvl" data-i="2" data-say="Level 2 · SCADA / HMI and process models: the operator pulpit screens, alarms, trends, setpoints for each stand."><polygon points="200,122 400,122 450,174 150,174" fill="#D9A441"/><text x="300" y="154" text-anchor="middle" fill="#0E1A2B" font-size="13" font-weight="700">SCADA / HMI</text></g>
+      <g class="lvl" data-i="1" data-say="Level 1 · PLCs and drives: run the mill in milliseconds; read sensors, drive the motors, keep it safe."><polygon points="150,178 450,178 500,230 100,230" fill="#127A78"/><text x="300" y="210" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">PLC · Drives</text></g>
+      <g class="lvl" data-i="0" data-say="Level 0 · The field: sensors (temperature, pressure, thickness gauges, vibration) and actuators (motors, valves, hydraulics)."><polygon points="100,234 500,234 550,286 50,286" fill="#2F6FB5"/><text x="300" y="266" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Sensors · Actuators</text></g>
+    </svg>
+    <div class="say" id="lvlSay">Start at the bottom, the field.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Level</th><th>What</th><th>Speed</th></tr>
+    <tr><td>4 · ERP</td><td>Orders, stock, cost</td><td>Days</td></tr>
+    <tr><td>3 · MES</td><td>Production schedule, coil tracking, quality</td><td>Hours, minutes</td></tr>
+    <tr><td>2 · SCADA / HMI</td><td>Operator screens, alarms, trends</td><td>Seconds</td></tr>
+    <tr><td>1 · PLC / drives</td><td>Control logic, motors, interlocks</td><td>Milliseconds</td></tr>
+    <tr><td>0 · Field</td><td>Sensors and actuators</td><td>Real time</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">02</span>Sensors and the 4-20 mA signal</h2>
+  <p class="lead">Most field instruments send their reading as a current between 4 and 20 milliamps. Simple, robust over long cables, and it tells you when a wire breaks.</p>
+  <div class="box def"><b>4-20 mA:</b> 4 mA = the bottom of the range, 20 mA = the top. A reheating furnace thermocouple transmitter set for 0 to 1,200 °C sends 4 mA at 0 °C and 20 mA at 1,200 °C. <b>0 mA means a broken wire</b>, not zero degrees: that is why the scale starts at 4 ("live zero").</div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Read the transmitter<small>Furnace temperature, range 0 to 1,200 °C</small></div><div class="pill" id="maRead">12.0 mA</div></div>
+    <input type="range" id="mA" min="0" max="220" value="120" style="width:100%">
+    <div class="say" id="mASay"></div>
+  </div>
+  <p>The formula the PLC uses: <b>value = (mA − 4) ÷ 16 × range</b>. At 12 mA: (12 − 4) ÷ 16 × 1,200 = 600 °C.</p>
+  <pre>value = (mA - 4) / 16 * (max - min) + min
+12 mA -> (12 - 4) / 16 * 1200 = 600 C
+ 0 mA -> below 3.8 mA: wire break alarm</pre>
+</section>
+
+<section>
+  <h2><span class="n">03</span>Fieldbus and industrial Ethernet</h2>
+  <p class="lead">Wires for every signal do not scale. Networks carry hundreds of signals on one cable, each with its own language: the protocol.</p>
+  <div class="table-wrap"><table>
+    <tr><th>Protocol</th><th>Where you meet it</th><th>Good to know</th></tr>
+    <tr><td>Modbus RTU (RS-485)</td><td>Energy meters, VFDs, old instruments</td><td>Simple, slow, master asks and slaves answer</td></tr>
+    <tr><td>Modbus TCP</td><td>Meters and gateways on Ethernet</td><td>The same registers over a network</td></tr>
+    <tr><td>Profibus / Profinet</td><td>Siemens PLCs, drives and remote I/O</td><td>Fast, deterministic, very common in steel plants</td></tr>
+    <tr><td>EtherNet/IP</td><td>Rockwell (Allen-Bradley) PLCs</td><td>Industrial Ethernet for that family</td></tr>
+    <tr><td>OPC UA</td><td>Between PLCs, SCADA, MES and IT</td><td>Vendor-neutral, secure, describes the data</td></tr>
+    <tr><td>MQTT</td><td>Sensors and gateways to the cloud</td><td>Light publish/subscribe, made for IoT</td></tr>
+  </table></div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Pick the protocol<small>Which one fits each job?</small></div><div class="pill" id="protoScore">0 / 4</div></div>
+    <div id="protoQs"></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>OPC UA and MQTT: bridging OT and IT</h2>
+  <p class="lead">The plant floor (OT) and the office and cloud (IT) speak different languages. OPC UA and MQTT are the two bridges you meet most.</p>
+  <div class="grid">
+    <div class="tile"><b>OPC UA</b>A server on the PLC or gateway exposes tags with names, units and types. SCADA and MES read them securely, from any vendor.</div>
+    <div class="tile"><b>MQTT</b>Devices <i>publish</i> readings to a broker on a topic; dashboards and apps <i>subscribe</i>. Nobody polls; data arrives when it changes.</div>
+  </div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Publish a reading<small>Watch a vibration reading travel from the mill to the dashboard</small></div><div class="pill" id="mqState">idle</div></div>
+    <svg viewBox="0 0 700 140" style="width:100%;border-radius:12px;background:#182538">
+      <rect x="20" y="40" width="140" height="60" rx="8" fill="#22324A" stroke="#9FB0C3"/><text x="90" y="66" text-anchor="middle" fill="#fff" font-size="13">Stand 3 motor</text><text x="90" y="86" text-anchor="middle" fill="#9FB0C3" font-size="11">vibration sensor</text>
+      <rect x="280" y="40" width="140" height="60" rx="8" fill="#22324A" stroke="#D9A441"/><text x="350" y="66" text-anchor="middle" fill="#D9A441" font-size="13">MQTT broker</text><text x="350" y="86" text-anchor="middle" fill="#9FB0C3" font-size="11">plant gateway</text>
+      <rect x="540" y="40" width="140" height="60" rx="8" fill="#22324A" stroke="#4ADE80"/><text x="610" y="66" text-anchor="middle" fill="#4ADE80" font-size="13">Dashboard</text><text x="610" y="86" text-anchor="middle" fill="#9FB0C3" font-size="11">maintenance team</text>
+      <line x1="160" y1="70" x2="280" y2="70" stroke="#3B4B61" stroke-width="3"/><line x1="420" y1="70" x2="540" y2="70" stroke="#3B4B61" stroke-width="3"/>
+      <circle id="pkt" cx="160" cy="70" r="8" fill="#FFD23F" opacity="0"/>
+      <text id="pktTxt" x="350" y="125" text-anchor="middle" fill="#C9D4E2" font-size="13"></text>
+    </svg>
+    <div class="row" style="margin-top:12px"><button class="btn" id="pub">Publish 4.2 mm/s</button></div>
+    <div class="say" id="mqSay">Topic: plant/hsm/stand3/motor/vibration</div>
+  </div>
+  <pre>topic:   plant/hsm/stand3/motor/vibration
+payload: {"mm_s": 4.2, "ts": "2026-10-30T09:15:00+05:30"}</pre>
+  <p>Good topic names go from big to small: plant, area, machine, signal. Anyone can then subscribe to <b>plant/hsm/#</b> for the whole hot strip mill.</p>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Predictive maintenance in a rolling mill</h2>
+  <p class="lead">A failing bearing vibrates more weeks before it breaks. Watch the trend and change it in a planned shutdown, not in a breakdown.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Read the vibration<small>Motor of stand 3, velocity in mm/s (ISO 10816 zones)</small></div><div class="pill" id="vibVal">2.0 mm/s</div></div>
+    <input type="range" id="vib" min="0" max="120" value="20" style="width:100%">
+    <div class="say" id="vibSay"></div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Velocity (mm/s, large motor)</th><th>Zone</th><th>Action</th></tr>
+    <tr><td>Below 2.8</td><td>Good</td><td>Normal</td></tr>
+    <tr><td>2.8 to 7.1</td><td>Acceptable</td><td>Watch the trend</td></tr>
+    <tr><td>7.1 to 11</td><td>Alarm</td><td>Plan a bearing check in the next shutdown</td></tr>
+    <tr><td>Above 11</td><td>Danger</td><td>Stop and inspect: damage is happening now</td></tr>
+  </table></div>
+  <div class="box story"><b>What it is worth:</b> an unplanned stop of a hot strip mill costs lakhs of rupees an hour in lost production. One avoided breakdown pays for the sensors on the whole line.</div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>OT cybersecurity: the plant is a target</h2>
+  <p class="lead">Connecting the plant brings risk. Attacks on industrial networks have stopped plants and pipelines around the world.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Safe or risky?<small>Decide for each habit</small></div><div class="pill" id="cyScore">0 / 5</div></div>
+    <div id="cyQs"></div>
+  </div>
+  <div class="grid">
+    <div class="tile"><b>Segment</b>The plant network is separated from the office by a firewall and a DMZ. Nothing on the internet reaches a PLC directly.</div>
+    <div class="tile"><b>No unknown USB</b>USB sticks have carried attacks into plants. Scan them, or use the approved transfer station.</div>
+    <div class="tile"><b>Passwords</b>No default passwords on PLCs, HMIs and routers. Personal logins, not one shared one.</div>
+    <div class="tile"><b>Remote access</b>Vendors connect only through the approved, logged remote-access system, never through a modem or TeamViewer on the HMI.</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Test</h2>
+  <p class="lead">Eight questions. Score 70% or more (6 of 8) to earn your Industrial Connectivity certificate.</p>
+  <div class="q"><p>1. Which level runs the mill's motors and interlocks in milliseconds?</p><ul><li>A. ERP</li><li>B. PLC and drives (level 1)</li><li>C. MES</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="q"><p>2. A 4-20 mA transmitter for 0-1,200 °C sends 12 mA. What is the temperature?</p><ul><li>A. 600 °C</li><li>B. 720 °C</li><li>C. 1,200 °C</li></ul><div class="ans">Answer: A. (12 − 4) ÷ 16 × 1,200 = 600.</div></div>
+  <div class="q"><p>3. A transmitter reads 0 mA. What does it most likely mean?</p><ul><li>A. Zero degrees</li><li>B. A broken wire or a failed transmitter</li><li>C. Maximum temperature</li></ul><div class="ans">Answer: B. That is why the scale starts at 4 mA.</div></div>
+  <div class="q"><p>4. Which protocol lets SCADA and MES read PLC tags from any vendor, securely?</p><ul><li>A. OPC UA</li><li>B. RS-232</li><li>C. Bluetooth</li></ul><div class="ans">Answer: A.</div></div>
+  <div class="q"><p>5. In MQTT, how does a dashboard get a sensor's readings?</p><ul><li>A. It polls the sensor every second</li><li>B. It subscribes to the topic on the broker</li><li>C. Through email</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="q"><p>6. A stand motor's vibration rose from 2 to 8 mm/s over three weeks. What do you do?</p><ul><li>A. Nothing, it still runs</li><li>B. Plan a bearing check in the next shutdown</li><li>C. Increase the speed</li></ul><div class="ans">Answer: B. Alarm zone: plan it before it breaks.</div></div>
+  <div class="q"><p>7. A vendor asks you to install TeamViewer on the HMI for support. What is right?</p><ul><li>A. Install it, it is quicker</li><li>B. Refuse; remote access only through the plant's approved, logged system</li><li>C. Install it and remove it later</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="q"><p>8. Why is the plant network separated from the office network?</p><ul><li>A. To make cables shorter</li><li>B. So an attack or virus in the office cannot reach the PLCs</li><li>C. It is not needed</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="box rule"><b>Recap.</b> Five levels: field, PLC, SCADA, MES, ERP. 4-20 mA, live zero at 4, 0 mA is a broken wire. Profinet and Modbus on the floor, OPC UA between systems, MQTT to the cloud. Vibration trends predict failures weeks ahead. Segment the network, no unknown USB, no default passwords, approved remote access only.</div>
+</section>
+
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  Array.prototype.forEach.call(document.querySelectorAll('.lvl'), function (g) {
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.lvl'), function (x) { x.style.filter = x === g ? 'drop-shadow(0 0 10px #FFD23F) brightness(1.2)' : 'saturate(.6)'; });
+      $('lvlName').textContent = 'Level ' + g.dataset.i; $('lvlSay').textContent = g.dataset.say;
+    });
+  });
+  function mA() { var v = +$('mA').value / 10; $('maRead').textContent = v.toFixed(1) + ' mA';
+    $('mASay').textContent = v < 3.8 ? v.toFixed(1) + ' mA: below 3.8 mA. Wire break or failed transmitter: the PLC raises an alarm, it does not show 0 °C.'
+      : v > 20.5 ? v.toFixed(1) + ' mA: over range. Check the transmitter.'
+      : v.toFixed(1) + ' mA → (' + v.toFixed(1) + ' − 4) ÷ 16 × 1,200 = ' + Math.round((v - 4) / 16 * 1200) + ' °C'; }
+  $('mA').oninput = mA; mA();
+  function quiz(box, score, items, max) {
+    var got = 0;
+    items.forEach(function (it) {
+      var d = document.createElement('div'); d.style.margin = '10px 0';
+      var p = document.createElement('div'); p.textContent = it[0]; p.style.marginBottom = '6px'; d.appendChild(p);
+      var row = document.createElement('div'); row.className = 'row';
+      it[1].forEach(function (o) { var b = document.createElement('button'); b.className = 'btn'; b.textContent = o;
+        b.onclick = function () { if (row.dataset.done) return; var ok = o === it[2]; b.className = 'btn ' + (ok ? 'good' : 'bad');
+          if (ok) { row.dataset.done = 1; got++; $(score).textContent = got + ' / ' + max; var w = document.createElement('div'); w.className = 'say'; w.textContent = it[3]; d.appendChild(w); }
+          else setTimeout(function () { b.className = 'btn'; }, 900); };
+        row.appendChild(b); });
+      d.appendChild(row); $(box).appendChild(d);
+    });
+  }
+  quiz('protoQs', 'protoScore', [
+    ['Reading 40 energy meters on one RS-485 cable', ['Modbus RTU', 'MQTT', 'OPC UA'], 'Modbus RTU', 'Modbus RTU: simple, cheap, every meter speaks it.'],
+    ['Siemens PLC to its remote I/O and drives on the mill', ['Profinet', 'MQTT', 'Modbus RTU'], 'Profinet', 'Profinet: fast and deterministic for control.'],
+    ['MES reading tags from PLCs of three different vendors', ['OPC UA', 'RS-232', 'Profibus'], 'OPC UA', 'OPC UA: vendor-neutral and secure.'],
+    ['Battery-powered vibration sensors sending to a cloud dashboard', ['MQTT', 'Profinet', 'Modbus RTU'], 'MQTT', 'MQTT: light publish/subscribe for IoT.']], 4);
+  quiz('cyQs', 'cyScore', [
+    ['Using a USB stick found in the parking lot on the HMI', ['Safe', 'Risky'], 'Risky', 'Risky: found USB sticks are a classic attack.'],
+    ['Changing the default password on a new PLC', ['Safe', 'Risky'], 'Safe', 'Safe: default passwords are public.'],
+    ['Connecting the HMI to the office Wi-Fi to check email', ['Safe', 'Risky'], 'Risky', 'Risky: it bridges office and plant networks.'],
+    ['Vendor support through the approved, logged remote-access system', ['Safe', 'Risky'], 'Safe', 'Safe: controlled and recorded.'],
+    ['Sharing one admin login for all engineers', ['Safe', 'Risky'], 'Risky', 'Risky: nobody knows who changed what.']], 5);
+  var busy = false;
+  $('pub').onclick = function () {
+    if (busy) return; busy = true; var p = $('pkt'); p.setAttribute('opacity', '1'); $('mqState').textContent = 'publishing';
+    var t0 = null;
+    function step(ts) { if (t0 === null) t0 = ts; var k = Math.min(1, (ts - t0) / 1800); var x = 160 + k * 380;
+      p.setAttribute('cx', x < 280 ? x : x < 420 ? 350 : x);
+      $('pktTxt').textContent = k < .35 ? 'Sensor publishes to plant/hsm/stand3/motor/vibration' : k < .65 ? 'Broker passes it to every subscriber' : 'Dashboard shows 4.2 mm/s (acceptable zone)';
+      if (k < 1) requestAnimationFrame(step); else { busy = false; $('mqState').textContent = 'delivered'; p.setAttribute('opacity', '0'); } }
+    requestAnimationFrame(step);
+  };
+  function vib() { var v = +$('vib').value / 10; $('vibVal').textContent = v.toFixed(1) + ' mm/s';
+    var z = v < 2.8 ? ['Good', 'rgba(74,222,128,.15)', 'Normal. Keep trending it.'] : v < 7.1 ? ['Acceptable', 'rgba(217,164,65,.2)', 'Acceptable. Watch the trend: is it rising week by week?']
+      : v < 11 ? ['Alarm', 'rgba(226,88,31,.35)', 'Alarm. Plan a bearing and alignment check in the next shutdown, order the spares now.'] : ['Danger', 'rgba(198,40,40,.5)', 'Danger. Damage is happening now: stop and inspect.'];
+    $('vibVal').style.background = z[1]; $('vibSay').textContent = v.toFixed(1) + ' mm/s · ' + z[0] + ': ' + z[2]; }
+  $('vib').oninput = vib; vib();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electrical Panel Safety · Altrobyte Industrial</title>
+<style>
+  :root { --ink:#0E1A2B; --ink2:#16263D; --soft:#5A6675; --paper:#F6F3EC; --line:#E3DCCD; --gold:#D9A441; --hot:#E2581F;
+          --red:#C62828; --green:#2E7D32; --teal:#127A78; --card:#fff; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:var(--paper); font:17px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 22px 18px 70px; }
+  .hero { position:relative; overflow:hidden; border-radius: 22px; color:#fff; padding: 34px 30px 30px;
+          background: radial-gradient(120% 140% at 85% 10%, #3A2414 0%, #1B1410 35%, var(--ink) 70%); }
+  .hero svg.plant { position:absolute; right:-10px; bottom:0; width: 62%; max-width: 560px; opacity:.95; }
+  .hero .tag { font: 700 12px/1 "Segoe UI", sans-serif; letter-spacing: 3px; color: var(--gold); }
+  .hero h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
+  .hero p { margin: 0; color:#D8DEE6; max-width: 470px; position:relative; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; position:relative; max-width: 400px; }
+  .chips span { font-size: 12.5px; font-weight:600; border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:4px 11px; background:rgba(255,255,255,.06); }
+  .meta { display:flex; gap:22px; margin-top: 22px; position:relative; flex-wrap: wrap; }
+  .meta div { font-size: 13px; color:#B9C3CF; } .meta b { display:block; color:#fff; font-size: 20px; }
+  section { background: var(--card); border:1px solid var(--line); border-radius: 18px; padding: 24px 26px; margin-top: 22px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 8px 24px -18px rgba(14,26,43,.35); }
+  h2 { font: 800 25px/1.2 "Segoe UI", sans-serif; margin: 0 0 6px; display:flex; gap:12px; align-items:center; }
+  h2 .n { font: 700 13px/1 "Cascadia Mono", Consolas, monospace; background: var(--ink); color: var(--gold); border-radius: 8px; padding: 6px 9px; }
+  .lead { color: var(--soft); margin-top: 2px; font-size: 16.5px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
+  .tile { border:1px solid var(--line); border-radius: 14px; padding: 13px 15px; background:#FFFDF9; }
+  .tile b { display:block; font-size: 15.5px; margin-bottom: 2px; }
+  .box { padding: 12px 16px; border-radius: 12px; margin: 14px 0; }
+  .def { background:#EAF5F4; border-left: 5px solid var(--teal); }
+  .warn { background:#FCECEA; border-left: 5px solid var(--red); }
+  .story { background:#FBF1DE; border-left: 5px solid var(--gold); }
+  .rule { background: var(--ink); color:#fff; } .rule b { color: var(--gold); }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 12px 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 9px 0 9px 48px; border-bottom: 1px dashed var(--line); }
+  ol.steps li::before { content: counter(s); position:absolute; left:0; top:8px; width:33px; height:33px; border-radius:50%;
+                        background: var(--ink); color: var(--gold); font: 700 14px/33px Consolas, monospace; text-align:center; }
+  .table-wrap { overflow-x:auto; } table { width:100%; border-collapse: collapse; margin: 12px 0; font-size: 15.5px; }
+  th, td { text-align:left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; } th { background:#F3EEE3; }
+  /* widgets */
+  .lab { border-radius: 16px; background: var(--ink); color:#fff; padding: 18px; margin: 16px 0; }
+  .lab .top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom: 10px; }
+  .lab .title { font-weight: 800; letter-spacing:.3px; } .lab .title small { display:block; font-weight:500; color:#9FB0C3; font-size: 13px; }
+  .pill { font: 700 13px Consolas, monospace; background: rgba(217,164,65,.15); color: var(--gold); border-radius: 99px; padding: 5px 12px; }
+  .btn { font: 600 14px "Segoe UI", sans-serif; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); color:#fff;
+         border-radius: 10px; padding: 8px 13px; cursor:pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); } .btn.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+  .btn.good { background: var(--green); border-color: var(--green); } .btn.bad { background: var(--red); border-color: var(--red); }
+  .say { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.07); min-height: 22px; font-size: 15px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; }
+  svg text { font-family: "Segoe UI", sans-serif; }
+  .spot { cursor: pointer; }
+  .spot circle.ring { fill: transparent; stroke: transparent; stroke-width: 4; }
+  .spot.found circle.ring { stroke: #4ADE80; fill: rgba(74,222,128,.18); }
+  .q { border:1px solid var(--line); border-radius: 14px; padding: 13px 16px; margin: 12px 0; }
+  .q p { margin: 0 0 6px; font-weight: 700; } .q ul { margin: 0 0 6px; padding-left: 20px; }
+  .ans { font-size: 14.5px; color: var(--teal); font-weight: 600; }
+  .recap li { margin: 5px 0; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .shake { animation: shake .25s linear 3; }
+  @keyframes flick { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.12)} }
+  .flame { transform-origin: bottom center; animation: flick .5s ease-in-out infinite; transform-box: fill-box; }
+  @media (max-width: 640px) { .hero h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+<div class="hero" style="background: radial-gradient(120% 140% at 85% 10%, #10324A 0%, #0E1A2B 55%, #0A1220 100%);">
+  <svg class="plant" viewBox="0 0 560 300" aria-hidden="true">
+    <rect x="250" y="30" width="270" height="240" rx="8" fill="#22324A" stroke="#3B4B61" stroke-width="3"/>
+    <rect x="265" y="45" width="115" height="210" rx="4" fill="#1A2638"/><rect x="390" y="45" width="115" height="210" rx="4" fill="#1A2638"/>
+    <rect x="280" y="60" width="85" height="10" fill="#B87333"/><rect x="280" y="76" width="85" height="10" fill="#B87333"/><rect x="280" y="92" width="85" height="10" fill="#B87333"/>
+    <rect x="285" y="120" width="22" height="34" rx="3" fill="#D9A441"/><rect x="314" y="120" width="22" height="34" rx="3" fill="#D9A441"/><rect x="343" y="120" width="22" height="34" rx="3" fill="#D9A441"/>
+    <rect x="285" y="170" width="80" height="26" rx="3" fill="#3B4B61"/><rect x="285" y="205" width="80" height="34" rx="3" fill="#127A78"/>
+    <rect x="405" y="60" width="85" height="60" rx="4" fill="#0E1A2B" stroke="#4ADE80" stroke-width="2"/>
+    <polyline points="410,100 425,85 440,95 455,70 470,82 485,75" stroke="#4ADE80" stroke-width="2" fill="none"/>
+    <circle cx="420" cy="145" r="8" fill="#4ADE80"/><circle cx="447" cy="145" r="8" fill="#D9A441"/><circle cx="474" cy="145" r="8" fill="#C62828"/>
+    <path d="M440 175 l-14 30 h14 l-10 30 l26 -38 h-15 l12 -22 z" fill="#FFD23F"/>
+    <rect x="0" y="270" width="560" height="30" fill="#0A1220"/>
+  </svg>
+  <div class="tag">ALTROBYTE INDUSTRIAL · ELECTRICAL</div>
+  <h1>Electrical panels: respect the box.</h1>
+  <p>What is inside a motor control centre, how electricity hurts, and the rules that let maintenance teams in a steel plant work on 415 V panels and go home safe.</p>
+  <div class="chips"><span>Inside an MCC</span><span>Shock</span><span>Arc flash</span><span>Test before touch</span><span>Protection</span><span>Panel room rules</span></div>
+  <div class="meta"><div><b>7</b>sections</div><div><b>5</b>hands-on drills</div><div><b>8</b>question test</div><div><b>70%</b>to pass</div></div>
+</div>
+
+<section>
+  <h2><span class="n">01</span>Inside a motor control centre (MCC)</h2>
+  <p class="lead">An MCC is the panel that feeds and controls the motors of a line: the rolling mill stands, the pumps, the fans, the conveyors.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Open the panel<small>Tap each part to learn what it does</small></div><div class="pill" id="partCount">0 / 7 explored</div></div>
+    <svg viewBox="0 0 760 360" style="width:100%;border-radius:12px;background:#182538">
+      <rect x="20" y="20" width="720" height="320" rx="10" fill="#22324A" stroke="#3B4B61" stroke-width="3"/>
+      <g class="part" data-i="0" data-say="Incomer breaker (ACB or MCCB): the main switch of the whole panel. It opens on a big fault, and it is where the panel is isolated for work."><rect x="40" y="40" width="140" height="110" rx="6" fill="#3B4B61"/><rect x="70" y="70" width="80" height="50" rx="4" fill="#D9A441"/><text x="110" y="168" text-anchor="middle" fill="#C9D4E2" font-size="14">Incomer</text></g>
+      <g class="part" data-i="1" data-say="Busbars: thick copper bars that carry 415 V to every feeder. Always live while the incomer is on, even when a feeder is off."><rect x="200" y="42" width="520" height="12" fill="#B87333"/><rect x="200" y="62" width="520" height="12" fill="#B87333"/><rect x="200" y="82" width="520" height="12" fill="#B87333"/><text x="460" y="114" text-anchor="middle" fill="#C9D4E2" font-size="14">Busbars R Y B</text></g>
+      <g class="part" data-i="2" data-say="Feeder MCCB: the switch and protection for one motor. Off and locked here is how one motor is isolated."><rect x="200" y="130" width="110" height="90" rx="6" fill="#3B4B61"/><rect x="225" y="150" width="60" height="44" rx="4" fill="#5B6B82"/><text x="255" y="238" text-anchor="middle" fill="#C9D4E2" font-size="14">Feeder MCCB</text></g>
+      <g class="part" data-i="3" data-say="Contactor: an electrically operated switch. The start and stop buttons, or the PLC, close and open it to run the motor."><rect x="330" y="130" width="90" height="90" rx="6" fill="#3B4B61"/><rect x="345" y="145" width="60" height="60" rx="4" fill="#127A78"/><text x="375" y="238" text-anchor="middle" fill="#C9D4E2" font-size="14">Contactor</text></g>
+      <g class="part" data-i="4" data-say="Overload relay: watches the motor current. If the motor is overloaded for too long (a jammed roll, a failing bearing) it trips before the winding burns."><rect x="440" y="130" width="90" height="90" rx="6" fill="#3B4B61"/><rect x="455" y="150" width="60" height="40" rx="4" fill="#D9A441"/><text x="485" y="238" text-anchor="middle" fill="#C9D4E2" font-size="14">Overload</text></g>
+      <g class="part" data-i="5" data-say="VFD (variable frequency drive): runs a motor at any speed, used on mill stands and fans. Its DC capacitors stay charged for minutes after switching off: wait and test."><rect x="550" y="130" width="170" height="130" rx="6" fill="#0E1A2B" stroke="#4ADE80" stroke-width="2"/><text x="635" y="200" text-anchor="middle" fill="#4ADE80" font-size="22" font-weight="700">VFD</text><text x="635" y="280" text-anchor="middle" fill="#C9D4E2" font-size="14">Drive</text></g>
+      <g class="part" data-i="6" data-say="Control section: 24 V DC supply, PLC input and output cards and terminal strips. Low voltage, but the terminals next to it may still carry 230 V."><rect x="40" y="250" width="490" height="70" rx="6" fill="#2B394D"/><rect x="60" y="265" width="200" height="40" rx="3" fill="#3B4B61"/><g fill="#9AA8BA"><rect x="280" y="275" width="8" height="22"/><rect x="294" y="275" width="8" height="22"/><rect x="308" y="275" width="8" height="22"/><rect x="322" y="275" width="8" height="22"/><rect x="336" y="275" width="8" height="22"/><rect x="350" y="275" width="8" height="22"/></g><text x="430" y="292" text-anchor="middle" fill="#C9D4E2" font-size="14">PLC &amp; terminals</text></g>
+    </svg>
+    <div class="say" id="partSay">Tap the incomer to begin.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Part</th><th>What it does</th></tr>
+    <tr><td>Incomer (ACB / MCCB)</td><td>Main switch and protection of the whole panel</td></tr>
+    <tr><td>Busbars</td><td>Copper bars carrying 415 V to every feeder; live whenever the incomer is on</td></tr>
+    <tr><td>Feeder MCCB</td><td>Switch and protection for one motor; the point to isolate one motor</td></tr>
+    <tr><td>Contactor</td><td>Electrically operated switch that starts and stops the motor</td></tr>
+    <tr><td>Overload relay</td><td>Trips on long overcurrent so the motor winding does not burn</td></tr>
+    <tr><td>VFD</td><td>Variable speed; its capacitors stay charged after switch-off</td></tr>
+    <tr><td>Control section</td><td>24 V supply, PLC cards, terminal strips</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">02</span>How electricity hurts</h2>
+  <p class="lead">It is the current through your body that hurts, and it takes very little. Our 230 V and 415 V are more than enough to kill.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Current through the body<small>Slide to see what each current does</small></div><div class="pill" id="maVal">1 mA</div></div>
+    <input type="range" id="ma" min="0" max="5" value="0" style="width:100%">
+    <div class="say" id="maSay"></div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Current</th><th>What happens</th></tr>
+    <tr><td>1 mA</td><td>A tingle</td></tr>
+    <tr><td>10 mA</td><td>Muscles lock: you cannot let go of the wire</td></tr>
+    <tr><td>30 mA</td><td>Breathing becomes difficult; this is why an RCCB trips at 30 mA</td></tr>
+    <tr><td>100 mA</td><td>The heart goes out of rhythm (fibrillation): death within minutes</td></tr>
+    <tr><td>1 A and more</td><td>Burns inside the body, the heart stops</td></tr>
+  </table></div>
+  <div class="box story"><b>Example:</b> wet hands and wet floor in a cooling-water area lower the body's resistance. The same 230 V that gives a tingle with dry hands can push a deadly current with wet ones. That is why rubber mats and dry hands matter.</div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>Arc flash: the explosion in the panel</h2>
+  <p class="lead">When a short circuit jumps through the air, it makes an arc hotter than the surface of the sun, with a blast and molten copper.</p>
+  <div class="box def"><b>Arc flash:</b> a fault through air between phases or to earth. It reaches around 20,000 °C in a split second, throws molten metal, a pressure wave and blinding light. Most arc flashes happen when someone is working on or near a live panel: a dropped spanner, a loose cover, a wrong test lead.</div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · How close is too close?<small>Move towards the open live panel</small></div><div class="pill" id="zoneVal">Safe</div></div>
+    <svg viewBox="0 0 700 120" style="width:100%;border-radius:12px;background:#182538">
+      <rect x="600" y="15" width="80" height="90" rx="6" fill="#22324A" stroke="#C62828" stroke-width="3"/><path d="M640 35 l-10 22 h10 l-7 22 l19 -28 h-11 l9 -16 z" fill="#FFD23F"/>
+      <rect x="380" y="10" width="220" height="100" fill="#C62828" opacity=".12"/><rect x="480" y="10" width="120" height="100" fill="#C62828" opacity=".18"/><rect x="560" y="10" width="40" height="100" fill="#C62828" opacity=".3"/>
+      <text x="385" y="112" fill="#9FB0C3" font-size="11">arc flash boundary</text><text x="485" y="26" fill="#9FB0C3" font-size="11">limited</text><text x="562" y="26" fill="#9FB0C3" font-size="11">restricted</text>
+      <g id="man"><circle cx="0" cy="45" r="11" fill="#E8B88A"/><rect x="-10" y="57" width="20" height="40" rx="5" fill="#2F6FB5"/></g>
+    </svg>
+    <input type="range" id="dist" min="40" max="580" value="80" style="width:100%">
+    <div class="say" id="zoneSay"></div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Zone</th><th>Who may enter</th><th>PPE</th></tr>
+    <tr><td>Outside the arc flash boundary</td><td>Anyone</td><td>Normal shop floor PPE</td></tr>
+    <tr><td>Inside the arc flash boundary</td><td>Only authorised electrical staff with a permit</td><td>Arc-rated suit, face shield, insulated gloves</td></tr>
+    <tr><td>Restricted (next to live parts)</td><td>Only qualified electricians, only when it cannot be made dead</td><td>Full arc-rated kit for the panel's rating, insulated tools</td></tr>
+  </table></div>
+  <div class="box rule"><b>First choice is always dead working.</b> Live work is the rare exception, with a written permit, never to save time.</div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>Test before touch: live, dead, live</h2>
+  <p class="lead">A switch in the OFF position does not prove a circuit is dead. Only a test does, done the right way.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Prove it dead<small>Tap the steps in the right order</small></div><div class="pill" id="tbtState">Not proven</div></div>
+    <div class="row" id="tbtBtns"></div>
+    <div class="say" id="tbtSay">Feeder 7 (pump motor) must be worked on. Prove it is dead.</div>
+  </div>
+  <ol class="steps">
+    <li><b>Isolate and lock</b> the feeder MCCB with your own lock and tag.</li>
+    <li><b>Test the tester</b> on a known live source (or a proving unit): the tester works.</li>
+    <li><b>Test the circuit</b> phase to phase and each phase to earth: no voltage.</li>
+    <li><b>Test the tester again</b> on the known live source: it still works, so the "dead" reading was real.</li>
+    <li><b>Earth</b> the conductors if the work needs it, then start work.</li>
+  </ol>
+  <div class="box warn"><b>VFDs and capacitors:</b> after switch-off, wait the time written on the drive (often 5 to 15 minutes) and test the DC bus too. "It is off" has killed people who did not wait.</div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Protection devices and earthing</h2>
+  <p class="lead">Each protection device watches for one kind of fault. Knowing which one trips tells you what went wrong.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · What trips?<small>Pick a fault, then the device that should clear it</small></div><div class="pill" id="faultState">Choose a fault</div></div>
+    <div class="row" id="faults"></div>
+    <div class="row" id="devices" style="margin-top:12px"></div>
+    <div class="say" id="faultSay">Pick a fault first.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Fault</th><th>Cleared by</th></tr>
+    <tr><td>Short circuit (phase to phase)</td><td>MCB / MCCB / fuse, instantly</td></tr>
+    <tr><td>Overload (motor drawing too much for too long)</td><td>Overload relay or the breaker's thermal trip</td></tr>
+    <tr><td>Earth leakage through a person (30 mA)</td><td>RCCB / ELCB</td></tr>
+    <tr><td>Earth fault on a metal body</td><td>Earthing carries it away so the breaker trips; the body never stays live</td></tr>
+  </table></div>
+  <div class="box def"><b>Earthing:</b> every metal body (panel, motor frame, cable tray) is connected to the earth pit. If a live wire touches the body, the current goes to earth and the protection trips, instead of going through you. A broken earth wire makes the body a trap.</div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Panel room rules</h2>
+  <p class="lead">Most panel incidents start with something small in the room around the panel.</p>
+  <div class="grid">
+    <div class="tile"><b>Doors closed</b>Panel doors and covers closed and bolted. An open door is an arc flash waiting to happen.</div>
+    <div class="tile"><b>Nothing stored</b>No cartons, oil, cloth or tools in the panel room. 1 metre clear in front of every panel.</div>
+    <div class="tile"><b>Rubber mats</b>Insulating mats in front of the panels, dry and undamaged.</div>
+    <div class="tile"><b>Heat and dust</b>Steel plant dust is conductive. Filters clean, AC working, panels sealed (IP54 or better).</div>
+    <div class="tile"><b>Thermal scans</b>Hot spots on loose terminals show up on a thermal camera months before they burn.</div>
+    <div class="tile"><b>Permit to work</b>No work on a panel without an electrical permit, isolation and the test.</div>
+  </div>
+  <div class="box story"><b>Example:</b> a rolling mill MCC tripped every afternoon. A thermal scan found a busbar joint at 95 °C: a loose bolt. Tightened in a planned shutdown, it saved a fire and a three-day stoppage.</div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Test</h2>
+  <p class="lead">Eight questions. Score 70% or more (6 of 8) to earn your Electrical Panel Safety certificate.</p>
+  <div class="q"><p>1. A feeder switch is in the OFF position. Is the motor circuit safe to touch?</p><ul><li>A. Yes, it is off</li><li>B. Only after lock, tag and a live-dead-live test</li><li>C. Yes, if the motor is not running</li></ul><div class="ans">Answer: B. OFF is not proof; only the test is.</div></div>
+  <div class="q"><p>2. Why do you test the tester again after the circuit reads dead?</p><ul><li>A. To use up time</li><li>B. To prove the tester did not fail during the test</li><li>C. It is not needed</li></ul><div class="ans">Answer: B. A failed tester also reads "dead".</div></div>
+  <div class="q"><p>3. Which current through the body can stop the heart?</p><ul><li>A. 1 mA</li><li>B. 100 mA</li><li>C. Only above 10 A</li></ul><div class="ans">Answer: B. Around 100 mA causes fibrillation.</div></div>
+  <div class="q"><p>4. A person touches a live wire and current leaks to earth through them. What trips?</p><ul><li>A. The overload relay</li><li>B. The RCCB / ELCB at 30 mA</li><li>C. Nothing</li></ul><div class="ans">Answer: B. That is the job of the RCCB.</div></div>
+  <div class="q"><p>5. You switched off a VFD. When can you work on it?</p><ul><li>A. Immediately</li><li>B. After the waiting time on the drive and testing the DC bus</li><li>C. After the fan stops</li></ul><div class="ans">Answer: B. The capacitors stay charged.</div></div>
+  <div class="q"><p>6. What is an arc flash?</p><ul><li>A. A spark from a welding rod</li><li>B. A fault through air with extreme heat, blast and molten metal</li><li>C. A light on the panel</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="q"><p>7. Cartons are kept in front of a panel to save space. What is wrong?</p><ul><li>A. Nothing</li><li>B. The panel needs 1 metre clear; cartons are fuel and block escape</li><li>C. Only that it looks untidy</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="q"><p>8. Why must the motor frame be earthed?</p><ul><li>A. To make it heavier</li><li>B. So a fault goes to earth and trips the protection, not through a person</li><li>C. It is only for lightning</li></ul><div class="ans">Answer: B.</div></div>
+  <div class="box rule"><b>Recap.</b> Know the panel: incomer, busbars, feeders, contactors, overloads, drives. 100 mA can kill; RCCB at 30 mA. Arc flash is an explosion: stay outside the boundary unless authorised and dressed for it. Lock, tag, live-dead-live. Wait for drives to discharge. Earth every metal body. Panel rooms clean, dry, closed and clear.</div>
+</section>
+
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var seen = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.part'), function (g) {
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', function () {
+      seen[g.dataset.i] = 1;
+      Array.prototype.forEach.call(document.querySelectorAll('.part'), function (x) { x.style.filter = x === g ? 'drop-shadow(0 0 8px #D9A441) brightness(1.3)' : ''; });
+      $('partCount').textContent = Object.keys(seen).length + ' / 7 explored';
+      $('partSay').textContent = g.dataset.say;
+    });
+  });
+  var MA = [['1 mA', 'A tingle. Your body is warning you.'], ['10 mA', 'Muscles lock. You cannot let go of the wire.'],
+            ['30 mA', 'Breathing gets hard. This is why the RCCB trips at 30 mA.'], ['100 mA', 'The heart goes out of rhythm. Death within minutes without help.'],
+            ['1 A', 'Internal burns, the heart stops.'], ['10 A', 'What a 415 V fault can push. Nobody survives this.']];
+  function ma() { var v = MA[+$('ma').value]; $('maVal').textContent = v[0]; $('maSay').textContent = v[0] + ': ' + v[1];
+    $('maVal').style.background = +$('ma').value < 1 ? 'rgba(74,222,128,.15)' : +$('ma').value < 3 ? 'rgba(217,164,65,.25)' : 'rgba(198,40,40,.45)'; }
+  $('ma').oninput = ma; ma();
+  function zone() { var x = +$('dist').value; $('man').setAttribute('transform', 'translate(' + x + ',0)');
+    var z = x < 380 ? ['Safe', 'Outside the arc flash boundary: normal shop floor PPE is enough.']
+      : x < 480 ? ['Arc flash boundary', 'Inside the arc flash boundary: only authorised electrical staff with a permit, arc-rated suit and face shield.']
+      : x < 560 ? ['Limited', 'Limited approach: qualified electricians only, escorted others must stay back.']
+      : ['Restricted', 'Restricted: next to live parts. Only when it cannot be made dead, with full arc-rated kit and insulated tools.'];
+    $('zoneVal').textContent = z[0]; $('zoneSay').textContent = z[1]; }
+  $('dist').oninput = zone; zone();
+  var STEPS = ['Isolate and lock', 'Test the tester', 'Test the circuit', 'Test the tester again', 'Earth, then work'], at = 0;
+  STEPS.slice().sort(function () { return Math.random() - 0.5; }).forEach(function (s) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = s;
+    b.onclick = function () {
+      if (b.classList.contains('good')) return;
+      if (s === STEPS[at]) { b.className = 'btn good'; at++;
+        $('tbtSay').textContent = at === 5 ? 'Proven dead and earthed. Now you may work.' : 'Right. Next?';
+        if (at === 5) $('tbtState').textContent = 'Proven dead'; }
+      else { b.className = 'btn bad shake'; $('tbtSay').textContent = '"' + s + '" now is the wrong order. What has to be true before it?';
+        setTimeout(function () { b.className = 'btn'; }, 900); }
+    };
+    $('tbtBtns').appendChild(b);
+  });
+  var F = { 'Short circuit': 'MCB / MCCB', 'Motor overload': 'Overload relay', 'Leakage through a person': 'RCCB', 'Live wire touches the panel body': 'Earthing' };
+  var fault = null;
+  Object.keys(F).forEach(function (f) { var b = document.createElement('button'); b.className = 'btn'; b.textContent = f; b.dataset.f = f;
+    b.onclick = function () { fault = f; $('faultState').textContent = f; $('faultSay').textContent = 'Which device clears it?';
+      Array.prototype.forEach.call($('faults').children, function (x) { x.className = 'btn' + (x.dataset.f === f ? ' on' : ''); }); };
+    $('faults').appendChild(b); });
+  ['MCB / MCCB', 'Overload relay', 'RCCB', 'Earthing'].forEach(function (d) { var b = document.createElement('button'); b.className = 'btn'; b.textContent = d;
+    b.onclick = function () { if (!fault) { $('faultSay').textContent = 'Pick a fault first.'; return; }
+      var ok = F[fault] === d;
+      $('faultSay').textContent = ok ? 'Right: ' + d + ' clears a ' + fault.toLowerCase() + '.' : 'Not this one. ' + d + ' watches for something else. Try again.';
+      b.className = 'btn ' + (ok ? 'good' : 'bad'); setTimeout(function () { b.className = 'btn'; }, 1200); };
+    $('devices').appendChild(b); });
+})();
+</script>
+
+</body>
+</html>

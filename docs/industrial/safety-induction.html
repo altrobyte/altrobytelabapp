@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety Induction · Altrobyte Industrial</title>
+<style>
+  :root { --ink:#0E1A2B; --ink2:#16263D; --soft:#5A6675; --paper:#F6F3EC; --line:#E3DCCD; --gold:#D9A441; --hot:#E2581F;
+          --red:#C62828; --green:#2E7D32; --teal:#127A78; --card:#fff; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; color:var(--ink); background:var(--paper); font:17px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 22px 18px 70px; }
+  .hero { position:relative; overflow:hidden; border-radius: 22px; color:#fff; padding: 34px 30px 30px;
+          background: radial-gradient(120% 140% at 85% 10%, #3A2414 0%, #1B1410 35%, var(--ink) 70%); }
+  .hero svg.plant { position:absolute; right:-10px; bottom:0; width: 62%; max-width: 560px; opacity:.95; }
+  .hero .tag { font: 700 12px/1 "Segoe UI", sans-serif; letter-spacing: 3px; color: var(--gold); }
+  .hero h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
+  .hero p { margin: 0; color:#D8DEE6; max-width: 470px; position:relative; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; position:relative; max-width: 400px; }
+  .chips span { font-size: 12.5px; font-weight:600; border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:4px 11px; background:rgba(255,255,255,.06); }
+  .meta { display:flex; gap:22px; margin-top: 22px; position:relative; flex-wrap: wrap; }
+  .meta div { font-size: 13px; color:#B9C3CF; } .meta b { display:block; color:#fff; font-size: 20px; }
+  section { background: var(--card); border:1px solid var(--line); border-radius: 18px; padding: 24px 26px; margin-top: 22px;
+            box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 8px 24px -18px rgba(14,26,43,.35); }
+  h2 { font: 800 25px/1.2 "Segoe UI", sans-serif; margin: 0 0 6px; display:flex; gap:12px; align-items:center; }
+  h2 .n { font: 700 13px/1 "Cascadia Mono", Consolas, monospace; background: var(--ink); color: var(--gold); border-radius: 8px; padding: 6px 9px; }
+  .lead { color: var(--soft); margin-top: 2px; font-size: 16.5px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 14px 0; }
+  .tile { border:1px solid var(--line); border-radius: 14px; padding: 13px 15px; background:#FFFDF9; }
+  .tile b { display:block; font-size: 15.5px; margin-bottom: 2px; }
+  .box { padding: 12px 16px; border-radius: 12px; margin: 14px 0; }
+  .def { background:#EAF5F4; border-left: 5px solid var(--teal); }
+  .warn { background:#FCECEA; border-left: 5px solid var(--red); }
+  .story { background:#FBF1DE; border-left: 5px solid var(--gold); }
+  .rule { background: var(--ink); color:#fff; } .rule b { color: var(--gold); }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 12px 0; }
+  ol.steps li { counter-increment: s; position: relative; padding: 9px 0 9px 48px; border-bottom: 1px dashed var(--line); }
+  ol.steps li::before { content: counter(s); position:absolute; left:0; top:8px; width:33px; height:33px; border-radius:50%;
+                        background: var(--ink); color: var(--gold); font: 700 14px/33px Consolas, monospace; text-align:center; }
+  .table-wrap { overflow-x:auto; } table { width:100%; border-collapse: collapse; margin: 12px 0; font-size: 15.5px; }
+  th, td { text-align:left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; } th { background:#F3EEE3; }
+  /* widgets */
+  .lab { border-radius: 16px; background: var(--ink); color:#fff; padding: 18px; margin: 16px 0; }
+  .lab .top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom: 10px; }
+  .lab .title { font-weight: 800; letter-spacing:.3px; } .lab .title small { display:block; font-weight:500; color:#9FB0C3; font-size: 13px; }
+  .pill { font: 700 13px Consolas, monospace; background: rgba(217,164,65,.15); color: var(--gold); border-radius: 99px; padding: 5px 12px; }
+  .btn { font: 600 14px "Segoe UI", sans-serif; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); color:#fff;
+         border-radius: 10px; padding: 8px 13px; cursor:pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); } .btn.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+  .btn.good { background: var(--green); border-color: var(--green); } .btn.bad { background: var(--red); border-color: var(--red); }
+  .say { margin-top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.07); min-height: 22px; font-size: 15px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; }
+  svg text { font-family: "Segoe UI", sans-serif; }
+  .spot { cursor: pointer; }
+  .spot circle.ring { fill: transparent; stroke: transparent; stroke-width: 4; }
+  .spot.found circle.ring { stroke: #4ADE80; fill: rgba(74,222,128,.18); }
+  .q { border:1px solid var(--line); border-radius: 14px; padding: 13px 16px; margin: 12px 0; }
+  .q p { margin: 0 0 6px; font-weight: 700; } .q ul { margin: 0 0 6px; padding-left: 20px; }
+  .ans { font-size: 14.5px; color: var(--teal); font-weight: 600; }
+  .recap li { margin: 5px 0; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .shake { animation: shake .25s linear 3; }
+  @keyframes flick { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.12)} }
+  .flame { transform-origin: bottom center; animation: flick .5s ease-in-out infinite; transform-box: fill-box; }
+  @media (max-width: 640px) { .hero h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero">
+  <svg class="plant" viewBox="0 0 560 300" aria-hidden="true">
+    <defs>
+      <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB547"/><stop offset="1" stop-color="#E2581F"/></linearGradient>
+      <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B4B61"/><stop offset="1" stop-color="#1E2A3B"/></linearGradient>
+    </defs>
+    <rect x="300" y="40" width="26" height="200" fill="url(#steel)"/><rect x="340" y="70" width="22" height="170" fill="url(#steel)"/>
+    <path d="M300 40 q10 -30 30 -36" stroke="#6B7A8F" stroke-width="10" fill="none" opacity=".35"/>
+    <path d="M190 240 L210 110 L270 110 L290 240 Z" fill="url(#steel)"/>
+    <rect x="205" y="96" width="70" height="16" rx="3" fill="#2B394D"/>
+    <path d="M233 96 L240 40 L246 96" fill="#2B394D"/>
+    <rect x="380" y="130" width="150" height="110" fill="url(#steel)"/>
+    <path d="M380 130 L410 105 L440 130 L470 105 L500 130 L530 105 L530 130 Z" fill="#2B394D"/>
+    <rect x="60" y="150" width="120" height="90" fill="url(#steel)"/>
+    <rect x="70" y="120" width="160" height="8" fill="#55657B"/><rect x="140" y="128" width="6" height="40" fill="#55657B"/>
+    <rect x="128" y="168" width="30" height="20" rx="3" fill="#D9A441"/>
+    <ellipse cx="240" cy="246" rx="70" ry="10" fill="url(#glow)" opacity=".9"/>
+    <path d="M222 236 q18 -30 36 0" fill="url(#glow)" class="flame"/>
+    <circle cx="210" cy="210" r="2" fill="#FFD27A"/><circle cx="268" cy="200" r="2.5" fill="#FFD27A"/><circle cx="250" cy="185" r="1.8" fill="#FFD27A"/>
+    <rect x="0" y="240" width="560" height="60" fill="#121B28"/>
+    <rect x="0" y="252" width="560" height="4" fill="#D9A441" opacity=".5"/>
+  </svg>
+  <div class="tag">ALTROBYTE INDUSTRIAL · SAFETY INDUCTION</div>
+  <h1>Go home safe, every shift.</h1>
+  <p>The induction every new joiner and contract worker takes before stepping into an integrated steel plant. Watch, try, and pass the test at the end.</p>
+  <div class="chips"><span>Spot the hazard</span><span>PPE</span><span>Lockout-Tagout</span><span>Hot metal &amp; cranes</span><span>Gas safety</span><span>Fire</span><span>Height</span><span>Emergency</span></div>
+  <div class="meta"><div><b>10</b>sections</div><div><b>6</b>hands-on drills</div><div><b>8</b>question test</div><div><b>70%</b>to pass</div></div>
+</div>
+
+<section>
+  <h2><span class="n">01</span>Why safety comes first</h2>
+  <p class="lead">Every rule in a steel plant was written after someone got hurt. Learning them is how it never happens to you.</p>
+  <p>Most injuries do not come from big disasters. They come from small shortcuts: a glove not worn "just for two minutes", a guard removed to clear a jam quickly, walking under a crane load because it is the shorter way. The work gets done, nothing happens, so the shortcut becomes a habit. One day it does not work.</p>
+  <div class="box story"><b>Think of a helmet on a bike.</b> You do not wear it because you plan to fall. You wear it because you cannot choose the day you fall.</div>
+  <div class="box def"><b>Your three rights on the shop floor:</b> the right to know the hazards of your job, the right to proper safety equipment, and the right to <b>stop work</b> when something is unsafe, without being punished for it.</div>
+  <div class="box rule"><b>Zero harm</b> is the target in every good plant: not "fewer injuries", none. Production can be made up tomorrow. A lost finger cannot.</div>
+</section>
+
+<section>
+  <h2><span class="n">02</span>Spot the hazard</h2>
+  <p class="lead">Safety starts with your eyes. Before you start any job, look around for what can hurt you.</p>
+  <div class="lab" id="spotLab">
+    <div class="top"><div class="title">Drill · Rolling mill bay<small>Tap everything that is unsafe in this picture</small></div><div class="pill" id="spotCount">0 / 6 found</div></div>
+    <svg viewBox="0 0 800 380" style="width:100%;border-radius:12px;background:#182538" id="spotSvg">
+      <rect x="0" y="300" width="800" height="80" fill="#22324A"/>
+      <rect x="0" y="296" width="800" height="6" fill="#D9A441" opacity=".6"/>
+      <!-- crane girder and hook with load -->
+      <rect x="40" y="30" width="720" height="16" fill="#46566D"/><rect x="300" y="46" width="50" height="22" fill="#D9A441"/>
+      <line x1="325" y1="68" x2="325" y2="170" stroke="#9AA8BA" stroke-width="3"/>
+      <rect x="285" y="170" width="80" height="40" rx="4" fill="#7B8798"/>
+      <!-- worker under the load -->
+      <g><circle cx="330" cy="248" r="11" fill="#E8B88A"/><rect x="320" y="259" width="20" height="36" rx="5" fill="#2F6FB5"/></g>
+      <!-- oil spill -->
+      <ellipse cx="560" cy="330" rx="60" ry="10" fill="#0B0F16" opacity=".85"/><ellipse cx="545" cy="327" rx="18" ry="3" fill="#3D4D66"/>
+      <!-- machine with guard open -->
+      <rect x="600" y="200" width="150" height="96" rx="6" fill="#3A4A61"/><circle cx="650" cy="248" r="26" fill="#56677F"/>
+      <circle cx="650" cy="248" r="6" fill="#1B2533"/><rect x="700" y="160" width="40" height="44" fill="#D9A441" transform="rotate(-35 700 204)"/>
+      <!-- blocked fire extinguisher -->
+      <rect x="90" y="236" width="18" height="50" rx="6" fill="#C62828"/><rect x="70" y="250" width="70" height="46" fill="#8B6A43"/>
+      <rect x="76" y="232" width="58" height="20" fill="#9C7A50"/>
+      <!-- worker without helmet near ladder, ladder at wrong angle -->
+      <line x1="430" y1="296" x2="470" y2="140" stroke="#B0BCCB" stroke-width="5"/><line x1="452" y1="296" x2="492" y2="140" stroke="#B0BCCB" stroke-width="5"/>
+      <line x1="437" y1="270" x2="459" y2="270" stroke="#B0BCCB" stroke-width="4"/><line x1="447" y1="230" x2="469" y2="230" stroke="#B0BCCB" stroke-width="4"/>
+      <line x1="457" y1="190" x2="479" y2="190" stroke="#B0BCCB" stroke-width="4"/>
+      <!-- trailing cable -->
+      <path d="M180 300 C220 340 260 280 300 330 S380 350 420 320" stroke="#F2C14E" stroke-width="5" fill="none"/>
+      <text x="16" y="370" fill="#8FA1B6" font-size="14">Rolling mill bay, shift A</text>
+      <g class="spot" data-i="0" data-say="A worker is standing under a suspended crane load. Never walk or stand under a load: if a sling fails, there is no second chance."><circle class="ring" cx="327" cy="225" r="58"/></g>
+      <g class="spot" data-i="1" data-say="Oil on the walkway. A slip here sends you into a machine or a hot surface. Cover it with sand or absorbent and report it."><circle class="ring" cx="555" cy="330" r="62"/></g>
+      <g class="spot" data-i="2" data-say="The machine guard is open while the machine can run. Guards stay closed; clearing a jam needs lockout-tagout first."><circle class="ring" cx="690" cy="215" r="62"/></g>
+      <g class="spot" data-i="3" data-say="The fire extinguisher is blocked by cartons. In a fire you lose seconds you do not have. Keep one metre clear around it."><circle class="ring" cx="100" cy="262" r="52"/></g>
+      <g class="spot" data-i="4" data-say="The ladder is nearly straight up and nobody is holding it. It needs the 1 in 4 angle, a second person, and the top tied."><circle class="ring" cx="462" cy="215" r="60"/></g>
+      <g class="spot" data-i="5" data-say="A cable is lying across the walkway. Someone will trip, or a forklift will cut it. Route cables overhead or use a cable cover."><circle class="ring" cx="300" cy="325" r="54"/></g>
+    </svg>
+    <div class="say" id="spotSay">Look carefully. There are six hazards.</div>
+  </div>
+  <p>The six hazards in this bay, in words:</p>
+  <ol class="steps">
+    <li><b>Standing under a crane load.</b> Never walk or stand under a suspended load.</li>
+    <li><b>Oil on the walkway.</b> Cover with absorbent, barricade, report.</li>
+    <li><b>Machine guard open.</b> Guards stay closed; a jam is cleared only after lockout-tagout.</li>
+    <li><b>Fire extinguisher blocked.</b> Keep one metre clear around every extinguisher and exit.</li>
+    <li><b>Ladder too steep and not held.</b> 1 out for every 4 up, a second person holds it.</li>
+    <li><b>Cable across the walkway.</b> Route it overhead or under a cable cover.</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="n">03</span>PPE: the right gear for the job</h2>
+  <p class="lead">PPE is the last line of defence. It only works if it is the right one, it fits, and it is on.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Dress for the job<small>Pick a job, then choose the PPE it needs</small></div><div class="pill" id="ppeScore">Choose a job</div></div>
+    <div class="row" id="jobs"></div>
+    <div class="row" id="gear" style="margin-top:12px"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="ppeCheck">Check my choice</button></div>
+    <div class="say" id="ppeSay">Every job has its own PPE. Start by picking a job above.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Job</th><th>PPE it needs</th></tr>
+    <tr><td>Tapping and casting hot metal</td><td>Aluminised suit, helmet with face shield, safety shoes, heat gloves</td></tr>
+    <tr><td>Grinding and cutting</td><td>Helmet, face shield over safety glasses, ear plugs, safety shoes, leather gloves</td></tr>
+    <tr><td>Working on an electrical panel</td><td>Arc-rated suit, insulated gloves, face shield, safety shoes, helmet</td></tr>
+    <tr><td>General shop floor and crane bays</td><td>Helmet, safety shoes, safety glasses, hi-vis jacket, ear plugs</td></tr>
+  </table></div>
+  <div class="box warn"><b>Gotcha:</b> gloves near a drill, lathe or any rotating part are dangerous. The glove gets caught and pulls the hand in. Near rotating machines: no gloves, no loose sleeves, no chains, hair tied.</div>
+</section>
+
+<section>
+  <h2><span class="n">04</span>Lockout-Tagout: make the machine safe before you touch it</h2>
+  <p class="lead">Before anyone repairs, cleans or clears a jam inside a machine, every source of energy is switched off, locked and tagged.</p>
+  <div class="box def"><b>Lockout</b> = your own padlock on the isolation point, the key stays in <i>your</i> pocket. <b>Tagout</b> = a tag on it with your name, date and the reason.</div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Isolate the conveyor<small>Tap the six steps in the right order</small></div><div class="pill" id="lotoState">Machine: RUNNING</div></div>
+    <svg viewBox="0 0 700 120" style="width:100%;border-radius:12px;background:#182538">
+      <rect x="40" y="60" width="520" height="22" rx="11" fill="#3A4A61"/>
+      <g id="belt"><rect x="60" y="48" width="60" height="14" rx="3" fill="#D9A441"/><rect x="220" y="48" width="60" height="14" rx="3" fill="#D9A441"/><rect x="380" y="48" width="60" height="14" rx="3" fill="#D9A441"/></g>
+      <circle cx="50" cy="71" r="16" fill="#56677F"/><circle cx="550" cy="71" r="16" fill="#56677F"/>
+      <rect x="600" y="30" width="70" height="70" rx="8" fill="#2B394D"/><circle id="lamp" cx="635" cy="52" r="10" fill="#4ADE80"/>
+      <rect id="lockIcon" x="622" y="70" width="26" height="20" rx="4" fill="#D9A441" opacity="0"/>
+    </svg>
+    <div class="row" id="lotoBtns" style="margin-top:12px"></div>
+    <div class="say" id="lotoSay">A jam inside the conveyor. Make it safe, step by step.</div>
+  </div>
+  <ol class="steps">
+    <li><b>Tell</b> the operator and the supervisor that the machine is going down.</li>
+    <li><b>Stop</b> the machine the normal way.</li>
+    <li><b>Isolate</b> every energy source: electrical, air, hydraulic, and also springs and gravity (a raised part can drop).</li>
+    <li><b>Lock and tag</b> each isolation point with your own lock. Two people working = two locks.</li>
+    <li><b>Release stored energy:</b> bleed the air, lower raised parts, discharge capacitors.</li>
+    <li><b>Try to start it.</b> If it does not start, it is safe. Put the switch back to OFF.</li>
+  </ol>
+  <div class="box warn"><b>Golden rule:</b> only the person who put the lock removes it. Never remove someone else's lock, never work under someone else's lock.</div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>Steel plant hazards: hot metal, cranes and gas</h2>
+  <p class="lead">Three things make a steel plant different from any other factory. Respect them every single day.</p>
+  <div class="grid">
+    <div class="tile"><b>🔥 Hot metal and slag</b>Liquid iron is around 1,500 °C. A drop of water under it turns to steam instantly and throws metal out. Keep moulds, ladles and tools bone dry; stay behind the marked line during tapping.</div>
+    <div class="tile"><b>🏗 EOT cranes</b>Never stand or walk under a load. Only a trained signaller gives signals, one person, clear hand signs. Check slings and hooks before every lift.</div>
+    <div class="tile"><b>☁ Gas</b>Blast furnace and coke oven gas contain carbon monoxide (CO). It has no colour and no smell, and it kills. Gas areas need a CO monitor, a permit and a buddy.</div>
+  </div>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Read the CO monitor<small>Move the slider: what do you do at each level?</small></div><div class="pill" id="coVal">0 ppm</div></div>
+    <input type="range" id="co" min="0" max="400" value="0" style="width:100%">
+    <div class="say" id="coSay">0 ppm: clean air. Keep your monitor switched on and clipped near your face.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>CO reading</th><th>What it means</th><th>What you do</th></tr>
+    <tr><td>Below 25 ppm</td><td>Safe to work</td><td>Carry on, monitor on</td></tr>
+    <tr><td>25 to 50 ppm</td><td>Warning</td><td>Limit time, ventilate, tell the supervisor</td></tr>
+    <tr><td>Above 50 ppm</td><td>Danger</td><td>Leave at once, upwind, raise the alarm</td></tr>
+    <tr><td>Someone has collapsed</td><td>Gas is still there</td><td>Do not run in. Call the rescue team with breathing sets</td></tr>
+  </table></div>
+  <div class="box warn">Most gas deaths are rescuers: someone runs in to help a fallen colleague and falls too. <b>Raise the alarm, do not become the second victim.</b></div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Fire: the right extinguisher, the right way</h2>
+  <p class="lead">A fire needs fuel, heat and oxygen. Take away any one and it dies. The wrong extinguisher can make it worse.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Put it out<small>Pick a fire, then pick the extinguisher</small></div><div class="pill" id="fireState">🔥 Burning</div></div>
+    <div class="row" id="fires"></div>
+    <div class="row" id="exts" style="margin-top:12px"></div>
+    <div class="say" id="fireSay">Pick a fire first.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>Fire</th><th>Use</th><th>Never use</th></tr>
+    <tr><td>Wood, paper, cloth, cartons</td><td>Water, foam, ABC powder</td><td>-</td></tr>
+    <tr><td>Oil, diesel, hydraulic fluid</td><td>Foam, CO₂, ABC powder</td><td>Water: it spreads burning oil</td></tr>
+    <tr><td>Electrical panel, motor, cable</td><td>CO₂ or powder, after switching off power</td><td>Water or foam: electric shock</td></tr>
+    <tr><td>Gas leak on fire</td><td>Shut the gas valve first, then powder</td><td>Putting out the flame with gas still flowing</td></tr>
+  </table></div>
+  <p><b>Using an extinguisher: P-A-S-S.</b> <b>Pull</b> the pin, <b>Aim</b> at the base of the fire, <b>Squeeze</b> the handle, <b>Sweep</b> side to side.</p>
+  <div class="box warn">Fight a fire only if it is small, you have the right extinguisher and your exit is behind you. Otherwise: raise the alarm, leave, go to the assembly point. Never use a lift in a fire.</div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>Work at height: the fall you do not get up from</h2>
+  <p class="lead">Any work where you could fall 1.8 metres (about 6 feet) or more needs a permit and fall protection.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Drill · Set the ladder<small>Move the foot of the ladder until the angle is safe</small></div><div class="pill" id="ladVal">-</div></div>
+    <svg viewBox="0 0 500 260" style="width:100%;max-width:520px;display:block;margin:auto;border-radius:12px;background:#182538">
+      <rect x="380" y="10" width="20" height="230" fill="#46566D"/><rect x="0" y="240" width="500" height="20" fill="#22324A"/>
+      <line id="lad" x1="300" y1="240" x2="380" y2="30" stroke="#D9A441" stroke-width="7" stroke-linecap="round"/>
+      <text id="ladTxt" x="20" y="30" fill="#9FB0C3" font-size="15">height 4 · out 1</text>
+    </svg>
+    <input type="range" id="ladIn" min="0" max="300" value="80" style="width:100%">
+    <div class="say" id="ladSay"></div>
+  </div>
+  <div class="grid">
+    <div class="tile"><b>Ladders</b>1 out for every 4 up (about 75°). Held by a second person or tied at the top. Three points of contact. Never stand on the top two steps.</div>
+    <div class="tile"><b>Full body harness</b>Worn tight, lanyard hooked above your shoulder to a strong anchor, hooked on every time you move.</div>
+    <div class="tile"><b>Scaffolds</b>Only with a green "safe to use" tag. Guard rails and toe boards in place.</div>
+    <div class="tile"><b>Below you</b>Barricade the area. Tools on a lanyard: a falling spanner can kill.</div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">08</span>Hazards and near misses: speak up early</h2>
+  <p class="lead">A near miss is an accident that did not happen this time. Reporting it is how the next one is stopped.</p>
+  <div class="box def"><b>Hazard:</b> anything that can hurt someone (oil on the floor, a missing guard, a blocked exit). <b>Near miss:</b> something that almost hurt someone (a part fell and missed a person, a forklift braked just in time).</div>
+  <svg viewBox="0 0 600 230" style="width:100%;max-width:560px;display:block;margin:10px auto">
+    <polygon points="300,10 340,60 260,60" fill="#C62828"/><text x="300" y="50" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">1</text>
+    <polygon points="260,64 340,64 390,120 210,120" fill="#E2581F"/><text x="300" y="98" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">10 minor injuries</text>
+    <polygon points="210,124 390,124 440,170 160,170" fill="#D9A441"/><text x="300" y="152" text-anchor="middle" fill="#0E1A2B" font-size="14" font-weight="700">30 property damage</text>
+    <polygon points="160,174 440,174 500,224 100,224" fill="#127A78"/><text x="300" y="205" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">600 near misses</text>
+    <text x="350" y="40" fill="#5A6675" font-size="13">1 serious injury</text>
+  </svg>
+  <p>Studies of many workplaces found this pattern: for every serious injury there are hundreds of near misses before it. Fix the near misses and the serious injury never arrives.</p>
+  <ol class="steps">
+    <li><b>See it:</b> notice what is unsafe.</li>
+    <li><b>Make it safe if you can</b> (wipe the oil, put a barricade), or keep people away.</li>
+    <li><b>Report it</b> to your supervisor or in the near-miss book, the same shift.</li>
+  </ol>
+</section>
+
+<section>
+  <h2><span class="n">09</span>Emergency and first aid</h2>
+  <p class="lead">In an emergency the first two minutes matter most. Know these before you need them.</p>
+  <div class="grid">
+    <div class="tile"><b>🚨 Alarm</b>A continuous siren means leave the building now, by the nearest marked exit.</div>
+    <div class="tile"><b>📍 Assembly point</b>Walk, do not run, to your assembly point. Stay until your name is counted.</div>
+    <div class="tile"><b>📞 Numbers</b>Plant emergency (your supervisor tells you on day one), Ambulance 108, Fire 101.</div>
+    <div class="tile"><b>⛑ First aid</b>Know where the nearest first-aid box is and who the trained first-aider is.</div>
+  </div>
+  <div class="table-wrap"><table>
+    <tr><th>If someone has</th><th>Do</th><th>Do not</th></tr>
+    <tr><td>Electric shock</td><td>Switch off the power first, or push them away with dry wood. Call for help.</td><td>Touch them while they are still in contact with the power.</td></tr>
+    <tr><td>Burn (hot metal, steam)</td><td>Cool under running water for 20 minutes.</td><td>Apply ice, oil or toothpaste. Pull off stuck clothing.</td></tr>
+    <tr><td>Bleeding cut</td><td>Press hard with a clean cloth, raise the limb.</td><td>Remove a deeply stuck object.</td></tr>
+    <tr><td>Chemical or dust in the eye</td><td>Eye-wash station for 15 minutes, eyes open.</td><td>Rub the eye.</td></tr>
+    <tr><td>Gas: someone collapsed</td><td>Raise the alarm, call the gas rescue team.</td><td>Run in without breathing apparatus.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">10</span>Test</h2>
+  <p class="lead">Eight questions. Score 70% or more (6 of 8) to earn your Safety Induction certificate.</p>
+  <div class="q"><p>1. You need to clear a jam inside a conveyor. What do you do first?</p>
+    <ul><li>A. Wear gloves and clear it quickly</li><li>B. Lockout-tagout: stop, isolate, lock with your own lock, try to start it</li><li>C. Ask the operator to keep an eye on the start button</li></ul>
+    <div class="ans">Answer: B. Only your own lock guarantees nobody can start it.</div></div>
+  <div class="q"><p>2. An oil drum catches fire. Which extinguisher must you never use?</p>
+    <ul><li>A. Water</li><li>B. Foam</li><li>C. CO₂</li></ul>
+    <div class="ans">Answer: A. Water spreads burning oil.</div></div>
+  <div class="q"><p>3. An EOT crane is carrying a coil across the bay. What do you do?</p>
+    <ul><li>A. Walk quickly under it</li><li>B. Wait or go around; never stand or walk under a load</li><li>C. Signal the crane operator yourself</li></ul>
+    <div class="ans">Answer: B. Only the trained signaller signals, and nobody goes under a load.</div></div>
+  <div class="q"><p>4. Your CO monitor reads 80 ppm. What do you do?</p>
+    <ul><li>A. Finish the job quickly</li><li>B. Leave at once, upwind, and raise the alarm</li><li>C. Open a window and continue</li></ul>
+    <div class="ans">Answer: B. Above 50 ppm is danger: leave and alert.</div></div>
+  <div class="q"><p>5. A colleague has collapsed in a gas area. What do you do?</p>
+    <ul><li>A. Run in and pull them out</li><li>B. Raise the alarm and call the gas rescue team with breathing sets</li><li>C. Splash water on their face</li></ul>
+    <div class="ans">Answer: B. Do not become the second victim.</div></div>
+  <div class="q"><p>6. A ladder is 4 metres high where it rests. How far from the wall should its foot be?</p>
+    <ul><li>A. About 1 metre</li><li>B. Touching the wall</li><li>C. About 3 metres</li></ul>
+    <div class="ans">Answer: A. One out for every four up.</div></div>
+  <div class="q"><p>7. You are working on a lathe. Which is right?</p>
+    <ul><li>A. Wear thick gloves</li><li>B. No gloves, sleeves tight, hair tied, safety glasses on</li><li>C. Loose clothes for comfort</li></ul>
+    <div class="ans">Answer: B. Gloves and loose clothes get caught in rotating parts.</div></div>
+  <div class="q"><p>8. A spanner falls from a platform and lands near a worker. Nobody is hurt. What is it?</p>
+    <ul><li>A. Nothing happened, nothing to do</li><li>B. A near miss: report it the same shift</li><li>C. The worker's fault</li></ul>
+    <div class="ans">Answer: B. Reporting near misses prevents serious injuries.</div></div>
+  <div class="box rule"><b>Recap.</b> Your right to stop unsafe work. Right PPE, checked every shift. LOTO before touching any machine. Never under a crane load. CO has no smell: monitor on, never rescue without breathing sets. Fire: the right extinguisher, P-A-S-S. Height: 1 in 4, harness hooked on. Report near misses the same shift. Know your alarm, assembly point and 108.</div>
+</section>
+
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  // Spot the hazard
+  var found = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.spot'), function (g) {
+    g.addEventListener('click', function () {
+      found[g.dataset.i] = 1; g.classList.add('found');
+      var n = Object.keys(found).length;
+      $('spotCount').textContent = n + ' / 6 found';
+      $('spotSay').textContent = (n === 6 ? 'All six found. ' : '') + g.dataset.say;
+    });
+  });
+  // PPE
+  var JOBS = { 'Hot metal tapping': ['Helmet', 'Face shield', 'Aluminised suit', 'Heat gloves', 'Safety shoes'],
+               'Grinding': ['Helmet', 'Face shield', 'Safety glasses', 'Ear plugs', 'Leather gloves', 'Safety shoes'],
+               'Electrical panel': ['Helmet', 'Face shield', 'Arc-rated suit', 'Insulated gloves', 'Safety shoes'],
+               'Crane bay walk': ['Helmet', 'Safety glasses', 'Hi-vis jacket', 'Ear plugs', 'Safety shoes'] };
+  var GEAR = ['Helmet', 'Face shield', 'Safety glasses', 'Ear plugs', 'Aluminised suit', 'Arc-rated suit', 'Hi-vis jacket',
+              'Heat gloves', 'Leather gloves', 'Insulated gloves', 'Safety shoes'];
+  var job = null, picked = {};
+  Object.keys(JOBS).forEach(function (j) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = j;
+    b.onclick = function () { job = j; picked = {}; paint(); $('ppeScore').textContent = j; $('ppeSay').textContent = 'Now choose everything this job needs, then check.'; };
+    b.dataset.job = j; $('jobs').appendChild(b);
+  });
+  GEAR.forEach(function (g) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = g; b.dataset.gear = g;
+    b.onclick = function () { if (!job) { $('ppeSay').textContent = 'Pick a job first.'; return; } picked[g] = !picked[g]; paint(); };
+    $('gear').appendChild(b);
+  });
+  function paint() {
+    Array.prototype.forEach.call($('jobs').children, function (b) { b.className = 'btn' + (b.dataset.job === job ? ' on' : ''); });
+    Array.prototype.forEach.call($('gear').children, function (b) { b.className = 'btn' + (picked[b.dataset.gear] ? ' on' : ''); });
+  }
+  $('ppeCheck').onclick = function () {
+    if (!job) { $('ppeSay').textContent = 'Pick a job first.'; return; }
+    var need = JOBS[job], missing = need.filter(function (g) { return !picked[g]; });
+    var extra = Object.keys(picked).filter(function (g) { return picked[g] && need.indexOf(g) < 0; });
+    Array.prototype.forEach.call($('gear').children, function (b) {
+      var g = b.dataset.gear; b.className = 'btn' + (need.indexOf(g) >= 0 ? (picked[g] ? ' good' : ' bad') : (picked[g] ? ' on' : ''));
+    });
+    $('ppeSay').textContent = !missing.length && !extra.length ? 'Perfect. That is exactly the PPE for ' + job.toLowerCase() + '.'
+      : (missing.length ? 'Missing: ' + missing.join(', ') + '. ' : '') + (extra.length ? 'Not needed here: ' + extra.join(', ') + '.' : '');
+  };
+  // LOTO
+  var STEPS = ['Tell the operator', 'Stop the machine', 'Isolate energy', 'Lock and tag', 'Release stored energy', 'Try to start'];
+  var at = 0, beltX = 0, running = true;
+  setInterval(function () { if (!running) return; beltX = (beltX + 4) % 160; $('belt').setAttribute('transform', 'translate(' + beltX + ',0)'); }, 50);
+  STEPS.slice().sort(function () { return Math.random() - 0.5; }).forEach(function (s) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = s;
+    b.onclick = function () {
+      if (b.classList.contains('good')) return;
+      if (s === STEPS[at]) {
+        b.className = 'btn good'; at++;
+        if (at === 2) { running = false; $('lotoState').textContent = 'Machine: STOPPED'; }
+        if (at === 3) $('lamp').setAttribute('fill', '#C62828');
+        if (at === 4) $('lockIcon').setAttribute('opacity', '1');
+        $('lotoSay').textContent = at === 6 ? 'Safe. It did not start: you may now clear the jam. Only you remove your lock.' : 'Right. Next step?';
+        if (at === 6) $('lotoState').textContent = 'Machine: LOCKED OUT';
+      } else {
+        b.className = 'btn bad'; b.classList.add('shake');
+        $('lotoSay').textContent = 'Not yet. Doing "' + s + '" now is how hands get caught. Think: what comes before it?';
+        setTimeout(function () { b.className = 'btn'; }, 900);
+      }
+    };
+    $('lotoBtns').appendChild(b);
+  });
+  // CO
+  function co() {
+    var v = +$('co').value; $('coVal').textContent = v + ' ppm';
+    $('coSay').textContent = v < 25 ? v + ' ppm: safe to work. Keep your monitor on and clipped near your face.'
+      : v <= 50 ? v + ' ppm: warning. Limit your time, ventilate, tell your supervisor.'
+      : v + ' ppm: DANGER. Leave at once, go upwind, raise the alarm. Do not go back for tools.';
+    $('coVal').style.background = v < 25 ? 'rgba(74,222,128,.15)' : v <= 50 ? 'rgba(217,164,65,.25)' : 'rgba(198,40,40,.45)';
+  }
+  $('co').oninput = co;
+  // Fire
+  var FIRES = { 'Cartons burning': ['Water', 'Foam', 'ABC powder'], 'Hydraulic oil fire': ['Foam', 'CO₂', 'ABC powder'],
+                'Electrical panel fire': ['CO₂', 'ABC powder'] };
+  var WHY = { 'Water|Hydraulic oil fire': 'Water spreads burning oil: the fire jumps.', 'Water|Electrical panel fire': 'Water conducts electricity: you get a shock.',
+              'Foam|Electrical panel fire': 'Foam is water-based: shock risk.', 'CO₂|Cartons burning': 'CO₂ blows away; cartons re-ignite. Use water or ABC.' };
+  var fire = null;
+  Object.keys(FIRES).forEach(function (f) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = f; b.dataset.f = f;
+    b.onclick = function () { fire = f; $('fireState').textContent = '🔥 ' + f; $('fireSay').textContent = 'Which extinguisher?';
+      Array.prototype.forEach.call($('fires').children, function (x) { x.className = 'btn' + (x.dataset.f === f ? ' on' : ''); }); };
+    $('fires').appendChild(b);
+  });
+  ['Water', 'Foam', 'CO₂', 'ABC powder'].forEach(function (e) {
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = e;
+    b.onclick = function () {
+      if (!fire) { $('fireSay').textContent = 'Pick a fire first.'; return; }
+      var ok = FIRES[fire].indexOf(e) >= 0;
+      $('fireState').textContent = ok ? '✅ Out' : '🔥 Worse';
+      $('fireSay').textContent = ok ? (fire === 'Electrical panel fire' ? 'Right: switch off the power, then ' + e + '. P-A-S-S.' : 'Right. Pull, Aim at the base, Squeeze, Sweep.')
+        : 'Wrong. ' + (WHY[e + '|' + fire] || 'This one does not suit this fire.');
+    };
+    $('exts').appendChild(b);
+  });
+  // Ladder
+  function lad() {
+    var out = +$('ladIn').value, x = 380 - out;
+    $('lad').setAttribute('x1', x);
+    var up = 210, ratio = out / up, ang = Math.round(Math.atan2(up, out) * 180 / Math.PI);
+    $('ladTxt').textContent = 'angle ' + ang + '°  ·  1 out for every ' + (ratio ? (1 / ratio).toFixed(1) : '∞') + ' up';
+    var ok = ang >= 72 && ang <= 78;
+    $('lad').setAttribute('stroke', ok ? '#4ADE80' : '#E2581F');
+    $('ladVal').textContent = ok ? 'SAFE' : (ang > 78 ? 'TOO STEEP' : 'TOO FLAT');
+    $('ladSay').textContent = ok ? ang + '°: safe. About 1 out for every 4 up. Now get it held or tied at the top.'
+      : ang > 78 ? ang + '°: too steep, it can tip backwards when you lean.' : ang + '°: too flat, the foot can slide out.';
+  }
+  $('ladIn').oninput = lad; lad();
+})();
+</script>
+</body>
+</html>
