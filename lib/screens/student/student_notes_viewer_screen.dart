@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
@@ -96,6 +97,15 @@ class _StudentNotesViewerScreenState extends State<StudentNotesViewerScreen> {
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) setState(() => _liveView = null);
         });
+      }
+      // No time left today, or the module needs a plan: the strip goes and the plans are offered.
+      if (m?['type'] == 'state' && m?['state'] == 'out_of_minutes' && mounted) {
+        setState(() => _liveView = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          duration: const Duration(seconds: 10),
+          content: Text('${m?['text'] ?? "Today's free time with Altron is used up."}'),
+          action: SnackBarAction(label: 'Unlock', onPressed: () => GoRouter.of(context).push('/unlock')),
+        ));
       }
     });
     setState(() => _liveView = id);
