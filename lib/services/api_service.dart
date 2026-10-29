@@ -1036,6 +1036,13 @@ class ApiService {
   }
 
   /// The automatic WhatsApp follow-ups: each sequence, on or off, with its words.
+  /// Staff: the website funnel (learn page, free weeks, plans page, plan taps, paid after the free week).
+  static Future<Map<String, dynamic>> salesFunnel(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/funnel/sales?days=$days'),
+        headers: _headers(prefs.getString('token'))));
+  }
+
   static Future<Map<String, dynamic>> crmAuto() async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/auto'), headers: _headers(prefs.getString('token'))));
@@ -2598,6 +2605,41 @@ class ApiService {
   /// The screen used to read the educator AuthProvider's institute id, which
   /// is null for a student — so it returned early and the tab was empty
   /// while modules were published. The server resolves it from the token.
+  // ── The free week and the website funnel (29 Oct 2026) ──
+
+  /// This learner's free week: {started, active, days_left, ends_at}. Null when signed out or unreachable.
+  static Future<Map<String, dynamic>?> trialMe() async {
+    final t = (await SharedPreferences.getInstance()).getString('student_token');
+    if (t == null || t.isEmpty) return null;
+    try {
+      final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/trial/me'), headers: _headers(t));
+      return res.statusCode == 200 ? Map<String, dynamic>.from(jsonDecode(res.body) as Map) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Starts the free week (once per person; again returns the same one).
+  static Future<Map<String, dynamic>> startTrial() async {
+    final t = (await SharedPreferences.getInstance()).getString('student_token');
+    final res = await safePost(Uri.parse('${ApiConstants.baseUrl}/trial/start'), headers: _headers(t));
+    return _parse(res);
+  }
+
+  /// One step of the website funnel, by an anonymous id kept in this browser. Never throws, never waits on the page.
+  static void funnel(String event, [String detail = '']) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var v = prefs.getString('funnel_visitor') ?? '';
+      if (v.isEmpty) {
+        v = '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}-${Object().hashCode.toRadixString(36)}';
+        await prefs.setString('funnel_visitor', v);
+      }
+      await http.post(Uri.parse('${ApiConstants.baseUrl}/funnel/event'),
+          headers: _headers(), body: jsonEncode({'event': event, 'visitor_id': v, 'detail': detail}));
+    } catch (_) {}
+  }
+
   static Future<List<dynamic>> getTrainingModulesForStudent() async {
     final prefs = await SharedPreferences.getInstance();
     final res = await safeGet(

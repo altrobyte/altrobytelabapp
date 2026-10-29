@@ -7,18 +7,118 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../services/api_service.dart';
 
+/// The website funnel, the number to watch every day (29 Oct 2026): visitors on /learn, free weeks started, the plans
+/// page, taps on a plan, and how many free-week people pay now. Free-week people are CRM leads with a follow-up.
+class _FunnelTab extends StatefulWidget {
+  const _FunnelTab();
+
+  @override
+  State<_FunnelTab> createState() => _FunnelTabState();
+}
+
+class _FunnelTabState extends State<_FunnelTab> {
+  int _days = 7;
+  Map<String, dynamic>? _f;
+  String? _err;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _err = null);
+    try {
+      final f = await ApiService.salesFunnel(_days);
+      if (mounted) setState(() => _f = f);
+    } catch (_) {
+      if (mounted) setState(() => _err = 'Could not load the funnel. Pull to try again.');
+    }
+  }
+
+  Widget _step(String label, Object? n, IconData icon) => Expanded(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(icon, color: const Color(0xFF1A3C5E)),
+              const SizedBox(height: 8),
+              Text('${n ?? 0}', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700)),
+              Text(label, style: GoogleFonts.inter(fontSize: 12.5, color: Colors.black54)),
+            ]),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final f = _f;
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(padding: const EdgeInsets.all(18), children: [
+        Row(children: [
+          Text('Last', style: GoogleFonts.inter()),
+          const SizedBox(width: 8),
+          for (final d in const [1, 7, 30])
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                  label: Text(d == 1 ? 'today' : '$d days'),
+                  selected: _days == d,
+                  onSelected: (_) {
+                    _days = d;
+                    _load();
+                  }),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        if (_err != null) Text(_err!, style: const TextStyle(color: Colors.red)),
+        if (f == null && _err == null) const Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator())),
+        if (f != null) ...[
+          Row(children: [
+            _step('saw the roadmap', f['learn_views'], Icons.map_rounded),
+            _step('started the free week', f['trials_started'], Icons.rocket_launch_rounded),
+            _step('saw the plans', f['unlock_views'], Icons.sell_rounded),
+          ]),
+          Row(children: [
+            _step('tapped a plan', f['plan_clicks'], Icons.touch_app_rounded),
+            _step('pay now (after the free week)', f['paid_after_trial'], Icons.currency_rupee_rounded),
+            const Expanded(child: SizedBox()),
+          ]),
+          const SizedBox(height: 14),
+          Text('Plans asked about', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          if ((f['plans'] as List? ?? []).isEmpty) const Text('None yet.'),
+          for (final p in (f['plans'] as List? ?? []))
+            ListTile(dense: true, title: Text('${p['plan']}'), trailing: Text('${p['visitors']}')),
+          const SizedBox(height: 10),
+          Text('Everyone who starts the free week is in the CRM as "interested" (source web_trial), with a follow-up the '
+              'day before their week ends. Nothing is sent to them automatically.',
+              style: GoogleFonts.inter(fontSize: 12.5, color: Colors.black54)),
+        ],
+      ]),
+    );
+  }
+}
+
 class CrmAutomationScreen extends StatelessWidget {
   const CrmAutomationScreen({super.key});
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-        length: 3,
+        length: 4,
         child: Scaffold(
           appBar: AppBar(
             title: Text('WhatsApp automation', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
-            bottom: const TabBar(tabs: [Tab(text: 'Auto messages'), Tab(text: 'Scheduled'), Tab(text: 'Altron counsellor')]),
+            bottom: const TabBar(isScrollable: true, tabs: [
+              Tab(text: 'Website funnel'),
+              Tab(text: 'Auto messages'),
+              Tab(text: 'Scheduled'),
+              Tab(text: 'Altron counsellor'),
+            ]),
           ),
-          body: const TabBarView(children: [_AutoTab(), _JobsTab(), _CounselTab()]),
+          body: const TabBarView(children: [_FunnelTab(), _AutoTab(), _JobsTab(), _CounselTab()]),
         ),
       );
 }

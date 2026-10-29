@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
 import '../../providers/training_module_provider.dart';
+import '../../services/api_service.dart';
+import '../../widgets/auth_sheet.dart';
 import '../student/student_module_detail_screen.dart';
 
 /// Public roadmap with a free start (29 Oct 2026, founder): anyone sees the whole curriculum by level, starts the
@@ -68,10 +70,51 @@ class LearnScreen extends StatefulWidget {
 }
 
 class _LearnScreenState extends State<LearnScreen> {
+  Map<String, dynamic>? _trial;     // this learner's free week, when signed in
+  bool _starting = false;
+
   @override
   void initState() {
     super.initState();
+    ApiService.funnel('learn_view');
     WidgetsBinding.instance.addPostFrameCallback((_) => context.read<TrainingModuleProvider>().ensureModulesForStudent());
+    ApiService.trialMe().then((t) {
+      if (mounted) setState(() => _trial = t);
+    });
+  }
+
+  bool get _inTrial => _trial?['active'] == true;
+
+  /// The free week: sign in with WhatsApp (if not yet), start it, and reload the modules so everything opens.
+  Future<void> _startTrial() async {
+    if (_starting) return;
+    setState(() => _starting = true);
+    try {
+      var t = await ApiService.trialMe();
+      if (t == null) {
+        if (!mounted) return;
+        final ok = await showAuthSheet(context, reason: 'to start your free week', phoneOnly: true);
+        if (!ok || !mounted) return;
+      }
+      t = await ApiService.startTrial();
+      ApiService.funnel('trial_started');
+      if (!mounted) return;
+      setState(() => _trial = t);
+      await context.read<TrainingModuleProvider>().ensureModulesForStudent(force: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(t['active'] == true
+              ? 'Your free week has started: every module and Altron are open for ${t['days_left']} days.'
+              : 'Your free week is over. The plans are on the next page.')));
+      if (t['active'] != true) context.push('/unlock');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Could not start the free week just now. Please try again.')));
+      }
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
   }
 
   /// The modules the server gives away: the first five published, in course order (training_modules._free_module_ids).
@@ -92,7 +135,8 @@ class _LearnScreenState extends State<LearnScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<TrainingModuleProvider>();
     final byId = {for (final m in p.modules) m.id: m};
-    final free = _free(p.modules);
+    // In the free week every module is open (the server says so too); otherwise the first five.
+    final free = _inTrial ? p.modules.map((m) => m.id).toSet() : _free(p.modules);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -135,9 +179,35 @@ class _LearnScreenState extends State<LearnScreen> {
           Text('From your first LED to a shipped IoT product',
               style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700, height: 1.25)),
           const SizedBox(height: 8),
-          Text('Start free: $freeModules modules, with Altron, our AI trainer, explaining every lesson to you by voice. '
-              'No payment needed to begin.',
+          Text(
+              _inTrial
+                  ? 'Your free week: ${_trial!['days_left']} days left. Every module, the recorded lectures and Altron, '
+                      'our AI trainer, are open to you, and this week\'s live classes are free.'
+                  : 'Try the whole course free for 7 days: every module, recorded lectures, Altron our AI trainer '
+                      'explaining each lesson by voice, and this week\'s live classes. No payment needed.',
               style: GoogleFonts.inter(color: Colors.white70, fontSize: 14.5, height: 1.5)),
+          const SizedBox(height: 16),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            if (!_inTrial && _trial?['started'] != true)
+              FilledButton.icon(
+                onPressed: _starting ? null : _startTrial,
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+                icon: _starting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.rocket_launch_rounded),
+                label: const Text('Start my free week'),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/live-sessions'),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+              icon: const Icon(Icons.live_tv_rounded),
+              label: const Text('Free live classes this week'),
+            ),
+          ]),
         ]),
       );
 
@@ -193,6 +263,8 @@ class _LearnScreenState extends State<LearnScreen> {
               onPressed: () => _start(m),
               style: FilledButton.styleFrom(backgroundColor: AppColors.success),
               child: const Text('Start learning · Free'))
+        else if (_trial?['started'] != true)
+          OutlinedButton(onPressed: _startTrial, child: const Text('Open free for 7 days'))
         else
           OutlinedButton(onPressed: () => _start(m), child: const Text('Unlock to learn')),
       ]),
