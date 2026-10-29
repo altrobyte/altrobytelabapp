@@ -713,6 +713,29 @@ class _ModulesPanelState extends State<ModulesPanel> {
   // title, a line about it, progress and one clear action.
 
   int _tab = 0;     // 0 all, 1 in progress, 2 completed
+  final Set<int> _expanded = {};      // courses opened in the list to show their sections and lessons
+  final Set<int> _collapsed = {};     // the current course, closed by the learner
+
+  bool _isOpen(TrainingModule m) =>
+      !m.locked && (_expanded.contains(m.id) || (identical(m, _current()) && !_collapsed.contains(m.id)));
+
+  void _toggle(TrainingModule m) {
+    if (m.locked) {
+      _openModule(m);
+      return;
+    }
+    final open = _isOpen(m);
+    setState(() {
+      if (open) {
+        _expanded.remove(m.id);
+        _collapsed.add(m.id);
+      } else {
+        _expanded.add(m.id);
+        _collapsed.remove(m.id);
+      }
+    });
+    if (!open) _open(m);          // its lessons (kept on this computer after the first time)
+  }
 
   /// The next lesson of one module: the first open note not done yet.
   ContentItem? _nextIn(TrainingModule m) {
@@ -840,6 +863,20 @@ class _ModulesPanelState extends State<ModulesPanel> {
   /// and one action. The step being worked on stands out.
   Widget _courseRow(TrainingModule m, int n, {bool isLast = false}) {
     final total = _totalOf(m), done = _doneOf(m);
+    final open = _isOpen(m);
+    if (open && _detail[m.id] == null && !_loading.contains(m.id) && _detailProblem[m.id] == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) _open(m); });
+    }
+    final next = _nextIn(m);
+    void go() {
+      if (next != null) {
+        _mark(m.id, next);
+        _note(next);
+      } else {
+        _openModule(m);
+      }
+    }
+
     final finished = total > 0 && done >= total;
     final current = !m.locked && !finished && identical(m, _current());
     final pct = total == 0 ? 0 : (done * 100 / total).round();
@@ -849,8 +886,11 @@ class _ModulesPanelState extends State<ModulesPanel> {
     final meta = m.locked
         ? 'Not unlocked yet'
         : [total == 0 ? 'Lessons inside' : '$total lessons', 'with Altron', if (done > 0) '$pct% complete'].join(' · ');
-    return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    // The line joining the steps sits behind the row (a Stack, not IntrinsicHeight: the open lessons list cannot be
+    // measured that way).
+    return Stack(children: [
+      if (!isLast) Positioned(left: 21, top: 30, bottom: 0, child: Container(width: 2, color: const Color(0xFFDCE2EA))),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
           width: 44,
           child: Column(children: [
@@ -864,19 +904,19 @@ class _ModulesPanelState extends State<ModulesPanel> {
                   ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
                   : Text('$n', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
             ),
-            if (!isLast) Expanded(child: Container(width: 2, color: const Color(0xFFDCE2EA))),
           ]),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(bottom: 14),
-            child: Material(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+             Material(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => _openModule(m),
+                onTap: () => _toggle(m),
                 child: Container(
                   height: 92,
                   decoration: BoxDecoration(
@@ -929,22 +969,40 @@ class _ModulesPanelState extends State<ModulesPanel> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.only(right: 8),
                       child: current
                           ? FilledButton(
-                              onPressed: () => _openModule(m),
+                              onPressed: m.locked ? () => _openModule(m) : go,
                               style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
                               child: Text(action))
-                          : OutlinedButton(onPressed: () => _openModule(m), child: Text(action)),
+                          : OutlinedButton(onPressed: m.locked ? () => _openModule(m) : go, child: Text(action)),
                     ),
+                    if (!m.locked)
+                      IconButton(
+                        tooltip: open ? 'Hide lessons' : 'Show lessons',
+                        onPressed: () => _toggle(m),
+                        icon: Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded),
+                      ),
+                    const SizedBox(width: 6),
                   ]),
                 ),
               ),
             ),
+            // Its sections and lessons, right here (like a course page's contents): the same list as inside the module,
+            // with the order, the locks and the actions.
+            if (open)
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                decoration: BoxDecoration(
+                    color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E6EC))),
+                child: _moduleBody(m),
+              ),
+            ]),
           ),
         ),
       ]),
-    );
+    ]);
   }
 
   /// The step being worked on: the first open module, in course order, not finished.

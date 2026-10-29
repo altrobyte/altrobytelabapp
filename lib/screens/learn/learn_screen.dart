@@ -15,7 +15,7 @@ import '../student/student_module_detail_screen.dart';
 /// free modules right here with Altron explaining them, and is offered the plans (/unlock) after.
 ///
 /// A topic points at the module that teaches it (ids of the published modules on the Altrobyte institute); a topic
-/// with no module yet says "coming soon". The server decides what is free (the first five published modules) and
+/// with no self-paced module is taught in the live programme, and says so (29 Oct 2026, founder: never "coming soon"). The server decides what is free (the first five published modules) and
 /// locks the rest, so a wrong badge here can never open anything.
 class _Topic {
   final String title;
@@ -127,9 +127,6 @@ class _LearnScreenState extends State<LearnScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => StudentModuleDetailScreen(module: m, completedIds: const {})));
   }
 
-  void _notify(String topic) => launchUrl(
-      Uri.parse('https://wa.me/917222977927').replace(queryParameters: {'text': 'Hi, please tell me when "$topic" is ready on Altrobyte.'}),
-      mode: LaunchMode.externalApplication);
 
   @override
   Widget build(BuildContext context) {
@@ -245,19 +242,19 @@ class _LearnScreenState extends State<LearnScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0F1F3)))),
       child: Row(children: [
-        Icon(m == null ? Icons.schedule_rounded : (isFree ? Icons.play_circle_fill_rounded : Icons.lock_rounded),
-            size: 20, color: m == null ? Colors.grey : (isFree ? AppColors.success : AppColors.accent)),
+        Icon(m == null ? Icons.groups_rounded : (isFree ? Icons.play_circle_fill_rounded : Icons.lock_rounded),
+            size: 20, color: m == null ? AppColors.primary : (isFree ? AppColors.success : AppColors.accent)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(t.title, style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            if (m != null)
-              Text(m.title, style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(m?.title ?? 'Live with a mentor, in the product engineering programme',
+                style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),
         ),
         const SizedBox(width: 8),
         if (m == null)
-          TextButton(onPressed: () => _notify(t.title), child: const Text('Coming soon · Notify me'))
+          OutlinedButton(onPressed: () => context.push('/unlock'), child: const Text('Learn live'))
         else if (isFree)
           FilledButton(
               onPressed: () => _start(m),
