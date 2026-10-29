@@ -126,7 +126,22 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
     }
     switch (item.type) {
       case 'notes':
-        await Navigator.push(
+        // The next open note of the module, in course order: the lesson moves on to it by itself when it ends.
+        final notes = [
+          for (final t in (provider.currentModule ?? widget.module).topics)
+            for (final st in t.subtopics)
+              for (final it in st.contentItems)
+                if (it.type == 'notes') it
+        ];
+        final i = notes.indexWhere((n) => n.id == item.id);
+        ContentItem? next;
+        for (final n in i < 0 ? const <ContentItem>[] : notes.skip(i + 1)) {
+          if (!n.locked && (n.htmlContent ?? '').isNotEmpty) {
+            next = n;
+            break;
+          }
+        }
+        final r = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => StudentNotesViewerScreen(
@@ -134,11 +149,13 @@ class _StudentModuleDetailScreenState extends State<StudentModuleDetailScreen> {
               title: item.title,
               htmlContent: item.htmlContent ?? '',
               moduleColor: widget.module.color,
+              nextTitle: next?.title,
             ),
           ),
         );
         // Auto-mark as completed after viewing
         provider.markComplete(widget.module.id, item.id);
+        if (r == 'next' && next != null && mounted) _openContent(provider, next);
         break;
 
       case 'test':
