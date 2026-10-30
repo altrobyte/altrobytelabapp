@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../models/training_module_model.dart';
@@ -238,6 +237,13 @@ class _LearnScreenState extends State<LearnScreen> {
   Widget _topic(_Topic t, Map<int, TrainingModule> byId, Set<int> free) {
     final m = t.moduleId == null ? null : byId[t.moduleId];
     final isFree = m != null && free.contains(m.id);
+    // On a phone the long labels squeezed the topic to a word per line (founder, 30 Oct 2026).
+    final narrow = MediaQuery.sizeOf(context).width < 560;
+    final small = narrow
+        ? const ButtonStyle(
+            padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 14)),
+            visualDensity: VisualDensity.compact)
+        : null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0F1F3)))),
@@ -254,16 +260,16 @@ class _LearnScreenState extends State<LearnScreen> {
         ),
         const SizedBox(width: 8),
         if (m == null)
-          OutlinedButton(onPressed: () => context.push('/unlock'), child: const Text('Learn live'))
+          OutlinedButton(onPressed: () => context.push('/unlock'), style: small, child: const Text('Learn live'))
         else if (isFree)
           FilledButton(
               onPressed: () => _start(m),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.success),
-              child: const Text('Start learning · Free'))
+              style: FilledButton.styleFrom(backgroundColor: AppColors.success).merge(small),
+              child: Text(narrow ? 'Start free' : 'Start learning · Free'))
         else if (_trial?['started'] != true)
-          OutlinedButton(onPressed: _startTrial, child: const Text('Open free for 7 days'))
+          OutlinedButton(onPressed: _startTrial, style: small, child: Text(narrow ? 'Try free' : 'Open free for 7 days'))
         else
-          OutlinedButton(onPressed: () => _start(m), child: const Text('Unlock to learn')),
+          OutlinedButton(onPressed: () => _start(m), style: small, child: Text(narrow ? 'Unlock' : 'Unlock to learn')),
       ]),
     );
   }
