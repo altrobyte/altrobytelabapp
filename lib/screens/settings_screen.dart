@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  static const _supportEmail = 'support@altrobytelab.com';
+  static const _supportEmail = 'pawan@altrobytelab.com';
   static const _supportWa = '917691971623'; // Altrobyte sales/support WhatsApp
   static const _privacyUrl = 'https://coachingclub-bba5c.web.app/privacy.html';
   static const _deleteAccountUrl =
