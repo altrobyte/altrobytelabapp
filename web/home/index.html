@@ -84,6 +84,21 @@
   .unis { margin-top: 18px; display:flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
   .unis span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft); font-size: 13.5px; background: rgba(255,255,255,.03); }
   @media (max-width: 800px) { .stats { grid-template-columns: 1fr 1fr; } }
+  /* proof gallery and the founder's record (30 Oct 2026, from the founder's profile and photos) */
+  .trained { display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 22px; }
+  .trained div { padding: 16px 18px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+  .trained b { display:block; font-family: "Space Grotesk"; font-size: 17px; } .trained span { color: var(--soft); font-size: 13.5px; }
+  .trained .corp { border-color: rgba(217,164,65,.45); } .trained .corp span { color: var(--gold); }
+  .gallery { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; margin-top: 26px; }
+  .gallery figure { margin: 0; position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); min-height: 260px; }
+  .gallery img { width: 100%; height: 100%; object-fit: cover; display:block; transition: transform .6s ease; } .gallery figure:hover img { transform: scale(1.05); }
+  .gallery figcaption { position:absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; font-size: 13.5px; font-weight: 600;
+                        background: linear-gradient(transparent, rgba(5,10,20,.92)); }
+  @media (max-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; } .gallery figure:first-child { grid-column: 1 / -1; } }
+  .record { display:grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; margin-top: 16px; }
+  .record div { padding-left: 16px; border-left: 2px solid var(--line); } .record b { display:block; font-size: 15px; } .record span { color: var(--soft); font-size: 13.5px; }
+  .founder img { width: 120px; height: 120px; border-radius: 28px; object-fit: cover; border: 2px solid rgba(255,106,26,.5); }
+  @media (max-width: 700px) { .record { grid-template-columns: 1fr; } .founder { grid-template-columns: 1fr; } }
   /* Altron */
   .altron { display:grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
   .call { border-radius: 24px; background: linear-gradient(160deg, var(--panel), var(--ink2)); border: 1px solid var(--line); padding: 26px; position: relative; }
@@ -232,6 +247,30 @@
   </div>
 </section>
 
+<section>
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">Proof, not promises</div>
+      <h2>Trained engineers at companies and colleges.</h2>
+      <p class="lead">Corporate teams and engineering colleges have learnt embedded systems, IoT and industrial automation from us, in person.</p>
+    </div>
+    <div class="trained reveal">
+      <div class="corp"><b>JSW MG Motor India</b><span>3-day corporate training · Embedded systems &amp; Industrial IoT</span></div>
+      <div class="corp"><b>Navigo Tech Lab</b><span>2-day corporate training · IoT &amp; Edge AI for vehicle telematics</span></div>
+      <div><b>NIT Raipur</b><span>2-day FDP · IoT, AI + IoT for industrial automation</span></div>
+      <div><b>IIT Bombay × Chameli Devi Group, Indore</b><span>Robotics workshop</span></div>
+      <div><b>Banasthali Vidyapith</b><span>1-week IoT &amp; embedded systems training</span></div>
+      <div><b>SISTec Bhopal · ITM University Gwalior</b><span>IoT &amp; industrial automation workshop · smart talk</span></div>
+    </div>
+    <div class="gallery reveal">
+      <figure><img src="/home/img/workshop.jpg" alt="Pawan Meena with students at an IoT workshop" loading="lazy"><figcaption>A full lab at one of our IoT workshops</figcaption></figure>
+      <figure><img src="/home/img/weighing-scale.jpg" alt="Hi-Fi weighing scale built by Altrobyte Automation" loading="lazy"><figcaption>Hi-Fi weighing scale, built by Altrobyte Automation</figcaption></figure>
+      <figure><img src="/home/img/esp32-pcb.jpg" alt="An ESP32 board designed and made in our lab" loading="lazy"><figcaption>An ESP32 board, designed and made in our lab</figcaption></figure>
+      <figure><img src="/home/img/iot-prototype.jpg" alt="An IoT prototype on the bench" loading="lazy"><figcaption>An IoT prototype on our bench</figcaption></figure>
+    </div>
+  </div>
+</section>
+
 <section id="altron">
   <div class="wrap altron">
     <div class="reveal">
@@ -338,12 +377,19 @@
 <section>
   <div class="wrap">
     <div class="founder reveal">
-      <div class="avatar">PM</div>
+      <img src="/home/img/pawan.jpg" alt="Pawan Meena">
       <div>
-        <div class="kicker">Built by a product engineer</div>
-        <h3 style="font-size:24px;margin:6px 0">Pawan Meena, founder</h3>
-        <p style="color:var(--soft)">Product engineer and founder of Altrobyte Automation Pvt. Ltd., Indore. Studied at SISTec Bhopal. Altrobyte started with one idea: engineers learn fastest by building things that work, with someone beside them. Altron is that someone, for everyone, at any hour.</p>
-        <div class="unis" style="justify-content:flex-start;margin-top:12px"><span>Embedded systems</span><span>PCB design</span><span>Firmware</span><span>CAN bus &amp; telematics</span><span>FreeRTOS</span><span>STM32 · ESP32</span><span>Edge AI</span><span>Industrial automation</span></div>
+        <div class="kicker">Who teaches you</div>
+        <h3 style="font-size:24px;margin:6px 0">Pawan Meena, founder of Altrobyte Automation</h3>
+        <p style="color:var(--soft)">5+ years building and validating real hardware: motor-driven and sensor-driven machines, vehicle telematics and industrial IoT, on STM32, FreeRTOS and Embedded C. B.Tech, SISTec Bhopal. Altrobyte teaches the way he learnt: by building things that have to work outside the lab.</p>
+        <div class="record">
+          <div><b>Sr. IoT Engineer · Heximpact Tech</b><span>CAN, telematics, GPS and RP1210 for Eicher smart vehicles; FOTA</span></div>
+          <div><b>Sr. IoT Engineer · Navigo Tech Lab</b><span>Led the team on CAN telematics and vehicle tracking</span></div>
+          <div><b>R&amp;D Engineer · Scientech Technology</b><span>Embedded systems projects and new technologies</span></div>
+          <div><b>Embedded intern · Mahindra TEQO</b><span>Surveillance security robots</span></div>
+          <div><b>Built</b><span>IoT 3-phase motor starter, automated breadmaker, predictive-maintenance logger, PPE detection with vision, an IoT cloud platform</span></div>
+          <div><b>Award</b><span>Best Innovative Project, Shrijan 2k19 (AICTE, state level)</span></div>
+        </div>
         <a href="/founder" style="display:inline-block;margin-top:14px;color:var(--orange2);font-weight:700">More about Pawan →</a>
       </div>
     </div>
