@@ -98,6 +98,10 @@
   .gallery figcaption { position:absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; font-size: 13.5px; font-weight: 600;
                         background: linear-gradient(transparent, rgba(5,10,20,.92)); }
   @media (max-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; grid-auto-rows: 220px; } .gallery figure:first-child { grid-column: 1 / -1; grid-row: span 1; } }
+  .then-now { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; max-width: 520px; }
+  .then-now figure { margin:0; position:relative; border-radius: 14px; overflow:hidden; border: 1px solid var(--line); height: 190px; }
+  .then-now img { width:100%; height:100%; object-fit: cover; display:block; }
+  .then-now figcaption { position:absolute; left:0; right:0; bottom:0; padding: 22px 10px 8px; font-size: 12.5px; font-weight: 600; background: linear-gradient(transparent, rgba(0,0,0,.75)); color:#fff; }
   .campus { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
   .campus figure { margin:0; position:relative; border-radius: 18px; overflow:hidden; border: 1px solid var(--line); height: 250px; }
   .campus img { width:100%; height:100%; object-fit: cover; display:block; transition: transform .6s ease; } .campus figure:hover img { transform: scale(1.05); }
@@ -295,6 +299,8 @@
     <div class="campus reveal" style="grid-template-columns:repeat(2,1fr)">
       <figure><img src="/home/img/client-nanotech.jpg" alt="A device built for the client Nanotech" loading="lazy"><figcaption>A device built for Nanotech: electronics and enclosure</figcaption></figure>
       <figure><img style="object-position:50% 35%" src="/home/img/client-iot-logger.jpg" alt="IoT data logger built for Oxbow Intellect" loading="lazy"><figcaption>IoT data logger, built for Oxbow Intellect</figcaption></figure>
+      <figure><img src="/home/img/client-logger-batch.jpg" alt="A batch of Oxbow IoT data loggers ready for delivery" loading="lazy"><figcaption>A production batch of Oxbow data loggers, ready to ship</figcaption></figure>
+      <figure><img style="object-position:50% 60%" src="/home/img/relay-board.jpg" alt="A relay control board under test on the Altrobyte bench" loading="lazy"><figcaption>A relay control board under test on our bench</figcaption></figure>
     </div>
     <div class="feature reveal">
       <img src="/home/img/conveyor-monitoring.jpg" alt="Industrial conveyor monitoring system by Altrobyte at an industry expo" loading="lazy">
@@ -425,6 +431,10 @@
         <h3 style="font-size:24px;margin:6px 0">Pawan Meena, founder of Altrobyte Automation</h3>
         <p style="color:var(--soft)">5+ years building and validating real hardware: motor-driven and sensor-driven machines, vehicle telematics and industrial IoT, on STM32, FreeRTOS and Embedded C. B.Tech, SISTec Bhopal. Altrobyte teaches the way he learnt: by building things that have to work outside the lab.</p>
         <p style="color:var(--text);font-weight:600;margin-top:10px">It started in 2020 with a first prototype wired into a plastic lunchbox at home. Today Altrobyte builds devices in batches for clients, and teaches the same path.</p>
+        <div class="then-now">
+          <figure><img src="/home/img/start-2020.jpg" alt="Pawan with his first prototype in a lunchbox, 2020" loading="lazy"><figcaption>2020: the first prototype, in a lunchbox</figcaption></figure>
+          <figure><img style="object-position:50% 45%" src="/home/img/pcb-today.jpg" alt="Pawan holding a custom PCB designed at Altrobyte" loading="lazy"><figcaption>Today: our own PCBs</figcaption></figure>
+        </div>
         <div class="record">
           <div><b>Sr. IoT Engineer · Heximpact Tech</b><span>CAN, telematics, GPS and RP1210 for Eicher smart vehicles; FOTA</span></div>
           <div><b>Sr. IoT Engineer · Navigo Tech Lab</b><span>Led the team on CAN telematics and vehicle tracking</span></div>
