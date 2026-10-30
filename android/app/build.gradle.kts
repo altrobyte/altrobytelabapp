@@ -55,8 +55,10 @@ android {
     // from a signed APK, never the Play Store.
     flavorDimensions += "app"
     productFlavors {
+        // The learner app on the Play Store (Play Console draft "Altrobyte Lab", 30 Oct 2026).
         create("lab") {
             dimension = "app"
+            applicationId = "com.altrobyte.altrobytelab"
         }
         create("caller") {
             dimension = "app"
