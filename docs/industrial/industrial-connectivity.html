@@ -15,7 +15,7 @@
           background: radial-gradient(120% 140% at 85% 10%, #3A2414 0%, #1B1410 35%, var(--ink) 70%); }
   .hero svg.plant { position:absolute; right:-10px; bottom:0; width: 62%; max-width: 560px; opacity:.95; }
   .hero .tag { font: 700 12px/1 "Segoe UI", sans-serif; letter-spacing: 3px; color: var(--gold); }
-  .hero h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
+  .hero .h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
   .hero p { margin: 0; color:#D8DEE6; max-width: 470px; position:relative; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; position:relative; max-width: 400px; }
   .chips span { font-size: 12.5px; font-weight:600; border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:4px 11px; background:rgba(255,255,255,.06); }
@@ -63,7 +63,22 @@
   .shake { animation: shake .25s linear 3; }
   @keyframes flick { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.12)} }
   .flame { transform-origin: bottom center; animation: flick .5s ease-in-out infinite; transform-box: fill-box; }
-  @media (max-width: 640px) { .hero h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
+
+  /* motion (30 Oct 2026, founder: the lessons need animation) */
+  @media (prefers-reduced-motion: no-preference) {
+    section.rv { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+    section.rv.in { opacity: 1; transform: none; }
+    .tile, .lab, .q { transition: transform .25s ease, box-shadow .25s ease; }
+    .tile:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -14px rgba(14,26,43,.45); }
+    .hero .h1, .hero p, .hero .chips, .hero .meta, .hero .tag { animation: up .8s ease both; }
+    .hero p { animation-delay: .12s; } .hero .chips { animation-delay: .24s; } .hero .meta { animation-delay: .36s; }
+    .spot:not(.found) circle.ring { animation: hint 2.6s ease-in-out infinite; }
+    .pill { animation: none; }
+  }
+  @keyframes up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes hint { 0%,100% { stroke: rgba(217,164,65,0); } 50% { stroke: rgba(217,164,65,.35); } }
+  @keyframes count { from { opacity: .2; } to { opacity: 1; } }
+  @media (max-width: 640px) { .hero .h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
 </style>
 </head>
 <body>
@@ -71,7 +86,7 @@
 <div class="hero" style="background: radial-gradient(120% 140% at 85% 10%, #0F3B3A 0%, #0E1A2B 55%, #0A1220 100%);">
   <svg class="plant" viewBox="0 0 560 300" aria-hidden="true">
     <g stroke="#127A78" stroke-width="2" opacity=".8"><line x1="300" y1="70" x2="400" y2="140"/><line x1="500" y1="70" x2="400" y2="140"/><line x1="400" y1="140" x2="300" y2="220"/><line x1="400" y1="140" x2="500" y2="220"/><line x1="400" y1="140" x2="400" y2="240"/></g>
-    <circle cx="400" cy="140" r="30" fill="#0E1A2B" stroke="#4ADE80" stroke-width="3"/><text x="400" y="146" text-anchor="middle" fill="#4ADE80" font-size="15" font-weight="700">PLC</text>
+    <circle cx="400" cy="140" r="30" fill="none" stroke="#4ADE80" stroke-width="2" opacity=".5"><animate attributeName="r" values="30;38;30" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".5;0;.5" dur="2s" repeatCount="indefinite"/></circle><circle cx="400" cy="140" r="30" fill="#0E1A2B" stroke="#4ADE80" stroke-width="3"/><text x="400" y="146" text-anchor="middle" fill="#4ADE80" font-size="15" font-weight="700">PLC</text>
     <rect x="270" y="50" width="60" height="38" rx="6" fill="#22324A" stroke="#D9A441"/><text x="300" y="74" text-anchor="middle" fill="#D9A441" font-size="12">SCADA</text>
     <rect x="470" y="50" width="60" height="38" rx="6" fill="#22324A" stroke="#D9A441"/><text x="500" y="74" text-anchor="middle" fill="#D9A441" font-size="12">Cloud</text>
     <circle cx="300" cy="225" r="16" fill="#22324A" stroke="#9FB0C3"/><circle cx="500" cy="225" r="16" fill="#22324A" stroke="#9FB0C3"/><circle cx="400" cy="250" r="16" fill="#22324A" stroke="#9FB0C3"/>
@@ -80,7 +95,7 @@
     <rect x="0" y="270" width="560" height="30" fill="#0A1220"/>
   </svg>
   <div class="tag">ALTROBYTE INDUSTRIAL · INDUSTRY 4.0</div>
-  <h1>Industrial connectivity: from sensor to cloud.</h1>
+  <div class="h1">Industrial connectivity: from sensor to cloud.</div>
   <p>How a rolling mill's sensors, PLCs, SCADA and cloud dashboards talk to each other, and how that data turns into fewer breakdowns.</p>
   <div class="chips"><span>Automation pyramid</span><span>4-20 mA</span><span>Fieldbus</span><span>OPC UA</span><span>MQTT</span><span>Predictive maintenance</span><span>OT security</span></div>
   <div class="meta"><div><b>7</b>sections</div><div><b>5</b>hands-on drills</div><div><b>8</b>question test</div><div><b>70%</b>to pass</div></div>
@@ -274,5 +289,19 @@ payload: {"mm_s": 4.2, "ts": "2026-10-30T09:15:00+05:30"}</pre>
 })();
 </script>
 
+<script>
+(function () {   // sections rise into view as the page reaches them; numbers count up in the hero
+  var secs = document.querySelectorAll('main > section');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); },
+      { rootMargin: '0px 0px -8% 0px' });
+    Array.prototype.forEach.call(secs, function (s, i) { if (i > 0) { s.classList.add('rv'); io.observe(s); } });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.meta b'), function (b) {
+    var m = b.textContent.match(/^(\d+)(.*)$/); if (!m) return; var to = +m[1], k = 0;
+    var t = setInterval(function () { k++; b.textContent = Math.round(to * k / 20) + m[2]; if (k >= 20) clearInterval(t); }, 40);
+  });
+})();
+</script>
 </body>
 </html>

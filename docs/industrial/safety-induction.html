@@ -15,7 +15,7 @@
           background: radial-gradient(120% 140% at 85% 10%, #3A2414 0%, #1B1410 35%, var(--ink) 70%); }
   .hero svg.plant { position:absolute; right:-10px; bottom:0; width: 62%; max-width: 560px; opacity:.95; }
   .hero .tag { font: 700 12px/1 "Segoe UI", sans-serif; letter-spacing: 3px; color: var(--gold); }
-  .hero h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
+  .hero .h1 { font: 800 40px/1.08 "Segoe UI", sans-serif; margin: 12px 0 10px; max-width: 520px; position:relative; }
   .hero p { margin: 0; color:#D8DEE6; max-width: 470px; position:relative; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; position:relative; max-width: 400px; }
   .chips span { font-size: 12.5px; font-weight:600; border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:4px 11px; background:rgba(255,255,255,.06); }
@@ -63,7 +63,22 @@
   .shake { animation: shake .25s linear 3; }
   @keyframes flick { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.12)} }
   .flame { transform-origin: bottom center; animation: flick .5s ease-in-out infinite; transform-box: fill-box; }
-  @media (max-width: 640px) { .hero h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
+
+  /* motion (30 Oct 2026, founder: the lessons need animation) */
+  @media (prefers-reduced-motion: no-preference) {
+    section.rv { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+    section.rv.in { opacity: 1; transform: none; }
+    .tile, .lab, .q { transition: transform .25s ease, box-shadow .25s ease; }
+    .tile:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -14px rgba(14,26,43,.45); }
+    .hero .h1, .hero p, .hero .chips, .hero .meta, .hero .tag { animation: up .8s ease both; }
+    .hero p { animation-delay: .12s; } .hero .chips { animation-delay: .24s; } .hero .meta { animation-delay: .36s; }
+    .spot:not(.found) circle.ring { animation: hint 2.6s ease-in-out infinite; }
+    .pill { animation: none; }
+  }
+  @keyframes up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes hint { 0%,100% { stroke: rgba(217,164,65,0); } 50% { stroke: rgba(217,164,65,.35); } }
+  @keyframes count { from { opacity: .2; } to { opacity: 1; } }
+  @media (max-width: 640px) { .hero .h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } }
 </style>
 </head>
 <body>
@@ -83,8 +98,9 @@
     <rect x="380" y="130" width="150" height="110" fill="url(#steel)"/>
     <path d="M380 130 L410 105 L440 130 L470 105 L500 130 L530 105 L530 130 Z" fill="#2B394D"/>
     <rect x="60" y="150" width="120" height="90" fill="url(#steel)"/>
-    <rect x="70" y="120" width="160" height="8" fill="#55657B"/><rect x="140" y="128" width="6" height="40" fill="#55657B"/>
-    <rect x="128" y="168" width="30" height="20" rx="3" fill="#D9A441"/>
+    <rect x="70" y="120" width="160" height="8" fill="#55657B"/><g opacity=".55"><circle cx="313" cy="36" r="9" fill="#5B6573"><animate attributeName="cy" values="36;-20" dur="5s" repeatCount="indefinite"/><animate attributeName="r" values="7;20" dur="5s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0" dur="5s" repeatCount="indefinite"/></circle><circle cx="351" cy="66" r="7" fill="#5B6573"><animate attributeName="cy" values="66;0" dur="6s" begin="1.5s" repeatCount="indefinite"/><animate attributeName="r" values="6;18" dur="6s" begin="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values=".6;0" dur="6s" begin="1.5s" repeatCount="indefinite"/></circle></g>
+    <g fill="#FFD27A"><circle cx="230" cy="232" r="2"><animate attributeName="cy" values="232;200;246" dur="1.4s" repeatCount="indefinite"/><animate attributeName="cx" values="230;214;206" dur="1.4s" repeatCount="indefinite"/></circle><circle cx="250" cy="232" r="2"><animate attributeName="cy" values="232;196;246" dur="1.7s" begin=".4s" repeatCount="indefinite"/><animate attributeName="cx" values="250;268;280" dur="1.7s" begin=".4s" repeatCount="indefinite"/></circle><circle cx="240" cy="230" r="1.6"><animate attributeName="cy" values="230;190;246" dur="2s" begin=".8s" repeatCount="indefinite"/></circle></g>
+    <g><animateTransform attributeName="transform" type="rotate" values="-3 143 128;3 143 128;-3 143 128" dur="3.5s" repeatCount="indefinite"/><rect x="140" y="128" width="6" height="40" fill="#55657B"/><rect x="128" y="168" width="30" height="20" rx="3" fill="#D9A441"/></g>
     <ellipse cx="240" cy="246" rx="70" ry="10" fill="url(#glow)" opacity=".9"/>
     <path d="M222 236 q18 -30 36 0" fill="url(#glow)" class="flame"/>
     <circle cx="210" cy="210" r="2" fill="#FFD27A"/><circle cx="268" cy="200" r="2.5" fill="#FFD27A"/><circle cx="250" cy="185" r="1.8" fill="#FFD27A"/>
@@ -92,7 +108,7 @@
     <rect x="0" y="252" width="560" height="4" fill="#D9A441" opacity=".5"/>
   </svg>
   <div class="tag">ALTROBYTE INDUSTRIAL · SAFETY INDUCTION</div>
-  <h1>Go home safe, every shift.</h1>
+  <div class="h1">Go home safe, every shift.</div>
   <p>The induction every new joiner and contract worker takes before stepping into an integrated steel plant. Watch, try, and pass the test at the end.</p>
   <div class="chips"><span>Spot the hazard</span><span>PPE</span><span>Lockout-Tagout</span><span>Hot metal &amp; cranes</span><span>Gas safety</span><span>Fire</span><span>Height</span><span>Emergency</span></div>
   <div class="meta"><div><b>10</b>sections</div><div><b>6</b>hands-on drills</div><div><b>8</b>question test</div><div><b>70%</b>to pass</div></div>
@@ -117,8 +133,7 @@
       <rect x="0" y="296" width="800" height="6" fill="#D9A441" opacity=".6"/>
       <!-- crane girder and hook with load -->
       <rect x="40" y="30" width="720" height="16" fill="#46566D"/><rect x="300" y="46" width="50" height="22" fill="#D9A441"/>
-      <line x1="325" y1="68" x2="325" y2="170" stroke="#9AA8BA" stroke-width="3"/>
-      <rect x="285" y="170" width="80" height="40" rx="4" fill="#7B8798"/>
+      <g><animateTransform attributeName="transform" type="rotate" values="-2.5 325 68;2.5 325 68;-2.5 325 68" dur="3s" repeatCount="indefinite"/><line x1="325" y1="68" x2="325" y2="170" stroke="#9AA8BA" stroke-width="3"/><rect x="285" y="170" width="80" height="40" rx="4" fill="#7B8798"/></g>
       <!-- worker under the load -->
       <g><circle cx="330" cy="248" r="11" fill="#E8B88A"/><rect x="320" y="259" width="20" height="36" rx="5" fill="#2F6FB5"/></g>
       <!-- oil spill -->
@@ -449,6 +464,20 @@
       : ang > 78 ? ang + '°: too steep, it can tip backwards when you lean.' : ang + '°: too flat, the foot can slide out.';
   }
   $('ladIn').oninput = lad; lad();
+})();
+</script>
+<script>
+(function () {   // sections rise into view as the page reaches them; numbers count up in the hero
+  var secs = document.querySelectorAll('main > section');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); },
+      { rootMargin: '0px 0px -8% 0px' });
+    Array.prototype.forEach.call(secs, function (s, i) { if (i > 0) { s.classList.add('rv'); io.observe(s); } });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.meta b'), function (b) {
+    var m = b.textContent.match(/^(\d+)(.*)$/); if (!m) return; var to = +m[1], k = 0;
+    var t = setInterval(function () { k++; b.textContent = Math.round(to * k / 20) + m[2]; if (k >= 20) clearInterval(t); }, 40);
+  });
 })();
 </script>
 </body>

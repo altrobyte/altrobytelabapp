@@ -110,7 +110,7 @@ Future<bool> runIndustrialTraining(BuildContext context, int plantId, IndProgram
   final worker = await showDialog<Map<String, dynamic>>(context: context, builder: (_) => _WorkerDialog(plantId: plantId, programme: p));
   if (worker == null || !context.mounted) return false;
   final started = DateTime.now();
-  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi')));
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false)));
   if (!context.mounted) return false;
   final minutes = DateTime.now().difference(started).inMinutes;
   final result = await Navigator.of(context).push<Map<String, dynamic>>(

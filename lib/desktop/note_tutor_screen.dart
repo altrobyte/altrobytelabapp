@@ -42,8 +42,12 @@ class NoteTutorScreen extends StatefulWidget {
 
   /// The language Altron starts in, whatever the learner chose last (industrial training starts in Hindi for workers).
   final String? lang;
+
+  /// Carry on where this computer left the note. Off for industrial training: each worker is someone new and starts at
+  /// the top (30 Oct 2026: a worker's lesson began at the previous worker's section).
+  final bool resume;
   const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml,
-      this.nextTitle, this.lang});
+      this.nextTitle, this.lang, this.resume = true});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -415,10 +419,17 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         if (msg?['type'] == 'section' && part != null && part >= 1) {
           t.reading('s${part - 1}', bring: true);
           // Where Altron got to: opening this note again carries on from here.
-          SharedPreferences.getInstance().then((p) => p.setInt('note_part_${widget.contentId}', part));
+          if (widget.resume) SharedPreferences.getInstance().then((p) => p.setInt('note_part_${widget.contentId}', part));
         }
       });
-      final from = (await SharedPreferences.getInstance()).getInt('note_part_${widget.contentId}') ?? 0;
+      final from = widget.resume ? (await SharedPreferences.getInstance()).getInt('note_part_${widget.contentId}') ?? 0 : 0;
+      // The page goes to where Altron carries on, at once: it said section 4 while the page still showed the top.
+      if (from > 1) {
+        for (var i = 0; i < 20 && !_webReady && mounted; i++) {
+          await Future.delayed(const Duration(milliseconds: 250));
+        }
+        _show('s${from - 1}', true);
+      }
       await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from, strip: true); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
