@@ -29,11 +29,16 @@ SETUP = "AltrobyteTrainerSetup.exe"
 
 def live(name: str):
     """The live description file, or None when the site has none (it answers with its home page instead)."""
-    try:
-        with urllib.request.urlopen(f"{SITE}/{name}", timeout=20) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except Exception:       # noqa: BLE001
-        return None
+    # Tried three times: one slow answer used to read as "nothing is live", and the build then left the live download out.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(f"{SITE}/{name}", timeout=20) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except json.JSONDecodeError:
+            return None                  # the home page came back: nothing of that name is live
+        except Exception:       # noqa: BLE001
+            if attempt == 2:
+                return None
 
 
 def sha(path: Path) -> str:
