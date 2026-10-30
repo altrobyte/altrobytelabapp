@@ -59,6 +59,11 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
     bool isPaid = ((existing?['price'] as num?) ?? 0) > 0;
     bool featured = existing?['is_featured'] == true;
     bool alwaysOpen = existing?['registration_always_open'] == true;
+    // A class that repeats every week on these days (0 = Mon .. 6 = Sun), at the start date's time (30 Oct 2026).
+    final repeat = <int>{
+      for (final x in '${existing?['repeat_days'] ?? ''}'.split(','))
+        if (int.tryParse(x.trim()) != null) int.parse(x.trim())
+    };
     int? linkedModuleId = existing?['linked_module_id'] as int?;
     List<dynamic> availableModules = [];
     try {
@@ -238,6 +243,22 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                   activeColor: AppColors.accent,
                 ),
                 const SizedBox(height: 6),
+                const Text('Repeats every week on', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('Pick days for a class that runs again and again (every Sat and Sun, Mon to Fri). It shows its next '
+                    'run at the start time and never closes. None picked = a one-time class.',
+                    style: TextStyle(fontSize: 12)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final d in const [(0, 'Mon'), (1, 'Tue'), (2, 'Wed'), (3, 'Thu'), (4, 'Fri'), (5, 'Sat'), (6, 'Sun')])
+                    FilterChip(
+                      label: Text(d.$2),
+                      selected: repeat.contains(d.$1),
+                      onSelected: (v) => setSheetState(() => v ? repeat.add(d.$1) : repeat.remove(d.$1)),
+                    ),
+                  ActionChip(label: const Text('Sat + Sun'), onPressed: () => setSheetState(() => repeat..clear()..addAll([5, 6]))),
+                  ActionChip(label: const Text('Mon to Fri'), onPressed: () => setSheetState(() => repeat..clear()..addAll([0, 1, 2, 3, 4]))),
+                ]),
+                const SizedBox(height: 6),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Feature on home page'),
@@ -297,6 +318,7 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                         'redirect_link': redirectCtrl.text.trim(),
                         'is_featured': featured,
                         'registration_always_open': alwaysOpen,
+                        'repeat_days': (repeat.toList()..sort()).join(','),
                         'price': isPaid ? (double.tryParse(priceCtrl.text.trim()) ?? 0) : 0,
                         'tax_percent': isPaid ? (double.tryParse(taxCtrl.text.trim()) ?? 0) : 0,
                         'booking_amount':

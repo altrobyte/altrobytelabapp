@@ -98,7 +98,7 @@
   function card(s) {
     var over = past(s);
     return '<a class="card" href="/live-sessions/' + s.id + '">' + (s.banner_url ? '<img loading="lazy" src="' + esc(s.banner_url) + '" alt="">' : '') +
-      '<div class="b"><b>' + esc(s.title) + '</b><span class="muted" style="font-size:13.5px">' + when(s.session_date) + '</span>' +
+      '<div class="b"><b>' + esc(s.title) + '</b><span class="muted" style="font-size:13.5px">' + (s.repeat_label ? '🔁 ' + esc(s.repeat_label) + ' · next ' : '') + when(s.session_date) + '</span>' +
       (over ? '<span class="ended">Ended</span>' : priceHtml(s).replace('class="price"', 'class="price" style="font-size:20px;margin:0"')) + '</div></a>';
   }
   if (!m) {
@@ -121,7 +121,7 @@
     var main = over ? '<span class="ended">This class has ended</span>' :
       '<a class="btn btn-main" href="' + go + '">' + (free ? 'Register free' : 'Register now') + '</a>';
     app.innerHTML = '<div class="hero">' + (s.banner_url ? '<img class="poster" src="' + esc(s.banner_url) + '" alt="">' : '<div></div>') +
-      '<div><h1>' + esc(s.title) + '</h1><div class="chips"><span class="chip">📅 ' + when(s.session_date) + '</span>' +
+      '<div><h1>' + esc(s.title) + '</h1><div class="chips">' + (s.repeat_label ? '<span class="chip" style="border-color:var(--cyan);color:var(--cyan)">🔁 ' + esc(s.repeat_label) + '</span>' : '') + '<span class="chip">📅 ' + (s.repeat_label ? 'Next: ' : '') + when(s.session_date) + '</span>' +
       (s.duration_minutes ? '<span class="chip">⏱ ' + (s.duration_minutes >= 60 ? (s.duration_minutes / 60) + (s.duration_minutes === 60 ? ' hour' : ' hours') : s.duration_minutes + ' min') + '</span>' : '') +
       (s.platform ? '<span class="chip">🎥 Live on ' + esc(s.platform) + '</span>' : '') + (s.host_name ? '<span class="chip">👤 ' + esc(s.host_name) + '</span>' : '') +
       (s.registration_count > 5 ? '<span class="chip">✅ ' + s.registration_count + ' registered</span>' : '') + '</div>' +
