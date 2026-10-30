@@ -59,11 +59,21 @@
       },
       {
         "//": "The app shell. None of these carry a content hash, so a cached copy pins a visitor to whatever version they first loaded. flutter_bootstrap.js is the entry point and was being cached for a year, which is why some people saw a build from days ago while others saw today's.",
-        "source": "/@(index.html|main.dart.js|flutter_bootstrap.js|flutter.js|flutter_service_worker.js|version.json|manifest.json)",
+        "source": "/@(index.html|flutter_bootstrap.js|flutter.js|flutter_service_worker.js|version.json|manifest.json)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "//": "The 6.5 MB app code: no-store made every visit download it again. no-cache keeps it fresh (the browser asks, and a 304 comes back when it has not changed) without the download (30 Oct 2026).",
+        "source": "/main.dart.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
           }
         ]
       },
