@@ -69,6 +69,12 @@ android {
             applicationId = "com.altrobyte.altron"
             minSdk = 26
         }
+        // Altrobyte Industrial on a plant's tablet: lib/industrial/industrial_main.dart, manifest in src/industrial.
+        create("industrial") {
+            dimension = "app"
+            applicationId = "com.altrobyte.industrial"
+            minSdk = 26
+        }
     }
 
     buildTypes {

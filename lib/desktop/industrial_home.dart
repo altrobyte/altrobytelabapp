@@ -12,7 +12,9 @@ import 'visual_page.dart' show openExternal;
 /// On a team login it is live (30 Oct 2026): workers are trained here and the plant head's view is the real record. On any
 /// other login it shows what a plant gets, with an example plant said to be one.
 class IndustrialHome extends StatefulWidget {
-  const IndustrialHome({super.key});
+  /// The lesson screen of the device: the tablet passes its own; the desktop uses the note tutor.
+  final Widget Function(IndProgramme p)? lesson;
+  const IndustrialHome({super.key, this.lesson});
 
   static const ink = indInk;
   static const gold = indGold;
@@ -63,15 +65,22 @@ class _IndustrialHomeState extends State<IndustrialHome> {
     }
   }
 
-  void _talk(String about) => openExternal('https://wa.me/917222977927?text=${Uri.encodeComponent(
-      'Hello Altrobyte, I would like to know about industrial training for our plant ($about).')}');
+  void _talk(String about) {
+    final url = 'https://wa.me/917222977927?text=${Uri.encodeComponent(
+        'Hello Altrobyte, I would like to know about industrial training for our plant ($about).')}';
+    if (Platform.isWindows) {
+      openExternal(url);
+    } else {
+      indOpenUrl?.call(url);
+    }
+  }
 
   Future<void> _train(IndProgramme p) async {
     if (!_live || _plantId == null) {
       _talk(p.title);
       return;
     }
-    final done = await runIndustrialTraining(context, _plantId!, p);
+    final done = await runIndustrialTraining(context, _plantId!, p, lesson: widget.lesson);
     if (done && mounted) {
       setState(() => _programme = p.key);
       await _loadView();
@@ -83,6 +92,12 @@ class _IndustrialHomeState extends State<IndustrialHome> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final csv = await ApiService.industrialReport(_plantId!);
+      if (!Platform.isWindows) {
+        final f = File('${Directory.systemTemp.path}/training-record.csv');
+        await f.writeAsString(csv);
+        await indShareFile?.call(f.path, 'text/csv', 'Training record');
+        return;
+      }
       final home = Platform.environment['USERPROFILE'] ?? Directory.systemTemp.path;
       final dir = Directory('$home\\Downloads');
       await dir.create(recursive: true);

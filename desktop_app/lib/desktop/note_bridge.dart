@@ -17,6 +17,7 @@ const noteBridgeScript = r"""
 (function () {
   function post(m) {
     try { window.chrome.webview.postMessage(m); } catch (e) {}
+    try { if (window.AltronHost) window.AltronHost.postMessage(JSON.stringify(m)); } catch (e) {}   // the tablet app
     // On the website the note sits in a frame of the note page: the same messages go to it.
     try { if (!(window.chrome && window.chrome.webview) && window.parent !== window) window.parent.postMessage(JSON.stringify(m), '*'); } catch (e) {}
   }

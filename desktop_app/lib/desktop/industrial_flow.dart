@@ -101,17 +101,24 @@ const indProgrammes = [
   ]),
 ];
 
+/// Set by the tablet app (it has share_plus and url_launcher; the desktop app does not): hands a file to another app, and
+/// opens a link. Null on the desktop, which saves and opens files itself.
+Future<void> Function(String path, String mime, String subject)? indShareFile;
+Future<void> Function(String url)? indOpenUrl;
+
 const indDepartments = ['Production', 'Maintenance', 'Quality', 'Stores & logistics', 'Contract workforce', 'Office & admin'];
 
 String indVerifyUrl(String cert) => 'https://altrobytelab.com/verify/?c=$cert';
 
 /// Registers the worker, runs the lesson and the test, records the result, and shows the certificate.
 /// Returns true when a result was recorded (the plant view refreshes).
-Future<bool> runIndustrialTraining(BuildContext context, int plantId, IndProgramme p) async {
+/// [lesson] is the lesson screen of the device (the tablet has its own); by default the desktop's note tutor.
+Future<bool> runIndustrialTraining(BuildContext context, int plantId, IndProgramme p, {Widget Function(IndProgramme p)? lesson}) async {
   final worker = await showDialog<Map<String, dynamic>>(context: context, builder: (_) => _WorkerDialog(plantId: plantId, programme: p));
   if (worker == null || !context.mounted) return false;
   final started = DateTime.now();
-  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false, audience: 'worker')));
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => lesson?.call(p) ??
+      NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false, audience: 'worker')));
   if (!context.mounted) return false;
   final minutes = DateTime.now().difference(started).inMinutes;
   final result = await Navigator.of(context).push<Map<String, dynamic>>(
@@ -445,6 +452,13 @@ class IndustrialCertificateScreen extends StatelessWidget {
 
   /// The certificate as a printable page (A4 landscape), saved in Documents\Altrobyte Certificates and opened in the browser.
   static Future<String> saveAndOpen(Map<String, dynamic> r) async {
+    if (!Platform.isWindows) {
+      // The tablet: the page is shared (to a printer app, WhatsApp or Drive), where it prints or saves as PDF.
+      final f = File('${Directory.systemTemp.path}/${r['cert_no']}.html');
+      await f.writeAsString(certificateHtml(r));
+      await indShareFile?.call(f.path, 'text/html', 'Certificate ${r['cert_no']}');
+      return f.path;
+    }
     final home = Platform.environment['USERPROFILE'] ?? Directory.systemTemp.path;
     final dir = Directory('$home\\Documents\\Altrobyte Certificates');
     await dir.create(recursive: true);
