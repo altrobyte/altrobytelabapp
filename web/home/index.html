@@ -96,6 +96,13 @@
   .gallery figcaption { position:absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; font-size: 13.5px; font-weight: 600;
                         background: linear-gradient(transparent, rgba(5,10,20,.92)); }
   @media (max-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; grid-auto-rows: 220px; } .gallery figure:first-child { grid-column: 1 / -1; grid-row: span 1; } }
+  .feature { display:grid; grid-template-columns: 1.3fr 1fr; gap: 0; margin-top: 16px; border-radius: 20px; overflow: hidden;
+             border: 1px solid rgba(217,164,65,.45); background: linear-gradient(140deg, #0B1424, #1B2D4F); }
+  .feature img { width: 100%; height: 100%; object-fit: cover; display:block; min-height: 300px; }
+  .feature > div { padding: 30px; } .feature .kicker { color: var(--gold); }
+  .feature ul { list-style:none; padding:0; margin: 14px 0 0; display:grid; gap: 8px; color: var(--soft); font-size: 15px; }
+  .feature li::before { content: '◆'; color: var(--gold); margin-right: 10px; font-size: 11px; }
+  @media (max-width: 900px) { .feature { grid-template-columns: 1fr; } }
   .record { display:grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; margin-top: 16px; }
   .record div { padding-left: 16px; border-left: 2px solid var(--line); } .record b { display:block; font-size: 15px; } .record span { color: var(--soft); font-size: 13.5px; }
   .founder img { width: 120px; height: 120px; border-radius: 28px; object-fit: cover; border: 2px solid rgba(255,106,26,.5); }
@@ -269,6 +276,15 @@
       <figure><img src="/home/img/esp32-pcb.jpg" alt="An ESP32 board designed and made in our lab" loading="lazy"><figcaption>An ESP32 board, designed and made in our lab</figcaption></figure>
       <figure><img src="/home/img/iot-prototype.jpg" alt="An IoT prototype on the bench" loading="lazy"><figcaption>An IoT prototype on our bench</figcaption></figure>
       <figure><img style="object-position:50% 30%" src="/home/img/custom-pcb.jpg" alt="Custom PCB products in development" loading="lazy"><figcaption>Custom PCB products, in development</figcaption></figure>
+    </div>
+    <div class="feature reveal">
+      <img src="/home/img/conveyor-monitoring.jpg" alt="Industrial conveyor monitoring system by Altrobyte at an industry expo" loading="lazy">
+      <div>
+        <div class="kicker">Built for industry</div>
+        <h3 style="font-size:24px;margin:8px 0 6px">Conveyor belt monitoring system</h3>
+        <p style="color:var(--soft)">Developed by Altrobyte and shown with Continental Conveyors at industry expos in Kolkata and Bengaluru.</p>
+        <ul><li>Live belt status, speed and uptime</li><li>Detections and alerts as they happen</li><li>Temperature and vibration tracking</li><li>Data export for the maintenance team</li></ul>
+      </div>
     </div>
   </div>
 </section>
