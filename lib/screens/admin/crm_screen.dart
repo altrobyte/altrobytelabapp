@@ -17,6 +17,7 @@ import '../../services/api_service.dart';
 import 'crm_automation_screen.dart';
 import 'founder_altron_screen.dart';
 import 'crm_chat_screen.dart';
+import 'crm_messages_screen.dart';
 import 'crm_team_screen.dart';
 
 const _stageLabels = {
@@ -238,6 +239,11 @@ class _CrmScreenState extends State<CrmScreen> {
               onPressed: () => openFounderAltron(context),
               icon: const Icon(Icons.graphic_eq_rounded, size: 20),
               label: const Text('Jarvis')),
+          // Every WhatsApp sent or received, in one list (what Jarvis and the bulk sends sent, and the replies).
+          TextButton.icon(
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmMessagesScreen())),
+              icon: const Icon(Icons.forum_rounded, size: 20),
+              label: const Text('Messages')),
           TextButton.icon(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrmAutomationScreen())),
               icon: const Icon(Icons.auto_mode_rounded, size: 20),
