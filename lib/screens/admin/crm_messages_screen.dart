@@ -7,10 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../constants/api_constants.dart';
 import '../../constants/app_colors.dart';
-import 'crm_screen.dart' show LeadDetailScreen;
+import 'crm_chat_screen.dart';
 
-/// Every WhatsApp the CRM sent or received, in one list (30 Oct 2026, founder: Jarvis sent to 30 people and there was no
-/// screen to see what went and what came back). Read-only; a row opens that lead, where the chat and the reply are.
+/// The team's WhatsApp, laid out like WhatsApp Web (30 Oct 2026, founder: Jarvis sent to 30 people and there was no screen
+/// to see what went and what came back; it should look like the Altrobyte bot). The chats on the left, newest first, each
+/// with its last message, its time and how many of their messages wait for a reply; the chosen chat on the right, where the
+/// team reads and replies. On a narrow screen a chat opens on its own page.
 class CrmMessagesScreen extends StatefulWidget {
   const CrmMessagesScreen({super.key});
   @override
@@ -18,11 +20,13 @@ class CrmMessagesScreen extends StatefulWidget {
 }
 
 class _CrmMessagesScreenState extends State<CrmMessagesScreen> {
+  static const _bar = Color(0xFF4F46E5);
+  static const _green = Color(0xFF25D366);
   String _filter = 'all';
-  int _days = 7;
   final _q = TextEditingController();
-  Map<String, dynamic>? _data;
-  String? _problem;
+  List<Map<String, dynamic>> _chats = [];
+  int _waiting = 0;
+  String? _problem, _open, _openName;
   bool _loading = true;
 
   @override
@@ -35,15 +39,19 @@ class _CrmMessagesScreenState extends State<CrmMessagesScreen> {
     setState(() { _loading = true; _problem = null; });
     try {
       final token = (await SharedPreferences.getInstance()).getString('token') ?? '';
-      final uri = Uri.parse('${ApiConstants.baseUrl}/crm/messages').replace(queryParameters: {
-        'filter': _filter, 'days': '$_days', if (_q.text.trim().isNotEmpty) 'q': _q.text.trim(),
+      final uri = Uri.parse('${ApiConstants.baseUrl}/crm/conversations').replace(queryParameters: {
+        'filter': _filter, 'days': '60', if (_q.text.trim().isNotEmpty) 'q': _q.text.trim(),
       });
       final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      if (res.statusCode != 200) throw '${body['detail'] ?? 'Could not load the messages.'}';
-      if (mounted) setState(() => _data = body);
+      if (res.statusCode != 200) throw '${body['detail'] ?? 'Could not load the chats.'}';
+      if (!mounted) return;
+      setState(() {
+        _chats = [for (final c in (body['conversations'] as List? ?? const [])) Map<String, dynamic>.from(c as Map)];
+        _waiting = (body['waiting'] as num?)?.toInt() ?? 0;
+      });
     } catch (e) {
-      if (mounted) setState(() => _problem = e is String ? e : 'Could not load the messages. Check the internet and try again.');
+      if (mounted) setState(() => _problem = e is String ? e : 'Could not load the chats. Check the internet and try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -53,73 +61,73 @@ class _CrmMessagesScreenState extends State<CrmMessagesScreen> {
     final d = DateTime.tryParse(iso ?? '')?.toLocal();
     if (d == null) return '';
     final now = DateTime.now();
-    final hm = '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-    if (d.year == now.year && d.month == now.month && d.day == now.day) return 'Today $hm';
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${d.day} ${m[d.month - 1]} $hm';
+    if (d.year == now.year && d.month == now.month && d.day == now.day) {
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    }
+    final y = now.subtract(const Duration(days: 1));
+    if (d.year == y.year && d.month == y.month && d.day == y.day) return 'Yesterday';
+    return '${d.day}/${d.month}/${d.year % 100}';
   }
 
-  Widget _stat(String n, String label, Color c) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E6EC))),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(n, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: c)),
-            Text(label, style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
-          ]),
-        ),
-      );
+  void _choose(Map<String, dynamic> c, bool wide) {
+    final phone = '${c['phone']}', name = '${c['name'] ?? ''}';
+    if (wide) {
+      setState(() { _open = phone; _openName = name; });
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => CrmChatScreen(phone: phone, name: name))).then((_) => _load());
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final t = (_data?['totals'] as Map?) ?? const {};
-    final msgs = (_data?['messages'] as List?) ?? const [];
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-        title: Text('WhatsApp messages', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 17)),
-        actions: [IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded))],
-      ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-          child: Row(children: [
-            _stat('${t['sent'] ?? '-'}', 'sent', AppColors.primary),
-            const SizedBox(width: 10),
-            _stat('${t['received'] ?? '-'}', 'received', AppColors.success),
-            const SizedBox(width: 10),
-            _stat('${t['replied_people'] ?? '-'}', 'people replied', AppColors.success),
-            const SizedBox(width: 10),
-            _stat('${t['failed'] ?? '-'}', 'not sent', AppColors.error),
-          ]),
+  Widget _list(bool wide) {
+    return Container(
+      color: Colors.white,
+      child: Column(children: [
+        Container(
+          color: _bar,
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+          child: SafeArea(
+            bottom: false,
+            child: Row(children: [
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_rounded, color: Colors.white)),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('WhatsApp', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18)),
+                  Text(_waiting == 0 ? 'Every chat answered' : '$_waiting waiting for a reply',
+                      style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+                ]),
+              ),
+              IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded, color: Colors.white)),
+            ]),
+          ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            for (final f in const [('all', 'All'), ('sent', 'Sent'), ('received', 'Received'), ('failed', 'Not sent')])
-              ChoiceChip(label: Text(f.$2), selected: _filter == f.$1, onSelected: (_) { setState(() => _filter = f.$1); _load(); }),
-            const SizedBox(width: 8),
-            DropdownButton<int>(
-              value: _days,
-              underline: const SizedBox.shrink(),
-              items: const [
-                DropdownMenuItem(value: 1, child: Text('Today')),
-                DropdownMenuItem(value: 7, child: Text('Last 7 days')),
-                DropdownMenuItem(value: 30, child: Text('Last 30 days')),
-              ],
-              onChanged: (v) { setState(() => _days = v ?? 7); _load(); },
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+          child: TextField(
+            controller: _q,
+            onSubmitted: (_) => _load(),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: const Color(0xFFF0F2F5),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              hintText: 'Search a name, number or message',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
             ),
-            SizedBox(
-              width: 260,
-              child: TextField(
-                controller: _q,
-                onSubmitted: (_) => _load(),
-                decoration: const InputDecoration(isDense: true, prefixIcon: Icon(Icons.search_rounded), hintText: 'Name, phone or text'),
+          ),
+        ),
+        SizedBox(
+          height: 40,
+          child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 10), children: [
+            for (final f in const [('all', 'All'), ('reply', 'Waiting for reply'), ('failed', 'Not sent')])
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(f.$2),
+                  selected: _filter == f.$1,
+                  selectedColor: _bar.withValues(alpha: 0.14),
+                  onSelected: (_) { setState(() => _filter = f.$1); _load(); },
+                ),
               ),
-            ),
           ]),
         ),
         const Divider(height: 1),
@@ -127,61 +135,101 @@ class _CrmMessagesScreenState extends State<CrmMessagesScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _problem != null
-                  ? Center(child: Text(_problem!, style: GoogleFonts.inter(color: AppColors.error)))
-                  : msgs.isEmpty
-                      ? Center(child: Text('No messages here.', style: GoogleFonts.inter(color: AppColors.textSecondary)))
+                  ? Center(child: Padding(padding: const EdgeInsets.all(20), child: Text(_problem!, style: GoogleFonts.inter(color: AppColors.error))))
+                  : _chats.isEmpty
+                      ? Center(child: Text('No chats here.', style: GoogleFonts.inter(color: AppColors.textSecondary)))
                       : ListView.separated(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: msgs.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (_, i) {
-                            final m = msgs[i] as Map;
-                            final status = '${m['status']}';
-                            final (label, color, icon) = switch (status) {
-                              'received' => ('Received', AppColors.success, Icons.call_received_rounded),
-                              'failed' => ('Not sent', AppColors.error, Icons.error_outline_rounded),
-                              _ => ('Sent', AppColors.primary, Icons.call_made_rounded),
-                            };
-                            final name = '${m['name'] ?? ''}'.trim();
-                            return Material(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LeadDetailScreen(phone: '${m['phone']}'))),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Icon(icon, color: color, size: 20),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Row(children: [
-                                          Expanded(
-                                            child: Text(name.isEmpty ? '${m['phone']}' : '$name · ${m['phone']}',
-                                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(99)),
-                                            child: Text(label, style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(_when(m['at'] as String?), style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary)),
-                                        ]),
-                                        const SizedBox(height: 4),
-                                        Text('${m['body'] ?? ''}', maxLines: 3, overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.inter(fontSize: 13.5, color: AppColors.textPrimary)),
-                                      ]),
-                                    ),
-                                  ]),
-                                ),
-                              ),
-                            );
-                          },
+                          itemCount: _chats.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1, indent: 76),
+                          itemBuilder: (_, i) => _row(_chats[i], wide),
                         ),
         ),
       ]),
     );
+  }
+
+  Widget _row(Map<String, dynamic> c, bool wide) {
+    final name = '${c['name'] ?? ''}'.trim();
+    final title = name.isEmpty ? '+91 ${c['phone']}' : name;
+    final waiting = (c['waiting'] as num?)?.toInt() ?? 0;
+    final theirs = c['last_direction'] == 'in';
+    final failed = c['failed'] == true;
+    final open = _open == c['phone'];
+    return Material(
+      color: open ? const Color(0xFFF0F2F5) : Colors.white,
+      child: InkWell(
+        onTap: () => _choose(c, wide),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: _bar.withValues(alpha: 0.12),
+              child: Text(title.characters.first.toUpperCase(), style: GoogleFonts.poppins(color: _bar, fontWeight: FontWeight.w600, fontSize: 18)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15))),
+                  Text(_when(c['at'] as String?),
+                      style: GoogleFonts.inter(fontSize: 12, color: waiting > 0 ? _green : AppColors.textSecondary, fontWeight: waiting > 0 ? FontWeight.w700 : FontWeight.w400)),
+                ]),
+                const SizedBox(height: 3),
+                Row(children: [
+                  if (!theirs)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(failed ? Icons.error_outline_rounded : Icons.done_all_rounded, size: 16, color: failed ? AppColors.error : const Color(0xFF53BDEB)),
+                    ),
+                  Expanded(
+                    child: Text(failed ? 'Not sent: ${c['last']}' : '${c['last'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 13.5, color: failed ? AppColors.error : AppColors.textSecondary)),
+                  ),
+                  if (waiting > 0)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(color: _green, borderRadius: BorderRadius.circular(99)),
+                      child: Text('$waiting', style: GoogleFonts.inter(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                    ),
+                ]),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (_, box) {
+      final wide = box.maxWidth >= 900;
+      if (!wide) return Scaffold(body: _list(false));
+      return Scaffold(
+        body: Row(children: [
+          SizedBox(width: 400, child: _list(true)),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: _open == null
+                ? Container(
+                    color: const Color(0xFFF0F2F5),
+                    child: Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.forum_rounded, size: 64, color: Colors.black26),
+                        const SizedBox(height: 12),
+                        Text('Choose a chat to read and reply', style: GoogleFonts.poppins(fontSize: 18, color: Colors.black54)),
+                        const SizedBox(height: 4),
+                        Text('Messages sent by the team, Jarvis and automations, and every reply.',
+                            style: GoogleFonts.inter(fontSize: 13, color: Colors.black45)),
+                      ]),
+                    ),
+                  )
+                : CrmChatScreen(key: ValueKey(_open), phone: _open!, name: _openName ?? '', embedded: true),
+          ),
+        ]),
+      );
+    });
   }
 }

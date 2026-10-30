@@ -23,7 +23,10 @@ class CrmChatScreen extends StatefulWidget {
 
   /// A message to start from (the AI's suggestion), put in the box for the team to read and change.
   final String draft;
-  const CrmChatScreen({super.key, required this.phone, this.name = '', this.draft = ''});
+
+  /// Shown beside the list of chats (the Messages screen on a wide screen): no back arrow.
+  final bool embedded;
+  const CrmChatScreen({super.key, required this.phone, this.name = '', this.draft = '', this.embedded = false});
 
   @override
   State<CrmChatScreen> createState() => _CrmChatScreenState();
@@ -229,7 +232,7 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
   Widget build(BuildContext context) {
     final title = widget.name.isNotEmpty ? widget.name : widget.phone;
     return PopScope(
-      canPop: false,
+      canPop: widget.embedded,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) Navigator.pop(context, sent);
       },
@@ -239,8 +242,9 @@ class _CrmChatScreenState extends State<CrmChatScreen> {
           backgroundColor: _bar,
           foregroundColor: Colors.white,
           elevation: 0,
-          titleSpacing: 0,
-          leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context, sent)),
+          automaticallyImplyLeading: false,
+          leading: widget.embedded ? null : IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context, sent)),
+          titleSpacing: widget.embedded ? 16 : 0,
           title: Row(children: [
             CircleAvatar(
               radius: 18,
