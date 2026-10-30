@@ -36,7 +36,6 @@ import 'screens/batches/batches_screen.dart' deferred as d14;
 import 'screens/broadcast/broadcast_screen.dart' deferred as d15;
 import 'screens/role_selection_screen.dart' deferred as d16;
 import 'screens/branded_landing_screen.dart' deferred as d17;
-import 'screens/student/student_login_screen.dart' deferred as d18;
 import 'screens/student/student_home_screen.dart';
 import 'screens/student/student_onboarding_screen.dart';
 import 'screens/student/student_training_screen.dart' deferred as e4;
@@ -469,7 +468,8 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         ),
         GoRoute(
           path: '/student/login',
-          builder: (_, __) => _Lazy(d18.loadLibrary, () => d18.StudentLoginScreen()),
+          // The coaching-institute login is retired (founder, 30 Oct 2026); old links land on the learner sign-in.
+          redirect: (_, __) => '/signin',
         ),
         GoRoute(
           path: '/student/home',
