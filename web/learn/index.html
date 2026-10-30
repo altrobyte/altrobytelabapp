@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your roadmap · Altrobyte Lab</title>
+<meta name="description" content="The Altrobyte roadmap: from your first LED to a shipped IoT product. Start the first steps free, with Altron, your AI trainer.">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://edu.altrobytelab.com" crossorigin>
+<!-- The learning page, as a plain page (30 Oct 2026, founder: "it's the place where people get converted"; the Flutter
+     page took 15-20 s on a phone). The roadmap in steps: free steps open here with Altron, the rest locked with the way
+     to open them. Lessons open at /learn/<module>/<lesson>. Sign-in is the app's /signin (same browser storage). -->
+<style>
+  :root { --ink:#0A1220; --ink2:#0F1B2E; --panel:#13223A; --line:#22344F; --text:#E8EEF6; --soft:#9DB0C6; --orange:#FF6A1A; --orange2:#FF9A3D;
+          --cyan:#38E1D3; --green:#2BD47D; --gold:#D9A441; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--ink); color: var(--text); font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(10,18,32,.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.06); }
+  nav .wrap { display: flex; align-items: center; height: 58px; gap: 12px; }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 17px; white-space: nowrap; }
+  .logo img { width: 27px; height: 27px; border-radius: 7px; }
+  nav .r { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 20px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; white-space: nowrap; }
+  .btn-main { background: linear-gradient(135deg, var(--orange), var(--orange2)); color: #fff; box-shadow: 0 10px 30px -12px rgba(255,106,26,.8); }
+  .btn-ghost { border: 1px solid rgba(255,255,255,.22); color: #fff; background: transparent; }
+  .btn-sm { padding: 8px 14px; font-size: 13.5px; }
+  .muted { color: var(--soft); }
+
+  /* hero */
+  .hero { padding: 26px 0 8px; }
+  .hero h1 { font-size: clamp(26px, 5vw, 38px); line-height: 1.15; letter-spacing: -.02em; }
+  .hero p { margin: 10px 0 16px; color: var(--soft); }
+  .prog { margin: 14px 0 4px; padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+  .bar { height: 8px; border-radius: 9px; background: #0c1626; overflow: hidden; margin-top: 8px; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--cyan)); transition: width .6s; }
+  .trial { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(56,225,211,.35); background: rgba(56,225,211,.07); font-size: 14.5px; }
+
+  /* path */
+  .level { margin-top: 28px; }
+  .lh { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .lh .n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; flex: none; }
+  .lh b { font-size: 19px; display: block; line-height: 1.2; }
+  .lh span { font-size: 13.5px; color: var(--soft); }
+  .steps { position: relative; padding-left: 16px; margin-left: 17px; border-left: 2px dashed var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .step { position: relative; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+  .step::before { content: ""; position: absolute; left: -26px; top: 22px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--line); }
+  .step.open::before { border-color: var(--green); background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .step.done::before { content: "✓"; color: #062; font-size: 10px; display: grid; place-items: center; }
+  .sh { display: flex; align-items: center; gap: 12px; padding: 14px; cursor: pointer; width: 100%; background: none; border: 0; color: inherit; text-align: left; }
+  .sh .t { flex: 1; min-width: 0; }
+  .sh .t b { display: block; font-size: 15.5px; line-height: 1.3; }
+  .sh .t small { color: var(--soft); font-size: 12.5px; }
+  .pill { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; padding: 4px 9px; border-radius: 999px; flex: none; }
+  .p-free { background: rgba(43,212,125,.14); color: var(--green); }
+  .p-open { background: rgba(56,225,211,.14); color: var(--cyan); }
+  .p-lock { background: rgba(255,255,255,.07); color: var(--soft); }
+  .p-live { background: rgba(217,164,65,.14); color: var(--gold); }
+  .step.locked .sh .t b { color: #b7c4d3; }
+  .lessons { display: none; border-top: 1px solid var(--line); }
+  .step.x .lessons { display: block; }
+  .lesson { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.04); }
+  .lesson:first-child { border-top: 0; }
+  .lesson .ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: rgba(43,212,125,.15); color: var(--green); flex: none; }
+  .lesson.ok .ic { background: var(--green); color: #052; }
+  .lesson span { flex: 1; font-size: 14.5px; }
+  .lockbox { padding: 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--soft); display: none; }
+  .step.x .lockbox { display: block; }
+  .lockbox .cta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  .unlock { margin: 34px 0 20px; padding: 22px; border-radius: 20px; background: linear-gradient(160deg, #1a2d4a, #13223A); border: 1px solid rgba(255,154,61,.35); }
+  .unlock h2 { font-size: 22px; line-height: 1.25; }
+  .unlock ul { margin: 12px 0 16px; padding-left: 20px; color: #cfdbe8; }
+  .unlock .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  footer { padding: 20px 0 110px; font-size: 13px; color: var(--soft); text-align: center; }
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(10,18,32,.96); border-top: 1px solid var(--line); display: none; }
+  .dock .btn { width: 100%; }
+  .skel { height: 64px; border-radius: 16px; margin: 10px 0; background: linear-gradient(90deg, #13223A, #1b2f4d, #13223A); background-size: 200% 100%; animation: sh 1.2s infinite; }
+  @keyframes sh { to { background-position: -200% 0; } }
+
+  /* lesson view */
+  .lv { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .lv .top { display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 10px; background: var(--ink2); border-bottom: 1px solid var(--line); flex: none; }
+  .lv .top .tt { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.06); color: #fff; cursor: pointer; font-size: 18px; flex: none; }
+  .lv iframe.note { flex: 1; width: 100%; border: 0; background: #fff; }
+  .strip { flex: none; height: 64px; display: flex; align-items: center; background: #0D1726; border-top: 1px solid var(--line); }
+  .strip iframe { flex: 1; height: 100%; border: 0; }
+  .ask { flex: none; display: flex; gap: 10px; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0D1726; border-top: 1px solid var(--line); }
+  .ask .muted { flex: 1; font-size: 13.5px; line-height: 1.35; }
+  .donebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0F5132; }
+  .donebar span { flex: 1; font-weight: 600; font-size: 14px; }
+  @media (max-width: 640px) { .dock { display: block; } nav .hide-s { display: none; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="/learn/bridge.js"></script>
+<script>
+(function () {
+  var API = 'https://edu.altrobytelab.com';
+  var root = document.getElementById('root');
+  // The roadmap: a topic points at the module that teaches it; a topic without one is taught live in the programme
+  // (never "coming soon"). Same list as lib/screens/learn/learn_screen.dart.
+  var LEVELS = [
+    ['Beginner', 'Electronics and your first microcontroller', '#1E8E3E', [['Voltage, current and resistance', 4], ['Basic electronic components', 4], ['Microcontrollers and processors', 5], ['Arduino, ESP32 and Raspberry Pi', 5], ['Programming for hardware']]],
+    ['Basic', 'Embedded C, embedded systems and IoT', '#1A73E8', [['Embedded C', 5], ['Embedded systems', 5], ['Internet of Things (IoT)', 8], ['Git for embedded projects', 10]]],
+    ['Advance', 'Industrial-grade firmware', '#D4500A', [['STM32'], ['Industrial IoT (IIoT)', 9], ['FreeRTOS'], ['Robotics']]],
+    ['Pro', 'Edge AI and shipping a product', '#7B1FA2', [['Edge AI / ML', 8], ['Product development', 6], ['Embedded Linux'], ['Computer vision'], ['AWS IoT'], ['App and web for devices']]]
+  ];
+  var IDS = [4, 5, 6, 8, 9, 10];
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
+  function token() { try { var v = store('flutter.student_token'); return v ? JSON.parse(v) || '' : ''; } catch (e) { return ''; } }
+  function hdr() { var t = token(); return t ? { Authorization: 'Bearer ' + t } : {}; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function done(id) { return store('altro_done_' + id) === '1'; }
+  function funnel(ev, detail) {
+    try {
+      var v = store('altro_visitor'); if (!v) { v = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); store('altro_visitor', v); }
+      fetch(API + '/funnel/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: ev, visitor_id: v, detail: detail || '' }), keepalive: true });
+    } catch (e) {}
+  }
+  function signIn() { location.href = '/signin?next=' + encodeURIComponent(location.pathname + location.search); }
+  function getJSON(path, opts) {
+    return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
+  }
+
+  var mods = {}, trial = null;
+  function loadRoadmap() {
+    return Promise.all([
+      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { (d.modules || []).forEach(function (m) { m.notes = (m.items || []).filter(function (i) { return i.type === 'notes'; }); mods[m.id] = m; }); }),
+      token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
+    ]);
+  }
+
+  // ── the roadmap ──
+  function roadmap() {
+    document.title = 'Your roadmap · Altrobyte Lab';
+    funnel('learn_view');
+    root.innerHTML = nav() + '<main class="wrap"><div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
+      '<p>Step by step, the way products are really made. The first steps are free, with Altron, your AI trainer, explaining every lesson by voice.</p></div>' +
+      '<div class="skel"></div><div class="skel"></div><div class="skel"></div></main>';
+    loadRoadmap().then(drawRoadmap).catch(function () {
+      root.querySelector('main').innerHTML = '<div class="hero"><h1>Could not load the roadmap</h1><p>Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a></div>';
+    });
+  }
+  function nav() {
+    var t = token();
+    return '<nav><div class="wrap"><a class="logo" href="/"><img src="/icons/Icon-192.png" alt="">Altrobyte Lab</a><div class="r">' +
+      '<a class="btn btn-ghost btn-sm hide-s" href="/live-sessions">Live classes</a>' +
+      (t ? '<a class="btn btn-ghost btn-sm" href="/pricing">Plans</a>' : '<a class="btn btn-ghost btn-sm" href="javascript:void 0" data-signin>Log in</a>') + '</div></div></nav>';
+  }
+  function inTrial() { return trial && trial.active === true; }
+  function drawRoadmap() {
+    var freeLessons = 0, doneLessons = 0, stepNo = 0, html = '';
+    Object.keys(mods).forEach(function (k) { var m = mods[k]; if (!m.locked) m.notes.forEach(function (n) { freeLessons++; if (done(n.id)) doneLessons++; }); });
+    LEVELS.forEach(function (L, li) {
+      html += '<section class="level"><div class="lh"><div class="n" style="background:' + L[2] + '">' + (li + 1) + '</div><div><b style="color:' + L[2] + '">' + L[0] + '</b><span>' + L[1] + '</span></div></div><div class="steps">';
+      L[3].forEach(function (T) {
+        stepNo++;
+        var m = T[1] ? mods[T[1]] : null, open = m && !m.locked, cls = 'step', pill, body = '';
+        if (!T[1]) {
+          cls += ' locked'; pill = '<span class="pill p-live">LIVE</span>';
+          body = '<div class="lockbox">Taught live by our engineers in the product engineering programme, building a real product.<div class="cta"><a class="btn btn-ghost btn-sm" href="/pricing">See the programme</a><a class="btn btn-ghost btn-sm" href="/live-sessions">Join a live class</a></div></div>';
+        } else if (!m) {
+          cls += ' locked'; pill = '<span class="pill p-lock">🔒</span>';
+          body = '<div class="lockbox">This step opens with a plan.<div class="cta"><a class="btn btn-main btn-sm" href="/pricing">Unlock</a></div></div>';
+        } else if (open) {
+          var all = m.notes.length, ok = m.notes.filter(function (n) { return done(n.id); }).length;
+          cls += ' open' + (all && ok === all ? ' done' : '');
+          pill = inTrial() ? '<span class="pill p-open">OPEN</span>' : '<span class="pill p-free">FREE</span>';
+          body = '<div class="lessons">' + (m.notes.length ? m.notes.map(function (n) {
+            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + m.id + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : 'Start') + '</b></a>';
+          }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
+        } else if (m.login_required && !token()) {
+          // Opens for a signed-in learner (a module bundled with a live class needs a real account).
+          cls += ' locked'; pill = '<span class="pill p-free">SIGN IN</span>';
+          body = '<div class="lockbox">Sign in with your WhatsApp number to open this step.<div class="cta"><button class="btn btn-main btn-sm" data-signin>Sign in with WhatsApp</button></div></div>';
+        } else {
+          cls += ' locked'; pill = '<span class="pill p-lock">🔒 LOCKED</span>';
+          var canTrial = !trial || !trial.started;
+          body = '<div class="lockbox">' + (m.notes.length || m.item_count || '') + (m.item_count ? ' lessons with Altron. ' : '') + 'Opens with the free week or a plan.' +
+            '<div class="cta">' + (canTrial ? '<button class="btn btn-main btn-sm" data-trial>Open free for 7 days</button>' : '') + '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>';
+        }
+        html += '<div class="' + cls + '"><button class="sh"><span class="muted" style="font-weight:800;width:22px">' + stepNo + '</span><span class="t"><b>' + esc(T[0]) + '</b><small>' + esc(m ? m.title : 'Live with a mentor') + '</small></span>' + pill + '</button>' + body + '</div>';
+      });
+      html += '</div></section>';
+    });
+    var pct = freeLessons ? Math.round(doneLessons * 100 / freeLessons) : 0;
+    var trialLine = inTrial() ? '<div class="trial">🎉 Your free week: <b>' + trial.days_left + ' days left</b>. Every step and Altron are open, and this week\'s live classes are free.</div>' :
+      (trial && trial.started ? '<div class="trial">Your free week is over. Your progress is saved: pick a plan to carry on.</div>' : '');
+    var first = firstOpenLesson();
+    root.querySelector('main').innerHTML = '<div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
+      '<p>Step by step, the way products are really made. Altron, your AI trainer, explains every lesson by voice and answers your questions.</p>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start the first lesson') + '</a>' : '') +
+      (!trial || !trial.started ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
+      '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
+      html + unlockCard() + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a></footer>';
+    var dock = document.createElement('div'); dock.className = 'dock';
+    dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
+    document.body.appendChild(dock);
+    bind();
+  }
+  function firstOpenLesson() {
+    var firstAny = null;
+    for (var i = 0; i < IDS.length; i++) {
+      var m = mods[IDS[i]]; if (!m || m.locked) continue;
+      for (var j = 0; j < m.notes.length; j++) { var u = '/learn/' + m.id + '/' + m.notes[j].id; if (!firstAny) firstAny = u; if (!done(m.notes[j].id)) return u; }
+    }
+    return firstAny;
+  }
+  function unlockCard() {
+    return '<div class="unlock"><h2>Open every step, with a live class every week</h2><ul>' +
+      '<li>Every module of the roadmap, with Altron explaining each lesson by voice</li><li>A live class with our engineers every week</li><li>Build real products: PCB, firmware, cloud and AI</li><li>A certificate you can show to employers</li></ul>' +
+      '<p style="margin-bottom:14px"><b style="font-size:22px">₹4,999</b><span class="muted"> / month + GST, self-paced</span></p>' +
+      '<div class="cta"><a class="btn btn-main" href="/pricing">See all plans</a><a class="btn btn-ghost" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want to know about the Altrobyte plans.') + '">Ask on WhatsApp</a></div></div>';
+  }
+  function bind() {
+    root.querySelectorAll('.sh').forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle('x'); }; });
+    root.querySelectorAll('[data-signin]').forEach(function (b) { b.onclick = signIn; });
+    root.querySelectorAll('[data-trial]').forEach(function (b) { b.onclick = startTrial; });
+    // Open the first unfinished open step, so a visitor sees lessons at once.
+    var s = root.querySelector('.step.open:not(.done)') || root.querySelector('.step.open'); if (s) s.classList.add('x');
+  }
+  function startTrial() {
+    funnel('trial_click', 'learn');
+    if (!token()) { location.href = '/signin?next=' + encodeURIComponent('/learn?trial=1'); return; }
+    getJSON('/trial/start', { method: 'POST' }).then(function () { funnel('trial_started', 'learn'); location.replace('/learn'); })
+      .catch(function (e) { alert((e && e.detail) || 'Could not start the free week just now. Please try again.'); });
+  }
+
+  // ── a lesson ──
+  function lesson(mid, cid) {
+    root.innerHTML = '<div class="lv"><div class="top"><a class="iconbtn" href="/learn" aria-label="Roadmap" style="display:grid;place-items:center">←</a><div class="tt">Loading the lesson…</div></div><div style="flex:1;display:grid;place-items:center" class="muted">Loading…</div></div>';
+    // The lesson first; the roadmap (for "Next") follows without holding it up.
+    getJSON('/learn/lesson/' + mid + '/' + cid).then(function (item) {
+      if (!item.html_content) { location.replace('/learn'); return; }
+      drawLesson(item.module, item);
+      loadRoadmap().then(function () { var nx = nextLesson(mid, cid), top = root.querySelector('.top'); if (nx && top && !top.querySelector('.nx')) top.insertAdjacentHTML('beforeend', '<a class="btn btn-ghost btn-sm nx" href="/learn/' + nx.m + '/' + nx.n.id + '">Next ›</a>'); }).catch(function () {});
+    }).catch(function (e) {
+      if (e && e.detail) { location.replace('/learn'); return; }
+      root.querySelector('.tt').textContent = 'Could not load the lesson. Check the internet and go back.';
+    });
+  }
+  function nextLesson(mid, cid) {
+    var list = [];
+    IDS.forEach(function (id) { var m = mods[id]; if (m && !m.locked) m.notes.forEach(function (n) { list.push({ m: id, n: n }); }); });
+    for (var i = 0; i < list.length; i++) if (String(list[i].n.id) === String(cid)) return list[i + 1] || null;
+    return null;
+  }
+  function drawLesson(m, item) {
+    document.title = item.title + ' · Altrobyte Lab';
+    funnel('lesson_open', String(item.id));
+    var nx = nextLesson(m.id, item.id);
+    root.innerHTML = '<div class="lv"><div class="top"><a class="iconbtn" href="/learn" aria-label="Roadmap" style="display:grid;place-items:center">←</a>' +
+      '<div class="tt">' + esc(item.title) + '<div class="muted" style="font-size:12px;font-weight:500">' + esc(m.title) + '</div></div>' +
+      (nx ? '<a class="btn btn-ghost btn-sm nx" href="/learn/' + nx.m + '/' + nx.n.id + '">Next ›</a>' : '') + '</div>' +
+      '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe><div id="foot"></div></div>';
+    var note = root.querySelector('iframe.note');
+    note.srcdoc = window.altroTutorPage(item.html_content);
+    var foot = document.getElementById('foot'), live = null;
+    var partKey = 'altro_part_' + item.id;
+    function toNote(o) { try { note.contentWindow.postMessage(JSON.stringify(o), '*'); } catch (e) {} }
+    function startAltron() {
+      var from = parseInt(store(partKey) || '0', 10);
+      foot.innerHTML = '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + item.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1' + (from > 1 ? '&from=' + from : '') + '"></iframe><button class="iconbtn" style="margin:0 8px" aria-label="Stop Altron">✕</button></div>';
+      live = foot.querySelector('iframe');
+      foot.querySelector('button').onclick = askBar;
+      funnel('altron_start', String(item.id));
+    }
+    function askBar() {
+      live = null;
+      foot.innerHTML = '<div class="ask"><span class="muted">' + (token() ? 'Let Altron explain this lesson by voice, part by part.' : 'Sign in with WhatsApp and Altron explains this lesson by voice, free.') + '</span><button class="btn btn-main btn-sm" id="go">' + (token() ? '▶ Learn with Altron' : 'Sign in to learn with Altron') + '</button></div>';
+      document.getElementById('go').onclick = function () { token() ? startAltron() : signIn(); };
+    }
+    function finished() {
+      nx = nextLesson(m.id, item.id);
+      store('altro_done_' + item.id, '1'); store(partKey, null);
+      funnel('lesson_done', String(item.id));
+      var n = 6;
+      foot.innerHTML = '<div class="donebar"><span id="dn"></span>' + (nx ? '<button class="btn btn-ghost btn-sm" id="stay">Stay</button><a class="btn btn-sm" style="background:#fff;color:#0F5132" href="/learn/' + nx.m + '/' + nx.n.id + '">Start now</a>' : '<a class="btn btn-sm" style="background:#fff;color:#0F5132" href="/learn">Roadmap</a>') + '</div>';
+      var dn = document.getElementById('dn');
+      if (!nx) { dn.textContent = 'Lesson complete. That was the last open lesson: unlock the next steps on the roadmap.'; return; }
+      var tick = setInterval(function () {
+        n--; dn.textContent = 'Lesson complete. Next: ' + nx.n.title + ' in ' + n + ' s';
+        if (n <= 0) { clearInterval(tick); location.href = '/learn/' + nx.m + '/' + nx.n.id; }
+      }, 1000);
+      document.getElementById('stay').onclick = function () { clearInterval(tick); dn.textContent = 'Lesson complete.'; };
+    }
+    window.onmessage = function (e) {
+      if (typeof e.data !== 'string') return;
+      var o; try { o = JSON.parse(e.data); } catch (x) { return; }
+      if (!o) return;
+      if (!o.type) {                                   // the note
+        if (o.open && /^https?:\/\//.test(o.open)) window.open(o.open, '_blank', 'noopener');
+        if (live && (o.needs || o.did)) { try { if (o.needs && live.contentWindow.altronNeeds) live.contentWindow.altronNeeds(o.needs); if (o.did && live.contentWindow.altronDid) live.contentWindow.altronDid(o.did); } catch (x) {} }
+        return;
+      }
+      if (e.origin !== location.origin) return;        // Altron's strip is our own page
+      if (o.type === 'section' && typeof o.part === 'number') { toNote({ show: o.part - 1 }); store(partKey, String(o.part)); }
+      else if (o.type === 'said' && typeof o.text === 'string') toNote({ said: o.text });
+      else if (o.type === 'state' && o.state === 'done') setTimeout(finished, 2500);
+      else if (o.type === 'state' && o.state === 'out_of_minutes') {
+        foot.innerHTML = '<div class="ask"><span class="muted">' + esc(o.text || "Today's time with Altron is used up.") + '</span><a class="btn btn-main btn-sm" href="/pricing">Unlock</a></div>';
+      }
+    };
+    token() ? startAltron() : askBar();
+  }
+
+  var p = location.pathname.replace(/\/+$/, '');
+  var mm = p.match(/^\/learn\/(\d+)\/(\d+)$/);
+  if (mm) lesson(mm[1], mm[2]);
+  else {
+    if (/[?&]trial=1/.test(location.search) && token()) { history.replaceState(null, '', '/learn'); startTrial(); }
+    roadmap();
+  }
+})();
+</script>
+</body>
+</html>

@@ -28,6 +28,15 @@
         "destination": "/pricing/index.html"
       },
       {
+        "//": "The roadmap and its lessons are a plain page (30 Oct 2026, founder: the place where people convert); /learn/<module>/<lesson> opens a lesson.",
+        "source": "/learn",
+        "destination": "/learn/index.html"
+      },
+      {
+        "source": "/learn/**",
+        "destination": "/learn/index.html"
+      },
+      {
         "//": "The live classes are a plain page (30 Oct 2026, founder: WhatsApp links must open at once); registering happens in the app at /join/:id.",
         "source": "/live-sessions",
         "destination": "/session/index.html"

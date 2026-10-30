@@ -60,7 +60,6 @@ import 'screens/enquiries/partner_enquiry_screen.dart' deferred as e14;
 import 'screens/enquiries/enquiries_admin_screen.dart' deferred as d27;
 import 'screens/mock_interview/mock_interview_screen.dart' deferred as e15;
 import 'screens/pricing/pricing_screen.dart' deferred as e16;
-import 'screens/learn/learn_screen.dart';
 import 'screens/learn/sign_in_screen.dart';
 import 'screens/learn/unlock_screen.dart';
 import 'screens/program_page.dart' deferred as e17;
@@ -376,8 +375,9 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Pricing — public, no login.
         GoRoute(path: '/pricing', builder: (_, __) => _Lazy(e16.loadLibrary, () => e16.PricingScreen())),
         // The roadmap with a free start, and every plan after it: public, no login (29 Oct 2026).
-        GoRoute(path: '/learn', builder: (_, __) => const LearnScreen()),
-        GoRoute(path: '/signin', builder: (_, __) => const SignInScreen()),
+        // The roadmap is the plain page web/learn (30 Oct 2026); the app hands over to it.
+        GoRoute(path: '/learn', builder: (_, __) => const FullPage('/learn')),
+        GoRoute(path: '/signin', builder: (_, state) => SignInScreen(next: state.uri.queryParameters['next'])),
         GoRoute(path: '/unlock', builder: (_, __) => const UnlockScreen()),
         // Deliberately not linked from anywhere. Its URL is the product: it is
         // sent directly to someone who asked, while the public pricing page

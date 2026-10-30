@@ -41,3 +41,9 @@ if os.path.exists(home):
     io.open("build/web/app.html", "w", encoding="utf-8", newline="\n").write(html)
     shutil.copyfile(home, path)
     print("home page at /, the app at app.html")
+
+# The fast lesson page ties a note to Altron with the apps' own script (tools/export_note_bridge.py).
+import importlib.util as _u
+_spec = _u.spec_from_file_location("export_note_bridge", "tools/export_note_bridge.py"); _m = _u.module_from_spec(_spec); _spec.loader.exec_module(_m)
+_m.export("build/web/learn")
+print("learn/bridge.js written")
