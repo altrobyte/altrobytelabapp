@@ -56,7 +56,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
   String? _newVersion; // a newer installer exists
   int _shown = 0;
   bool _showLog = false; // the whole conversation instead of the step on screen now
-  int _product = 0;          // the home's two products: 0 technical training, 1 industrial training
+  int? _product;             // the two products: null the choice, 0 technical training, 1 industrial training
   bool _module0Open = false; // Module 0 folds to one line once every lesson in it is done
   bool _setupOpen = false; // the computer check folds to one line once the tools are ready
   static const _showModule0 = false; // Module 0 is off the home: the modules are the course
@@ -475,6 +475,7 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
         break;
       }
     }
+    if (_product == null) return _chooser();
     if (_product == 1) {
       return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(28, 26, 28, 28),
@@ -553,54 +554,110 @@ class _DesktopTrainerScreenState extends State<DesktopTrainerScreen> {
     );
   }
 
-  /// The two products, side by side at the top of the home (29 Oct 2026, founder).
+  /// Each product has its own screen (30 Oct 2026, founder); this row on top of it goes back to the choice.
   Widget _products() {
-    Widget card(int i, IconData icon, String title, String line, {bool premium = false}) {
-      final on = _product == i;
-      final fg = premium && on ? Colors.white : AppColors.textPrimary;
+    final industrial = _product == 1;
+    return Row(children: [
+      TextButton.icon(
+        onPressed: () => setState(() => _product = null),
+        icon: const Icon(Icons.arrow_back_rounded),
+        label: const Text('All trainings'),
+      ),
+      const SizedBox(width: 8),
+      Icon(industrial ? Icons.factory_rounded : Icons.memory_rounded, color: industrial ? IndustrialHome.gold : AppColors.accent),
+      const SizedBox(width: 8),
+      Text(industrial ? 'Industrial Training' : 'Technical Training', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18)),
+    ]);
+  }
+
+  /// The first screen: the two trainings, large, to choose from.
+  Widget _chooser() {
+    Widget card(int i, IconData icon, String title, String line, List<String> points, {bool premium = false}) {
+      final fg = premium ? Colors.white : AppColors.textPrimary;
+      final soft = premium ? Colors.white70 : AppColors.textSecondary;
       return Expanded(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => setState(() => _product = i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              color: on ? (premium ? IndustrialHome.ink : Colors.white) : Colors.white.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: on ? (premium ? IndustrialHome.gold : AppColors.accent) : const Color(0xFFE2E6EC), width: on ? 2 : 1),
-            ),
-            child: Row(children: [
-              Icon(icon, size: 28, color: premium ? IndustrialHome.gold : AppColors.accent),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: fg)),
-                    if (premium) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                        decoration: BoxDecoration(color: IndustrialHome.gold, borderRadius: BorderRadius.circular(99)),
-                        child: Text('FOR PLANTS', style: GoogleFonts.inter(fontSize: 9.5, fontWeight: FontWeight.w800, color: IndustrialHome.ink, letterSpacing: 1)),
-                      ),
-                    ],
-                  ]),
-                  Text(line, style: GoogleFonts.inter(fontSize: 12.5, color: premium && on ? Colors.white70 : AppColors.textSecondary)),
-                ]),
+        child: Material(
+          color: premium ? IndustrialHome.ink : Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () => setState(() => _product = i),
+            child: Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: premium ? IndustrialHome.gold.withValues(alpha: 0.6) : const Color(0xFFE2E6EC), width: 1.5),
               ),
-            ]),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                        color: (premium ? IndustrialHome.gold : AppColors.accent).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(18)),
+                    child: Icon(icon, size: 34, color: premium ? IndustrialHome.gold : AppColors.accent),
+                  ),
+                  const Spacer(),
+                  if (premium)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(color: IndustrialHome.gold, borderRadius: BorderRadius.circular(99)),
+                      child: Text('FOR PLANTS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: IndustrialHome.ink, letterSpacing: 1)),
+                    ),
+                ]),
+                const SizedBox(height: 26),
+                Text(title, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700, color: fg)),
+                const SizedBox(height: 6),
+                Text(line, style: GoogleFonts.inter(fontSize: 15, color: soft, height: 1.45)),
+                const SizedBox(height: 20),
+                for (final p in points)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      Icon(Icons.check_circle_rounded, size: 18, color: premium ? IndustrialHome.gold : AppColors.success),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(p, style: GoogleFonts.inter(fontSize: 14, color: fg))),
+                    ]),
+                  ),
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.icon(
+                    onPressed: () => setState(() => _product = i),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: premium ? IndustrialHome.gold : AppColors.accent,
+                        foregroundColor: premium ? IndustrialHome.ink : Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: Text('Open', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ]),
+            ),
           ),
         ),
       );
     }
 
-    return Row(children: [
-      card(0, Icons.memory_rounded, 'Technical Training', 'Embedded, IoT and electronics, with Altron'),
-      const SizedBox(width: 14),
-      card(1, Icons.factory_rounded, 'Industrial Training', 'Safety, SOPs and skills for your workforce', premium: true),
-    ]);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Choose your training', style: GoogleFonts.poppins(fontSize: 30, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text('Altron teaches both, by voice, with hands-on practice.', style: GoogleFonts.inter(fontSize: 15, color: AppColors.textSecondary)),
+        const SizedBox(height: 26),
+        IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            card(0, Icons.memory_rounded, 'Technical Training', 'Embedded systems, IoT and electronics, with Altron.',
+                ['Your courses in order, one learning path', 'Notes taught by voice, slide by slide', 'Labs and projects on your computer']),
+            const SizedBox(width: 22),
+            card(1, Icons.factory_rounded, 'Industrial Training', 'Safety, SOPs and skills for a plant\'s workforce.',
+                ['Hindi lessons with hands-on drills', 'Test and certificate for every worker', 'Plant report for the auditors'],
+                premium: true),
+          ]),
+        ),
+      ]),
+    );
   }
 
   Widget _courseTile(Map<String, dynamic> k, int number, bool isNext) {

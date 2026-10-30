@@ -603,23 +603,6 @@ class _ModulesPanelState extends State<ModulesPanel> {
   int _totalOf(TrainingModule m) => _total[m.id] ?? m.totalContentItemsFromApi ?? 0;
   int _doneOf(TrainingModule m) => (_done[m.id]?.length ?? 0).clamp(0, _totalOf(m));
 
-  /// The next thing to learn: the first lesson not done in the module they are part-way through (else the first module
-  /// not finished). Known only for modules whose lessons are on this computer, which after the first start is all of them.
-  (TrainingModule, ContentItem)? _next() {
-    final open = [for (final m in _modules ?? const <TrainingModule>[]) if (!m.locked && _detail[m.id] != null) m];
-    final started = open.where((m) => _doneOf(m) > 0 && _doneOf(m) < _totalOf(m));
-    for (final m in [...started, ...open.where((m) => _doneOf(m) < _totalOf(m) || _totalOf(m) == 0)]) {
-      for (final t in _detail[m.id]!.topics) {
-        for (final st in t.subtopics) {
-          for (final it in st.contentItems) {
-            if (!it.locked && it.type == 'notes' && (it.htmlContent ?? '').isNotEmpty && !_isDone(m.id, it)) return (m, it);
-          }
-        }
-      }
-    }
-    return null;
-  }
-
   void _openModule(TrainingModule m) {
     if (!m.locked) _open(m);
     Navigator.of(context).push(MaterialPageRoute(
@@ -760,103 +743,6 @@ class _ModulesPanelState extends State<ModulesPanel> {
     if (t.contains('product') || t.contains('manager')) return Icons.rocket_launch_rounded;
     if (t.contains('embedded') || t.contains('micro')) return Icons.memory_rounded;
     return Icons.menu_book_rounded;
-  }
-
-  /// The course picture: the module's colour, its subject drawn large, a soft grid behind.
-  Widget _thumb(TrainingModule m, double height, {double radius = 12}) {
-    final c = m.locked ? Colors.blueGrey.shade300 : _colorOf(m);
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [c, Color.lerp(c, const Color(0xFF0B1B2B), 0.55)!])),
-        child: Stack(children: [
-          Positioned(right: -18, bottom: -24, child: Icon(_iconOf(m), size: height * 0.95, color: Colors.white.withValues(alpha: 0.13))),
-          Positioned(
-            left: 14,
-            top: 14,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(10)),
-              child: Icon(m.locked ? Icons.lock_rounded : _iconOf(m), color: Colors.white, size: 22),
-            ),
-          ),
-          if (_totalOf(m) > 0 && _doneOf(m) >= _totalOf(m))
-            Positioned(
-              right: 12,
-              top: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(99)),
-                child: Text('Completed', style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-              ),
-            ),
-        ]),
-      ),
-    );
-  }
-
-  /// One "pick up where you left off" card: the lesson, its course, how far along, and play.
-  Widget _resumeCard(TrainingModule m, ContentItem it) {
-    final total = _totalOf(m), done = _doneOf(m);
-    return SizedBox(
-      width: 380,
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            _mark(m.id, it);
-            _note(it);
-          },
-          child: Container(
-            height: 96,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E6EC))),
-            child: Row(children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-                child: SizedBox(
-                  width: 120,
-                  height: 96,
-                  child: Stack(fit: StackFit.expand, children: [
-                    Container(color: _colorOf(m)),
-                    Icon(_iconOf(m), color: Colors.white.withValues(alpha: 0.25), size: 64),
-                    Center(
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: Icon(Icons.play_arrow_rounded, color: _colorOf(m), size: 26),
-                      ),
-                    ),
-                  ]),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(m.title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: .6, color: AppColors.textSecondary)),
-                    const SizedBox(height: 3),
-                    Text(it.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.25)),
-                    const Spacer(),
-                    if (total > 0)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(99),
-                        child: LinearProgressIndicator(value: done / total, minHeight: 4, backgroundColor: const Color(0xFFE8EDF3), color: AppColors.accent),
-                      ),
-                  ]),
-                ),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
   }
 
   /// One step of the path: its number on a line joining the steps, the picture, the title and a line about it, progress,
@@ -1039,13 +925,6 @@ class _ModulesPanelState extends State<ModulesPanel> {
     final allDone = open.fold<int>(0, (a, m) => a + _doneOf(m));
     bool started(TrainingModule m) => !m.locked && _doneOf(m) > 0 && _doneOf(m) < _totalOf(m);
     bool finished(TrainingModule m) => !m.locked && _totalOf(m) > 0 && _doneOf(m) >= _totalOf(m);
-    final resume = [
-      for (final m in open.where(started)) if (_nextIn(m) != null) (m, _nextIn(m)!),
-    ];
-    if (resume.isEmpty) {
-      final n = _next();
-      if (n != null) resume.add(n);
-    }
     // The course order, as the team set it: one path, followed top to bottom (29 Oct 2026, founder).
     final all = [...?modules];
     final shown = switch (_tab) { 1 => all.where(started).toList(), 2 => all.where(finished).toList(), _ => all };
@@ -1066,20 +945,6 @@ class _ModulesPanelState extends State<ModulesPanel> {
         IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh_rounded, size: 20)),
       ]),
       const SizedBox(height: 20),
-      if (resume.isNotEmpty) ...[
-        Text("Let's pick up where you left off", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 98,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: resume.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (_, i) => _resumeCard(resume[i].$1, resume[i].$2),
-          ),
-        ),
-        const SizedBox(height: 26),
-      ],
       Row(children: [
         _tabChip(0, 'Learning path', all.length),
         _tabChip(1, 'In progress', all.where(started).length),
