@@ -365,6 +365,12 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           builder: (context, state) => _Lazy(e13.loadLibrary, () => e13.LiveSessionDetailScreen(
               sessionId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0)),
         ),
+        // Register for a class: the static page at /live-sessions/:id (web/session) sends its Register button here.
+        GoRoute(
+          path: '/join/:id',
+          builder: (context, state) => _Lazy(e13.loadLibrary, () => e13.LiveSessionDetailScreen(
+              sessionId: int.tryParse(state.pathParameters['id'] ?? '0') ?? 0)),
+        ),
         // Partner enquiry — public, no login.
         GoRoute(path: '/partner', builder: (_, __) => _Lazy(e14.loadLibrary, () => e14.PartnerEnquiryScreen())),
         // Pricing — public, no login.
