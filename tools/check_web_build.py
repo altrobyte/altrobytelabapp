@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "build" / "web"
-NEEDED = ["index.html", "main.dart.js", "flutter_bootstrap.js", "flutter.js", "manifest.json", "favicon.png", "version.json",
+NEEDED = ["index.html", "app.html", "main.dart.js", "flutter_bootstrap.js", "flutter.js", "manifest.json", "favicon.png", "version.json",
           "assets/FontManifest.json", "assets/AssetManifest.bin.json", "canvaskit/canvaskit.wasm", "live/index.html", "live/v2/index.html", "class/index.html", "admissions/index.html"]
 JSON = ["manifest.json", "assets/FontManifest.json", "version.json"]
 

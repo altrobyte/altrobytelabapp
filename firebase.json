@@ -23,13 +23,9 @@
         "destination": "/admissions/index.html"
       },
       {
-        "//": "The front door is the static home page (30 Oct 2026, founder): fast, readable by Google, a website rather than an app. Every other path is still the app.",
-        "source": "/",
-        "destination": "/home/index.html"
-      },
-      {
+        "//": "The app's shell is app.html: index.html is the static home page at the front door (30 Oct 2026, founder; stamp_version.py swaps them after the build).",
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/app.html"
       }
     ],
     "headers": [
@@ -64,7 +60,7 @@
       },
       {
         "//": "The app shell. None of these carry a content hash, so a cached copy pins a visitor to whatever version they first loaded. flutter_bootstrap.js is the entry point and was being cached for a year, which is why some people saw a build from days ago while others saw today's.",
-        "source": "/@(index.html|flutter_bootstrap.js|flutter.js|flutter_service_worker.js|version.json|manifest.json)",
+        "source": "/@(index.html|app.html|flutter_bootstrap.js|flutter.js|flutter_service_worker.js|version.json|manifest.json)",
         "headers": [
           {
             "key": "Cache-Control",

@@ -34,7 +34,8 @@ const _premium = [
 ];
 
 const _budget = [
-  _Offer('Self-paced with Altron AI', '₹1,999', 'Every module and recorded lecture, with Altron explaining each one by voice.',
+  // ₹4,999 with a live class every week (30 Oct 2026, founder; it was ₹1,999 without one).
+  _Offer('Self-paced with Altron AI', '₹4,999 / month', 'Every module and recorded lecture, Altron explaining each one by voice, and a live class every week.',
       Icons.record_voice_over_rounded, badge: 'Most affordable'),
   _Offer('Lab at home', 'from ₹4,000', 'Your own kit, so every lesson is done on real hardware.', Icons.home_work_rounded),
   _Offer('Learn with an industry expert', 'from ₹8,800 / month', 'Live classes and reviews from engineers who build products.',

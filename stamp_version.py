@@ -31,3 +31,13 @@ if html == before:
 
 io.open(path, "w", encoding="utf-8", newline="\n").write(html)
 print(f"stamped flutter_bootstrap.js?v={version}")
+
+# The front door is the static home page (30 Oct 2026, founder): Firebase serves index.html for "/" before any rewrite,
+# so the app's shell moves to app.html (every other path is rewritten to it) and the home page takes index.html.
+import os
+import shutil
+home = "build/web/home/index.html"
+if os.path.exists(home):
+    io.open("build/web/app.html", "w", encoding="utf-8", newline="\n").write(html)
+    shutil.copyfile(home, path)
+    print("home page at /, the app at app.html")
