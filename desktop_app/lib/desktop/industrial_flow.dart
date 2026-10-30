@@ -118,7 +118,8 @@ Future<bool> runIndustrialTraining(BuildContext context, int plantId, IndProgram
   if (worker == null || !context.mounted) return false;
   final started = DateTime.now();
   await Navigator.of(context).push(MaterialPageRoute(builder: (_) => lesson?.call(p) ??
-      NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false, audience: 'worker')));
+      // When the lesson is complete the test opens by itself (30 Oct 2026: it waited for the back button).
+      NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false, audience: 'worker', nextTitle: 'Test (8 sawaal)')));
   if (!context.mounted) return false;
   final minutes = DateTime.now().difference(started).inMinutes;
   final result = await Navigator.of(context).push<Map<String, dynamic>>(
