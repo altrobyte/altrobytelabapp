@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electronics Fundamentals · Altrobyte Lab</title>
+<style>
+  :root { --ink:#13202C; --soft:#5B6876; --paper:#F7F4EE; --grid:#ECE5D8; --line:#E2DACB; --copper:#C2662D; --teal:#127A78;
+          --dark:#0F1B2A; --gold:#E0A43A; --red:#C0392B; --green:#2E8B57; --card:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); font:18px/1.7 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+         background: var(--paper) repeating-linear-gradient(0deg, transparent 0 31px, var(--grid) 31px 32px),
+                     repeating-linear-gradient(90deg, transparent 0 31px, var(--grid) 31px 32px); background-blend-mode: multiply; }
+  main { max-width: 960px; margin: 0 auto; padding: 22px 18px 70px; }
+  .hero { position:relative; overflow:hidden; border-radius: 22px; color:#fff; padding: 34px 30px 30px;
+          background: radial-gradient(120% 140% at 85% 10%, #3B2412 0%, #1A1410 40%, var(--dark) 72%); }
+  .hero .tag { font-weight:700; font-size:12px; letter-spacing: 3px; color: var(--gold); }
+  .hero .h1 { font-weight:800; font-size:42px; line-height:1.1; margin: 12px 0 10px; max-width: 560px; }
+  .hero p { margin: 0; color:#D8DEE6; max-width: 520px; }
+  .hero svg { position:absolute; right: 10px; bottom: 0; width: 44%; max-width: 420px; opacity: .95; }
+  section { background: var(--card); border:1px solid var(--line); border-radius: 18px; padding: 24px 26px; margin-top: 22px; box-shadow: 0 8px 24px -18px rgba(19,32,44,.35); }
+  h2 { font-weight:800; font-size:26px; line-height:1.25; margin: 0 0 6px; display:flex; gap:12px; align-items:center; }
+  h2 .n { font: 700 13px/1 Consolas, monospace; background: var(--dark); color: var(--gold); border-radius: 8px; padding: 7px 10px; }
+  .big { font-size: 19.5px; font-weight: 600; margin: 4px 0 12px; }
+  .box { padding: 12px 16px; border-radius: 12px; margin: 12px 0; }
+  .def { background:#E9F4F3; border-left: 5px solid var(--teal); } .warn { background:#FBECE9; border-left: 5px solid var(--red); }
+  .story { background:#FBF1DE; border-left: 5px solid var(--gold); } .rule { background: var(--dark); color:#fff; } .rule b { color: var(--gold); }
+  .formula { font: 700 21px/1.4 Consolas, monospace; text-align:center; padding: 12px; border-radius: 12px; background: #FFF8EE; border: 1px dashed var(--copper); color: var(--copper); }
+  ul.points { padding-left: 0; list-style: none; margin: 8px 0; } ul.points li { padding: 7px 0 7px 34px; position: relative; border-bottom: 1px dashed var(--line); }
+  ul.points li::before { content: '▸'; position:absolute; left: 8px; color: var(--copper); font-weight: 800; }
+  table { width:100%; border-collapse: collapse; font-size: 16px; } th, td { text-align:left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; } th { background:#F3EEE3; }
+  pre { background: var(--dark); color:#E8EEF6; border-radius: 12px; padding: 14px; font: 15px/1.6 Consolas, monospace; overflow-x:auto; }
+  .lab { border-radius: 16px; background: var(--dark); color:#fff; padding: 16px; margin: 12px 0; }
+  .lab .top { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom: 10px; }
+  .lab .title { font-weight: 800; font-size: 17px; } .lab .title small { display:block; font-weight:500; color:#A9B8C9; font-size: 14px; }
+  .pill { font: 700 14px Consolas, monospace; background: rgba(224,164,58,.16); color: var(--gold); border-radius: 99px; padding: 5px 12px; }
+  .btn { font: 600 15px "Segoe UI", sans-serif; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.07); color:#fff; border-radius: 10px; padding: 9px 14px; cursor:pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); } .btn.on { background: var(--gold); color: var(--dark); border-color: var(--gold); }
+  .btn.ok { background: var(--green); border-color: var(--green); } .btn.no { background: var(--red); border-color: var(--red); }
+  .say { margin-top: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: 16px; min-height: 24px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; } label.s { display:block; font-size: 14px; color:#C9D4E2; margin-top: 8px; }
+  input[type=range] { width: 100%; accent-color: var(--gold); }
+  .scene { width:100%; border-radius: 12px; background:#16263B; display:block; }
+  .read { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 8px; margin-top: 10px; }
+  .read div { background: rgba(255,255,255,.06); border-radius: 10px; padding: 8px 10px; font-size: 13px; color:#A9B8C9; } .read b { display:block; font: 700 20px Consolas, monospace; color:#fff; }
+  .q { border:1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 10px 0; } .q p { margin: 0 0 8px; font-weight: 700; }
+  .q .opts { display:flex; flex-wrap:wrap; gap: 8px; } .q button { font: 600 15px "Segoe UI"; border:1px solid var(--line); background:#fff; border-radius: 10px; padding: 8px 12px; cursor:pointer; }
+  .q button.ok { background: var(--green); color:#fff; border-color: var(--green); } .q button.no { background: var(--red); color:#fff; border-color: var(--red); }
+  .q .ans { display:none; margin-top: 8px; color: var(--teal); font-weight: 600; } .q.done .ans { display:block; }
+  .cols { display:grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 22px; align-items: start; } .cols > div > :first-child { margin-top: 0; }
+  @media (max-width: 900px) { .cols { display:block; } .hero svg { opacity:.2; width: 90%; } }
+  @keyframes zap { 0%,100% { opacity: 0; } 10%,40% { opacity: 1; } }
+  .smoke { animation: rise 1.6s ease-out infinite; transform-box: fill-box; } @keyframes rise { from { transform: translateY(0); opacity: .8; } to { transform: translateY(-40px); opacity: 0; } }
+  @media (prefers-reduced-motion: no-preference) { section.rv { opacity: 0; transform: translateY(24px); transition: .7s ease; } section.rv.in { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero">
+  <svg viewBox="0 0 420 260" aria-hidden="true">
+    <path d="M30 200 H140 V80 H300 V200 H390" stroke="#3B5068" stroke-width="6" fill="none"/>
+    <path d="M30 200 H140 V80 H300 V200 H390" stroke="#FFB547" stroke-width="6" fill="none" stroke-dasharray="14 40"><animate attributeName="stroke-dashoffset" values="0;-54" dur=".9s" repeatCount="indefinite"/></path>
+    <rect x="190" y="66" width="60" height="28" rx="5" fill="#C7A27A"/><rect x="202" y="66" width="6" height="28" fill="#8B4513"/><rect x="216" y="66" width="6" height="28" fill="#C0392B"/><rect x="230" y="66" width="6" height="28" fill="#8B4513"/>
+    <circle cx="300" cy="200" r="18" fill="#FF4D4D"><animate attributeName="opacity" values="1;.55;1" dur="1.4s" repeatCount="indefinite"/></circle>
+    <rect x="20" y="170" width="30" height="60" rx="5" fill="#2B394D" stroke="#E0A43A"/>
+  </svg>
+  <div class="tag">ALTROBYTE LAB · EMBEDDED FOUNDATION · LESSON 1</div>
+  <div class="h1">Electronics fundamentals: feel what happens in the wire.</div>
+  <p>Before the first line of firmware: voltage, current, resistance, Ohm's law, power, capacitors and coils. Fourteen short parts, each with something to try.</p>
+</div>
+
+<section>
+  <h2><span class="n">01</span>What is actually moving</h2>
+  <p class="big">Every sensor reading, motor and Wi-Fi packet is the same thing underneath: electrons pushed through a material.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Random motion vs drift<small>Connect the battery and watch the electrons</small></div><div class="pill" id="drState">battery off</div></div>
+    <svg viewBox="0 0 600 140" class="scene" id="drSvg"><rect x="20" y="40" width="560" height="60" rx="30" fill="#B87333" opacity=".35"/></svg>
+    <div class="row" style="margin-top:10px"><button class="btn" id="drBtn">🔋 Connect the battery</button></div>
+    <div class="say" id="drSay">Battery off: the free electrons wander in every direction. Nothing useful happens.</div>
+  </div>
+  <ul class="points">
+    <li>Copper holds its outer electrons loosely: they wander randomly.</li>
+    <li>A battery adds a slight, steady <b>drift</b> in one direction. That drift is <b>current</b>.</li>
+    <li>One coulomb ≈ 6.24 × 10¹⁸ electrons; one coulomb per second is one <b>ampere</b>.</li>
+    <li>An ESP32 GPIO pin is happy at 10–20 mA: 0.010–0.020 coulombs every second.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">02</span>Voltage, current, resistance</h2>
+  <p class="big">Three quantities, one relationship. The water tank shows all three at once.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Water tank ↔ circuit<small>Move both sliders and watch the flow</small></div><div class="pill" id="tkI">10.0 mA</div></div>
+    <svg viewBox="0 0 600 200" class="scene"><rect x="40" y="30" width="120" height="150" rx="8" fill="#22344F"/><rect id="tkWater" x="44" y="100" width="112" height="76" rx="4" fill="#3FA7E0"/>
+      <rect x="160" y="150" width="380" height="24" fill="#22344F"/><rect id="tkPipe" x="300" y="152" width="80" height="20" fill="#16263B"/>
+      <g id="tkDrops" fill="#7FD0FF"></g><text x="100" y="22" text-anchor="middle" fill="#A9B8C9" font-size="13">voltage = pressure</text><text x="340" y="196" text-anchor="middle" fill="#A9B8C9" font-size="13">resistance = narrow pipe</text></svg>
+    <label class="s">Voltage (tank level): <b id="tkVv">5.0 V</b></label><input type="range" id="tkV" min="1" max="12" step=".5" value="5">
+    <label class="s">Resistance (pipe pinch): <b id="tkRv">500 Ω</b></label><input type="range" id="tkR" min="100" max="2000" step="50" value="500">
+    <div class="say" id="tkSay">More pressure or a wider pipe both give more flow.</div>
+  </div>
+  <div class="box def"><b>Voltage (V)</b>, the push: a difference in pressure between <b>two points</b>. <b>Current (I)</b>, the flow: charge per second. <b>Resistance (R)</b>, the opposition: it turns lost energy into heat.</div>
+  <div class="box rule"><b>Remember:</b> voltage is always between two points. There is no voltage "at" a pin without a reference, usually ground.</div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>A circuit must be a complete loop</h2>
+  <p class="big">Water can spill out of an open pipe. Charge cannot: it must come back to the source.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Close the loop<small>Open and close the switch</small></div><div class="pill" id="lpState">open</div></div>
+    <svg viewBox="0 0 600 180" class="scene"><path d="M80 140 V40 H520 V140 H340" stroke="#4A6380" stroke-width="5" fill="none"/><path d="M260 140 H80" stroke="#4A6380" stroke-width="5"/>
+      <line id="lpSw" x1="260" y1="140" x2="330" y2="110" stroke="#E0A43A" stroke-width="6" stroke-linecap="round"/><circle cx="260" cy="140" r="6" fill="#E0A43A"/><circle cx="340" cy="140" r="6" fill="#E0A43A"/>
+      <circle id="lpBulb" cx="520" cy="90" r="22" fill="#3B4B61" stroke="#A9B8C9"/><rect x="60" y="70" width="40" height="50" rx="5" fill="#2B394D" stroke="#E0A43A"/><text x="80" y="100" fill="#E0A43A" font-size="14" text-anchor="middle">+−</text>
+      <path id="lpFlow" d="M80 140 V40 H520 V140 H340 M260 140 H80" stroke="#FFB547" stroke-width="5" fill="none" stroke-dasharray="10 30" opacity="0"><animate attributeName="stroke-dashoffset" values="0;-40" dur=".8s" repeatCount="indefinite"/></path></svg>
+    <div class="row" style="margin-top:10px"><button class="btn" id="lpBtn">Close the switch</button></div>
+    <div class="say" id="lpSay">The switch is open: the loop is broken, so no current flows and the bulb stays dark.</div>
+  </div>
+  <ul class="points">
+    <li>No complete path back to the source = no current, whatever the voltage.</li>
+    <li>A real battery empties (its <b>capacity</b>); an ideal supply does not. Separate topic.</li>
+    <li>Use the water analogy to build intuition, then drop it: from here we speak in volts and amps.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">04</span>Reading a real resistor</h2>
+  <p class="big">The colour bands are the value. Learn to read them and stop guessing at the bench.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Colour code decoder<small>Build 220 Ω from the bands</small></div><div class="pill" id="rcVal">1.0 kΩ ±5%</div></div>
+    <svg viewBox="0 0 600 120" class="scene"><line x1="40" y1="60" x2="560" y2="60" stroke="#A9B8C9" stroke-width="5"/><rect x="170" y="30" width="260" height="60" rx="26" fill="#D9BF94"/>
+      <rect id="b0" x="210" y="30" width="18" height="60"/><rect id="b1" x="250" y="30" width="18" height="60"/><rect id="b2" x="290" y="30" width="18" height="60"/><rect id="b3" x="380" y="30" width="14" height="60"/></svg>
+    <div id="rcPick"></div>
+    <div class="say" id="rcSay">Task: make 220 Ω. Then try 1 kΩ and 10 kΩ.</div>
+  </div>
+  <ul class="points">
+    <li>Bands 1 and 2 are digits, band 3 the multiplier (how many zeros), band 4 the tolerance.</li>
+    <li>Hold it with the tolerance band (usually gold) on your right.</li>
+    <li>Red red brown = 2, 2, ×10 = <b>220 Ω</b>. Brown black red = 1, 0, ×100 = <b>1 kΩ</b>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">05</span>The three resistors you will use constantly</h2>
+  <p class="big">Almost every board you build uses resistors for one of three jobs.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Pick the right resistor<small>For each job, choose the value</small></div><div class="pill" id="jbScore">0 / 3</div></div>
+    <div id="jbQs"></div>
+  </div>
+  <table><tr><th>Value</th><th>Job</th></tr>
+    <tr><td>220 Ω / 330 Ω</td><td>In series with an LED, to limit its current</td></tr>
+    <tr><td>4.7 kΩ / 10 kΩ</td><td>Pull-up on I²C lines and buttons, so a pin is never floating</td></tr>
+    <tr><td>Two resistors as a divider</td><td>Bring a 12 V battery line down into the ESP32's 0–3.3 V ADC range</td></tr></table>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Ohm's law</h2>
+  <p class="big">One line ties the three together. If you remember nothing else today, remember this.</p>
+  <div class="formula">V = I × R &nbsp;·&nbsp; I = V ÷ R &nbsp;·&nbsp; R = V ÷ I</div>
+  <div class="lab">
+    <div class="top"><div class="title">Solver and V–I graph<small>Task: what current flows with 3.3 V across 330 Ω?</small></div><div class="pill" id="ohI">10.0 mA</div></div>
+    <svg viewBox="0 0 600 180" class="scene"><line x1="60" y1="150" x2="560" y2="150" stroke="#4A6380"/><line x1="60" y1="20" x2="60" y2="150" stroke="#4A6380"/>
+      <text x="560" y="168" fill="#A9B8C9" font-size="12" text-anchor="end">voltage →</text><text x="66" y="28" fill="#A9B8C9" font-size="12">current ↑</text>
+      <line id="ohLine" x1="60" y1="150" x2="560" y2="60" stroke="#E0A43A" stroke-width="3"/><circle id="ohDot" cx="270" cy="110" r="7" fill="#FFB547"/></svg>
+    <label class="s">Voltage: <b id="ohVv">5.0 V</b></label><input type="range" id="ohV" min="0" max="12" step=".1" value="5">
+    <label class="s">Resistance: <b id="ohRv">500 Ω</b></label><input type="range" id="ohR" min="50" max="2000" step="10" value="500">
+    <div class="say" id="ohSay">The slope of the line is set by the resistance: smaller R, steeper line, more current.</div>
+  </div>
+  <div class="box story">Ohm's law works for resistors. An LED or diode is <b>not</b> ohmic: its drop stays roughly fixed (about 2 V for red), which is why we subtract it first.</div>
+</section>
+
+<section>
+  <h2><span class="n">07</span>The LED on your board</h2>
+  <p class="big">A red LED drops about 2 V and wants about 10 mA. Your ESP32 pin gives 3.3 V. Which resistor?</p>
+  <div class="formula">R = (3.3 V − 2.0 V) ÷ 0.010 A = 130 Ω</div>
+  <div class="lab">
+    <div class="top"><div class="title">Choose the series resistor<small>Watch the LED and the current</small></div><div class="pill" id="ledI">-</div></div>
+    <svg viewBox="0 0 600 140" class="scene"><path d="M40 100 H180 M300 100 H420 M470 100 H560" stroke="#4A6380" stroke-width="5"/>
+      <rect x="180" y="85" width="120" height="30" rx="10" fill="#D9BF94"/><text id="ledRt" x="240" y="105" text-anchor="middle" fill="#13202C" font-size="14" font-weight="700">?</text>
+      <circle id="ledG" cx="445" cy="100" r="34" fill="#FF4D4D" opacity="0"/><path d="M425 82 L465 100 L425 118 Z" fill="#FF6B6B"/><line x1="467" y1="80" x2="467" y2="120" stroke="#FF6B6B" stroke-width="4"/>
+      <text id="ledX" x="445" y="60" text-anchor="middle" fill="#FF8A80" font-size="15" font-weight="700" opacity="0">burnt!</text></svg>
+    <div class="row" id="ledBtns" style="margin-top:10px"></div>
+    <div class="say" id="ledSay">Pick a resistor and see what happens.</div>
+  </div>
+  <ul class="points">
+    <li>Nearest standard values above 130 Ω: 150 Ω and 220 Ω. Pick <b>220 Ω</b>: slightly dimmer, safer pin, in every kit.</li>
+    <li>No resistor at all: the current spikes, the LED and the pin can die.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">08</span>Power and heat</h2>
+  <p class="big">Current through a resistance always makes heat. Every part you burn out is this equation ignored.</p>
+  <div class="formula">P = V × I = I² × R = V² ÷ R</div>
+  <div class="lab">
+    <div class="top"><div class="title">Burn a resistor (safely)<small>Pick its rating, then raise the voltage</small></div><div class="pill" id="pwState">cool</div></div>
+    <svg viewBox="0 0 600 140" class="scene"><line x1="60" y1="90" x2="540" y2="90" stroke="#4A6380" stroke-width="5"/><rect id="pwBody" x="230" y="65" width="140" height="50" rx="20" fill="#D9BF94"/>
+      <g id="pwSmoke" opacity="0"><circle class="smoke" cx="280" cy="55" r="10" fill="#9AA3AE"/><circle class="smoke" style="animation-delay:.5s" cx="310" cy="50" r="12" fill="#9AA3AE"/><circle class="smoke" style="animation-delay:1s" cx="335" cy="55" r="9" fill="#9AA3AE"/></g></svg>
+    <div class="row" id="pwRate" style="margin-top:10px"></div>
+    <label class="s">Voltage across it: <b id="pwVv">5.0 V</b> (resistor 100 Ω)</label><input type="range" id="pwV" min="0" max="12" step=".1" value="5">
+    <div class="read"><div><b id="pwI">50</b>mA</div><div><b id="pwP">0.25</b>watts</div></div>
+    <div class="say" id="pwSay">Power is the rate electrical energy becomes something else: in a resistor, all of it becomes heat.</div>
+  </div>
+  <ul class="points"><li>Watts = joules per second. A motor turns most of it into motion, an LED into light, a resistor into heat.</li>
+    <li>Always pick a resistor rated for more than the power it will carry (¼ W is the usual small one).</li></ul>
+</section>
+
+<section>
+  <h2><span class="n">09</span>Battery life is power discipline</h2>
+  <p class="big">A battery IoT node lives or dies on its average current.</p>
+  <div class="lab">
+    <div class="top"><div class="title">How long will the battery last?<small>2000 mAh cell: change how the node behaves</small></div><div class="pill" id="btLife">-</div></div>
+    <label class="s">Current while awake: <b id="btAv">80 mA</b></label><input type="range" id="btA" min="10" max="200" step="5" value="80">
+    <label class="s">Time awake: <b id="btPv">100 %</b> of the time</label><input type="range" id="btP" min="0.1" max="100" step="0.1" value="100">
+    <label class="s">Current while asleep: <b id="btSv">50 µA</b></label><input type="range" id="btS" min="5" max="2000" step="5" value="50">
+    <div class="say" id="btSay">Always awake at 80 mA, a 2000 mAh cell lasts about a day. Now try waking only 1 % of the time.</div>
+  </div>
+  <ul class="points"><li>Average current = awake current × awake share + sleep current × sleep share.</li>
+    <li>Same hardware: about a day always on, years when it sleeps at 50 µA between readings.</li></ul>
+</section>
+
+<section>
+  <h2><span class="n">10</span>Capacitance</h2>
+  <p class="big">A capacitor stores charge and resists sudden changes in voltage.</p>
+  <div class="formula">τ = R × C &nbsp;·&nbsp; 63 % after 1τ &nbsp;·&nbsp; about 99 % after 5τ</div>
+  <div class="lab">
+    <div class="top"><div class="title">Charging and discharging<small>Press charge; change R or C</small></div><div class="pill" id="cpTau">τ = 1.00 s</div></div>
+    <svg viewBox="0 0 600 160" class="scene"><line x1="40" y1="140" x2="580" y2="140" stroke="#4A6380"/><polyline id="cpCurve" fill="none" stroke="#38E1D3" stroke-width="3" points=""/><text x="44" y="22" fill="#A9B8C9" font-size="12">cap voltage (5 V supply)</text></svg>
+    <label class="s">Resistance: <b id="cpRv">10 kΩ</b></label><input type="range" id="cpR" min="1" max="100" step="1" value="10">
+    <label class="s">Capacitance: <b id="cpCv">100 µF</b></label><input type="range" id="cpC" min="10" max="1000" step="10" value="100">
+    <div class="row" style="margin-top:8px"><button class="btn" id="cpCh">⚡ Charge</button><button class="btn" id="cpDis">Discharge</button><span class="pill" id="cpV">0.00 V</span></div>
+    <div class="say" id="cpSay">A bigger R or a bigger C means a slower curve.</div>
+  </div>
+  <div class="box def"><b>Capacitance (C)</b>, in farads: charge held per volt. Real parts are µF, nF and pF. Two plates, an insulator between; remove the source and the charge stays for a while.</div>
+</section>
+
+<section>
+  <h2><span class="n">11</span>Why every chip has a capacitor next to it</h2>
+  <p class="big">When a motor kicks in, the supply dips. Without a capacitor, your microcontroller resets.</p>
+  <div class="lab">
+    <div class="top"><div class="title">Motor kick<small>Start the motor, with and without the capacitors</small></div><div class="pill" id="mkState">ESP32 running</div></div>
+    <svg viewBox="0 0 600 150" class="scene"><polyline id="mkRail" fill="none" stroke="#38E1D3" stroke-width="3" points="20,40 580,40"/><line x1="20" y1="95" x2="580" y2="95" stroke="#C0392B" stroke-dasharray="6 6"/>
+      <text x="24" y="112" fill="#FF8A80" font-size="12">reset below 2.5 V</text><text x="24" y="30" fill="#A9B8C9" font-size="12">3.3 V supply rail</text></svg>
+    <div class="row" style="margin-top:10px"><button class="btn" id="mkCap">Fit 0.1 µF + 100 µF</button><button class="btn" id="mkGo">⚙ Start the motor</button></div>
+    <div class="say" id="mkSay">No capacitors fitted. Start the motor and watch the rail.</div>
+  </div>
+  <table><tr><th>Part</th><th>Job on a real board</th></tr>
+    <tr><td>0.1 µF ceramic</td><td>Decoupling: right next to each chip's power pin, supplying short sharp bursts</td></tr>
+    <tr><td>10–470 µF electrolytic</td><td>Bulk storage at the power input, smoothing bigger, slower dips</td></tr>
+    <tr><td>Small cap + resistor</td><td>Debouncing a button; timing in RC circuits</td></tr></table>
+  <div class="box warn">An electrolytic capacitor has polarity: the stripe marks the negative leg. Backwards, it fails, sometimes loudly.</div>
+</section>
+
+<section>
+  <h2><span class="n">12</span>Inductance and the relay spike</h2>
+  <p class="big">An inductor resists a change in current, and gets violent when you ignore it.</p>
+  <div class="lab">
+    <div class="top"><div class="title">The relay spike<small>Switch the coil on, then off; then fit the flyback diode</small></div><div class="pill" id="rlV">0 V</div></div>
+    <svg viewBox="0 0 600 150" class="scene"><polyline id="rlTrace" fill="none" stroke="#FFB547" stroke-width="3" points="20,75 580,75"/><line x1="20" y1="75" x2="580" y2="75" stroke="#4A6380" stroke-dasharray="4 6"/>
+      <text id="rlZap" x="300" y="30" text-anchor="middle" fill="#FF8A80" font-size="16" font-weight="700" opacity="0">⚡ −180 V spike at the transistor!</text></svg>
+    <div class="row" style="margin-top:10px"><button class="btn" id="rlOn">Switch coil on</button><button class="btn" id="rlOff">Switch coil off</button><button class="btn" id="rlD">Fit flyback diode</button></div>
+    <div class="say" id="rlSay">Any coil is an inductor: relays, solenoids, motor windings, buzzers.</div>
+  </div>
+  <ul class="points"><li>Switch on: the current ramps up, it does not jump.</li>
+    <li>Switch off: the collapsing field tries to keep current flowing; with nowhere to go it makes a big reverse spike that kills transistors.</li>
+    <li>A <b>flyback diode</b> across the coil gives that current a safe path. Every relay board has one.</li></ul>
+</section>
+
+<section>
+  <h2><span class="n">13</span>Quick check</h2>
+  <p class="big">Five questions. Answer honestly: it tells you what to revisit.</p>
+  <div class="q"><p>1. A multimeter shows "3.3 V". What is missing from that statement?</p><div class="opts"><button>Nothing</button><button data-ok>Between which two points (the reference)</button><button>The current</button></div><div class="ans">Voltage is always between two points, usually a pin and ground.</div></div>
+  <div class="q"><p>2. 5 V across 1 kΩ. What current flows?</p><div class="opts"><button data-ok>5 mA</button><button>5 A</button><button>0.2 mA</button></div><div class="ans">I = V ÷ R = 5 ÷ 1000 = 0.005 A = 5 mA.</div></div>
+  <div class="q"><p>3. A green LED drops 2.1 V and wants 12 mA on a 5 V rail. Closest resistor?</p><div class="opts"><button>100 Ω</button><button data-ok>240–270 Ω</button><button>10 kΩ</button></div><div class="ans">(5 − 2.1) ÷ 0.012 ≈ 242 Ω; use the next standard value up.</div></div>
+  <div class="q"><p>4. Why is a 0.1 µF capacitor placed next to every chip?</p><div class="opts"><button>To store data</button><button data-ok>To supply short current bursts so the rail does not dip</button><button>To slow the clock</button></div><div class="ans">That is decoupling: it keeps the chip from resetting or glitching.</div></div>
+  <div class="q"><p>5. A relay coil is switched off by a transistor. What protects the transistor?</p><div class="opts"><button>A bigger resistor</button><button data-ok>A flyback diode across the coil</button><button>A capacitor on the base</button></div><div class="ans">The diode gives the coil's current a path, so there is no spike.</div></div>
+</section>
+
+<section>
+  <h2><span class="n">14</span>Carry these five into the next lesson</h2>
+  <ul class="points">
+    <li>Voltage is a difference between two points. Always ask "relative to what?"</li>
+    <li>Current does the work, and current kills components.</li>
+    <li><b>V = I × R</b> is the whole first month in three letters.</li>
+    <li>A capacitor smooths voltage; an inductor fights changes in current.</li>
+    <li>Power becomes heat: check the rating before you power up.</li>
+  </ul>
+  <div class="box rule"><b>Before the next lesson:</b> read three resistors from your kit; work out the resistor for a green LED (2.1 V, 12 mA) on 5 V; bring a multimeter if you have one. Next: breadboard, ground, series and parallel.</div>
+</section>
+
+</main>
+<script>
+(function () {   // a section with a drill becomes two columns: drills left, the rest right (runs before the app's slides)
+  if (window.innerWidth <= 900) return;
+  Array.prototype.forEach.call(document.querySelectorAll('main > section'), function (sec) {
+    if (!sec.querySelector('.lab')) return;
+    var cols = document.createElement('div'), left = document.createElement('div'), right = document.createElement('div');
+    cols.className = 'cols'; cols.appendChild(left); cols.appendChild(right);
+    Array.prototype.slice.call(sec.children).forEach(function (el, i) {
+      if (/^H[1-3]$/.test(el.tagName) || (i === 1 && el.classList.contains('big'))) return;
+      (el.classList.contains('lab') ? left : right).appendChild(el);
+    });
+    sec.appendChild(cols);
+  });
+})();
+</script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function did(t) { try { if (window.altroDid) window.altroDid(t); } catch (e) {} }
+  function done(el) { var lab = el.closest('.lab'); if (!lab || lab.dataset.done) return; lab.dataset.done = 1; did('DONE: every activity of this section is finished'); }
+  function svgEl(tag, a) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (var k in a) e.setAttribute(k, a[k]); return e; }
+
+  // 01 drift
+  var dr = [], on = false;
+  for (var i = 0; i < 26; i++) { var c = svgEl('circle', { r: 5, fill: '#FFD27A' }); $('drSvg').appendChild(c); dr.push({ el: c, x: 30 + Math.random() * 540, y: 48 + Math.random() * 44, vx: (Math.random() - .5) * 3, vy: (Math.random() - .5) * 3 }); }
+  setInterval(function () { dr.forEach(function (p) { p.vx += (Math.random() - .5) * .8; p.vy += (Math.random() - .5) * .8; p.vx *= .9; p.vy *= .9;
+    p.x += p.vx + (on ? 1.6 : 0); p.y += p.vy; if (p.y < 48) p.y = 48; if (p.y > 92) p.y = 92; if (p.x > 570) p.x = 30; if (p.x < 30) p.x = 570;
+    p.el.setAttribute('cx', p.x); p.el.setAttribute('cy', p.y); }); }, 40);
+  $('drBtn').onclick = function () { on = !on; $('drBtn').textContent = on ? 'Disconnect' : '🔋 Connect the battery'; $('drState').textContent = on ? 'battery on' : 'battery off';
+    $('drSay').textContent = on ? 'Battery on: the same random motion, plus a slow steady drift to the right. That drift is current.' : 'Battery off: random motion only, no current.';
+    did(on ? 'connected the battery and saw the drift' : 'disconnected the battery'); if (on) done($('drBtn')); };
+
+  // 02 tank
+  var drops = []; for (var d = 0; d < 6; d++) { var e = svgEl('circle', { r: 4, cy: 162 }); $('tkDrops').appendChild(e); drops.push({ el: e, x: 170 + d * 60 }); }
+  var tkMoved = {};
+  function tank() { var v = +$('tkV').value, r = +$('tkR').value, ma = v / r * 1000;
+    $('tkVv').textContent = v.toFixed(1) + ' V'; $('tkRv').textContent = r + ' Ω'; $('tkI').textContent = ma.toFixed(1) + ' mA';
+    var h = v / 12 * 140; $('tkWater').setAttribute('y', 176 - h); $('tkWater').setAttribute('height', h);
+    var gap = Math.max(2, 20 - (2000 - r) / 2000 * 18); $('tkPipe').setAttribute('y', 152 + (20 - gap) / 2); $('tkPipe').setAttribute('height', gap);
+    window.__tkSpeed = ma / 4; }
+  setInterval(function () { drops.forEach(function (p) { p.x += (window.__tkSpeed || 2); if (p.x > 535) p.x = 165; p.el.setAttribute('cx', p.x); }); }, 40);
+  ['tkV', 'tkR'].forEach(function (id) { $(id).oninput = tank; $(id).onchange = function () { tkMoved[id] = 1; did('moved ' + (id === 'tkV' ? 'voltage' : 'resistance') + ': current now ' + $('tkI').textContent); if (tkMoved.tkV && tkMoved.tkR) done($('tkV')); }; });
+  tank();
+
+  // 03 loop
+  var closed = false;
+  $('lpBtn').onclick = function () { closed = !closed; $('lpSw').setAttribute('x2', closed ? 340 : 330); $('lpSw').setAttribute('y2', closed ? 140 : 110);
+    $('lpBulb').setAttribute('fill', closed ? '#FFE07A' : '#3B4B61'); $('lpFlow').setAttribute('opacity', closed ? 1 : 0);
+    $('lpState').textContent = closed ? 'closed' : 'open'; $('lpBtn').textContent = closed ? 'Open the switch' : 'Close the switch';
+    $('lpSay').textContent = closed ? 'Loop complete: current flows out and back to the source, the bulb lights.' : 'Loop broken: no current anywhere, even with the battery full.';
+    did(closed ? 'closed the switch: the bulb lit' : 'opened the switch: the bulb went out'); if (closed) done($('lpBtn')); };
+
+  // 04 resistor colours
+  var COL = [['black', '#111'], ['brown', '#8B4513'], ['red', '#C0392B'], ['orange', '#E67E22'], ['yellow', '#F1C40F'], ['green', '#27AE60'], ['blue', '#2E86DE'], ['violet', '#8E44AD'], ['grey', '#95A5A6'], ['white', '#ECF0F1']];
+  var bands = [1, 0, 2], tol = 5;
+  function fmt(o) { return o >= 1e6 ? (o / 1e6).toFixed(o % 1e6 ? 1 : 0) + ' MΩ' : o >= 1e3 ? (o / 1e3).toFixed(o % 1e3 ? 1 : 0) + ' kΩ' : o + ' Ω'; }
+  function paintR() { for (var b = 0; b < 3; b++) $('b' + b).setAttribute('fill', COL[bands[b]][1]); $('b3').setAttribute('fill', '#D4AF37');
+    var ohm = (bands[0] * 10 + bands[1]) * Math.pow(10, bands[2]); $('rcVal').textContent = fmt(ohm) + ' ±' + tol + '%'; return ohm; }
+  var made = {};
+  ['Band 1', 'Band 2', 'Multiplier'].forEach(function (name, b) { var row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '8px';
+    var lab = document.createElement('span'); lab.textContent = name + ':'; lab.style.cssText = 'width:90px;font-size:13px;color:#A9B8C9'; row.appendChild(lab);
+    COL.slice(0, b === 2 ? 7 : 10).forEach(function (c, i) { var k = document.createElement('button'); k.title = c[0]; k.style.cssText = 'width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;background:' + c[1];
+      k.onclick = function () { bands[b] = i; var o = paintR(); var tgt = { 220: '220 Ω', 1000: '1 kΩ', 10000: '10 kΩ' }[o];
+        $('rcSay').textContent = tgt ? '✓ ' + tgt + '! ' + (made[o] ? '' : 'Well read.') : 'That is ' + fmt(o) + '.';
+        if (tgt && !made[o]) { made[o] = 1; did('built ' + tgt + ' from the colour bands'); if (made[220]) done(k); } };
+      row.appendChild(k); });
+    $('rcPick').appendChild(row); });
+  paintR();
+
+  // 05 jobs
+  var got = 0;
+  [['An LED on an ESP32 pin', ['220 Ω', '10 kΩ', '1 MΩ'], '220 Ω', 'Right: 220–330 Ω limits the LED current.'],
+   ['A pull-up on a push button', ['10 Ω', '10 kΩ', '10 MΩ'], '10 kΩ', 'Right: 4.7–10 kΩ keeps the pin from floating.'],
+   ['Reading a 12 V battery on a 3.3 V ADC', ['one 1 kΩ', 'a two-resistor divider', 'no resistor'], 'a two-resistor divider', 'Right: the divider scales 12 V down into range.']].forEach(function (q) {
+    var d = document.createElement('div'); d.style.margin = '10px 0'; var p = document.createElement('div'); p.textContent = q[0]; d.appendChild(p);
+    var row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '6px';
+    q[1].forEach(function (o) { var b = document.createElement('button'); b.className = 'btn'; b.textContent = o;
+      b.onclick = function () { if (row.dataset.done) return; var ok = o === q[2]; b.className = 'btn ' + (ok ? 'ok' : 'no');
+        did('for "' + q[0] + '" chose ' + o + (ok ? ' (right)' : ' (wrong)'));
+        if (ok) { row.dataset.done = 1; got++; $('jbScore').textContent = got + ' / 3'; var s = document.createElement('div'); s.className = 'say'; s.textContent = q[3]; d.appendChild(s); if (got === 3) done(b); }
+        else setTimeout(function () { b.className = 'btn'; }, 900); };
+      row.appendChild(b); });
+    d.appendChild(row); $('jbQs').appendChild(d); });
+
+  // 06 Ohm
+  function ohm() { var v = +$('ohV').value, r = +$('ohR').value, ma = v / r * 1000;
+    $('ohVv').textContent = v.toFixed(1) + ' V'; $('ohRv').textContent = r + ' Ω'; $('ohI').textContent = ma.toFixed(1) + ' mA';
+    var slope = 1 / r * 1000 / 120 * 130 * 12; var y2 = Math.max(20, 150 - slope * 12 / 12 * 1); $('ohLine').setAttribute('y2', Math.max(20, 150 - (12 / r * 1000) / 120 * 130));
+    $('ohDot').setAttribute('cx', 60 + v / 12 * 500); $('ohDot').setAttribute('cy', Math.max(20, 150 - ma / 120 * 130));
+    if (Math.abs(v - 3.3) < .06 && Math.abs(r - 330) < 6) { $('ohSay').textContent = '✓ 3.3 V ÷ 330 Ω = 10 mA. Exactly what an LED likes.'; if (!$('ohV').dataset.d) { $('ohV').dataset.d = 1; did('found 10 mA for 3.3 V across 330 Ω'); done($('ohV')); } } }
+  ['ohV', 'ohR'].forEach(function (id) { $(id).oninput = ohm; $(id).onchange = function () { did('set ' + $('ohVv').textContent + ' across ' + $('ohRv').textContent + ': ' + $('ohI').textContent); }; }); ohm();
+
+  // 07 LED
+  [0, 47, 150, 220, 1000].forEach(function (r) { var b = document.createElement('button'); b.className = 'btn'; b.textContent = r === 0 ? 'No resistor' : r + ' Ω';
+    b.onclick = function () { var ma = r === 0 ? 120 : (3.3 - 2) / r * 1000; $('ledRt').textContent = r === 0 ? 'wire' : r + ' Ω'; $('ledI').textContent = ma.toFixed(1) + ' mA';
+      var burnt = ma > 30; $('ledX').setAttribute('opacity', burnt ? 1 : 0); $('ledG').setAttribute('opacity', burnt ? 0 : Math.min(.9, ma / 12 * .8));
+      $('ledSay').textContent = burnt ? (r === 0 ? 'No resistor: the current shoots up, the LED burns and the pin is at risk.' : ma.toFixed(0) + ' mA is too much: the LED will not last.')
+        : r === 220 ? '✓ 220 Ω: about 6 mA. Clearly lit, safe for the pin, in every kit.' : r === 150 ? '150 Ω: about 9 mA, bright and fine.' : '1 kΩ: about 1.3 mA, very dim but safe.';
+      did('chose ' + b.textContent + ' for the LED: ' + ma.toFixed(1) + ' mA'); if (r === 220 || r === 150) done(b); };
+    $('ledBtns').appendChild(b); });
+
+  // 08 power
+  var rating = .25;
+  [.125, .25, .5, 1].forEach(function (w) { var b = document.createElement('button'); b.className = 'btn' + (w === .25 ? ' on' : ''); b.textContent = w + ' W'; b.dataset.w = w;
+    b.onclick = function () { rating = w; Array.prototype.forEach.call($('pwRate').children, function (x) { x.className = 'btn' + (+x.dataset.w === w ? ' on' : ''); }); pw(); did('chose a ' + w + ' W resistor'); };
+    $('pwRate').appendChild(b); });
+  var burned = false;
+  function pw() { var v = +$('pwV').value, i = v / 100, p = v * i; $('pwVv').textContent = v.toFixed(1) + ' V'; $('pwI').textContent = (i * 1000).toFixed(0); $('pwP').textContent = p.toFixed(2);
+    var hot = p / rating; $('pwBody').setAttribute('fill', hot > 1.5 ? '#3B2A1A' : hot > 1 ? '#C0392B' : hot > .7 ? '#E67E22' : '#D9BF94');
+    $('pwSmoke').setAttribute('opacity', hot > 1.5 ? 1 : 0); $('pwState').textContent = hot > 1.5 ? 'burning' : hot > 1 ? 'too hot' : hot > .7 ? 'warm' : 'cool';
+    $('pwSay').textContent = hot > 1.5 ? p.toFixed(2) + ' W in a ' + rating + ' W part: it is burning. Choose a bigger rating or less voltage.' : hot > 1 ? 'Over its rating: it will fail soon.' : 'Within the rating: ' + p.toFixed(2) + ' W of heat, fine.';
+    if (hot > 1.5 && !burned) { burned = true; did('pushed ' + p.toFixed(2) + ' W through a ' + rating + ' W resistor and burned it'); done($('pwV')); } }
+  $('pwV').oninput = pw; pw();
+
+  // 09 battery
+  function bt() { var a = +$('btA').value, pc = +$('btP').value, s = +$('btS').value / 1000;
+    $('btAv').textContent = a + ' mA'; $('btPv').textContent = pc + ' %'; $('btSv').textContent = (s * 1000) + ' µA';
+    var avg = a * pc / 100 + s * (1 - pc / 100), hours = 2000 / avg;
+    $('btLife').textContent = hours < 48 ? hours.toFixed(0) + ' hours' : hours < 24 * 60 ? (hours / 24).toFixed(0) + ' days' : (hours / 24 / 365).toFixed(1) + ' years';
+    $('btSay').textContent = 'Average ' + avg.toFixed(3) + ' mA → about ' + $('btLife').textContent + ' on 2000 mAh.';
+    if (hours > 24 * 180 && !$('btA').dataset.d) { $('btA').dataset.d = 1; did('made the battery last ' + $('btLife').textContent + ' by sleeping'); done($('btA')); } }
+  ['btA', 'btP', 'btS'].forEach(function (id) { $(id).oninput = bt; }); bt();
+
+  // 10 capacitor
+  var vc = 0, target = 0, last = performance.now();
+  function tau() { return (+$('cpR').value * 1000) * (+$('cpC').value / 1e6); }
+  function cpLabels() { $('cpRv').textContent = $('cpR').value + ' kΩ'; $('cpCv').textContent = $('cpC').value + ' µF'; $('cpTau').textContent = 'τ = ' + tau().toFixed(2) + ' s'; }
+  var pts = [];
+  setInterval(function () { var now = performance.now(), dt = (now - last) / 1000; last = now; vc += (target - vc) * (1 - Math.exp(-dt / tau())); $('cpV').textContent = vc.toFixed(2) + ' V';
+    pts.push(vc); if (pts.length > 270) pts.shift(); $('cpCurve').setAttribute('points', pts.map(function (v, i) { return (40 + i * 2) + ',' + (140 - v / 5 * 110); }).join(' ')); }, 50);
+  ['cpR', 'cpC'].forEach(function (id) { $(id).oninput = cpLabels; }); cpLabels();
+  $('cpCh').onclick = function () { target = 5; did('charged the capacitor, τ ' + tau().toFixed(2) + ' s'); window.__ch = 1; };
+  $('cpDis').onclick = function () { target = 0; did('discharged the capacitor'); if (window.__ch) done($('cpDis')); };
+
+  // 11 motor kick
+  var capOn = false;
+  $('mkCap').onclick = function () { capOn = !capOn; $('mkCap').className = 'btn' + (capOn ? ' on' : ''); $('mkCap').textContent = capOn ? 'Capacitors fitted ✓' : 'Fit 0.1 µF + 100 µF';
+    $('mkSay').textContent = capOn ? 'Capacitors fitted. Start the motor again.' : 'No capacitors fitted.'; did(capOn ? 'fitted the decoupling capacitors' : 'removed the capacitors'); };
+  $('mkGo').onclick = function () { var dip = capOn ? 0.25 : 1.4, p = [];
+    for (var x = 20; x <= 580; x += 10) { var v = 3.3; if (x > 200 && x < 380) v = 3.3 - dip * Math.exp(-(x - 200) / 50) * (x < 210 ? (x - 200) / 10 : 1); p.push(x + ',' + (40 + (3.3 - v) / 3.3 * 110)); }
+    $('mkRail').setAttribute('points', p.join(' ')); var reset = !capOn;
+    $('mkState').textContent = reset ? 'ESP32 RESET!' : 'ESP32 running'; $('mkSay').textContent = reset ? 'The rail fell below 2.5 V: the ESP32 reset. This is the classic "it restarts when the motor starts" bug.' : 'The capacitors held the rail up: the ESP32 kept running.';
+    did(reset ? 'started the motor without capacitors: the ESP32 reset' : 'started the motor with capacitors: no reset'); if (!reset) done($('mkGo')); };
+
+  // 12 relay spike
+  var coil = false, diode = false;
+  function trace(spike) { var p = []; for (var x = 20; x <= 580; x += 6) { var y = 75; if (coil && x > 120) y = 75 - 30 * (1 - Math.exp(-(x - 120) / 60)); if (spike) { y = 45; if (x > 300) y = diode ? 45 + (x - 300) * .1 : (x < 320 ? 140 : 45 + (75 - 45) * Math.exp(-(x - 320) / 30)); } p.push(x + ',' + Math.min(145, y)); } $('rlTrace').setAttribute('points', p.join(' ')); }
+  $('rlOn').onclick = function () { coil = true; trace(false); $('rlV').textContent = 'coil on'; $('rlSay').textContent = 'The current ramps up smoothly: the coil resists the change.'; did('switched the relay coil on'); };
+  $('rlOff').onclick = function () { if (!coil) { $('rlSay').textContent = 'Switch the coil on first.'; return; } trace(true); coil = false;
+    $('rlZap').setAttribute('opacity', diode ? 0 : 1); $('rlV').textContent = diode ? '−0.7 V' : '−180 V';
+    $('rlSay').textContent = diode ? 'With the flyback diode: the current circulates through the diode and dies away. No spike.' : 'A huge reverse spike: this is what kills the driving transistor. Fit the diode and try again.';
+    did(diode ? 'switched off with the flyback diode: no spike' : 'switched off without a diode: a −180 V spike'); if (diode) done($('rlOff')); };
+  $('rlD').onclick = function () { diode = !diode; $('rlD').className = 'btn' + (diode ? ' on' : ''); $('rlD').textContent = diode ? 'Diode fitted ✓' : 'Fit flyback diode'; $('rlZap').setAttribute('opacity', 0); did(diode ? 'fitted the flyback diode' : 'removed the diode'); };
+
+  // 13 quick check
+  Array.prototype.forEach.call(document.querySelectorAll('.q'), function (q, n) { q.querySelectorAll('button').forEach(function (b) {
+    b.onclick = function () { if (q.classList.contains('done')) return; var ok = b.hasAttribute('data-ok'); b.className = ok ? 'ok' : 'no';
+      did('quick check ' + (n + 1) + ': ' + (ok ? 'right' : 'wrong') + ' (' + b.textContent + ')'); if (ok) q.classList.add('done'); else setTimeout(function () { b.className = ''; }, 900); }; }); });
+
+  // sections rise in
+  if ('IntersectionObserver' in window) { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px' });
+    Array.prototype.forEach.call(document.querySelectorAll('main > section'), function (s) { s.classList.add('rv'); io.observe(s); }); }
+})();
+</script>
+</body>
+</html>

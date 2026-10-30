@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electronic Ka E — Session 1 | Altrobyte Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E8EEF0;
+  --panel:#F8FBFB;
+  --grid:rgba(20,52,64,.09);
+  --ink:#14343F;
+  --ink-2:#4D6975;
+  --ink-3:#7C949D;
+  --copper:#AE6529;
+  --red:#B93B2C;
+  --gold:#C2963A;
+  --signal:#177F86;
+  --violet:#5F4A94;
+  --rule:rgba(20,52,64,.16);
+  --shadow:0 1px 0 rgba(20,52,64,.10), 0 10px 24px -18px rgba(20,52,64,.55);
+  --mono:'Spline Sans Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  color:var(--ink);
+  font-family:'Newsreader',Georgia,serif;
+  font-size:18px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.ui{font-family:'Familjen Grotesk',system-ui,sans-serif;line-height:1.15}
+p{max-width:66ch}
+a{color:var(--signal)}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.cols{display:grid;grid-template-columns:210px minmax(0,1fr);gap:44px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr;gap:0}}
+
+/* ---------- hero ---------- */
+header.hero{border-bottom:1px solid var(--rule);background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0))}
+.heroGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:40px;align-items:center;padding:44px 0 34px}
+@media(max-width:900px){.heroGrid{grid-template-columns:1fr;padding:30px 0 26px;gap:24px}}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;color:var(--ink-3)}
+h1{font-size:clamp(46px,8.4vw,84px);font-weight:700;margin:.18em 0 .1em;letter-spacing:-.03em}
+h1 .e{
+  color:var(--copper);
+  font-style:italic;
+  font-family:'Newsreader',serif;
+  font-weight:500;
+  position:relative;
+}
+.sub{font-size:20px;color:var(--ink-2);max-width:42ch;margin:0 0 20px}
+.metaRow{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:'Familjen Grotesk',sans-serif;font-size:13.5px;border:1px solid var(--rule);border-radius:999px;padding:5px 12px;background:rgba(255,255,255,.6);color:var(--ink-2)}
+
+/* ---------- instrument panels ---------- */
+.bench{
+  background:var(--panel);
+  border:1px solid var(--rule);
+  border-top:3px solid var(--ink);
+  border-radius:3px;
+  box-shadow:var(--shadow);
+  padding:20px 22px 22px;
+  margin:26px 0;
+}
+.bench > h4{font-size:15px;font-weight:600;margin:0 0 2px;letter-spacing:.01em}
+.bench .hint{font-size:14.5px;color:var(--ink-3);margin:0 0 16px;font-family:'Familjen Grotesk',sans-serif}
+.benchGrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:24px;align-items:center}
+@media(max-width:760px){.benchGrid{grid-template-columns:1fr}}
+
+/* controls */
+.ctrl{margin:0 0 14px}
+.ctrl label{display:flex;justify-content:space-between;align-items:baseline;font-family:'Familjen Grotesk',sans-serif;font-size:14px;color:var(--ink-2);margin-bottom:5px}
+.ctrl label b{font-family:var(--mono);font-size:14px;color:var(--ink);font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--rule);border-radius:2px}
+input[type=range]::-moz-range-track{height:3px;background:var(--rule);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--panel);border:2px solid var(--ink);margin-top:-7px}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--panel);border:2px solid var(--ink)}
+input[type=range]:focus-visible{outline:2px solid var(--signal);outline-offset:4px;border-radius:4px}
+
+button{font-family:'Familjen Grotesk',sans-serif}
+.btn{
+  font-size:14px;font-weight:500;padding:8px 15px;border-radius:2px;cursor:pointer;
+  background:var(--ink);color:#F5FAFA;border:1px solid var(--ink);
+}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+.btnRow{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px}
+
+/* readouts */
+.readout{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.cell{flex:1 1 88px;border:1px solid var(--rule);border-radius:2px;padding:8px 10px;background:rgba(255,255,255,.7)}
+.cell span{display:block;font-family:'Familjen Grotesk',sans-serif;font-size:12px;color:var(--ink-3)}
+.cell b{font-family:var(--mono);font-size:21px;font-weight:600;letter-spacing:-.02em}
+.verdict{font-family:'Familjen Grotesk',sans-serif;font-size:14.5px;margin-top:12px;padding:9px 12px;border-left:3px solid var(--signal);background:rgba(23,127,134,.07);border-radius:0 2px 2px 0}
+.verdict.warn{border-color:var(--red);background:rgba(185,59,44,.08)}
+.verdict.ok{border-color:var(--signal)}
+
+svg{display:block;max-width:100%;height:auto}
+canvas{display:block;width:100%;height:auto}
+
+/* ---------- sidebar ---------- */
+nav.rail{position:sticky;top:22px;padding:30px 0;font-family:'Familjen Grotesk',sans-serif}
+@media(max-width:900px){nav.rail{position:static;padding:22px 0 0;border-bottom:1px solid var(--rule)}}
+nav.rail ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.rail li{counter-increment:s;margin:0 0 3px}
+nav.rail a{
+  display:grid;grid-template-columns:26px 1fr;gap:6px;align-items:baseline;
+  text-decoration:none;color:var(--ink-2);font-size:14px;padding:5px 6px 5px 0;border-radius:2px;
+}
+nav.rail a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+nav.rail a:hover,nav.rail a.on{color:var(--ink)}
+nav.rail a.on::before{color:var(--copper)}
+nav.rail .t{font-family:var(--mono);font-size:11px;color:var(--ink-3);display:block}
+.railHead{font-size:12.5px;font-family:var(--mono);color:var(--ink-3);margin:0 0 12px}
+
+/* ---------- sections ---------- */
+section{padding:46px 0 10px;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:none}
+.sTop{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.sNum{font-family:var(--mono);font-size:13px;color:var(--copper)}
+.sTime{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-left:auto}
+h2{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.02em;margin:0 0 10px}
+h3{font-size:21px;font-weight:600;margin:30px 0 6px}
+.lead{font-size:20.5px;color:var(--ink-2);max-width:62ch}
+
+.def{border-left:2px solid var(--copper);padding:2px 0 2px 16px;margin:20px 0;max-width:62ch}
+.def b{font-family:'Familjen Grotesk',sans-serif;font-size:15px;display:block;color:var(--ink)}
+.formula{
+  font-family:var(--mono);font-size:20px;text-align:center;padding:14px;margin:20px 0;
+  background:rgba(255,255,255,.66);border:1px solid var(--rule);border-radius:2px;letter-spacing:.02em;
+}
+.hing{font-style:italic;color:var(--copper)}
+ul.tight{max-width:62ch;padding-left:20px}
+ul.tight li{margin:5px 0}
+
+details.cue{margin:22px 0;max-width:66ch;border:1px dashed var(--rule);border-radius:2px;background:rgba(255,255,255,.4)}
+details.cue summary{cursor:pointer;padding:9px 13px;font-family:'Familjen Grotesk',sans-serif;font-size:13.5px;color:var(--ink-2)}
+details.cue summary::marker{color:var(--copper)}
+details.cue div{padding:0 13px 13px;font-size:16.5px;color:var(--ink-2)}
+details.cue ul{padding-left:18px;margin:6px 0}
+
+/* resistor decoder */
+.bands{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.bandPick{flex:1 1 100px}
+.bandPick span{display:block;font-family:'Familjen Grotesk',sans-serif;font-size:12px;color:var(--ink-3);margin-bottom:4px}
+select{width:100%;font-family:'Familjen Grotesk',sans-serif;font-size:14px;padding:7px 8px;border:1px solid var(--rule);border-radius:2px;background:#fff;color:var(--ink)}
+select:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+/* quiz */
+.q{border-top:1px solid var(--rule);padding:18px 0}
+.q:first-child{border-top:none;padding-top:4px}
+.q p{font-family:'Familjen Grotesk',sans-serif;font-size:17px;font-weight:500;margin:0 0 10px;max-width:60ch}
+.opts{display:flex;flex-direction:column;gap:7px;max-width:520px}
+.opt{
+  text-align:left;font-size:15.5px;padding:9px 13px;border:1px solid var(--rule);background:rgba(255,255,255,.7);
+  border-radius:2px;cursor:pointer;color:var(--ink);transition:background .12s ease,border-color .12s ease;
+}
+.opt:hover{border-color:var(--ink-3)}
+.opt.right{border-color:var(--signal);background:rgba(23,127,134,.12)}
+.opt.wrong{border-color:var(--red);background:rgba(185,59,44,.1)}
+.qFb{font-family:'Familjen Grotesk',sans-serif;font-size:14.5px;color:var(--ink-2);margin-top:9px;min-height:1px}
+
+/* kit table */
+.kit{width:100%;border-collapse:collapse;margin:18px 0;font-size:16.5px}
+.kit th{text-align:left;font-family:'Familjen Grotesk',sans-serif;font-size:13px;color:var(--ink-3);font-weight:500;padding:0 12px 7px 0;border-bottom:1px solid var(--rule)}
+.kit td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+.kit td:first-child{font-family:'Familjen Grotesk',sans-serif;font-size:15px;white-space:nowrap}
+@media(max-width:620px){.kit,.kit tbody,.kit tr,.kit td{display:block;width:100%}.kit thead{display:none}.kit td{border:none;padding:2px 0}.kit tr{border-bottom:1px solid var(--rule);padding:11px 0;display:block}}
+
+footer{border-top:1px solid var(--rule);margin-top:50px;padding:32px 0 60px;color:var(--ink-2);font-family:'Familjen Grotesk',sans-serif;font-size:15px}
+footer b{color:var(--ink)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap heroGrid">
+    <div>
+      <p class="kicker">Altrobyte Academy · Embedded Systems &amp; IoT · Session 01 of the foundation track</p>
+      <h1>Electronic<br>Ka <span class="e">E</span></h1>
+      <p class="sub">Before you write a single line of firmware, you need to feel what is happening inside the wire. This session builds that feeling in 90 minutes.</p>
+      <div class="metaRow">
+        <span class="chip">90 minutes</span>
+        <span class="chip">No prior electronics needed</span>
+        <span class="chip">7 live demos on this page</span>
+      </div>
+    </div>
+
+    <!-- HERO INTERACTIVE: first circuit -->
+    <div class="bench" style="margin:0">
+      <h4>Your first circuit</h4>
+      <p class="hint">Turn the battery up. Watch the charge move and the LED respond.</p>
+      <svg id="heroSvg" viewBox="0 0 460 250" role="img" aria-label="Battery connected to a resistor and an LED, with charge carriers moving around the loop">
+        <defs>
+          <radialGradient id="ledGlow"><stop offset="0%" stop-color="#FFC24D" stop-opacity=".95"/><stop offset="100%" stop-color="#FFC24D" stop-opacity="0"/></radialGradient>
+        </defs>
+        <!-- wire loop -->
+        <path id="loop" d="M90 190 L90 70 L230 70 L370 70 L370 190 L230 190 Z" fill="none" stroke="#14343F" stroke-width="3.5" stroke-linejoin="round"/>
+        <!-- battery -->
+        <g>
+          <rect x="76" y="112" width="28" height="4.5" fill="#14343F"/>
+          <rect x="82" y="124" width="16" height="9" fill="#14343F"/>
+          <rect x="76" y="140" width="28" height="4.5" fill="#14343F"/>
+          <rect x="82" y="152" width="16" height="9" fill="#14343F"/>
+          <text x="58" y="118" font-family="Spline Sans Mono, monospace" font-size="15" fill="#B93B2C">+</text>
+          <text x="58" y="168" font-family="Spline Sans Mono, monospace" font-size="15" fill="#4D6975">−</text>
+          <text id="heroVLabel" x="14" y="145" font-family="Spline Sans Mono, monospace" font-size="14" fill="#14343F">5.0 V</text>
+        </g>
+        <!-- resistor -->
+        <g>
+          <rect x="186" y="52" width="88" height="36" rx="4" fill="#E8DCC8" stroke="#14343F" stroke-width="2.5"/>
+          <rect x="200" y="52" width="8" height="36" fill="#7A4A2B"/>
+          <rect x="216" y="52" width="8" height="36" fill="#14343F"/>
+          <rect x="232" y="52" width="8" height="36" fill="#B93B2C"/>
+          <rect x="252" y="52" width="6" height="36" fill="#C2963A"/>
+          <text id="heroRLabel" x="230" y="40" text-anchor="middle" font-family="Spline Sans Mono, monospace" font-size="13" fill="#14343F">220 Ω</text>
+        </g>
+        <!-- LED -->
+        <g>
+          <circle id="glow" cx="370" cy="130" r="44" fill="url(#ledGlow)" opacity="0"/>
+          <path d="M356 116 L356 144 L380 130 Z" fill="#B93B2C" stroke="#14343F" stroke-width="2.2" stroke-linejoin="round"/>
+          <line x1="380" y1="114" x2="380" y2="146" stroke="#14343F" stroke-width="3.5"/>
+          <text x="398" y="134" font-family="Spline Sans Mono, monospace" font-size="13" fill="#4D6975">LED</text>
+        </g>
+        <g id="heroDots"></g>
+      </svg>
+
+      <div class="ctrl" style="margin-top:14px">
+        <label for="heroV">Battery voltage <b id="heroVOut">5.0 V</b></label>
+        <input id="heroV" type="range" min="0" max="12" step="0.1" value="5">
+      </div>
+      <div class="ctrl">
+        <label for="heroR">Series resistor <b id="heroROut">220 Ω</b></label>
+        <input id="heroR" type="range" min="47" max="2200" step="1" value="220">
+      </div>
+      <div class="readout">
+        <div class="cell"><span>Current</span><b id="heroI">14.5</b><span style="display:inline">mA</span></div>
+        <div class="cell"><span>Power in resistor</span><b id="heroP">46</b><span style="display:inline">mW</span></div>
+      </div>
+      <div class="verdict ok" id="heroSay">Comfortable. This is roughly how every indicator LED on your dev board is wired.</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap cols">
+
+  <nav class="rail" aria-label="Session contents">
+    <p class="railHead">90 min · run in order</p>
+    <ol>
+      <li><a href="#s1">What is actually moving<span class="t">0:00 – 0:10</span></a></li>
+      <li><a href="#s2">Voltage, current, resistance<span class="t">0:10 – 0:26</span></a></li>
+      <li><a href="#s3">Reading a real resistor<span class="t">0:26 – 0:36</span></a></li>
+      <li><a href="#s4">Ohm's law<span class="t">0:36 – 0:52</span></a></li>
+      <li><a href="#s5">Power and heat<span class="t">0:52 – 1:06</span></a></li>
+      <li><a href="#s6">Capacitance<span class="t">1:06 – 1:20</span></a></li>
+      <li><a href="#s7">Inductance<span class="t">1:20 – 1:28</span></a></li>
+      <li><a href="#s8">Quick check<span class="t">1:28 – 1:30</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <!-- ===================== 1 ===================== -->
+  <section id="s1">
+    <div class="sTop"><span class="sNum">01</span><span class="sTime">10 min</span></div>
+    <h2>What is actually moving</h2>
+    <p class="lead">Every sensor reading, every motor, every Wi-Fi packet from an ESP32 — all of it is one thing underneath: electrons pushed through a material.</p>
+
+    <p>Copper atoms hold their outer electrons very loosely. Left alone, those free electrons wander randomly in every direction, so nothing useful happens. Connect a battery and the randomness gets a bias: now there is a slight, steady drift in one direction. That drift is <b>current</b>.</p>
+
+    <div class="bench">
+      <h4>Random motion vs. drift</h4>
+      <p class="hint">Same electrons, same wire. The only difference is whether a battery is connected.</p>
+      <canvas id="driftCv" width="880" height="230" aria-label="Animation comparing random electron motion with directed drift"></canvas>
+      <div class="btnRow">
+        <button class="btn" id="driftBtn">Connect the battery</button>
+        <span class="chip" id="driftState">Battery off — random motion</span>
+      </div>
+    </div>
+
+    <div class="def">
+      <b>Charge (Q), measured in coulombs</b>
+      One coulomb is about 6.24 × 10<sup>18</sup> electrons. You will never count them. You only care about how many pass a point per second.
+    </div>
+
+    <p>One coulomb per second is one <b>ampere</b>. In embedded work you rarely see a full amp on a signal line — an ESP32 GPIO pin is happy around 10–20 mA, which is 0.010–0.020 coulombs every second. <span class="hing">Chhota number, lekin poora system usi pe chalta hai.</span></p>
+
+    <details class="cue"><summary>Teaching cue — 10 min</summary><div>
+      <ul>
+        <li>Open with a burnt component or a dead battery in hand. Ask: "Why did this die?" Park the question, promise the answer by minute 60.</li>
+        <li>Run the drift demo twice. Point out that the electrons never speed up dramatically — the <em>bias</em> is what changes.</li>
+        <li>Do not define coulomb formally for more than 60 seconds. Move on.</li>
+      </ul>
+    </div></details>
+  </section>
+
+  <!-- ===================== 2 ===================== -->
+  <section id="s2">
+    <div class="sTop"><span class="sNum">02</span><span class="sTime">16 min</span></div>
+    <h2>Voltage, current, resistance</h2>
+    <p class="lead">Three quantities, one relationship. Get the intuition here and the maths for the rest of the course becomes bookkeeping.</p>
+
+    <div class="def"><b>Voltage (V), in volts</b> The push. A difference in electrical pressure between two points. Voltage is always measured <em>between</em> two points — there is no such thing as the voltage "at" a pin without a reference, and that reference is usually ground.</div>
+    <div class="def"><b>Current (I), in amperes</b> The flow. How much charge passes a point each second.</div>
+    <div class="def"><b>Resistance (R), in ohms</b> The opposition. How hard the material fights that flow, turning the lost energy into heat.</div>
+
+    <div class="bench">
+      <h4>Water tank ↔ circuit</h4>
+      <p class="hint">Drag the two sliders. The tank and the circuit are the same system shown two ways.</p>
+      <div class="benchGrid">
+        <div>
+          <svg id="waterSvg" viewBox="0 0 480 300" role="img" aria-label="Water tank with adjustable level and pipe width driving a flow, alongside the equivalent circuit">
+            <!-- tank -->
+            <rect x="30" y="40" width="120" height="150" fill="none" stroke="#14343F" stroke-width="3"/>
+            <clipPath id="tankClip"><rect x="33" y="43" width="114" height="144"/></clipPath>
+            <g clip-path="url(#tankClip)">
+              <rect id="water" x="33" y="90" width="114" height="100" fill="#177F86" opacity=".55"/>
+              <path id="wave" d="" fill="#177F86" opacity=".35"/>
+            </g>
+            <text x="90" y="30" text-anchor="middle" font-family="Familjen Grotesk, sans-serif" font-size="13" fill="#4D6975">pressure = voltage</text>
+            <line id="hLine" x1="160" y1="90" x2="160" y2="190" stroke="#AE6529" stroke-width="2"/>
+            <text id="hTxt" x="168" y="140" font-family="Spline Sans Mono, monospace" font-size="13" fill="#AE6529">5.0 V</text>
+
+            <!-- pipe -->
+            <path d="M150 175 L150 190 L215 190" stroke="#14343F" stroke-width="3" fill="none"/>
+            <g>
+              <rect x="215" y="168" width="70" height="44" rx="3" fill="#E8DCC8" stroke="#14343F" stroke-width="2.5"/>
+              <rect id="pinchTop" x="215" y="168" width="70" height="10" fill="#14343F" opacity=".85"/>
+              <rect id="pinchBot" x="215" y="202" width="70" height="10" fill="#14343F" opacity=".85"/>
+              <text x="250" y="160" text-anchor="middle" font-family="Familjen Grotesk, sans-serif" font-size="13" fill="#4D6975">narrow pipe = resistance</text>
+            </g>
+            <path d="M285 190 L340 190" stroke="#14343F" stroke-width="3" fill="none"/>
+            <g id="drops"></g>
+            <rect x="330" y="215" width="110" height="60" fill="none" stroke="#14343F" stroke-width="3"/>
+            <text x="385" y="292" text-anchor="middle" font-family="Familjen Grotesk, sans-serif" font-size="13" fill="#4D6975">flow rate = current</text>
+
+            <!-- mini circuit -->
+            <g transform="translate(330,40)">
+              <path d="M20 20 L20 100 L110 100 L110 20 Z" fill="none" stroke="#14343F" stroke-width="2.5"/>
+              <rect x="10" y="48" width="20" height="3" fill="#14343F"/><rect x="14" y="58" width="12" height="7" fill="#14343F"/>
+              <rect x="72" y="8" width="46" height="22" rx="3" fill="#E8DCC8" stroke="#14343F" stroke-width="2" transform="translate(-30,-2)"/>
+              <g id="miniDots"></g>
+            </g>
+          </svg>
+        </div>
+        <div>
+          <div class="ctrl">
+            <label for="wV">Voltage (tank level) <b id="wVOut">5.0 V</b></label>
+            <input id="wV" type="range" min="0" max="12" step="0.1" value="5">
+          </div>
+          <div class="ctrl">
+            <label for="wR">Resistance (pipe pinch) <b id="wROut">500 Ω</b></label>
+            <input id="wR" type="range" min="50" max="3000" step="10" value="500">
+          </div>
+          <div class="readout">
+            <div class="cell"><span>Current</span><b id="wI">10.0</b> <span style="display:inline">mA</span></div>
+          </div>
+          <div class="verdict" id="wSay">More pressure or a wider pipe both give more flow.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Where the analogy breaks</h3>
+    <ul class="tight">
+      <li>Water can spill out of an open pipe. Charge cannot — it must return to the source, so a circuit has to be a complete loop.</li>
+      <li>The tank empties. An ideal supply does not; a real battery does, and that is a separate topic called capacity.</li>
+      <li>Use the analogy to build intuition, then drop it. From Session 3 onward we speak only in volts and amps.</li>
+    </ul>
+
+    <details class="cue"><summary>Teaching cue — 16 min</summary><div>
+      <ul>
+        <li>Ask a student to predict the current before you move a slider. Predict-then-check is what makes this stick.</li>
+        <li>Hammer one sentence: <em>voltage is always between two points.</em> Half of all beginner debugging failures come from ignoring this.</li>
+        <li>Show a multimeter on a live board here if you have one on the bench.</li>
+      </ul>
+    </div></details>
+  </section>
+
+  <!-- ===================== 3 ===================== -->
+  <section id="s3">
+    <div class="sTop"><span class="sNum">03</span><span class="sTime">10 min</span></div>
+    <h2>Reading a real resistor</h2>
+    <p class="lead">You will pick up hundreds of these. The colour bands are the value — learn to read them and you stop guessing at the bench.</p>
+
+    <p>The first two bands are digits, the third is a multiplier, and the fourth is tolerance. Hold the resistor with the tolerance band (usually gold) on your right.</p>
+
+    <div class="bench">
+      <h4>Colour code decoder</h4>
+      <p class="hint">Change the bands and read the value. Try to build 220 Ω, 1 kΩ and 10 kΩ from memory.</p>
+      <svg viewBox="0 0 460 130" role="img" aria-label="Resistor with four adjustable colour bands">
+        <line x1="10" y1="65" x2="120" y2="65" stroke="#14343F" stroke-width="3"/>
+        <line x1="340" y1="65" x2="450" y2="65" stroke="#14343F" stroke-width="3"/>
+        <rect x="120" y="32" width="220" height="66" rx="16" fill="#E8DCC8" stroke="#14343F" stroke-width="2.5"/>
+        <rect id="b0" x="150" y="32" width="20" height="66" fill="#7A4A2B"/>
+        <rect id="b1" x="185" y="32" width="20" height="66" fill="#14343F"/>
+        <rect id="b2" x="220" y="32" width="20" height="66" fill="#B93B2C"/>
+        <rect id="b3" x="300" y="32" width="16" height="66" fill="#C2963A"/>
+        <text id="rVal" x="230" y="122" text-anchor="middle" font-family="Spline Sans Mono, monospace" font-size="18" fill="#14343F" font-weight="600">1.0 kΩ ±5%</text>
+      </svg>
+      <div class="bands">
+        <div class="bandPick"><span>Band 1</span><select id="s0"></select></div>
+        <div class="bandPick"><span>Band 2</span><select id="s1"></select></div>
+        <div class="bandPick"><span>Multiplier</span><select id="s2"></select></div>
+        <div class="bandPick"><span>Tolerance</span><select id="s3"></select></div>
+      </div>
+      <div class="btnRow"><button class="btn ghost" id="rndBand">Give me a random one to read</button></div>
+    </div>
+
+    <h3>The three you will use constantly</h3>
+    <ul class="tight">
+      <li><b>220 Ω / 330 Ω</b> — in series with an LED, to limit current.</li>
+      <li><b>4.7 kΩ / 10 kΩ</b> — pull-up on I²C lines and on buttons, so an unconnected pin is never floating.</li>
+      <li><b>Two resistors as a divider</b> — to bring a 12 V battery sense line down into the ESP32's 0–3.3 V ADC range. We build this in Session 4.</li>
+    </ul>
+  </section>
+
+  <!-- ===================== 4 ===================== -->
+  <section id="s4">
+    <div class="sTop"><span class="sNum">04</span><span class="sTime">16 min</span></div>
+    <h2>Ohm's law</h2>
+    <p class="lead">One line that ties the three quantities together. If you remember nothing else from today, remember this.</p>
+
+    <div class="formula">V = I × R &nbsp;&nbsp;·&nbsp;&nbsp; I = V ÷ R &nbsp;&nbsp;·&nbsp;&nbsp; R = V ÷ I</div>
+
+    <div class="bench">
+      <h4>Solver and V–I graph</h4>
+      <p class="hint">Enter any two values to get the third. The graph plots current against voltage — the slope is set by resistance.</p>
+      <div class="benchGrid">
+        <div>
+          <canvas id="viCv" width="760" height="480" aria-label="Graph of current versus voltage for the chosen resistance"></canvas>
+        </div>
+        <div>
+          <div class="ctrl">
+            <label for="oV">Voltage <b id="oVOut">5.0 V</b></label>
+            <input id="oV" type="range" min="0" max="12" step="0.1" value="5">
+          </div>
+          <div class="ctrl">
+            <label for="oR">Resistance <b id="oROut">500 Ω</b></label>
+            <input id="oR" type="range" min="50" max="3000" step="10" value="500">
+          </div>
+          <div class="readout">
+            <div class="cell"><span>Current = V ÷ R</span><b id="oI">10.0</b> <span style="display:inline">mA</span></div>
+          </div>
+          <div class="verdict" id="oSay"></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Worked example — the LED on your board</h3>
+    <p>A red LED drops about 2 V across itself and wants roughly 10 mA. Your ESP32 pin gives 3.3 V. How big should the series resistor be?</p>
+    <div class="formula">R = (3.3 V − 2.0 V) ÷ 0.010 A = 130 Ω</div>
+    <p>The nearest standard values are 150 Ω and 220 Ω. Pick 220 Ω: the LED is slightly dimmer, the pin is safer, and the part is in every kit. <span class="hing">Jo milta hai wahi lagao, bas calculation ke upar wala value lo.</span></p>
+
+    <details class="cue"><summary>Teaching cue — 16 min</summary><div>
+      <ul>
+        <li>Make the room do the LED calculation on paper before you show the answer. Give them 3 minutes.</li>
+        <li>Then ask the follow-up: what happens with no resistor at all? Slide the resistance to minimum in the hero demo and let them see the current spike.</li>
+        <li>Flag that a diode is <em>not</em> ohmic — its 2 V drop is roughly fixed. That is why we subtract before dividing.</li>
+      </ul>
+    </div></details>
+  </section>
+
+  <!-- ===================== 5 ===================== -->
+  <section id="s5">
+    <div class="sTop"><span class="sNum">05</span><span class="sTime">14 min</span></div>
+    <h2>Power and heat</h2>
+    <p class="lead">Current through a resistance always produces heat. Every component you burn out on the bench is this equation being ignored.</p>
+
+    <div class="formula">P = V × I &nbsp;&nbsp;=&nbsp;&nbsp; I² × R &nbsp;&nbsp;=&nbsp;&nbsp; V² ÷ R</div>
+
+    <p>Power is measured in watts, which is joules per second — the rate at which electrical energy becomes something else. In a resistor that "something else" is entirely heat. In a motor most of it is motion. In an LED, light.</p>
+
+    <div class="bench">
+      <h4>Burn a resistor (safely)</h4>
+      <p class="hint">Choose a resistor's physical power rating, then push voltage until it can't cope.</p>
+      <div class="benchGrid">
+        <div>
+          <svg id="pwrSvg" viewBox="0 0 460 200" role="img" aria-label="Resistor heating up as power dissipation increases">
+            <line x1="20" y1="100" x2="150" y2="100" stroke="#14343F" stroke-width="3"/>
+            <line x1="310" y1="100" x2="440" y2="100" stroke="#14343F" stroke-width="3"/>
+            <rect id="body" x="150" y="66" width="160" height="68" rx="16" fill="#E8DCC8" stroke="#14343F" stroke-width="2.5"/>
+            <g id="smoke" opacity="0">
+              <circle cx="210" cy="52" r="9" fill="#4D6975" opacity=".4"/>
+              <circle cx="235" cy="34" r="13" fill="#4D6975" opacity=".28"/>
+              <circle cx="262" cy="18" r="17" fill="#4D6975" opacity=".18"/>
+            </g>
+            <text id="tempTxt" x="230" y="108" text-anchor="middle" font-family="Spline Sans Mono, monospace" font-size="17" font-weight="600" fill="#14343F">cool</text>
+          </svg>
+        </div>
+        <div>
+          <div class="ctrl">
+            <label for="pV">Voltage across it <b id="pVOut">5.0 V</b></label>
+            <input id="pV" type="range" min="0" max="24" step="0.1" value="5">
+          </div>
+          <div class="ctrl">
+            <label for="pR">Resistance <b id="pROut">100 Ω</b></label>
+            <input id="pR" type="range" min="10" max="1000" step="5" value="100">
+          </div>
+          <div class="ctrl">
+            <label for="pRate">Resistor's rating <b id="pRateOut">0.25 W</b></label>
+            <input id="pRate" type="range" min="0" max="3" step="1" value="1">
+          </div>
+          <div class="readout">
+            <div class="cell"><span>Current</span><b id="pI">50</b> <span style="display:inline">mA</span></div>
+            <div class="cell"><span>Power</span><b id="pP">0.25</b> <span style="display:inline">W</span></div>
+          </div>
+          <div class="verdict" id="pSay"></div>
+        </div>
+      </div>
+    </div>
+
+    <p>This is also why a battery-powered IoT node lives or dies on current. A node drawing 80 mA continuously from a 2000 mAh cell lasts about a day. The same node sleeping at 50 µA between readings lasts years. Same hardware, different power discipline.</p>
+  </section>
+
+  <!-- ===================== 6 ===================== -->
+  <section id="s6">
+    <div class="sTop"><span class="sNum">06</span><span class="sTime">14 min</span></div>
+    <h2>Capacitance</h2>
+    <p class="lead">A capacitor stores charge and resists sudden changes in voltage. It is the component that keeps your microcontroller from resetting itself every time a motor kicks in.</p>
+
+    <div class="def"><b>Capacitance (C), in farads</b> How much charge a component holds per volt applied. A farad is enormous; real parts are in microfarads (µF), nanofarads (nF) and picofarads (pF).</div>
+
+    <p>Two conductive plates separated by an insulator. Apply a voltage and charge piles up on the plates. Remove the source and the charge stays — the capacitor now behaves briefly like a small battery. It does not fill instantly, and how fast it fills depends on the resistance feeding it.</p>
+
+    <div class="formula">τ = R × C &nbsp;&nbsp;·&nbsp;&nbsp; 63% charged after 1τ &nbsp;·&nbsp; ~99% after 5τ</div>
+
+    <div class="bench">
+      <h4>Charging and discharging</h4>
+      <p class="hint">Press charge. Change R or C and watch the curve get lazier or sharper.</p>
+      <div class="benchGrid">
+        <div>
+          <canvas id="rcCv" width="760" height="440" aria-label="Capacitor voltage over time while charging and discharging"></canvas>
+        </div>
+        <div>
+          <div class="ctrl">
+            <label for="cR">Resistance <b id="cROut">10 kΩ</b></label>
+            <input id="cR" type="range" min="1" max="100" step="1" value="10">
+          </div>
+          <div class="ctrl">
+            <label for="cC">Capacitance <b id="cCOut">100 µF</b></label>
+            <input id="cC" type="range" min="1" max="470" step="1" value="100">
+          </div>
+          <div class="readout">
+            <div class="cell"><span>Time constant τ</span><b id="cTau">1.00</b> <span style="display:inline">s</span></div>
+            <div class="cell"><span>Cap voltage</span><b id="cV">0.00</b> <span style="display:inline">V</span></div>
+          </div>
+          <div class="btnRow">
+            <button class="btn" id="cCharge">Charge</button>
+            <button class="btn ghost" id="cDisch">Discharge</button>
+          </div>
+          <div class="verdict" id="cSay">A bigger R or a bigger C means a slower curve.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Where you will actually meet capacitors</h3>
+    <table class="kit">
+      <thead><tr><th>Part</th><th>Job on a real board</th></tr></thead>
+      <tbody>
+        <tr><td>0.1 µF ceramic</td><td>Decoupling. Sits right next to every IC's power pin and supplies the short, sharp current bursts the chip demands, so the supply rail doesn't dip.</td></tr>
+        <tr><td>10–470 µF electrolytic</td><td>Bulk storage near the power input. Smooths out the bigger, slower sags when a relay or motor switches.</td></tr>
+        <tr><td>Small cap + resistor</td><td>Debouncing a mechanical button, and setting timing in RC circuits.</td></tr>
+      </tbody>
+    </table>
+    <p>An electrolytic capacitor has polarity. Put it in backwards and it will fail — sometimes loudly. The stripe marks the negative leg.</p>
+  </section>
+
+  <!-- ===================== 7 ===================== -->
+  <section id="s7">
+    <div class="sTop"><span class="sNum">07</span><span class="sTime">8 min</span></div>
+    <h2>Inductance</h2>
+    <p class="lead">A capacitor resists a change in voltage. An inductor resists a change in current — and gets violent when you ignore it.</p>
+
+    <div class="def"><b>Inductance (L), in henries</b> A coil of wire stores energy in a magnetic field. The field opposes any change in the current making it.</div>
+
+    <p>Switch an inductor on and current ramps up rather than jumping. Switch it off and the collapsing magnetic field tries to keep that current flowing — with nowhere to go, it produces a large reverse voltage spike. Any coil is an inductor: relays, solenoids, motor windings, buzzers.</p>
+
+    <div class="bench">
+      <h4>The relay spike</h4>
+      <p class="hint">Switch the coil on, let the current settle, then switch it off. Then try again with a flyback diode fitted.</p>
+      <div class="benchGrid">
+        <div>
+          <svg id="indSvg" viewBox="0 0 460 240" role="img" aria-label="Coil with magnetic field, showing a voltage spike when switched off">
+            <line x1="30" y1="150" x2="140" y2="150" stroke="#14343F" stroke-width="3"/>
+            <path d="M140 150 q14 -30 28 0 q14 -30 28 0 q14 -30 28 0 q14 -30 28 0" fill="none" stroke="#AE6529" stroke-width="4"/>
+            <line x1="252" y1="150" x2="360" y2="150" stroke="#14343F" stroke-width="3"/>
+            <g id="fieldRings" opacity="0">
+              <ellipse cx="196" cy="150" rx="46" ry="20" fill="none" stroke="#5F4A94" stroke-width="2"/>
+              <ellipse cx="196" cy="150" rx="70" ry="32" fill="none" stroke="#5F4A94" stroke-width="1.6" opacity=".65"/>
+              <ellipse cx="196" cy="150" rx="96" ry="45" fill="none" stroke="#5F4A94" stroke-width="1.3" opacity=".4"/>
+            </g>
+            <g id="spike" opacity="0">
+              <path d="M300 130 L286 96 L306 100 L292 58" fill="none" stroke="#B93B2C" stroke-width="3.5" stroke-linejoin="round"/>
+              <text id="spikeTxt" x="316" y="80" font-family="Spline Sans Mono, monospace" font-size="16" font-weight="600" fill="#B93B2C">−180 V</text>
+            </g>
+            <g id="diode" opacity="0">
+              <path d="M180 60 L180 92 L206 76 Z" fill="#177F86" stroke="#14343F" stroke-width="2"/>
+              <line x1="206" y1="58" x2="206" y2="94" stroke="#14343F" stroke-width="3"/>
+              <line x1="140" y1="76" x2="180" y2="76" stroke="#14343F" stroke-width="2.5"/>
+              <line x1="206" y1="76" x2="252" y2="76" stroke="#14343F" stroke-width="2.5"/>
+              <line x1="140" y1="76" x2="140" y2="150" stroke="#14343F" stroke-width="2.5"/>
+              <line x1="252" y1="76" x2="252" y2="150" stroke="#14343F" stroke-width="2.5"/>
+            </g>
+            <text id="indI" x="196" y="205" text-anchor="middle" font-family="Spline Sans Mono, monospace" font-size="16" fill="#14343F">0 mA</text>
+          </svg>
+        </div>
+        <div>
+          <div class="btnRow" style="margin-bottom:12px">
+            <button class="btn" id="coilBtn">Switch coil on</button>
+            <button class="btn ghost" id="diodeBtn">Fit flyback diode</button>
+          </div>
+          <div class="verdict warn" id="indSay">With no diode, the collapsing field can produce well over a hundred volts across a transistor rated for 40.</div>
+        </div>
+      </div>
+    </div>
+
+    <p>This is the answer to the question from minute one. That is how components die: a relay driven directly by a transistor with no flyback diode across the coil. Fit the diode reversed across the coil and the current has a loop to die down in — the spike never forms. It costs two rupees and saves the board.</p>
+  </section>
+
+  <!-- ===================== 8 ===================== -->
+  <section id="s8">
+    <div class="sTop"><span class="sNum">08</span><span class="sTime">2 min</span></div>
+    <h2>Quick check</h2>
+    <p class="lead">Five questions. Answer honestly — this tells you whether to rewatch anything before Session 2.</p>
+
+    <div class="bench" id="quiz"></div>
+
+    <h3>Carry these five into next week</h3>
+    <ul class="tight">
+      <li>Voltage is a difference between two points. Always ask "relative to what?"</li>
+      <li>Current is what actually does the work, and what actually kills components.</li>
+      <li>V = IR is the whole first month of this course in three letters.</li>
+      <li>A capacitor smooths voltage. An inductor smooths current.</li>
+      <li>Anything with a coil in it needs a flyback diode.</li>
+    </ul>
+
+    <h3>Before Session 2</h3>
+    <ul class="tight">
+      <li>Read three resistors from your kit and write down their values.</li>
+      <li>Work out the series resistor for a green LED (2.1 V drop, 12 mA) on a 5 V rail.</li>
+      <li>Bring a multimeter if you own one. Session 2 is breadboard, ground, series and parallel, and your first measurement.</li>
+    </ul>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p><b>Electronic Ka E</b> — Session 1 of the Embedded Systems &amp; IoT foundation track.<br>
+    Altrobyte Automation Pvt. Ltd. · Indore</p>
+  </div>
+</footer>
+
+<script>
+"use strict";
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+/* =============== HERO CIRCUIT =============== */
+(function(){
+  const loop = $('loop'), g = $('heroDots'), L = loop.getTotalLength();
+  const N = 22, dots = [];
+  for(let i=0;i<N;i++){
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r','4'); c.setAttribute('fill','#177F86');
+    g.appendChild(c); dots.push(c);
+  }
+  const vS=$('heroV'), rS=$('heroR');
+  let off=0, I=0;
+
+  function calc(){
+    const V=+vS.value, R=+rS.value;
+    const vLed = V>2 ? 2 : V;                    // LED forward drop
+    I = V>2 ? (V-vLed)/R : 0;                    // amps
+    const P = I*I*R;
+    $('heroVOut').textContent = V.toFixed(1)+' V';
+    $('heroROut').textContent = R+' Ω';
+    $('heroVLabel').textContent = V.toFixed(1)+' V';
+    $('heroRLabel').textContent = R+' Ω';
+    $('heroI').textContent = (I*1000).toFixed(1);
+    $('heroP').textContent = (P*1000).toFixed(0);
+    $('glow').setAttribute('opacity', clamp(I/0.025,0,1).toFixed(2));
+
+    const say=$('heroSay'), mA=I*1000;
+    if(mA<0.5){ say.className='verdict'; say.textContent='Below about 2 V the LED does not conduct at all. No current, no light.'; }
+    else if(mA<5){ say.className='verdict'; say.textContent='Conducting but dim. Fine for a low-power status indicator.'; }
+    else if(mA<25){ say.className='verdict ok'; say.textContent='Comfortable. This is roughly how every indicator LED on your dev board is wired.'; }
+    else { say.className='verdict warn'; say.textContent='Over 25 mA. An ESP32 GPIO pin cannot supply this — the pin, the LED, or both will fail.'; }
+  }
+  function draw(){
+    for(let i=0;i<N;i++){
+      const p = loop.getPointAtLength((off + i*L/N) % L);
+      dots[i].setAttribute('cx',p.x); dots[i].setAttribute('cy',p.y);
+      dots[i].setAttribute('opacity', I>0.0002 ? 1 : .25);
+    }
+  }
+  function tick(){ off = (off + I*2600 + 0.02) % L; draw(); requestAnimationFrame(tick); }
+  vS.oninput=rS.oninput=()=>{calc(); if(REDUCED) draw();};
+  calc(); draw();
+  if(!REDUCED) tick();
+})();
+
+/* =============== DRIFT CANVAS =============== */
+(function(){
+  const cv=$('driftCv'), ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  let on=false;
+  const parts=[];
+  for(let i=0;i<70;i++) parts.push({x:Math.random()*(W-120)+60,y:Math.random()*(H-90)+45,vx:(Math.random()-.5)*2.6,vy:(Math.random()-.5)*2.6});
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    // wire walls
+    ctx.strokeStyle='#14343F'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(50,40); ctx.lineTo(W-50,40); ctx.moveTo(50,H-40); ctx.lineTo(W-50,H-40); ctx.stroke();
+    ctx.fillStyle='#7C949D'; ctx.font='15px "Familjen Grotesk", sans-serif';
+    ctx.fillText('copper wire', 54, 30);
+    if(on){ ctx.fillStyle='#B93B2C'; ctx.fillText('→ drift toward +', W-210, H-14); }
+    parts.forEach(p=>{
+      ctx.beginPath(); ctx.arc(p.x,p.y,4.2,0,7); ctx.fillStyle= on?'#177F86':'#7C949D'; ctx.fill();
+      if(on){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x-11,p.y); ctx.strokeStyle='rgba(23,127,134,.35)'; ctx.lineWidth=2.5; ctx.stroke(); }
+    });
+  }
+  function step(){
+    parts.forEach(p=>{
+      p.vx += (Math.random()-.5)*1.4; p.vy += (Math.random()-.5)*1.4;
+      p.vx = clamp(p.vx,-2.8,2.8); p.vy = clamp(p.vy,-2.8,2.8);
+      p.x += p.vx + (on?1.9:0); p.y += p.vy;
+      if(p.y<48){p.y=48;p.vy*=-1;} if(p.y>H-48){p.y=H-48;p.vy*=-1;}
+      if(p.x>W-52){p.x=54;} if(p.x<52){p.x=W-54;}
+    });
+    render(); requestAnimationFrame(step);
+  }
+  $('driftBtn').onclick=()=>{
+    on=!on;
+    $('driftBtn').textContent = on?'Disconnect the battery':'Connect the battery';
+    $('driftState').textContent = on?'Battery on — random motion plus a steady drift':'Battery off — random motion';
+    if(REDUCED) render();
+  };
+  render(); if(!REDUCED) step();
+})();
+
+/* =============== WATER ANALOGY =============== */
+(function(){
+  const vS=$('wV'), rS=$('wR'), dropsG=$('drops');
+  const drops=[];
+  for(let i=0;i<9;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r','4'); c.setAttribute('fill','#177F86'); c.setAttribute('opacity','.75');
+    dropsG.appendChild(c); drops.push({el:c,t:i/9});
+  }
+  const miniG=$('miniDots'), mini=[];
+  for(let i=0;i<10;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r','3'); c.setAttribute('fill','#177F86');
+    miniG.appendChild(c); mini.push({t:i/10});
+  }
+  const per=(2*(80+90));                       // mini loop perimeter approx
+  let I=0;
+
+  function calc(){
+    const V=+vS.value, R=+rS.value; I=V/R;
+    $('wVOut').textContent=V.toFixed(1)+' V';
+    $('wROut').textContent=R+' Ω';
+    $('wI').textContent=(I*1000).toFixed(1);
+    const top = 187 - (V/12)*144;
+    $('water').setAttribute('y', top);
+    $('water').setAttribute('height', Math.max(0,187-top));
+    $('hLine').setAttribute('y1', top); $('hTxt').setAttribute('y', (top+190)/2);
+    $('hTxt').textContent=V.toFixed(1)+' V';
+    const pinch = 4 + (R/3000)*16;
+    $('pinchTop').setAttribute('height',pinch);
+    $('pinchBot').setAttribute('y',212-pinch); $('pinchBot').setAttribute('height',pinch);
+    const s=$('wSay');
+    if(V===0) s.textContent='No pressure, no flow. A dead battery does exactly this.';
+    else if(R>2200) s.textContent='Pinched almost shut. High resistance, very little current — same voltage, far less flow.';
+    else if(R<200) s.textContent='Wide open. Low resistance lets a lot of current through, which is exactly how short circuits happen.';
+    else s.textContent='More pressure or a wider pipe both give more flow.';
+  }
+  function place(){
+    drops.forEach(d=>{
+      const x = 285 + d.t*55, y = 190 + Math.pow(d.t,2)*8;
+      d.el.setAttribute('cx',x); d.el.setAttribute('cy', d.t<1?y:y);
+      d.el.setAttribute('opacity', I>0.0003?.8:.12);
+    });
+    mini.forEach((m,i)=>{
+      // rectangle path 20,20 -> 110,20 -> 110,100 -> 20,100
+      let t=m.t*per, x,y;
+      if(t<90){x=20+t;y=20;} else if(t<170){x=110;y=20+(t-90);} else if(t<260){x=110-(t-170);y=100;} else {x=20;y=100-(t-260);}
+      const c=miniG.children[i]; c.setAttribute('cx',x); c.setAttribute('cy',y);
+      c.setAttribute('opacity', I>0.0003?1:.15);
+    });
+  }
+  function tick(){
+    const sp = clamp(I*3.2,0,0.035);
+    drops.forEach(d=>{ d.t=(d.t+sp*1.6)%1; });
+    mini.forEach(m=>{ m.t=(m.t+sp*0.55)%1; });
+    place(); requestAnimationFrame(tick);
+  }
+  vS.oninput=rS.oninput=()=>{calc(); if(REDUCED) place();};
+  calc(); place(); if(!REDUCED) tick();
+})();
+
+/* =============== RESISTOR COLOUR CODE =============== */
+(function(){
+  const COL=[['Black','#14343F',0],['Brown','#7A4A2B',1],['Red','#B93B2C',2],['Orange','#C4622A',3],['Yellow','#D8B02C',4],
+             ['Green','#2E7D4F',5],['Blue','#2A5FA8',6],['Violet','#5F4A94',7],['Grey','#8A97A0',8],['White','#F2F2F2',9]];
+  const MUL=[['Black ×1','#14343F',1],['Brown ×10','#7A4A2B',10],['Red ×100','#B93B2C',100],['Orange ×1k','#C4622A',1e3],
+             ['Yellow ×10k','#D8B02C',1e4],['Green ×100k','#2E7D4F',1e5],['Blue ×1M','#2A5FA8',1e6]];
+  const TOL=[['Gold ±5%','#C2963A','±5%'],['Silver ±10%','#9AA5AA','±10%'],['Brown ±1%','#7A4A2B','±1%'],['Red ±2%','#B93B2C','±2%']];
+  const sels=[$('s0'),$('s1'),$('s2'),$('s3')], sets=[COL,COL,MUL,TOL];
+  sels.forEach((s,i)=>{ sets[i].forEach((o,j)=>{ const op=document.createElement('option'); op.value=j; op.textContent=o[0]; s.appendChild(op); }); });
+  function fmt(v){ if(v>=1e6) return (v/1e6).toFixed(v%1e6?1:0)+' MΩ'; if(v>=1e3) return (v/1e3).toFixed(v%1e3?1:0)+' kΩ'; return v+' Ω'; }
+  function upd(){
+    const a=+sels[0].value, b=+sels[1].value, m=+sels[2].value, t=+sels[3].value;
+    [0,1,2,3].forEach(i=>$('b'+i).setAttribute('fill', sets[i][+sels[i].value][1]));
+    const val=(COL[a][2]*10+COL[b][2])*MUL[m][2];
+    $('rVal').textContent = fmt(val)+' '+TOL[t][2];
+  }
+  sels.forEach(s=>s.onchange=upd);
+  $('rndBand').onclick=()=>{
+    sels[0].value=1+Math.floor(Math.random()*9);
+    sels[1].value=Math.floor(Math.random()*10);
+    sels[2].value=Math.floor(Math.random()*5);
+    sels[3].value=Math.floor(Math.random()*2);
+    upd();
+  };
+  sels[0].value=1; sels[1].value=0; sels[2].value=2; sels[3].value=0; upd();
+})();
+
+/* =============== V–I GRAPH =============== */
+(function(){
+  const cv=$('viCv'), ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const pad={l:78,r:26,t:26,b:56};
+  const vS=$('oV'), rS=$('oR');
+  function draw(){
+    const V=+vS.value, R=+rS.value, I=V/R;
+    $('oVOut').textContent=V.toFixed(1)+' V'; $('oROut').textContent=R+' Ω';
+    $('oI').textContent=(I*1000).toFixed(1);
+    const maxI=Math.max(20, 12/R*1000);
+    ctx.clearRect(0,0,W,H);
+    const X=v=>pad.l+(v/12)*(W-pad.l-pad.r), Y=i=>H-pad.b-(i/maxI)*(H-pad.t-pad.b);
+    // grid
+    ctx.strokeStyle='rgba(20,52,64,.12)'; ctx.lineWidth=1;
+    for(let v=0;v<=12;v+=2){ ctx.beginPath(); ctx.moveTo(X(v),pad.t); ctx.lineTo(X(v),H-pad.b); ctx.stroke(); }
+    for(let k=0;k<=4;k++){ const i=maxI*k/4; ctx.beginPath(); ctx.moveTo(pad.l,Y(i)); ctx.lineTo(W-pad.r,Y(i)); ctx.stroke(); }
+    ctx.strokeStyle='#14343F'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,H-pad.b); ctx.lineTo(W-pad.r,H-pad.b); ctx.stroke();
+    // line
+    ctx.strokeStyle='#AE6529'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(X(0),Y(0)); ctx.lineTo(X(12),Y(12/R*1000)); ctx.stroke();
+    // point
+    ctx.beginPath(); ctx.arc(X(V),Y(I*1000),9,0,7); ctx.fillStyle='#177F86'; ctx.fill();
+    ctx.strokeStyle='rgba(23,127,134,.45)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(pad.l,Y(I*1000)); ctx.lineTo(X(V),Y(I*1000)); ctx.lineTo(X(V),H-pad.b); ctx.stroke(); ctx.setLineDash([]);
+    // labels
+    ctx.fillStyle='#4D6975'; ctx.font='19px "Familjen Grotesk", sans-serif';
+    ctx.fillText('voltage (V)', W/2-46, H-16);
+    ctx.save(); ctx.translate(24,H/2+52); ctx.rotate(-Math.PI/2); ctx.fillText('current (mA)', 0,0); ctx.restore();
+    ctx.font='17px "Spline Sans Mono", monospace'; ctx.fillStyle='#7C949D';
+    for(let v=0;v<=12;v+=3) ctx.fillText(v, X(v)-5, H-pad.b+26);
+    for(let k=0;k<=4;k++){ const i=maxI*k/4; ctx.fillText(i.toFixed(0), pad.l-46, Y(i)+6); }
+    const s=$('oSay');
+    if(R<150) s.textContent='Low resistance, steep line. Small voltage changes cause big current changes.';
+    else if(R>2000) s.textContent='High resistance, flat line. Even 12 V pushes only a trickle through.';
+    else s.textContent='A straight line through the origin — that is what makes a resistor "ohmic".';
+  }
+  vS.oninput=rS.oninput=draw;
+  draw(); document.fonts && document.fonts.ready.then(draw);
+})();
+
+/* =============== POWER / HEAT =============== */
+(function(){
+  const RATE=[0.125,0.25,0.5,1], NAME=['0.125 W','0.25 W','0.5 W','1 W'];
+  const vS=$('pV'), rS=$('pR'), rt=$('pRate');
+  function upd(){
+    const V=+vS.value, R=+rS.value, I=V/R, P=V*I, cap=RATE[+rt.value];
+    $('pVOut').textContent=V.toFixed(1)+' V'; $('pROut').textContent=R+' Ω';
+    $('pRateOut').textContent=NAME[+rt.value];
+    $('pI').textContent=(I*1000).toFixed(0); $('pP').textContent=P.toFixed(2);
+    const ratio=P/cap;
+    const heat=clamp(ratio,0,1.6);
+    const col = heat<0.5 ? '#E8DCC8' : heat<1 ? `rgb(${232},${Math.round(220-heat*90)},${Math.round(200-heat*150)})`
+                : `rgb(${Math.round(210+heat*20)},${Math.round(90-heat*30)},50)`;
+    $('body').setAttribute('fill',col);
+    $('smoke').setAttribute('opacity', ratio>1.15?'1':'0');
+    const t=$('tempTxt');
+    t.setAttribute('fill', heat>0.75?'#F8FBFB':'#14343F');
+    t.textContent = ratio<0.3?'cool':ratio<0.7?'warm':ratio<1?'hot':ratio<1.15?'too hot':'failed';
+    const s=$('pSay');
+    if(ratio<0.5){ s.className='verdict ok'; s.textContent='Well inside the rating. Good design keeps you under about half the rated power.'; }
+    else if(ratio<1){ s.className='verdict'; s.textContent='Inside the rating but running warm. It will be uncomfortable to touch.'; }
+    else { s.className='verdict warn'; s.textContent='Over the rating. It will discolour, drift in value, and eventually fail open. Pick a bigger resistor or a higher wattage part.'; }
+  }
+  vS.oninput=rS.oninput=rt.oninput=upd; upd();
+})();
+
+/* =============== RC CHARGE / DISCHARGE =============== */
+(function(){
+  const cv=$('rcCv'), ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  const pad={l:70,r:26,t:26,b:52};
+  const rS=$('cR'), cS=$('cC');
+  const VS=5; let v=0, mode=null, hist=[], t=0, tau=1;
+  function params(){
+    const R=+rS.value*1000, C=+cS.value*1e-6;
+    tau=R*C;
+    $('cROut').textContent=rS.value+' kΩ'; $('cCOut').textContent=cS.value+' µF';
+    $('cTau').textContent=tau.toFixed(2);
+  }
+  function draw(){
+    const span=Math.max(tau*5,0.5);
+    ctx.clearRect(0,0,W,H);
+    const X=s=>pad.l+(s/span)*(W-pad.l-pad.r), Y=vv=>H-pad.b-(vv/VS)*(H-pad.t-pad.b);
+    ctx.strokeStyle='rgba(20,52,64,.12)'; ctx.lineWidth=1;
+    for(let k=1;k<=5;k++){ ctx.beginPath(); ctx.moveTo(X(tau*k),pad.t); ctx.lineTo(X(tau*k),H-pad.b); ctx.stroke(); }
+    // 63% marker
+    ctx.setLineDash([6,6]); ctx.strokeStyle='rgba(174,101,41,.6)';
+    ctx.beginPath(); ctx.moveTo(pad.l,Y(VS*0.632)); ctx.lineTo(W-pad.r,Y(VS*0.632)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#AE6529'; ctx.font='16px "Spline Sans Mono", monospace';
+    ctx.fillText('63% at 1τ', W-pad.r-108, Y(VS*0.632)-9);
+    ctx.strokeStyle='#14343F'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,H-pad.b); ctx.lineTo(W-pad.r,H-pad.b); ctx.stroke();
+    ctx.strokeStyle='#177F86'; ctx.lineWidth=4; ctx.beginPath();
+    hist.forEach((p,i)=>{ const x=X(p.t),y=Y(p.v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.stroke();
+    if(hist.length){ const p=hist[hist.length-1]; ctx.beginPath(); ctx.arc(X(p.t),Y(p.v),8,0,7); ctx.fillStyle='#177F86'; ctx.fill(); }
+    ctx.fillStyle='#7C949D'; ctx.font='16px "Spline Sans Mono", monospace';
+    for(let k=1;k<=5;k++) ctx.fillText(k+'τ', X(tau*k)-9, H-pad.b+24);
+    ctx.fillText('5.0 V', pad.l-58, Y(5)+6); ctx.fillText('0 V', pad.l-44, Y(0)+6);
+    ctx.fillStyle='#4D6975'; ctx.font='18px "Familjen Grotesk", sans-serif';
+    ctx.fillText('time', W/2-16, H-14);
+    $('cV').textContent=v.toFixed(2);
+  }
+  let last=performance.now();
+  function step(now){
+    const dt=Math.min((now-last)/1000,0.05); last=now;
+    if(mode){
+      const target = mode==='c'?VS:0;
+      v += (target-v)*(1-Math.exp(-dt/tau));
+      t += dt;
+      hist.push({t,v});
+      if(t>tau*5.2) mode=null;
+    }
+    draw(); requestAnimationFrame(step);
+  }
+  function start(m){ mode=m; t=0; hist=[{t:0,v}]; last=performance.now(); if(REDUCED){ v = m==='c'?VS*0.99:0.01; hist=[]; for(let k=0;k<=120;k++){const tt=k/120*tau*5; hist.push({t:tt,v:m==='c'?VS*(1-Math.exp(-tt/tau)):VS*Math.exp(-tt/tau)});} v=hist[hist.length-1].v; mode=null; draw(); } }
+  $('cCharge').onclick=()=>start('c');
+  $('cDisch').onclick=()=>start('d');
+  rS.oninput=cS.oninput=()=>{params(); draw(); $('cSay').textContent = tau>3 ? 'Slow. This is why a big bulk capacitor takes a moment to come up at power-on.' : tau<0.2 ? 'Fast. Small caps like the 0.1 µF decoupling part react almost instantly.' : 'A bigger R or a bigger C means a slower curve.';};
+  params(); draw(); if(!REDUCED) requestAnimationFrame(step);
+})();
+
+/* =============== INDUCTOR =============== */
+(function(){
+  let on=false, hasDiode=false, I=0;
+  const target=0.12;
+  function say(txt,warn){ const s=$('indSay'); s.className='verdict '+(warn?'warn':'ok'); s.textContent=txt; }
+  function render(){
+    $('fieldRings').setAttribute('opacity', (I/target*0.9).toFixed(2));
+    $('indI').textContent=(I*1000).toFixed(0)+' mA';
+  }
+  function ramp(){
+    if(on && I<target) I+=target*0.035; else if(!on && I>0) I-=target*(hasDiode?0.02:0.25);
+    I=clamp(I,0,target); render(); requestAnimationFrame(ramp);
+  }
+  $('coilBtn').onclick=()=>{
+    on=!on;
+    $('coilBtn').textContent = on?'Switch coil off':'Switch coil on';
+    if(on){ say('Current ramps up rather than jumping. The magnetic field is being built and it resists the change.',false); $('spike').setAttribute('opacity','0'); if(REDUCED){I=target;render();} }
+    else {
+      if(hasDiode){ say('The diode gives the current a loop to circulate in, so it decays gently. No spike. This is the whole job of a flyback diode.',false); $('spike').setAttribute('opacity','0'); }
+      else {
+        $('spikeTxt').textContent='−'+(120+Math.floor(Math.random()*120))+' V';
+        $('spike').setAttribute('opacity','1');
+        say('The field collapsed with nowhere for the current to go. That reverse spike is what destroys the driving transistor.',true);
+        setTimeout(()=>$('spike').setAttribute('opacity','0'),2600);
+      }
+      if(REDUCED){I=0;render();}
+    }
+  };
+  $('diodeBtn').onclick=()=>{
+    hasDiode=!hasDiode;
+    $('diode').setAttribute('opacity', hasDiode?'1':'0');
+    $('diodeBtn').textContent = hasDiode?'Remove flyback diode':'Fit flyback diode';
+    say(hasDiode?'Diode fitted, reversed across the coil. Switch the coil on and off again to compare.':'Diode removed. Switch the coil on and off to see the spike return.', !hasDiode);
+  };
+  render(); if(!REDUCED) ramp();
+})();
+
+/* =============== QUIZ =============== */
+(function(){
+  const QS=[
+    {q:'A 3.3 V pin drives a 330 Ω resistor to ground. Roughly how much current flows?',
+     o:['1 mA','10 mA','100 mA','1 A'],a:1,
+     f:'3.3 ÷ 330 = 0.01 A = 10 mA. Comfortable for a GPIO pin.'},
+    {q:'You double the resistance and keep the voltage the same. The current:',
+     o:['doubles','halves','stays the same','becomes zero'],a:1,
+     f:'I = V/R. Double the denominator, halve the result.'},
+    {q:'A 100 Ω resistor has 10 V across it. Which rating do you need?',
+     o:['0.125 W is fine','0.25 W is fine','You need at least 1 W','Rating does not matter'],a:2,
+     f:'P = V²/R = 100/100 = 1 W. A quarter-watt part would cook.'},
+    {q:'Why does every IC on a board have a 0.1 µF capacitor next to its power pin?',
+     o:['To store energy for hours','To supply fast current bursts so the rail does not dip','To increase the voltage','To block heat'],a:1,
+     f:'That is decoupling. The chip demands current faster than the supply can react, so a local cap covers the gap.'},
+    {q:'You drive a relay coil from a transistor. What must you add?',
+     o:['A capacitor in series','A second resistor','A flyback diode across the coil','Nothing'],a:2,
+     f:'The collapsing magnetic field produces a large reverse spike. The diode gives that current a safe path.'}
+  ];
+  const root=$('quiz');
+  QS.forEach((item,qi)=>{
+    const d=document.createElement('div'); d.className='q';
+    const p=document.createElement('p'); p.textContent=(qi+1)+'. '+item.q; d.appendChild(p);
+    const box=document.createElement('div'); box.className='opts';
+    const fb=document.createElement('div'); fb.className='qFb';
+    item.o.forEach((txt,oi)=>{
+      const b=document.createElement('button'); b.className='opt'; b.type='button'; b.textContent=txt;
+      b.onclick=()=>{
+        if(d.dataset.done) return;
+        d.dataset.done='1';
+        box.querySelectorAll('.opt').forEach((el,k)=>{ if(k===item.a) el.classList.add('right'); });
+        if(oi!==item.a) b.classList.add('wrong');
+        fb.textContent=(oi===item.a?'Correct. ':'Not quite. ')+item.f;
+      };
+      box.appendChild(b);
+    });
+    d.appendChild(box); d.appendChild(fb); root.appendChild(d);
+  });
+})();
+
+/* =============== SCROLLSPY =============== */
+(function(){
+  const links=[...document.querySelectorAll('nav.rail a')];
+  const secs=links.map(a=>$(a.getAttribute('href').slice(1)));
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ const i=secs.indexOf(e.target);
+      links.forEach(l=>l.classList.remove('on')); if(i>-1) links[i].classList.add('on'); } });
+  },{rootMargin:'-30% 0px -60% 0px'});
+  secs.forEach(s=>s&&io.observe(s));
+})();
+</script>
+</body>
+</html>
