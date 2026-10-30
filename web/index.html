@@ -283,7 +283,7 @@
     }
   </style>
 </head>
-<body>
+<body style="margin:0;background:#0F2540">
   <div id="splash">
     <div class="logo-wrap"><img src="icons/Icon-192.png" alt="AltrobyteLab"></div>
     <div class="msg" id="splash-msg">Warming up your workshop...</div>
@@ -324,7 +324,7 @@
       if (el) el.remove();
     }
     window.addEventListener('flutter-first-frame', removeSplash);
-    setTimeout(removeSplash, 6000);
+    setTimeout(removeSplash, 25000);
   </script>
   <!-- deferred: this is only needed once a user actually opens the payment
        page, not during initial boot — without defer, Flutter's own boot
