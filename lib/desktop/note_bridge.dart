@@ -236,10 +236,27 @@ const noteBridgeScript = r"""
   function fit() {
     if (!stage || fitting) return;
     fitting = true;
-    stage.style.zoom = 1;
-    var h = stage.scrollHeight, availH = window.innerHeight - 70;
-    var r = Math.min(1, availH / Math.max(1, h));
-    stage.style.zoom = r >= 0.8 ? r : 1;
+    // The whole part on one screen, always (30 Oct 2026, founder). Shrinking a narrow column left the sides empty and the
+    // text tiny, so the column is widened to fill the screen at the size it is shrunk to, a few times until it settles.
+    var availH = window.innerHeight - 66, availW = window.innerWidth * 0.96, r = 1;
+    for (var n = 0; n < 4; n++) {
+      stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
+      stage.style.zoom = 1;
+      var h = stage.scrollHeight;
+      var next = Math.max(0.45, Math.min(1, availH / Math.max(1, h)));
+      if (Math.abs(next - r) < 0.02) { r = next; break; }
+      r = next;
+    }
+    stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
+    stage.style.zoom = 1;                                  // the last width settled: measure once more, so nothing is cut
+    stage.style.zoom = Math.max(0.45, Math.min(1, availH / Math.max(1, stage.scrollHeight + 24)));
+    // The page's own margins and padding count too: shrink a little more until the page itself does not scroll.
+    var de = document.documentElement;
+    for (var m = 0; m < 4 && de.scrollHeight > window.innerHeight + 1; m++) {
+      var z = parseFloat(stage.style.zoom) || 1;
+      stage.style.zoom = Math.max(0.45, z * (window.innerHeight - 58) / Math.max(1, de.scrollHeight - 58));
+      if (parseFloat(stage.style.zoom) <= 0.45) break;
+    }
     setTimeout(function () { fitting = false; }, 60);
   }
   var fitLater = (function () { var t = null; return function () { clearTimeout(t); t = setTimeout(fit, 120); }; })();
@@ -291,6 +308,8 @@ const noteBridgeScript = r"""
     if (!SLIDES || heads.length < 2) return;
     var st = document.createElement('style'); st.setAttribute('data-altro', '1');
     st.textContent = '.altro-off{display:none!important}body{padding-top:58px!important}' +
+      // wide slides: a note's column (main, or its first box) may use the screen's width, so a part takes fewer lines
+      '#altro-stage>main,#altro-stage>.wrap,#altro-stage>.container,#altro-stage>.page,#altro-stage>article{max-width:var(--altro-w,96vw)!important}' +
       '.altro-bar{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;align-items:center;justify-content:center;gap:10px;' +
       'background:#0D1726;color:#fff;padding:8px 14px;box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 14px system-ui,sans-serif}' +
       '.altro-bar button{border:0;border-radius:999px;padding:8px 16px;font:700 14px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +

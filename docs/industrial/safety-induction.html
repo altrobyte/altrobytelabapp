@@ -66,6 +66,11 @@
   .flame { transform-origin: 50% 100%; transform-box: fill-box; animation: flick .45s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: .2; } } .blink { animation: blink .6s step-end infinite; }
   @media (max-width: 640px) { .hero .h1 { font-size: 30px; } .hero svg.plant { opacity:.25; width: 100%; } body { font-size: 18px; } }
+  /* two columns on a wide screen: the drill on the left, large; the points on the right (30 Oct 2026: a part must fit
+     one slide) */
+  .cols { display:grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .cols > div > :first-child { margin-top: 0; }
+  @media (max-width: 900px) { .cols { display:block; } }
 </style>
 </head>
 <body>
@@ -90,7 +95,7 @@
   <div class="tag">ALTROBYTE INDUSTRIAL · SAFETY INDUCTION</div>
   <div class="h1">हर शिफ्ट के बाद, सही-सलामत घर।</div>
   <p>Steel plant में काम शुरू करने से पहले की safety training। देखिए, खुद करके सीखिए, और आखिर में छोटा सा test दीजिए।</p>
-  <div class="meta"><div><b>11</b>हिस्से</div><div><b>12</b>खुद करके देखें</div><div><b>8</b>सवाल का test</div><div><b>70%</b>पास के लिए</div></div>
+  <div class="meta"><div><b>13</b>हिस्से</div><div><b>12</b>खुद करके देखें</div><div><b>8</b>सवाल का test</div><div><b>70%</b>पास के लिए</div></div>
 </div>
 
 <section>
@@ -218,8 +223,8 @@
 </section>
 
 <section>
-  <h2><span class="n">05</span>Hot metal और crane</h2>
-  <p class="big">Steel plant में दो चीज़ें सबसे ज़्यादा जान लेती हैं: पिघला लोहा और crane का load।</p>
+  <h2><span class="n">05</span>पिघला लोहा: पानी से दूर</h2>
+  <p class="big">पिघला लोहा लगभग 1500 °C का होता है। उसके नीचे पानी की एक बूँद भी धमाका कर देती है।</p>
   <div class="lab">
     <div class="top"><div class="title">Ladle और पानी<small>देखिए, पिघले लोहे के नीचे पानी हो तो क्या होता है</small></div><div class="pill" id="hmState">सूखी जगह</div></div>
     <svg viewBox="0 0 700 220" class="scene">
@@ -234,6 +239,14 @@
     <div class="row" style="margin-top:12px"><button class="btn" id="hmWet">💧 नीचे पानी गिरा दो</button><button class="btn" id="hmDry">🧹 जगह सुखा दो</button></div>
     <div class="say" id="hmSay">अभी जगह सूखी है। पानी गिराकर देखिए।</div>
   </div>
+  <ul class="points">
+    <li><span class="i">💧</span><b>पानी और पिघला लोहा कभी नहीं मिलें।</b> सांचे, ladle, औज़ार बिल्कुल सूखे। Tapping के समय पीली लाइन के पीछे रहो।</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Crane: load के नीचे कभी नहीं</h2>
+  <p class="big">Crane का load गिरा तो दूसरा मौका नहीं मिलता। रुको, या घूमकर जाओ।</p>
   <div class="lab">
     <div class="top"><div class="title">Crane load आ रहा है<small>आप क्या करेंगे? चुनिए</small></div><div class="pill" id="crState">सोचिए</div></div>
     <svg viewBox="0 0 700 200" class="scene">
@@ -245,14 +258,13 @@
     <div class="say" id="crSay">Coil लेकर crane आपकी तरफ़ आ रहा है।</div>
   </div>
   <ul class="points">
-    <li><span class="i">💧</span><b>पानी और पिघला लोहा कभी नहीं मिलें।</b> सांचे, ladle, औज़ार बिल्कुल सूखे। Tapping के समय पीली लाइन के पीछे रहो।</li>
     <li><span class="i">🏗️</span><b>Crane के load के नीचे कभी नहीं।</b> रुको या घूमकर जाओ।</li>
     <li><span class="i">👋</span><b>Crane को इशारा सिर्फ़ trained signal वाला देता है।</b> एक ही आदमी, साफ़ इशारे।</li>
   </ul>
 </section>
 
 <section>
-  <h2><span class="n">06</span>Gas: जो दिखती नहीं, सूँघती नहीं</h2>
+  <h2><span class="n">07</span>Gas: जो दिखती नहीं, सूँघती नहीं</h2>
   <p class="big">Blast furnace और coke oven की gas में CO होती है। न रंग, न गंध, और जान ले लेती है।</p>
   <div class="lab">
     <div class="top"><div class="title">CO meter पढ़ो<small>Slider खिसकाइए: हर reading पर क्या करेंगे?</small></div><div class="pill" id="coVal">0 ppm</div></div>
@@ -273,7 +285,7 @@
 </section>
 
 <section>
-  <h2><span class="n">07</span>आग: सही सिलेंडर, सही तरीका</h2>
+  <h2><span class="n">08</span>आग: सही सिलेंडर, सही तरीका</h2>
   <p class="big">गलत सिलेंडर से आग और भड़क सकती है। आग देखकर सिलेंडर चुनना सीखिए।</p>
   <div class="lab">
     <div class="top"><div class="title">आग बुझाओ<small>पहले आग चुनो, फिर सिलेंडर</small></div><div class="pill" id="fireState">🔥 जल रही है</div></div>
@@ -296,8 +308,8 @@
 </section>
 
 <section>
-  <h2><span class="n">08</span>ऊँचाई पर काम</h2>
-  <p class="big">6 फ़ुट (1.8 मीटर) से ऊपर काम हो तो permit और harness ज़रूरी है।</p>
+  <h2><span class="n">09</span>ऊँचाई पर काम: सीढ़ी</h2>
+  <p class="big">6 फ़ुट (1.8 मीटर) से ऊपर काम हो तो permit और harness ज़रूरी है। पहले सीढ़ी सही लगाना सीखें।</p>
   <div class="lab">
     <div class="top"><div class="title">सीढ़ी सही लगाओ<small>नीचे का हिस्सा खिसकाइए, जब तक सीढ़ी हरी न हो जाए</small></div><div class="pill" id="ladVal">-</div></div>
     <svg viewBox="0 0 500 260" style="width:100%;max-width:520px;margin:auto;border-radius:14px;background:#182538">
@@ -308,6 +320,14 @@
     <input type="range" id="ladIn" min="0" max="300" value="160" style="width:100%">
     <div class="say" id="ladSay"></div>
   </div>
+  <ul class="points">
+    <li><span class="i">🪜</span><b>सीढ़ी:</b> 4 ऊपर तो 1 बाहर। कोई नीचे पकड़े। ऊपर की दो सीढ़ियों पर न खड़े हों।</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="n">10</span>Harness: hook हमेशा लगा</h2>
+  <p class="big">Harness तभी बचाता है जब उसका hook मज़बूत जगह पर लगा हो, हर बार।</p>
   <div class="lab">
     <div class="top"><div class="title">Harness का hook<small>ऊपर platform पर worker है। Hook लगाओ, फिर देखो</small></div><div class="pill" id="hookState">Hook नहीं लगा</div></div>
     <svg viewBox="0 0 700 220" class="scene">
@@ -320,14 +340,13 @@
     <div class="say" id="hookSay">पहले देखिए बिना hook के फिसलने पर क्या होगा, फिर hook लगाकर।</div>
   </div>
   <ul class="points">
-    <li><span class="i">🪜</span><b>सीढ़ी:</b> 4 ऊपर तो 1 बाहर। कोई नीचे पकड़े। ऊपर की दो सीढ़ियों पर न खड़े हों।</li>
     <li><span class="i">🦺</span><b>Harness:</b> कसा हुआ, hook कंधे से ऊपर मज़बूत जगह पर, हर बार जगह बदलते समय भी।</li>
     <li><span class="i">🔧</span><b>औज़ार:</b> डोरी से बँधे। ऊपर से गिरा spanner जान ले सकता है। नीचे की जगह घेरो।</li>
   </ul>
 </section>
 
 <section>
-  <h2><span class="n">09</span>Near miss: बाल-बाल बचे, तो बताओ</h2>
+  <h2><span class="n">11</span>Near miss: बाल-बाल बचे, तो बताओ</h2>
   <p class="big">जो हादसा होते-होते बचा, वही "near miss" है। उसे बताने से अगला हादसा रुकता है।</p>
   <div class="lab">
     <div class="top"><div class="title">यह क्या है?<small>हर घटना के लिए सही जवाब चुनिए</small></div><div class="pill" id="nmScore">0 / 3</div></div>
@@ -344,7 +363,7 @@
 </section>
 
 <section>
-  <h2><span class="n">10</span>Emergency और first aid</h2>
+  <h2><span class="n">12</span>Emergency और first aid</h2>
   <p class="big">Emergency में पहले दो मिनट सबसे कीमती हैं। यह पहले से याद रखो।</p>
   <div class="lab">
     <div class="top"><div class="title">Siren बज रहा है!<small>चार कदम सही क्रम में दबाइए</small></div><div class="pill blink" id="sirenState">🚨</div></div>
@@ -366,7 +385,7 @@
 </section>
 
 <section>
-  <h2><span class="n">11</span>याद रखने वाली बातें</h2>
+  <h2><span class="n">13</span>याद रखने वाली बातें</h2>
   <p class="big">अब छोटा सा test आएगा। उससे पहले ये बातें एक बार और।</p>
   <ul class="points">
     <li><span class="i">✋</span>खतरा दिखे तो काम रोकने का आपका हक़ है।</li>
@@ -382,6 +401,21 @@
 </section>
 
 </main>
+<script>
+(function () {   // a section with a drill becomes two columns: drills left, the rest right (runs before the app's slides)
+  if (window.innerWidth <= 900) return;
+  Array.prototype.forEach.call(document.querySelectorAll('main > section'), function (sec) {
+    if (!sec.querySelector('.lab')) return;
+    var cols = document.createElement('div'), left = document.createElement('div'), right = document.createElement('div');
+    cols.className = 'cols'; cols.appendChild(left); cols.appendChild(right);
+    Array.prototype.slice.call(sec.children).forEach(function (el, i) {
+      if (/^H[1-3]$/.test(el.tagName) || (i === 1 && (el.classList.contains('big') || el.classList.contains('lead')))) return;
+      (el.classList.contains('lab') ? left : right).appendChild(el);
+    });
+    sec.appendChild(cols);
+  });
+})();
+</script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };

@@ -37,7 +37,7 @@ class IndProgramme {
 const indProgrammes = [
   IndProgramme('safety_induction', 'Safety Induction',
       'Hazards, PPE, lockout-tagout, hot metal, cranes, gas, fire, height and emergency, for every new joiner and contract worker.',
-      '11 sections · 12 drills · Hindi', 102, Icons.health_and_safety_rounded, [
+      '13 sections · 12 drills · Hindi', 102, Icons.health_and_safety_rounded, [
     // In simple Hindi, as the lesson is (30 Oct 2026, founder: workers are not used to English).
     IndQuestion('Conveyor में jam है। सबसे पहले क्या करेंगे?',
         ['Gloves पहनकर जल्दी से निकाल देंगे', 'LOTO: मशीन बंद, बिजली काटो, अपना ताला लगाओ, चलाकर देखो', 'Operator से कहेंगे कि start button पर नज़र रखे'],
