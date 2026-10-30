@@ -98,6 +98,11 @@
   .gallery figcaption { position:absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; font-size: 13.5px; font-weight: 600;
                         background: linear-gradient(transparent, rgba(5,10,20,.92)); }
   @media (max-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; grid-auto-rows: 220px; } .gallery figure:first-child { grid-column: 1 / -1; grid-row: span 1; } }
+  .campus { display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .campus figure { margin:0; position:relative; border-radius: 18px; overflow:hidden; border: 1px solid var(--line); height: 250px; }
+  .campus img { width:100%; height:100%; object-fit: cover; display:block; transition: transform .6s ease; } .campus figure:hover img { transform: scale(1.05); }
+  .campus figcaption { position:absolute; left:0; right:0; bottom:0; padding: 30px 14px 12px; font-size: 13.5px; font-weight: 600; background: linear-gradient(transparent, rgba(5,10,20,.92)); }
+  @media (max-width: 800px) { .campus { grid-template-columns: 1fr; } }
   .feature { display:grid; grid-template-columns: 1.3fr 1fr; gap: 0; margin-top: 16px; border-radius: 20px; overflow: hidden;
              border: 1px solid rgba(217,164,65,.45); background: linear-gradient(140deg, #0B1424, #1B2D4F); }
   .feature img { width: 100%; height: 100%; object-fit: cover; display:block; min-height: 300px; }
@@ -279,6 +284,12 @@
       <figure><img src="/home/img/iot-prototype.jpg" alt="An IoT prototype on the bench" loading="lazy"><figcaption>An IoT prototype on our bench</figcaption></figure>
       <figure><img style="object-position:50% 30%" src="/home/img/custom-pcb.jpg" alt="Custom PCB products in development" loading="lazy"><figcaption>Custom PCB products, in development</figcaption></figure>
       <figure class="wide"><img src="/home/img/spray-drone.jpg" alt="Agricultural spray drone built by Altrobyte" loading="lazy"><figcaption>Agricultural spray drone, built by Altrobyte</figcaption></figure>
+    </div>
+    <p class="reveal" style="color:var(--soft);margin:26px 0 0;font-weight:600">On campus</p>
+    <div class="campus reveal">
+      <figure><img src="/home/img/sistec-appreciation.jpg" alt="SISTec Bhopal presents an appreciation to Pawan Meena" loading="lazy"><figcaption>Appreciation from SISTec Bhopal after the Industrial IoT hands-on workshop</figcaption></figure>
+      <figure><img src="/home/img/sistec-workshop-1.jpg" alt="Industrial IoT hands-on workshop at SISTec Bhopal" loading="lazy"><figcaption>Industrial IoT hands-on workshop, SISTec Bhopal</figcaption></figure>
+      <figure><img src="/home/img/sistec-workshop-2.jpg" alt="Students building along at the workshop" loading="lazy"><figcaption>Every student builds along, not just listens</figcaption></figure>
     </div>
     <div class="feature reveal">
       <img src="/home/img/conveyor-monitoring.jpg" alt="Industrial conveyor monitoring system by Altrobyte at an industry expo" loading="lazy">
