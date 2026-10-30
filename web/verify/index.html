@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify a certificate · Altrobyte Industrial</title>
+<meta name="description" content="Check that an Altrobyte Industrial training certificate is genuine.">
+<style>
+  :root { --ink:#0B1424; --panel:#13203A; --gold:#D9A441; --soft:#F3D99B; --line:#243656; --good:#4ADE80; --bad:#EF7D6D; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background: radial-gradient(120% 90% at 80% 0%, #1B2D4F 0%, var(--ink) 60%); color:#fff;
+         font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; display:flex; align-items:center; justify-content:center; padding: 24px 16px; }
+  .card { width: 100%; max-width: 560px; background: var(--panel); border:1px solid var(--line); border-radius: 20px; padding: 32px 28px; }
+  .tag { font-weight:700; font-size:12px; letter-spacing:3px; color: var(--gold); }
+  h1 { font-size: 28px; margin: 10px 0 6px; line-height:1.2; }
+  p.sub { color:#AEBBCB; margin: 0 0 22px; }
+  form { display:flex; gap:10px; flex-wrap:wrap; }
+  input { flex:1 1 220px; min-width:0; font: 600 16px Consolas, monospace; padding: 13px 14px; border-radius: 12px; border:1px solid var(--line);
+          background: var(--ink); color:#fff; text-transform: uppercase; letter-spacing: 1px; }
+  input:focus { outline: 2px solid var(--gold); border-color: transparent; }
+  button { font: 700 15px "Segoe UI", sans-serif; padding: 13px 20px; border:0; border-radius: 12px; background: var(--gold); color: var(--ink); cursor:pointer; }
+  .out { margin-top: 22px; border-radius: 14px; padding: 18px 18px; display:none; }
+  .out.ok { display:block; background: rgba(74,222,128,.09); border:1px solid rgba(74,222,128,.45); }
+  .out.no { display:block; background: rgba(239,125,109,.09); border:1px solid rgba(239,125,109,.45); }
+  .badge { font-weight:800; font-size: 14px; letter-spacing:1px; }
+  .ok .badge { color: var(--good); } .no .badge { color: var(--bad); }
+  dl { display:grid; grid-template-columns: 120px 1fr; gap: 6px 12px; margin: 12px 0 0; }
+  dt { color:#9FB0C3; } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  .foot { margin-top: 26px; font-size: 13px; color:#8FA1B6; }
+  .foot a { color: var(--soft); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="tag">ALTROBYTE INDUSTRIAL</div>
+  <h1>Verify a training certificate</h1>
+  <p class="sub">Enter the certificate number printed on it, for example ALT-IND-2026-00012.</p>
+  <form id="f"><input id="c" placeholder="ALT-IND-2026-00012" autocomplete="off" aria-label="Certificate number"><button>Check</button></form>
+  <div class="out" id="out"></div>
+  <div class="foot">Certificates are issued when a worker passes the assessment after training with Altron, the Altrobyte AI trainer.
+    Questions: <a href="https://wa.me/917222977927">WhatsApp Altrobyte</a>.</div>
+</div>
+<script>
+(function () {
+  var API = 'https://edu.altrobytelab.com';
+  var f = document.getElementById('f'), c = document.getElementById('c'), out = document.getElementById('out');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); }
+  function date(s) { var d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  function check(no) {
+    no = (no || '').trim().toUpperCase();
+    if (!/^ALT-IND-\d{4}-\d{5,}$/.test(no)) { out.className = 'out no'; out.innerHTML = '<div class="badge">CHECK THE NUMBER</div>It looks like ALT-IND-2026-00012.'; return; }
+    out.className = 'out ok'; out.innerHTML = 'Checking…';
+    fetch(API + '/industrial/verify/' + encodeURIComponent(no)).then(function (r) { return r.json().then(function (j) { return [r.status, j]; }); })
+      .then(function (x) {
+        if (x[0] === 200 && x[1].valid) {
+          var v = x[1];
+          out.className = 'out ok';
+          out.innerHTML = '<div class="badge">✓ GENUINE CERTIFICATE</div><dl><dt>Number</dt><dd>' + esc(v.cert_no) + '</dd><dt>Name</dt><dd>' + esc(v.name) +
+            '</dd><dt>Training</dt><dd>' + esc(v.programme) + '</dd><dt>Plant</dt><dd>' + esc(v.plant) + (v.city ? ', ' + esc(v.city) : '') +
+            '</dd><dt>Date</dt><dd>' + esc(date(v.date)) + '</dd></dl>';
+          try { history.replaceState(null, '', '?c=' + encodeURIComponent(no)); } catch (e) {}
+        } else {
+          out.className = 'out no'; out.innerHTML = '<div class="badge">✕ NOT FOUND</div>No certificate has this number. Check it, or ask the plant for the original.';
+        }
+      })
+      .catch(function () { out.className = 'out no'; out.innerHTML = '<div class="badge">COULD NOT CHECK</div>Check your internet and try again.'; });
+  }
+  f.addEventListener('submit', function (e) { e.preventDefault(); check(c.value); });
+  var q = new URLSearchParams(location.search).get('c');
+  if (q) { c.value = q; check(q); }
+})();
+</script>
+</body>
+</html>

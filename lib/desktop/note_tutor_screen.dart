@@ -39,8 +39,11 @@ class NoteTutorScreen extends StatefulWidget {
 
   /// The next note of the module: when this lesson is complete, it opens by itself after a short countdown.
   final String? nextTitle;
+
+  /// The language Altron starts in, whatever the learner chose last (industrial training starts in Hindi for workers).
+  final String? lang;
   const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml,
-      this.nextTitle});
+      this.nextTitle, this.lang});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -101,7 +104,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   Future<void> _start() async {
     if (t.items.isEmpty && t.problem == null) {
       // The language the learner chose last time, before anything is said.
-      final saved = (await SharedPreferences.getInstance()).getString('tutor_lang');
+      final saved = widget.lang ?? (await SharedPreferences.getInstance()).getString('tutor_lang');
       if (saved != null && saved != t.lang && tutorLanguages.containsKey(saved)) {
         t.removeListener(_onTutor);
         t = _tutorIn(saved)

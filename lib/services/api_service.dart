@@ -3881,4 +3881,23 @@ class ApiService {
     final res = await safeGet(Uri.parse(ApiConstants.activityFeedAdmin(limit: limit)), headers: _headers(token));
     return _parse(res)['activity'] as List? ?? [];
   }
+
+  // ── Altrobyte Industrial (30 Oct 2026): plants, their workers, test results and certificates (industrial.py) ──
+
+  static Future<Map<String, dynamic>> industrialGet(String path) async => _parse(await http
+      .get(Uri.parse('${ApiConstants.baseUrl}/industrial/$path'), headers: _headers(await _learnerToken()))
+      .timeout(const Duration(seconds: 30)));
+
+  static Future<Map<String, dynamic>> industrialPost(String path, Map<String, dynamic> body) async => _parse(await http
+      .post(Uri.parse('${ApiConstants.baseUrl}/industrial/$path'), headers: _headers(await _learnerToken()), body: jsonEncode(body))
+      .timeout(const Duration(seconds: 30)));
+
+  /// The plant's training record for the auditors, as the CSV the server writes.
+  static Future<String> industrialReport(int plantId) async {
+    final res = await http
+        .get(Uri.parse('${ApiConstants.baseUrl}/industrial/plants/$plantId/report.csv'), headers: _headers(await _learnerToken()))
+        .timeout(const Duration(seconds: 30));
+    if (res.statusCode >= 400) _parse(res);
+    return utf8.decode(res.bodyBytes);
+  }
 }
