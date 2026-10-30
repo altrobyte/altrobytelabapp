@@ -3493,6 +3493,13 @@ class ApiService {
     _parse(res);
   }
 
+  /// Someone who registered offline (cash, UPI, at the office), added to the workshop's list by the team.
+  static Future<Map<String, dynamic>> addLiveSessionAttendee(int sessionId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse(ApiConstants.liveSessionAttendees(sessionId)), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
   static Future<List<dynamic>> getLiveSessionAttendees(int id) async {
     final token = await _token();
     final res = await safeGet(

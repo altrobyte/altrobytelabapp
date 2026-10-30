@@ -369,6 +369,83 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
     _load();
   }
 
+  /// The form for someone who registered offline. Returns their registration, or null.
+  Future<Map<String, dynamic>?> _addManually(BuildContext ctx, int sessionId) async {
+    final name = TextEditingController(), phone = TextEditingController(), email = TextEditingController();
+    final org = TextEditingController(), branch = TextEditingController(), city = TextEditingController();
+    var occupation = 'student';
+    var paid = true;
+    String? problem;
+    var busy = false;
+    return showDialog<Map<String, dynamic>>(
+      context: ctx,
+      builder: (dCtx) => StatefulBuilder(
+        builder: (dCtx, setD) => AlertDialog(
+          title: const Text('Add a registration'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('For someone who registered offline: cash, UPI or at the office. They are added to this list; nothing is sent to them.',
+                    style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                TextField(controller: name, decoration: const InputDecoration(labelText: 'Full name')),
+                TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone (10 digits)')),
+                TextField(controller: email, decoration: const InputDecoration(labelText: 'Email (optional)')),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'student', label: Text('Student')),
+                    ButtonSegment(value: 'professional', label: Text('Working')),
+                  ],
+                  selected: {occupation},
+                  onSelectionChanged: (v) => setD(() => occupation = v.first),
+                ),
+                TextField(controller: org, decoration: InputDecoration(labelText: occupation == 'student' ? 'College' : 'Company')),
+                TextField(controller: branch, decoration: InputDecoration(labelText: occupation == 'student' ? 'Branch and year' : 'Role')),
+                TextField(controller: city, decoration: const InputDecoration(labelText: 'City (optional)')),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: paid,
+                  onChanged: (v) => setD(() => paid = v),
+                  title: const Text('Paid (cash or UPI collected)'),
+                  subtitle: const Text('Gives the receipt, the linked course and the invoice'),
+                ),
+                if (problem != null) Text(problem!, style: const TextStyle(color: AppColors.error)),
+              ]),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: busy ? null : () => Navigator.pop(dCtx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      setD(() { busy = true; problem = null; });
+                      try {
+                        final r = await ApiService.addLiveSessionAttendee(sessionId, {
+                          'name': name.text.trim(),
+                          'phone': phone.text.trim(),
+                          'email': email.text.trim(),
+                          'occupation': occupation,
+                          if (occupation == 'student') 'college': org.text.trim() else 'company': org.text.trim(),
+                          'branch': branch.text.trim(),
+                          'city': city.text.trim(),
+                          'paid': paid,
+                        });
+                        if (dCtx.mounted) Navigator.pop(dCtx, r);
+                      } catch (e) {
+                        setD(() { busy = false; problem = e is ApiException ? e.message : 'Could not add. Please try again.'; });
+                      }
+                    },
+              child: const Text('Add and make their card'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showAttendees(Map<String, dynamic> session) async {
     final sessionId = session['id'] as int;
     final attendees = List<Map<String, dynamic>>.from(
@@ -412,6 +489,29 @@ class _LiveSessionsAdminScreenState extends State<LiveSessionsAdminScreen> {
                   },
                   icon: const Icon(Icons.receipt_long_rounded, size: 18),
                   label: const Text('Invoices for all paid'),
+                ),
+                // Someone who registered offline: on the list, then their card at once (30 Oct 2026, founder).
+                TextButton.icon(
+                  onPressed: () async {
+                    final added = await _addManually(ctx, sessionId);
+                    if (added == null) return;
+                    setSheetState(() {
+                      attendees.removeWhere((a) => a['id'] == added['id']);
+                      attendees.insert(0, added);
+                    });
+                    if (!ctx.mounted) return;
+                    await showRegistrationSuccessDialog(ctx,
+                        typeLabel: 'WORKSHOP',
+                        title: '${session['title'] ?? ''}',
+                        studentName: '${added['name'] ?? ''}',
+                        affiliation: ['${added['company'] ?? ''}', '${added['college'] ?? ''}']
+                            .firstWhere((e) => e.trim().isNotEmpty, orElse: () => ''),
+                        occupation: '${added['occupation'] ?? ''}',
+                        branch: '${added['branch'] ?? ''}',
+                        shareUrl: 'https://altrobytelab.com/roadmap/product-engineering');
+                  },
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: const Text('Add registration'),
                 ),
                 TextButton.icon(
                   onPressed: () => _exportCsv(sessionId),

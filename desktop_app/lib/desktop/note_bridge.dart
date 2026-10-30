@@ -230,7 +230,19 @@ const noteBridgeScript = r"""
   // ── slides ──
   // Every element belongs to the last heading before it in the page; a slide shows the elements of its heading (and the
   // boxes that hold them), and the part before the first heading with the first slide. Works on any note, whatever its markup.
-  var owner = null, bar = null, goTo = -1;
+  var owner = null, bar = null, goTo = -1, stage = null, fitting = false;
+  // Each slide fits the screen: the whole part is seen at once, no scrolling, nothing cut (30 Oct 2026, founder). It is
+  // shrunk only as far as it stays readable (55 %); a part longer than that scrolls a little.
+  function fit() {
+    if (!stage || fitting) return;
+    fitting = true;
+    stage.style.zoom = 1;
+    var h = stage.scrollHeight, w = stage.scrollWidth, availH = window.innerHeight - 96, availW = window.innerWidth;
+    var r = Math.max(0.55, Math.min(1, availH / Math.max(1, h), availW / Math.max(1, w)));
+    stage.style.zoom = r;
+    setTimeout(function () { fitting = false; }, 60);
+  }
+  var fitLater = (function () { var t = null; return function () { clearTimeout(t); t = setTimeout(fit, 120); }; })();
   function buildOwners() {
     owner = new Map(); var k = -1, n;
     var w = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
@@ -271,9 +283,9 @@ const noteBridgeScript = r"""
   }
   function showSlide(k) {
     if (k < 0 || k >= heads.length) return;
-    slideAt = k; visit(document.body, k);
+    slideAt = k; visit(stage || document.body, k);
     if (goTo === k) goTo = -1;
-    window.scrollTo(0, 0); paintBar();
+    window.scrollTo(0, 0); paintBar(); fit(); setTimeout(fit, 400);
   }
   function setupSlides() {
     if (!SLIDES || heads.length < 2) return;
@@ -292,6 +304,17 @@ const noteBridgeScript = r"""
     bar.querySelector('.p').onclick = function () { showSlide(slideAt - 1); report(slideAt); };
     bar.querySelector('.n').onclick = function () { showSlide(slideAt + 1); report(slideAt); };
     bar.querySelector('.g').onclick = function () { showSlide(goTo); report(slideAt); };
+    // Everything of the note goes in one box, so it can be fitted to the screen as one; the bar stays outside it.
+    stage = document.createElement('div'); stage.id = 'altro-stage'; stage.setAttribute('data-altro-stage', '1');
+    Array.prototype.slice.call(document.body.childNodes).forEach(function (n) {
+      if (n === bar || (n.nodeType === 1 && /^(SCRIPT|STYLE)$/.test(n.tagName))) return;
+      stage.appendChild(n);
+    });
+    document.body.insertBefore(stage, bar);
+    window.addEventListener('resize', fitLater);
+    // A drill that grows or shrinks the part (a message shown, an answer opened): fit again.
+    try { new MutationObserver(function () { if (!fitting) fitLater(); }).observe(stage, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+    window.addEventListener('load', fitLater);
     buildOwners(); showSlide(0); last = 0;
     var plain = window.__altroShow;
     window.__altroShow = function (i, bring) {
