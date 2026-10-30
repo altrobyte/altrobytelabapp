@@ -199,7 +199,7 @@
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start the first lesson') + '</a>' : '') +
       (!trial || !trial.started ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
       '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
-      html + unlockCard() + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a></footer>';
+      html + unlockCard() + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
     var dock = document.createElement('div'); dock.className = 'dock';
     dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
     document.body.appendChild(dock);

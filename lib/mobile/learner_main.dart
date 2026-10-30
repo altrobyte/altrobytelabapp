@@ -78,8 +78,8 @@ class _LearnState extends State<_Learn> {
         " localStorage.setItem('flutter.student_token', $t); location.reload(); }");
   }
 
-  /// The learning pages stay in the app; sign-in is native; everything else (WhatsApp, payments, other sites) opens
-  /// outside, in the browser or the app it belongs to.
+  /// The learning pages stay in the app; sign-in is native; everything else (WhatsApp, registering and paying, other
+  /// sites) opens outside, in the browser or the app it belongs to.
   NavigationDecision _route(NavigationRequest r) {
     final u = Uri.tryParse(r.url);
     if (u == null) return NavigationDecision.prevent;
@@ -88,7 +88,13 @@ class _LearnState extends State<_Learn> {
       _signIn(u.queryParameters['next'] ?? '/learn');
       return NavigationDecision.prevent;
     }
-    if (ours && (u.path == '/' || const ['/learn', '/live-sessions', '/join/', '/class', '/live/'].any(u.path.startsWith))) {
+    if (ours && u.queryParameters['signed_out'] == '1') {   // the account was deleted on /delete-account
+      _token = '';
+      SharedPreferences.getInstance().then((p) => p.remove('student_token'));
+    }
+    // Registering and paying (/join, /pricing) open in the browser: Play's rules on paying for digital content.
+    if (ours && (u.path == '/' || u.path == '/delete-account' ||
+        const ['/learn', '/live-sessions', '/class', '/live/'].any(u.path.startsWith))) {
       return NavigationDecision.navigate;
     }
     if (u.scheme == 'about' || u.scheme == 'data') return NavigationDecision.navigate;

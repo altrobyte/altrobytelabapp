@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Delete account · Altrobyte Lab</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.png">
+<!-- Delete your Altrobyte Lab account (31 Oct 2026). The Play Store wants an app with sign-in to offer this inside the
+     app and on the web; the app opens this page. Sign-in is the app's /signin (same browser storage). After deleting it
+     goes to /learn?signed_out=1, which tells the Android app to forget its own copy of the sign-in. -->
+<style>
+  :root { --ink:#0A1220; --panel:#13223A; --line:#22344F; --text:#E8EEF6; --soft:#9DB0C6; --orange:#FF6A1A; --red:#FF6B6B; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--ink); color: var(--text); font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 32px 16px 60px; }
+  h1 { font-size: 26px; margin-bottom: 10px; }
+  p, li { color: var(--soft); }
+  ul { margin: 10px 0 18px 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-top: 18px; }
+  .btn { display: inline-flex; justify-content: center; width: 100%; padding: 14px 20px; border-radius: 999px; font: inherit; font-weight: 700; border: 0; cursor: pointer; text-decoration: none; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-main { background: var(--orange); color: #fff; }
+  .btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.22); margin-top: 10px; }
+  label { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0; color: var(--text); font-size: 15px; }
+  .err { color: var(--red); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p><a href="/learn">‹ Back to learning</a></p>
+  <h1 style="margin-top:18px">Delete your account</h1>
+  <p>This deletes your Altrobyte Lab account at once:</p>
+  <ul>
+    <li>your name, WhatsApp number, email and profile are removed</li>
+    <li>you are signed out everywhere, on the web and in the app</li>
+    <li>your progress and your free week cannot be brought back</li>
+  </ul>
+  <p>Payment records are kept as the tax law requires. Signing in again with the same number later makes a new, empty account.</p>
+  <div class="card" id="box"></div>
+  <p style="margin-top:18px;font-size:14px">Trouble? Write to <a href="mailto:support@altrobytelab.com">support@altrobytelab.com</a> or <a href="https://wa.me/917222977927">WhatsApp us</a>.</p>
+</div>
+<script>
+(function () {
+  var API = 'https://edu.altrobytelab.com', box = document.getElementById('box');
+  var token = '';
+  try { token = JSON.parse(localStorage.getItem('flutter.student_token') || '""') || ''; } catch (e) {}
+  if (!token) {
+    box.innerHTML = '<p style="margin-bottom:14px;color:var(--text)">Sign in with the WhatsApp number of the account you want to delete.</p>' +
+      '<a class="btn btn-main" href="/signin?next=/delete-account">Sign in with WhatsApp</a>';
+    return;
+  }
+  box.innerHTML = '<label><input type="checkbox" id="sure"> I understand my account and progress will be deleted for good.</label>' +
+    '<button class="btn btn-red" id="del" disabled>Delete my account</button>' +
+    '<a class="btn btn-ghost" href="/learn">Keep my account</a><div class="err" id="err"></div>';
+  var sure = document.getElementById('sure'), del = document.getElementById('del'), err = document.getElementById('err');
+  sure.onchange = function () { del.disabled = !sure.checked; };
+  del.onclick = function () {
+    del.disabled = true; del.textContent = 'Deleting…'; err.textContent = '';
+    fetch(API + '/student/delete-account', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) {
+        if (!r.ok && r.status !== 401) throw 0;   // 401: already gone, nothing left to delete
+        try { localStorage.removeItem('flutter.student_token'); } catch (e) {}
+        box.innerHTML = '<p style="color:var(--text);font-weight:700">Your account is deleted.</p><p style="margin-top:6px">Taking you back…</p>';
+        setTimeout(function () { location.href = '/learn?signed_out=1'; }, 2500);
+      })
+      .catch(function () {
+        del.disabled = false; del.textContent = 'Delete my account';
+        err.textContent = 'Could not delete right now. Check the internet and try again.';
+      });
+  };
+})();
+</script>
+</body>
+</html>

@@ -75,8 +75,11 @@
     var d = new Date(iso.replace(' ', 'T') + (/[zZ+]/.test(iso.slice(10)) ? '' : '+05:30'));
     return d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST';
   }
-  function past(s) {
-    if (s.registration_always_open) return false;
+  // The list files a class whose date has gone under Past even when its registration was left open (31 Oct 2026: old
+  // workshops kept showing as open); its own page still takes registrations. A repeating class always carries its
+  // next run, so it never goes under Past.
+  function past(s, inList) {
+    if (s.registration_always_open && !inList) return false;
     if (!s.session_date) return false;
     var end = new Date(s.session_date.replace(' ', 'T') + '+05:30').getTime() + (s.duration_minutes || 60) * 60000;
     return end < Date.now();
@@ -96,14 +99,14 @@
     ['/main.dart.js', '/flutter_bootstrap.js'].forEach(function (u) { var l = document.createElement('link'); l.rel = 'prefetch'; l.href = u; document.head.appendChild(l); });
   }
   function card(s) {
-    var over = past(s);
+    var over = past(s, true);
     return '<a class="card" href="/live-sessions/' + s.id + '">' + (s.banner_url ? '<img loading="lazy" src="' + esc(s.banner_url) + '" alt="">' : '') +
       '<div class="b"><b>' + esc(s.title) + '</b><span class="muted" style="font-size:13.5px">' + (s.repeat_label ? '🔁 ' + esc(s.repeat_label) + ' · next ' : '') + when(s.session_date) + '</span>' +
       (over ? '<span class="ended">Ended</span>' : priceHtml(s).replace('class="price"', 'class="price" style="font-size:20px;margin:0"')) + '</div></a>';
   }
   if (!m) {
     fetch(API + '/live-sessions').then(function (r) { return r.json(); }).then(function (d) {
-      var all = d.sessions || [], up = all.filter(function (s) { return !past(s); }), done = all.filter(past).reverse();
+      var all = d.sessions || [], up = all.filter(function (s) { return !past(s, true); }), done = all.filter(function (s) { return past(s, true); }).reverse();
       document.title = 'Live classes · Altrobyte Lab';
       app.innerHTML = '<div style="padding:28px 0 6px"><h1>Live classes and workshops</h1><p class="muted">Build along with engineers who ship real products.</p></div>' +
         '<h2 class="sec">Open for registration</h2>' + (up.length ? '<div class="grid">' + up.map(card).join('') + '</div>' :

@@ -33,6 +33,10 @@
         "destination": "/learn/index.html"
       },
       {
+        "source": "/delete-account",
+        "destination": "/account/index.html"
+      },
+      {
         "source": "/learn/**",
         "destination": "/learn/index.html"
       },
