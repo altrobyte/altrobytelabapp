@@ -23,6 +23,11 @@
         "destination": "/admissions/index.html"
       },
       {
+        "//": "The full pricing is a static page (30 Oct 2026, founder); /unlock, where the app sends people, shows it too on a fresh load.",
+        "source": "/@(pricing|unlock)",
+        "destination": "/pricing/index.html"
+      },
+      {
         "//": "The app's shell is app.html: index.html is the static home page at the front door (30 Oct 2026, founder; stamp_version.py swaps them after the build).",
         "source": "**",
         "destination": "/app.html"

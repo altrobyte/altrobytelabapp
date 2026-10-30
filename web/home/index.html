@@ -158,7 +158,7 @@
   <div class="wrap">
     <a class="logo" href="/"><img src="/icons/Icon-192.png" alt="">Altrobyte Lab</a>
     <div class="links">
-      <a href="#altron">Altron AI trainer</a><a href="#roadmap">Roadmap</a><a href="#plans">Plans</a><a href="#industrial">For industry</a><a href="/live-sessions">Live classes</a>
+      <a href="#altron">Altron AI trainer</a><a href="#roadmap">Roadmap</a><a href="/pricing">Pricing</a><a href="#industrial">For industry</a><a href="/live-sessions">Live classes</a>
     </div>
     <a class="btn btn-ghost" href="/student/login" style="padding:10px 16px">Log in</a>
     <a class="btn btn-main" href="/learn">Start free</a>
@@ -196,8 +196,9 @@
         <path class="pulse-line" style="animation-delay:1.4s" d="M40 225 H170"/><path class="pulse-line" style="animation-delay:2.1s" d="M260 60 V150"/>
         <path class="pulse-line" style="animation-delay:1s" d="M460 90 H330 V170"/><path class="pulse-line" style="animation-delay:1.8s" d="M60 360 H180 V260"/>
         <g class="chip-glow"><rect x="170" y="150" width="180" height="150" rx="14" fill="#0B1424" stroke="#FF6A1A" stroke-width="2"/>
-          <text x="260" y="218" text-anchor="middle" fill="#fff" font-family="Space Grotesk" font-size="22" font-weight="700">ESP32</text>
-          <text x="260" y="244" text-anchor="middle" fill="#9DB0C6" font-family="Inter" font-size="12">your first product</text></g>
+          <text x="260" y="194" text-anchor="middle" fill="#FF9A3D" font-family="Inter" font-size="10.5" font-weight="700" letter-spacing="3">MICROCONTROLLER</text>
+          <text id="mcu" x="260" y="230" text-anchor="middle" fill="#fff" font-family="Space Grotesk" font-size="26" font-weight="700" style="transition:opacity .4s">ESP32</text>
+          <text x="260" y="258" text-anchor="middle" fill="#9DB0C6" font-family="Inter" font-size="12">the brain of every product</text></g>
         <g fill="#C9A15A"><rect x="160" y="168" width="10" height="6"/><rect x="160" y="190" width="10" height="6"/><rect x="160" y="212" width="10" height="6"/><rect x="160" y="234" width="10" height="6"/><rect x="160" y="256" width="10" height="6"/><rect x="160" y="278" width="10" height="6"/>
           <rect x="350" y="168" width="10" height="6"/><rect x="350" y="190" width="10" height="6"/><rect x="350" y="212" width="10" height="6"/><rect x="350" y="234" width="10" height="6"/><rect x="350" y="256" width="10" height="6"/><rect x="350" y="278" width="10" height="6"/></g>
         <circle class="led" cx="60" cy="80" r="9" fill="#38E1D3"/><circle class="led" style="animation-delay:.5s" cx="460" cy="360" r="9" fill="#FF6A1A"/>
@@ -284,9 +285,11 @@
       <div class="plan reveal">
         <h3>Self-paced</h3><div class="price">₹4,999<small> /month + GST</small></div><div class="note">Every module with Altron, plus a live class every week.</div>
         <ul><li>All modules and projects</li><li>Altron trainer, every day</li><li>One live class every week</li><li>Certificate on completion</li></ul>
-        <a class="btn btn-ghost" href="/unlock">See all options</a>
+        <a class="btn btn-ghost" href="/pricing">See all options</a>
       </div>
     </div>
+    <p class="reveal" style="text-align:center;color:var(--soft);margin-top:22px">Also: lab kits from ₹4,800 · the programme with the complete lab and Jarvis · corporate and institute training.
+      <a href="/pricing" style="color:var(--orange2);font-weight:700">See full pricing →</a></p>
   </div>
 </section>
 
@@ -364,6 +367,9 @@
   board.addEventListener('mousemove', function (e) { var r = board.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
     board.style.transform = 'perspective(1200px) rotateY(' + (x * 14) + 'deg) rotateX(' + (-y * 10) + 'deg)'; });
   board.addEventListener('mouseleave', function () { board.style.transform = ''; });
+  // the chip is every board we teach, not one
+  var mcus = ['ESP32', 'STM32', 'Raspberry Pi', 'Arduino', 'nRF52'], mi = 0, mcu = document.getElementById('mcu');
+  setInterval(function () { mcu.style.opacity = 0; setTimeout(function () { mi = (mi + 1) % mcus.length; mcu.textContent = mcus[mi]; mcu.style.opacity = 1; }, 400); }, 2200);
   // Altron's waveform and words
   var wave = document.getElementById('wave');
   for (var i = 0; i < 38; i++) { var b = document.createElement('i'); b.style.animationDelay = (Math.random() * 1.1).toFixed(2) + 's'; b.style.animationDuration = (0.7 + Math.random() * 0.8).toFixed(2) + 's'; wave.appendChild(b); }
