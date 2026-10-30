@@ -22,6 +22,8 @@ const noteBridgeScript = r"""
     try { if (!(window.chrome && window.chrome.webview) && window.parent !== window) window.parent.postMessage(JSON.stringify(m), '*'); } catch (e) {}
   }
   var heads = [], last = -1;
+  // One part at a time, like slides (30 Oct 2026, founder: the long scroll made the parts switch by themselves).
+  var SLIDES = true, slideAt = -1;
   function collect() { heads = Array.prototype.slice.call(document.querySelectorAll('h1,h2,h3')); }
   function report(i) { if (i >= 0 && i !== last) { last = i; post({ section: i }); } }
   function inView() {
@@ -35,7 +37,7 @@ const noteBridgeScript = r"""
     report(best);
   }
   var waiting = false;
-  function later() { if (!waiting) { waiting = true; setTimeout(function () { waiting = false; inView(); }, 250); } }
+  function later() { if (SLIDES && heads.length > 1) return; if (!waiting) { waiting = true; setTimeout(function () { waiting = false; inView(); }, 250); } }
   window.addEventListener('scroll', later, true);
   window.addEventListener('resize', later);
   document.addEventListener('click', function (e) {
@@ -225,8 +227,82 @@ const noteBridgeScript = r"""
   });
   // A note's drills tell Altron what the learner did: window.altroDid('found the oil spill').
   window.altroDid = function (what) { post({ did: String(what || '').slice(0, 160) }); };
+  // ── slides ──
+  // Every element belongs to the last heading before it in the page; a slide shows the elements of its heading (and the
+  // boxes that hold them), and the part before the first heading with the first slide. Works on any note, whatever its markup.
+  var owner = null, bar = null, goTo = -1;
+  function buildOwners() {
+    owner = new Map(); var k = -1, n;
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, null);
+    while ((n = w.nextNode())) { var hi = heads.indexOf(n); if (hi >= 0) k = hi; owner.set(n, k); }
+    // A heading's small label just before it (a number badge, an eyebrow line) belongs to that heading, not the one before.
+    heads.forEach(function (h, i) {
+      var el = h;
+      while (el && el !== document.body) {
+        for (var p = el.previousElementSibling; p && !p.querySelector('h1,h2,h3') && (p.innerText || '').trim().length < 40; p = p.previousElementSibling) {
+          owner.set(p, i); p.querySelectorAll('*').forEach(function (x) { owner.set(x, i); });
+        }
+        if (el.parentElement && el.parentElement.querySelector('h1,h2,h3') !== h) break;   // only up to its own box
+        el = el.parentElement;
+      }
+    });
+  }
+  function visit(node, k) {
+    var any = false;
+    Array.prototype.forEach.call(node.children, function (c) {
+      if (c.hasAttribute('data-altro') || /^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/.test(c.tagName)) return;
+      var hi = heads.indexOf(c), show;
+      if (hi >= 0) show = hi === k;
+      else if (c.querySelector('h1,h2,h3')) show = visit(c, k);
+      else { var o = owner.get(c); show = o === k || (k === 0 && o === -1); }
+      c.classList.toggle('altro-off', !show);
+      if (show) any = true;
+    });
+    return any;
+  }
+  function paintBar() {
+    if (!bar) return;
+    var t = heads[slideAt] ? (heads[slideAt].innerText || '').replace(/\s+/g, ' ').trim() : '';
+    bar.querySelector('.t').textContent = (slideAt + 1) + ' / ' + heads.length + (t ? '  ·  ' + (t.length > 46 ? t.slice(0, 46) + '…' : t) : '');
+    bar.querySelector('.p').disabled = slideAt <= 0;
+    bar.querySelector('.n').disabled = slideAt >= heads.length - 1;
+    var g = bar.querySelector('.g');
+    if (goTo >= 0 && goTo !== slideAt) { g.style.display = ''; g.textContent = 'Altron: part ' + (goTo + 1) + '  →'; } else g.style.display = 'none';
+  }
+  function showSlide(k) {
+    if (k < 0 || k >= heads.length) return;
+    slideAt = k; visit(document.body, k);
+    if (goTo === k) goTo = -1;
+    window.scrollTo(0, 0); paintBar();
+  }
+  function setupSlides() {
+    if (!SLIDES || heads.length < 2) return;
+    var st = document.createElement('style'); st.setAttribute('data-altro', '1');
+    st.textContent = '.altro-off{display:none!important}body{padding-bottom:84px!important}' +
+      '.altro-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:8px;' +
+      'background:#0D1726;color:#fff;border-radius:999px;padding:6px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:600 14px system-ui,sans-serif;max-width:94vw}' +
+      '.altro-bar button{border:0;border-radius:999px;padding:10px 16px;font:700 14px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +
+      '.altro-bar button:disabled{opacity:.35;cursor:default}.altro-bar .g{background:#D9A441;color:#0D1726}' +
+      '.altro-bar .t{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}';
+    (document.head || document.documentElement).appendChild(st);
+    bar = document.createElement('div'); bar.className = 'altro-bar'; bar.setAttribute('data-altro', '1');
+    bar.innerHTML = '<button class="p">◀</button><span class="t"></span><button class="n">▶</button><button class="g" style="display:none"></button>';
+    document.body.appendChild(bar);
+    // The learner moving on their own: the app hears of it, as it did of scrolling.
+    bar.querySelector('.p').onclick = function () { showSlide(slideAt - 1); report(slideAt); };
+    bar.querySelector('.n').onclick = function () { showSlide(slideAt + 1); report(slideAt); };
+    bar.querySelector('.g').onclick = function () { showSlide(goTo); report(slideAt); };
+    buildOwners(); showSlide(0); last = 0;
+    var plain = window.__altroShow;
+    window.__altroShow = function (i, bring) {
+      collect(); if (!owner || heads.length < 2) return plain(i, bring);
+      // Altron's part: its slide opens, unless the learner is in the middle of something on this one (then a button offers it).
+      if (bring && i !== slideAt) { if (learnerBusy()) { goTo = i; paintBar(); } else { showSlide(i); last = i; } }
+      plain(i, false);
+    };
+  }
   function start() {
-    collect(); inView(); try { tapSelects(); } catch (e) {}
+    collect(); try { setupSlides(); } catch (e) {} if (!(SLIDES && heads.length > 1)) inView(); try { tapSelects(); } catch (e) {}
     // The parts with something to do on the screen (a drill, a picture to tap): with a worker, Altron does not move on from
     // them until the note says the activity is done.
     var needs = [];
