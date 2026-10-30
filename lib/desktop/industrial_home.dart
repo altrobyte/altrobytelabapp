@@ -134,7 +134,7 @@ class _IndustrialHomeState extends State<IndustrialHome> {
         _heading('Programmes', 'Each one taught by Altron in Hinglish, with drills, a test and a certificate for every worker.'),
         const SizedBox(height: 16),
         LayoutBuilder(builder: (_, box) {
-          final cols = box.maxWidth > 1100 ? 3 : (box.maxWidth > 700 ? 2 : 1);
+          final cols = box.maxWidth > 900 ? 3 : (box.maxWidth > 600 ? 2 : 1);
           final w = (box.maxWidth - 16 * (cols - 1)) / cols;
           return Wrap(spacing: 16, runSpacing: 16, children: [
             for (final p in indProgrammes) SizedBox(width: w, child: _programmeCard(p)),
