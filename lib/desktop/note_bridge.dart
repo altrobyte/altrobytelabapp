@@ -237,9 +237,9 @@ const noteBridgeScript = r"""
     if (!stage || fitting) return;
     fitting = true;
     stage.style.zoom = 1;
-    var h = stage.scrollHeight, w = stage.scrollWidth, availH = window.innerHeight - 96, availW = window.innerWidth;
-    var r = Math.max(0.55, Math.min(1, availH / Math.max(1, h), availW / Math.max(1, w)));
-    stage.style.zoom = r;
+    var h = stage.scrollHeight, availH = window.innerHeight - 70;
+    var r = Math.min(1, availH / Math.max(1, h));
+    stage.style.zoom = r >= 0.8 ? r : 1;
     setTimeout(function () { fitting = false; }, 60);
   }
   var fitLater = (function () { var t = null; return function () { clearTimeout(t); t = setTimeout(fit, 120); }; })();
@@ -266,7 +266,7 @@ const noteBridgeScript = r"""
       var hi = heads.indexOf(c), show;
       if (hi >= 0) show = hi === k;
       else if (c.querySelector('h1,h2,h3')) show = visit(c, k);
-      else { var o = owner.get(c); show = o === k || (k === 0 && o === -1); }
+      else { var o = owner.get(c); show = o === k; }
       c.classList.toggle('altro-off', !show);
       if (show) any = true;
     });
@@ -290,12 +290,12 @@ const noteBridgeScript = r"""
   function setupSlides() {
     if (!SLIDES || heads.length < 2) return;
     var st = document.createElement('style'); st.setAttribute('data-altro', '1');
-    st.textContent = '.altro-off{display:none!important}body{padding-bottom:84px!important}' +
-      '.altro-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:8px;' +
-      'background:#0D1726;color:#fff;border-radius:999px;padding:6px 8px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:600 14px system-ui,sans-serif;max-width:94vw}' +
-      '.altro-bar button{border:0;border-radius:999px;padding:10px 16px;font:700 14px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +
-      '.altro-bar button:disabled{opacity:.35;cursor:default}.altro-bar .g{background:#D9A441;color:#0D1726}' +
-      '.altro-bar .t{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}';
+    st.textContent = '.altro-off{display:none!important}body{padding-top:58px!important}' +
+      '.altro-bar{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;align-items:center;justify-content:center;gap:10px;' +
+      'background:#0D1726;color:#fff;padding:8px 14px;box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 14px system-ui,sans-serif}' +
+      '.altro-bar button{border:0;border-radius:999px;padding:8px 16px;font:700 14px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +
+      '.altro-bar button:disabled{opacity:.3;cursor:default}.altro-bar .g{background:#D9A441;color:#0D1726}' +
+      '.altro-bar .t{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}';
     (document.head || document.documentElement).appendChild(st);
     bar = document.createElement('div'); bar.className = 'altro-bar'; bar.setAttribute('data-altro', '1');
     bar.innerHTML = '<button class="p">◀</button><span class="t"></span><button class="n">▶</button><button class="g" style="display:none"></button>';
@@ -319,8 +319,8 @@ const noteBridgeScript = r"""
     var plain = window.__altroShow;
     window.__altroShow = function (i, bring) {
       collect(); if (!owner || heads.length < 2) return plain(i, bring);
-      // Altron's part: its slide opens, unless the learner is in the middle of something on this one (then a button offers it).
-      if (bring && i !== slideAt) { if (learnerBusy()) { goTo = i; paintBar(); } else { showSlide(i); last = i; } }
+      // Altron's part always opens its slide (30 Oct 2026, founder: a tap on a drill held the slide back).
+      if (bring && i !== slideAt) { showSlide(i); last = i; }
       plain(i, false);
     };
   }
