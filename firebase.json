@@ -23,6 +23,11 @@
         "destination": "/admissions/index.html"
       },
       {
+        "//": "The front door is the static home page (30 Oct 2026, founder): fast, readable by Google, a website rather than an app. Every other path is still the app.",
+        "source": "/",
+        "destination": "/home/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
