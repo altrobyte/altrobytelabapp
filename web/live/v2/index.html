@@ -107,7 +107,8 @@
   const course = P.get('course') || null;
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const labId = P.get('lab') ? Number(P.get('lab')) : null;
-  const QUIET_S = 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
+  const WORKER = P.get('aud') === 'worker';               // a plant's worker (industrial training): slower, more waiting
+  const QUIET_S = WORKER ? 14 : 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
   let quietNudges = 0;
   const IDLE_S = FOUNDER ? 12 : 120;                       // the founder's assistant sleeps 12 s after the talk; its name wakes it
   let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
@@ -173,7 +174,7 @@
           body: JSON.stringify({ lang }) })
       : await fetch(API + '/trainer/live/token', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
-      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', from_part: Number(P.get('from')) || 0, lang, resume: !!resume }),
+      body: JSON.stringify({ course_id: course, content_id: noteId, lab_id: labId, steps: P.get('steps') === '1', teach: P.get('teach') === '1', audience: P.get('aud') || '', from_part: Number(P.get('from')) || 0, lang, resume: !!resume }),
     });
     const body = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in to Altrobyte first.'), { signin: true });
@@ -268,6 +269,18 @@
   // ── the camera: off until the learner turns it on ──
   const canvas = document.createElement('canvas');
   function ready() { return ws && ws.readyState === 1 && ws.__ready; }
+  // What the learner did on the note (a hazard tapped, gear chosen, a step pressed): Altron reacts to it. Several taps in a
+  // moment go as one line, so Altron is not interrupted on every tap.
+  let didQueue = [], didTimer = null;
+  let needs = new Set(), doneParts = new Set();         // parts with an activity, and those whose activity is done
+  window.altronNeeds = (list) => { needs = new Set((list || []).map(Number)); };
+  window.altronDid = (what) => {
+    const w = String(what || '');
+    if (/^DONE: every activity/.test(w)) doneParts.add(partAt);
+    didQueue.push(w.slice(0, 160)); lastActive = Date.now(); quietNudges = 0;
+    clearTimeout(didTimer);
+    didTimer = setTimeout(() => { const t = didQueue.join('; '); didQueue = []; note('[On the screen the learner just did: ' + t + ']'); }, 1800);
+  };
   function note(text) {                                   // tell Altron something that is not the learner speaking
     if (!ready()) return false;
     ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } }));
@@ -377,7 +390,9 @@
         // with almost nothing said): the next part opens only after 20 s and about 40 words on this one.
         if (want > partAt + 1) {
           response = { shown: false, error: 'Do not skip ahead. You are on part ' + partAt + '. Teach part ' + (partAt + 1) + ' next: call show_part ' + (partAt + 1) + '.' };
-        } else if (want > partAt && partSince && (Date.now() - partSince < 20000 || partWords < 40)) {
+        } else if (WORKER && want > partAt && needs.has(partAt) && !doneParts.has(partAt)) {
+          response = { shown: false, error: 'The worker has not finished the activity of part ' + partAt + ' yet. Do it with them now: tell them exactly which one button to press next, one at a time, and wait for each [On the screen ...] line. Move on only after the line saying every activity of this section is finished.' };
+        } else if (want > partAt && partSince && (Date.now() - partSince < (WORKER ? 45000 : 20000) || partWords < (WORKER ? 70 : 40))) {
           response = { shown: false, error: 'Part ' + partAt + ' is not taught yet. Explain it properly first: what it is, why it matters, an example from their work, then one short question. Call show_part ' + want + ' after that.' };
         } else {
           if (want > partAt) { partSince = Date.now(); partWords = 0; }

@@ -37,26 +37,27 @@ class IndProgramme {
 const indProgrammes = [
   IndProgramme('safety_induction', 'Safety Induction',
       'Hazards, PPE, lockout-tagout, hot metal, cranes, gas, fire, height and emergency, for every new joiner and contract worker.',
-      '10 sections · 6 drills', 102, Icons.health_and_safety_rounded, [
-    IndQuestion('You need to clear a jam inside a conveyor. What do you do first?',
-        ['Wear gloves and clear it quickly', 'Lockout-tagout: stop, isolate, lock with your own lock, try to start it', 'Ask the operator to watch the start button'],
-        1, 'Only your own lock guarantees nobody can start it.'),
-    IndQuestion('An oil drum catches fire. Which extinguisher must you never use?', ['Water', 'Foam', 'CO₂'], 0, 'Water spreads burning oil.'),
-    IndQuestion('An EOT crane is carrying a coil across the bay. What do you do?',
-        ['Walk quickly under it', 'Wait or go around: never stand or walk under a load', 'Signal the crane operator yourself'], 1,
-        'Nobody goes under a load, and only the trained signaller signals.'),
-    IndQuestion('Your CO monitor reads 80 ppm. What do you do?', ['Finish the job quickly', 'Leave at once, upwind, and raise the alarm', 'Open a window and continue'],
-        1, 'Above 50 ppm is danger.'),
-    IndQuestion('A colleague has collapsed in a gas area. What do you do?',
-        ['Run in and pull them out', 'Raise the alarm and call the gas rescue team with breathing sets', 'Splash water on their face'], 1,
-        'Most gas deaths are rescuers. Do not become the second victim.'),
-    IndQuestion('A ladder rests 4 metres up the wall. How far from the wall is its foot?', ['About 1 metre', 'Touching the wall', 'About 3 metres'], 0,
-        'One out for every four up.'),
-    IndQuestion('You are working on a lathe. Which is right?',
-        ['Wear thick gloves', 'No gloves, sleeves tight, hair tied, safety glasses on', 'Loose clothes for comfort'], 1,
-        'Gloves and loose clothes get caught in rotating parts.'),
-    IndQuestion('A spanner falls from a platform and lands near a worker. Nobody is hurt. What is it?',
-        ['Nothing happened, nothing to do', 'A near miss: report it the same shift', "The worker's fault"], 1, 'Reporting near misses prevents serious injuries.'),
+      '11 sections · 12 drills · Hindi', 102, Icons.health_and_safety_rounded, [
+    // In simple Hindi, as the lesson is (30 Oct 2026, founder: workers are not used to English).
+    IndQuestion('Conveyor में jam है। सबसे पहले क्या करेंगे?',
+        ['Gloves पहनकर जल्दी से निकाल देंगे', 'LOTO: मशीन बंद, बिजली काटो, अपना ताला लगाओ, चलाकर देखो', 'Operator से कहेंगे कि start button पर नज़र रखे'],
+        1, 'सिर्फ़ आपका अपना ताला पक्का करता है कि कोई मशीन चालू नहीं कर सकता।'),
+    IndQuestion('तेल के drum में आग लगी है। कौन सा सिलेंडर कभी नहीं?', ['पानी', 'Foam', 'CO₂'], 0, 'पानी से जलता तेल फैल जाता है।'),
+    IndQuestion('Crane coil लेकर आपकी तरफ़ आ रहा है। क्या करेंगे?',
+        ['जल्दी से नीचे से निकल जाएँगे', 'रुकेंगे या घूमकर जाएँगे, load के नीचे कभी नहीं', 'खुद crane operator को इशारा करेंगे'], 1,
+        'Load के नीचे कोई नहीं जाता, और इशारा सिर्फ़ trained signal वाला देता है।'),
+    IndQuestion('CO meter 80 ppm दिखा रहा है। क्या करेंगे?', ['काम जल्दी खत्म करेंगे', 'तुरंत बाहर, हवा की उल्टी तरफ़, alarm बजाएँगे', 'खिड़की खोलकर काम करते रहेंगे'],
+        1, '50 से ऊपर खतरा है।'),
+    IndQuestion('Gas वाली जगह एक साथी गिर गया है। क्या करेंगे?',
+        ['दौड़कर अंदर जाकर उसे खींच लाएँगे', 'Alarm बजाएँगे और gas rescue team को बुलाएँगे', 'उसके चेहरे पर पानी डालेंगे'], 1,
+        'ज़्यादातर मौतें बचाने वालों की होती हैं। दूसरे शिकार मत बनो।'),
+    IndQuestion('सीढ़ी दीवार पर 4 मीटर ऊपर टिकी है। नीचे का हिस्सा दीवार से कितना दूर हो?', ['लगभग 1 मीटर', 'दीवार से सटा हुआ', 'लगभग 3 मीटर'], 0,
+        '4 ऊपर, 1 बाहर।'),
+    IndQuestion('Lathe पर काम करते समय क्या सही है?',
+        ['मोटे gloves पहनें', 'Gloves नहीं, आस्तीन कसी, बाल बँधे, चश्मा पहना', 'आराम के लिए ढीले कपड़े'], 1,
+        'Gloves और ढीले कपड़े घूमते हिस्से में फँस जाते हैं।'),
+    IndQuestion('Platform से spanner गिरा और एक worker के पास आकर लगा। किसी को चोट नहीं। यह क्या है?',
+        ['कुछ नहीं हुआ, कुछ करना नहीं', 'Near miss: उसी शिफ्ट में बताओ', 'Worker की गलती'], 1, 'Near miss बताने से बड़े हादसे रुकते हैं।'),
   ]),
   IndProgramme('electrical_panel', 'Electrical Panel Safety',
       'Inside a motor control centre, shock and arc flash, test before touch, protection devices and panel room rules.',
@@ -110,7 +111,7 @@ Future<bool> runIndustrialTraining(BuildContext context, int plantId, IndProgram
   final worker = await showDialog<Map<String, dynamic>>(context: context, builder: (_) => _WorkerDialog(plantId: plantId, programme: p));
   if (worker == null || !context.mounted) return false;
   final started = DateTime.now();
-  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false)));
+  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteTutorScreen(contentId: p.contentId, title: p.title, lang: 'hi', resume: false, audience: 'worker')));
   if (!context.mounted) return false;
   final minutes = DateTime.now().difference(started).inMinutes;
   final result = await Navigator.of(context).push<Map<String, dynamic>>(

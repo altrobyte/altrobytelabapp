@@ -222,9 +222,15 @@ const noteBridgeScript = r"""
     if (typeof m.show === 'number' && window.__altroShow) window.__altroShow(m.show, m.bring !== false);
     if (typeof m.said === 'string' && window.__altroSaid) window.__altroSaid(m.said);
   });
+  // A note's drills tell Altron what the learner did: window.altroDid('found the oil spill').
+  window.altroDid = function (what) { post({ did: String(what || '').slice(0, 160) }); };
   function start() {
     collect(); inView(); try { tapSelects(); } catch (e) {}
-    post({ heads: heads.map(function (h) { return (h.innerText || h.textContent || '').trim().slice(0, 90); }) });
+    // The parts with something to do on the screen (a drill, a picture to tap): with a worker, Altron does not move on from
+    // them until the note says the activity is done.
+    var needs = [];
+    heads.forEach(function (h, i) { var sec = h.closest('section'); if (sec && sec.querySelector('.lab') && sec.querySelector('h1,h2,h3') === h) needs.push(i + 1); });
+    post({ heads: heads.map(function (h) { return (h.innerText || h.textContent || '').trim().slice(0, 90); }), needs: needs });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

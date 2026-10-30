@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 import 'helper_controller.dart';
+import 'screen_shot.dart';
 import 'live_tutor_screen.dart';
 
 /// Text as it should be said: no markdown marks.
@@ -187,11 +188,14 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
   String _lang = 'en';
   bool _wasBusy = false;
   int _toldUpTo = -1; // the last learner line Altron already knows about
+  int _serialSeen = 0; // serial monitor lines already looked at
+  DateTime _serialToldAt = DateTime(2000);
 
   @override
   void initState() {
     super.initState();
     _toldUpTo = c.chat.lastIndexWhere((b) => b.role == 'learner');
+    _serialSeen = c.monitorLines.length;
     c.addListener(_onCourse);
     _open();
   }
@@ -222,6 +226,11 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
 
   Future<void> _onPage(dynamic raw) async {
     final m = liveMessage(raw);
+    if (m != null && m['type'] == 'screen') {          // Altron asked to see the screen
+      final shot = await screenshotJpegBase64();
+      await _web?.executeScript('window.altronScreen && window.altronScreen(${jsonEncode(shot)})');
+      return;
+    }
     if (m == null || m['type'] != 'tool') return;
     final id = '${m['id']}';
     Map<String, dynamic> result;
@@ -233,8 +242,24 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
     await _web?.executeScript('window.altronToolResult && window.altronToolResult(${jsonEncode(id)}, ${jsonEncode(jsonEncode(result))})');
   }
 
+  /// The board printed a crash, a reset or an error on the serial monitor: Altron hears the lines and explains them aloud
+  /// (at most once every 20 seconds, so a boot loop does not drown the lesson).
+  void _onSerial() {
+    final lines = c.monitorLines;
+    if (lines.length < _serialSeen) _serialSeen = 0;          // the monitor was restarted
+    final fresh = lines.sublist(_serialSeen);
+    _serialSeen = lines.length;
+    final bad = fresh.where((l) => serialTrouble.hasMatch(l)).toList();
+    if (bad.isEmpty || DateTime.now().difference(_serialToldAt) < const Duration(seconds: 20)) return;
+    _serialToldAt = DateTime.now();
+    final text = 'The board just printed this on the serial monitor:\n${bad.take(6).join('\n')}\n'
+        'Explain in two short sentences what it means and what the learner should check, then carry on.';
+    _web?.executeScript('window.altronTell && window.altronTell(${jsonEncode(text)})');
+  }
+
   // A turn just ended. If the learner tapped or typed it (not Altron answering for them), Altron hears what happened.
   void _onCourse() {
+    _onSerial();
     final busy = c.busy;
     if (_wasBusy && !busy) {
       final i = c.chat.lastIndexWhere((b) => b.role == 'learner');
@@ -285,7 +310,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
             const Icon(Icons.graphic_eq_rounded, color: Color(0xFFFF9A5A), size: 18),
             const SizedBox(width: 6),
             Expanded(child: Text('Altron Live · talk, interrupt, ask anything', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12))),
-            for (final (code, label) in const [('en', 'English'), ('hi', 'Hinglish')])
+            for (final (code, label) in const [('en', 'English'), ('hi', 'Hinglish'), ('hd', 'हिंदी')])
               Padding(
                 padding: const EdgeInsets.only(left: 4),
                 child: InkWell(
@@ -317,3 +342,7 @@ class _LiveCoursePanelState extends State<LiveCoursePanel> {
     );
   }
 }
+
+/// Lines on an ESP32's serial monitor that mean trouble: a crash, a reset, a brownout, an error.
+final serialTrouble = RegExp(r'Guru Meditation|Backtrace|Brownout|brownout|panic|abort\(\)|rst:0x|WDT|watchdog|'
+    r'\bE \(\d+\)|\berror\b|\bfailed\b|exception', caseSensitive: false);

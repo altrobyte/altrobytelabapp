@@ -227,16 +227,8 @@
 </section>
 
 <section>
-  <h2><span class="n">07</span>Test</h2>
-  <p class="lead">Eight questions. Score 70% or more (6 of 8) to earn your Electrical Panel Safety certificate.</p>
-  <div class="q"><p>1. A feeder switch is in the OFF position. Is the motor circuit safe to touch?</p><ul><li>A. Yes, it is off</li><li>B. Only after lock, tag and a live-dead-live test</li><li>C. Yes, if the motor is not running</li></ul><div class="ans">Answer: B. OFF is not proof; only the test is.</div></div>
-  <div class="q"><p>2. Why do you test the tester again after the circuit reads dead?</p><ul><li>A. To use up time</li><li>B. To prove the tester did not fail during the test</li><li>C. It is not needed</li></ul><div class="ans">Answer: B. A failed tester also reads "dead".</div></div>
-  <div class="q"><p>3. Which current through the body can stop the heart?</p><ul><li>A. 1 mA</li><li>B. 100 mA</li><li>C. Only above 10 A</li></ul><div class="ans">Answer: B. Around 100 mA causes fibrillation.</div></div>
-  <div class="q"><p>4. A person touches a live wire and current leaks to earth through them. What trips?</p><ul><li>A. The overload relay</li><li>B. The RCCB / ELCB at 30 mA</li><li>C. Nothing</li></ul><div class="ans">Answer: B. That is the job of the RCCB.</div></div>
-  <div class="q"><p>5. You switched off a VFD. When can you work on it?</p><ul><li>A. Immediately</li><li>B. After the waiting time on the drive and testing the DC bus</li><li>C. After the fan stops</li></ul><div class="ans">Answer: B. The capacitors stay charged.</div></div>
-  <div class="q"><p>6. What is an arc flash?</p><ul><li>A. A spark from a welding rod</li><li>B. A fault through air with extreme heat, blast and molten metal</li><li>C. A light on the panel</li></ul><div class="ans">Answer: B.</div></div>
-  <div class="q"><p>7. Cartons are kept in front of a panel to save space. What is wrong?</p><ul><li>A. Nothing</li><li>B. The panel needs 1 metre clear; cartons are fuel and block escape</li><li>C. Only that it looks untidy</li></ul><div class="ans">Answer: B.</div></div>
-  <div class="q"><p>8. Why must the motor frame be earthed?</p><ul><li>A. To make it heavier</li><li>B. So a fault goes to earth and trips the protection, not through a person</li><li>C. It is only for lightning</li></ul><div class="ans">Answer: B.</div></div>
+  <h2><span class="n">07</span>Remember</h2>
+  <p class="lead">The test comes next on the screen. Before it, the points to keep.</p>
   <div class="box rule"><b>Recap.</b> Know the panel: incomer, busbars, feeders, contactors, overloads, drives. 100 mA can kill; RCCB at 30 mA. Arc flash is an explosion: stay outside the boundary unless authorised and dressed for it. Lock, tag, live-dead-live. Wait for drives to discharge. Earth every metal body. Panel rooms clean, dry, closed and clear.</div>
 </section>
 
@@ -306,6 +298,17 @@
   Array.prototype.forEach.call(document.querySelectorAll('.meta b'), function (b) {
     var m = b.textContent.match(/^(\d+)(.*)$/); if (!m) return; var to = +m[1], k = 0;
     var t = setInterval(function () { k++; b.textContent = Math.round(to * k / 20) + m[2]; if (k >= 20) clearInterval(t); }, 40);
+  });
+})();
+</script>
+<script>
+(function () {   // every drill tells Altron what the learner did and what the screen said back
+  function did(t) { try { if (window.altroDid) window.altroDid(t); } catch (e) {} }
+  Array.prototype.forEach.call(document.querySelectorAll('.lab'), function (lab) {
+    var title = ((lab.querySelector('.title') || {}).firstChild || {}).textContent || 'a drill';
+    function report(what) { setTimeout(function () { var say = lab.querySelector('.say'); did(title.trim() + ': ' + what + (say ? ' → ' + say.textContent.trim().slice(0, 140) : '')); }, 80); }
+    lab.addEventListener('click', function (e) { var t = e.target.closest('button, .part, .lvl, .spot'); if (t) report('tapped "' + (t.textContent || t.dataset.say || '').trim().slice(0, 50) + '"'); });
+    Array.prototype.forEach.call(lab.querySelectorAll('input[type=range]'), function (r) { r.addEventListener('change', function () { report('set the slider to ' + r.value); }); });
   });
 })();
 </script>

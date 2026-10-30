@@ -95,6 +95,9 @@ class NoteTutor extends ChangeNotifier {
   /// which says it in its own words, and this tutor only writes. Set by the screen while the camera is on.
   void Function(String text)? relay;
 
+  /// While Altron Live teaches the note, the reading tutor stays out of the way: no section lines, no quiz offers.
+  bool liveTeaching = false;
+
   /// Remembers the learner's language for next time.
   final void Function(String lang)? onLanguage;
   bool voice = true; // the learner can switch the tutor's voice off
@@ -268,6 +271,7 @@ class NoteTutor extends ChangeNotifier {
 
   // Say what this section is about (once per language) and offer its question.
   void _introduce(String id) {
+    if (liveTeaching) return;
     if (!_introduced.add('$lang:$id')) return;
     final say = _sayOf(id);
     if (say.isNotEmpty) _tutor(say, section: id, heading: titleOf(id));

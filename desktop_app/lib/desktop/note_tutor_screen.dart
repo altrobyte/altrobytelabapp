@@ -46,8 +46,11 @@ class NoteTutorScreen extends StatefulWidget {
   /// Carry on where this computer left the note. Off for industrial training: each worker is someone new and starts at
   /// the top (30 Oct 2026: a worker's lesson began at the previous worker's section).
   final bool resume;
+
+  /// Who is learning: "worker" teaches a plant's workforce very simply and slowly (industrial training).
+  final String audience;
   const NoteTutorScreen({super.key, required this.contentId, required this.title, this.speak, this.hush, this.prepare, this.fallbackHtml,
-      this.nextTitle, this.lang, this.resume = true});
+      this.nextTitle, this.lang, this.resume = true, this.audience = ''});
 
   @override
   State<NoteTutorScreen> createState() => _NoteTutorScreenState();
@@ -93,6 +96,8 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
   final _scroll = ScrollController();
   StreamSubscription? _messages;
   bool _webReady = false;
+  String? _needs;           // the note's parts with an activity, as JSON, for Altron's page
+  bool _needsSent = false;
   String? _webProblem; // why the note cannot be shown inside the app
   int _shown = 0;
 
@@ -153,6 +158,11 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
     if (m is! Map) return;
     final s = m['section'];
     if (s is num) t.readingIndex(s.toInt());
+    final needs = m['needs'];
+    if (needs is List) _needs = jsonEncode(needs);
+    // A drill done on the note (a hazard tapped, gear chosen): Altron hears of it and reacts.
+    final did = m['did'];
+    if (did is String && _cam != null) _cam!.executeScript('window.altronDid && window.altronDid(${jsonEncode(did)})');
     final link = m['open'];
     if (link is String) openExternal(link);
   }
@@ -415,9 +425,16 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
           _web.executeScript('window.__altroSaid && window.__altroSaid(${jsonEncode(msg?['text'] ?? '')})');
           return;
         }
+        if (!_needsSent && _needs != null) {
+          _needsSent = true;
+          cam.executeScript('window.altronNeeds && window.altronNeeds(${_needs!})');
+        }
         final part = (msg?['part'] as num?)?.toInt();
         if (msg?['type'] == 'section' && part != null && part >= 1) {
           t.reading('s${part - 1}', bring: true);
+          // Always to the page as well: the first section counts as the current one from the start, so reading() alone
+          // left the page at the top when Altron began with it (30 Oct 2026).
+          _show('s${part - 1}', true);
           // Where Altron got to: opening this note again carries on from here.
           if (widget.resume) SharedPreferences.getInstance().then((p) => p.setInt('note_part_${widget.contentId}', part));
         }
@@ -430,7 +447,7 @@ class _NoteTutorScreenState extends State<NoteTutorScreen> {
         }
         _show('s${from - 1}', true);
       }
-      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from, strip: true); // teaches at once; the camera stays off
+      await loadLive(cam, noteId: widget.contentId, lang: t.lang, teach: true, fromPart: from, strip: true, audience: widget.audience); // teaches at once; the camera stays off
       if (mounted && identical(_cam, cam)) setState(() => _camReady = true);
     } catch (_) {
       if (mounted) {

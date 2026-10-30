@@ -217,16 +217,8 @@ payload: {"mm_s": 4.2, "ts": "2026-10-30T09:15:00+05:30"}</pre>
 </section>
 
 <section>
-  <h2><span class="n">07</span>Test</h2>
-  <p class="lead">Eight questions. Score 70% or more (6 of 8) to earn your Industrial Connectivity certificate.</p>
-  <div class="q"><p>1. Which level runs the mill's motors and interlocks in milliseconds?</p><ul><li>A. ERP</li><li>B. PLC and drives (level 1)</li><li>C. MES</li></ul><div class="ans">Answer: B.</div></div>
-  <div class="q"><p>2. A 4-20 mA transmitter for 0-1,200 °C sends 12 mA. What is the temperature?</p><ul><li>A. 600 °C</li><li>B. 720 °C</li><li>C. 1,200 °C</li></ul><div class="ans">Answer: A. (12 − 4) ÷ 16 × 1,200 = 600.</div></div>
-  <div class="q"><p>3. A transmitter reads 0 mA. What does it most likely mean?</p><ul><li>A. Zero degrees</li><li>B. A broken wire or a failed transmitter</li><li>C. Maximum temperature</li></ul><div class="ans">Answer: B. That is why the scale starts at 4 mA.</div></div>
-  <div class="q"><p>4. Which protocol lets SCADA and MES read PLC tags from any vendor, securely?</p><ul><li>A. OPC UA</li><li>B. RS-232</li><li>C. Bluetooth</li></ul><div class="ans">Answer: A.</div></div>
-  <div class="q"><p>5. In MQTT, how does a dashboard get a sensor's readings?</p><ul><li>A. It polls the sensor every second</li><li>B. It subscribes to the topic on the broker</li><li>C. Through email</li></ul><div class="ans">Answer: B.</div></div>
-  <div class="q"><p>6. A stand motor's vibration rose from 2 to 8 mm/s over three weeks. What do you do?</p><ul><li>A. Nothing, it still runs</li><li>B. Plan a bearing check in the next shutdown</li><li>C. Increase the speed</li></ul><div class="ans">Answer: B. Alarm zone: plan it before it breaks.</div></div>
-  <div class="q"><p>7. A vendor asks you to install TeamViewer on the HMI for support. What is right?</p><ul><li>A. Install it, it is quicker</li><li>B. Refuse; remote access only through the plant's approved, logged system</li><li>C. Install it and remove it later</li></ul><div class="ans">Answer: B.</div></div>
-  <div class="q"><p>8. Why is the plant network separated from the office network?</p><ul><li>A. To make cables shorter</li><li>B. So an attack or virus in the office cannot reach the PLCs</li><li>C. It is not needed</li></ul><div class="ans">Answer: B.</div></div>
+  <h2><span class="n">07</span>Remember</h2>
+  <p class="lead">The test comes next on the screen. Before it, the points to keep.</p>
   <div class="box rule"><b>Recap.</b> Five levels: field, PLC, SCADA, MES, ERP. 4-20 mA, live zero at 4, 0 mA is a broken wire. Profinet and Modbus on the floor, OPC UA between systems, MQTT to the cloud. Vibration trends predict failures weeks ahead. Segment the network, no unknown USB, no default passwords, approved remote access only.</div>
 </section>
 
@@ -300,6 +292,17 @@ payload: {"mm_s": 4.2, "ts": "2026-10-30T09:15:00+05:30"}</pre>
   Array.prototype.forEach.call(document.querySelectorAll('.meta b'), function (b) {
     var m = b.textContent.match(/^(\d+)(.*)$/); if (!m) return; var to = +m[1], k = 0;
     var t = setInterval(function () { k++; b.textContent = Math.round(to * k / 20) + m[2]; if (k >= 20) clearInterval(t); }, 40);
+  });
+})();
+</script>
+<script>
+(function () {   // every drill tells Altron what the learner did and what the screen said back
+  function did(t) { try { if (window.altroDid) window.altroDid(t); } catch (e) {} }
+  Array.prototype.forEach.call(document.querySelectorAll('.lab'), function (lab) {
+    var title = ((lab.querySelector('.title') || {}).firstChild || {}).textContent || 'a drill';
+    function report(what) { setTimeout(function () { var say = lab.querySelector('.say'); did(title.trim() + ': ' + what + (say ? ' → ' + say.textContent.trim().slice(0, 140) : '')); }, 80); }
+    lab.addEventListener('click', function (e) { var t = e.target.closest('button, .part, .lvl, .spot'); if (t) report('tapped "' + (t.textContent || t.dataset.say || '').trim().slice(0, 50) + '"'); });
+    Array.prototype.forEach.call(lab.querySelectorAll('input[type=range]'), function (r) { r.addEventListener('change', function () { report('set the slider to ' + r.value); }); });
   });
 })();
 </script>
