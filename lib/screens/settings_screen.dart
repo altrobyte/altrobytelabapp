@@ -169,6 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'program_seats_left',
                 // Who can sign in to this admin with WhatsApp OTP (31 Oct 2026, founder).
                 'admin_login_phones',
+                // Extra notes for the WhatsApp AI, next to the live plans and classes (31 Oct 2026).
+                'bot_extra_facts',
               ])
                 if (_wa(key) != null)
                   _WaSettingRow(
@@ -1324,6 +1326,7 @@ class _WaSettingRowState extends State<_WaSettingRow> {
     'program_whatsapp_number': 'Enquiry number',
     'wa_dashboard_url': 'WhatsApp dashboard link',
     'admin_login_phones': 'Admin login numbers (WhatsApp OTP)',
+    'bot_extra_facts': 'WhatsApp AI: extra notes (FAQ, offers)',
   };
 
   String get _label =>
