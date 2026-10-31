@@ -50,6 +50,9 @@
   .shell { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 56px); height: calc(100dvh - 56px); }
   .side { overflow-y: auto; border-right: 1px solid var(--line); background: var(--ink2); padding: 14px 10px 40px; }
   .main { overflow-y: auto; min-width: 0; }
+  /* Reading: the lesson gets the whole width; the course list opens with the ☰ button (31 Oct 2026, founder). */
+  @media (min-width: 901px) { .shell.reading { grid-template-columns: 1fr; } .shell.reading .side { display: none; }
+    .shell.reading.outline-on { grid-template-columns: 300px 1fr; } .shell.reading.outline-on .side { display: block; } }
   .side, .main, .body { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
   @media (max-width: 900px) { .shell { display: flex; flex-direction: column-reverse; height: auto; } .side { border: 0; background: none; padding: 0 12px 40px; } .shell.reading { height: calc(100dvh - 56px); } .shell.reading .side { display: none; } .shell.reading .main { flex: 1; } }
   .lvl { margin: 12px 6px 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
@@ -114,7 +117,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script src="/learn/bridge.js"></script>
+<script src="/learn/bridge.js?v=20261031b"></script>
 <script>
 (function () {
   var API = 'https://edu.altrobytelab.com';
@@ -165,18 +168,41 @@
     var t = e.target;
     if (t.closest && t.closest('[data-signout]')) {
       e.preventDefault();
-      try { localStorage.removeItem('flutter.student_token'); } catch (x) {}
+      try { localStorage.removeItem('flutter.student_token'); localStorage.removeItem('altro_admin'); } catch (x) {}
       location.href = '/learn?signed_out=1';
       return;
     }
+    if (t.closest && t.closest('[data-outline]')) { var sh = document.querySelector('.shell'); if (sh) sh.classList.toggle('outline-on'); return; }
+    if (t.closest && t.closest('[data-admin]')) { e.preventDefault(); openAdmin(); return; }
     var open = document.querySelector('details.acct[open]');
     if (open && !(t.closest && t.closest('details.acct'))) open.removeAttribute('open');
   });
+  // A team number (the admin's own phone or Settings > Admin login numbers) signed in here opens the admin with the
+  // same sign-in: the admin session is written where the app reads it (31 Oct 2026, founder).
+  function checkAdmin() {
+    if (!token()) { store('altro_admin', ''); return; }
+    getJSON('/student/admin-access').then(function (d) {
+      var was = store('altro_admin') === '1';
+      store('altro_admin', d && d.admin ? '1' : '');
+      if (!was && d && d.admin) location.reload();
+    }).catch(function () {});
+  }
+  function openAdmin() {
+    getJSON('/student/admin-access', { method: 'POST' }).then(function (d) {
+      try {
+        localStorage.setItem('flutter.token', JSON.stringify(d.token));
+        localStorage.setItem('flutter.jwt_token', JSON.stringify(d.jwt_token));
+        localStorage.setItem('flutter.role', JSON.stringify(d.role));
+        localStorage.setItem('flutter.institute_id', String(d.institute_id));
+        localStorage.setItem('flutter.institute_name', JSON.stringify(d.name || ''));
+      } catch (x) {}
+      location.href = '/dashboard';
+    }).catch(function (e) { alert((e && e.detail) || 'Could not open the admin just now. Please try again.'); });
+  }
   function signIn() { location.href = '/signin?next=' + encodeURIComponent(location.pathname + location.search); }
   function getJSON(path, opts) {
     return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
   }
-  // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): it opens in notes only for testers (?beta=1).
   // A GitHub project opens in VS Code (founder, 31 Oct 2026): vscode.dev in the browser, or cloned into VS Code on the laptop.
   function projectLinks(link) {
     var m = /^https?:\/\/github\.com\/([^\/?#]+)\/([^\/?#]+)(.*)$/.exec(link);
@@ -190,6 +216,7 @@
       '<a class="muted" style="font-size:14px" href="' + esc(link) + '" target="_blank" rel="noopener">View on GitHub</a></div>' +
       '<p class="muted" style="font-size:13px;margin-top:10px">"Open in VS Code" works in the browser, nothing to install. "Clone into my VS Code" copies the project into VS Code on your laptop, so you can build and upload it with PlatformIO.</p>';
   }
+  // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): it opens in notes only for testers (?beta=1).
   function beta() { if (/[?&]beta=1/.test(location.search)) store('altro_beta', '1'); return store('altro_beta') === '1'; }
 
   // ── data ──
@@ -225,6 +252,7 @@
       '<div class="r"><a class="btn btn-ghost btn-sm hide-s" href="/roadmap">Syllabus</a>' +
       (token() ? '<details class="acct"><summary class="me" title="My account">👤</summary><div class="menu">' +
         // The rest of the learner's app (profile, tests, tools) is the Flutter app on the same site (31 Oct 2026, founder).
+        (store('altro_admin') === '1' ? '<a href="#" data-admin>Admin dashboard</a>' : '') +
         '<a href="/student/home">My account and profile</a><a href="/student/test-series">Test series</a>' +
         '<a href="/student/dev-tools">Dev tools</a><a href="/live-sessions">All live sessions</a><hr>' +
         '<a href="#" data-signout>Sign out</a></div></details>' : '<button class="btn btn-main btn-sm" data-signin>Sign in</button>') + '</div></div>';
@@ -331,7 +359,7 @@
     document.title = it.title + ' · Altrobyte Lab';
     funnel('lesson_open', String(it.id));
     var main = root.querySelector('.main');
-    var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
+    var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><button class="iconbtn hide-s" data-outline title="Course list">☰</button><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
       '<span class="navs row" style="gap:6px"></span>' +
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
@@ -357,7 +385,7 @@
       '<div class="foot"><span class="muted">' + (done(it.id) ? 'Done ✓' : 'Finished this? Mark it done to track your progress.') + '</span>' +
       (done(it.id) ? '' : '<button class="btn btn-main btn-sm" id="markdone">Mark as done</button>') + '</div>';
     main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
-    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: beta() });
+    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
     var md = document.getElementById('markdone');
     if (md) md.onclick = function () {
       store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));
@@ -419,6 +447,7 @@
   if (mm) item(mm[1], mm[2]);
   else if (p === '/learn/live') live();
   else course();
+  checkAdmin();
 })();
 </script>
 </body>
