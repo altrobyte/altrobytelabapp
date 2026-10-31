@@ -335,7 +335,7 @@
       '<div class="foot"><span class="muted">' + (done(it.id) ? 'Done ✓' : 'Finished this? Mark it done to track your progress.') + '</span>' +
       (done(it.id) ? '' : '<button class="btn btn-main btn-sm" id="markdone">Mark as done</button>') + '</div>';
     main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
-    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '');
+    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: beta() });
     var md = document.getElementById('markdone');
     if (md) md.onclick = function () {
       store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));

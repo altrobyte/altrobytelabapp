@@ -7,10 +7,12 @@
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Inter,-apple-system,sans-serif;padding:20px;color:#1a1a2e;line-height:1.7;font-size:16px}img{max-width:100%}pre{background:#1e1e1e;color:#d4d4d4;padding:14px;border-radius:8px;overflow:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px}</style></head><body>' + html + '</body></html>';
   }
   // The same closed page the apps show (lessonPage), with the bridge right after the security line (tutorPage).
-  window.altroTutorPage = function (html) {
+  window.altroTutorPage = function (html, opts) {
     var page = wrap(html || ''), at = page.toLowerCase().indexOf('<head>');
     page = at < 0 ? '<!DOCTYPE html><html><head>' + CSP + '</head><body>' + page + '</body></html>' : page.slice(0, at + 6) + CSP + page.slice(at + 6);
     var m = page.indexOf('<meta http-equiv="Content-Security-Policy"'), end = page.indexOf('>', m) + 1;
-    return page.slice(0, end) + BRIDGE + page.slice(end);
+    // A note read on its own (no Altron) keeps its own scrolling layout; the slides are for Altron's voice (31 Oct 2026, founder).
+    var br = opts && opts.slides === false ? BRIDGE.replace('var SLIDES = true', 'var SLIDES = false') : BRIDGE;
+    return page.slice(0, end) + br + page.slice(end);
   };
 })();
