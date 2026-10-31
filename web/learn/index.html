@@ -3,104 +3,107 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Your roadmap · Altrobyte Lab</title>
-<meta name="description" content="The Altrobyte roadmap: from your first LED to a shipped IoT product. Notes, code, tests and live classes with engineers.">
+<title>Learning · Altrobyte Lab</title>
+<meta name="description" content="The Altrobyte learning platform: notes, videos, code, tests and projects, step by step, with live classes and their recordings.">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://edu.altrobytelab.com" crossorigin>
-<!-- The learning page, as a plain page (30 Oct 2026, founder: "it's the place where people get converted"; the Flutter
-     page took 15-20 s on a phone). The roadmap in steps: free steps open here with Altron, the rest locked with the way
-     to open them. Lessons open at /learn/<module>/<lesson>. Sign-in is the app's /signin (same browser storage). -->
+<!-- The learning platform on the web (31 Oct 2026, founder: the roadmap is the syllabus, shared as a page and a PDF;
+     "Start learning" opens the learning platform, kept separate, with a full-screen mode on the web).
+       /learn            the course: levels and steps; every step brings its notes, videos, code, tests and projects
+       /learn/<m>/<c>    one item of a step (the course stays beside it on a wide screen)
+       /learn/live       live classes: the next ones and the recordings (recordings open for programme learners)
+     Plain HTML, so it opens at once on a phone (the Flutter pages took 15-20 s). Sign-in is the app's /signin (same
+     browser storage). The server decides what is open: four lessons free with an account, the rest with a plan. -->
 <style>
-  :root { --ink:#0A1220; --ink2:#0F1B2E; --panel:#13223A; --line:#22344F; --text:#E8EEF6; --soft:#9DB0C6; --orange:#FF6A1A; --orange2:#FF9A3D;
-          --cyan:#38E1D3; --green:#2BD47D; --gold:#D9A441; }
+  :root { --ink:#0A1220; --ink2:#0F1B2E; --panel:#13223A; --panel2:#182A45; --line:#22344F; --text:#E8EEF6; --soft:#9DB0C6; --orange:#FF6A1A;
+          --green:#2BD47D; --gold:#D9A441; --cyan:#38E1D3; }
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
-  body { background: var(--ink); color: var(--text); font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: var(--ink); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
   a { color: inherit; text-decoration: none; }
-  button { font: inherit; }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
-  nav { position: sticky; top: 0; z-index: 10; background: rgba(10,18,32,.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.06); }
-  nav .wrap { display: flex; align-items: center; height: 58px; gap: 12px; }
-  .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 17px; white-space: nowrap; }
-  .logo img { width: 27px; height: 27px; border-radius: 7px; }
-  nav .r { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 20px; border-radius: 999px; font-weight: 700; font-size: 15px; border: 0; cursor: pointer; white-space: nowrap; }
-  .btn-main { background: linear-gradient(135deg, var(--orange), var(--orange2)); color: #fff; box-shadow: 0 10px 30px -12px rgba(255,106,26,.8); }
-  .btn-ghost { border: 1px solid rgba(255,255,255,.22); color: #fff; background: transparent; }
-  .btn-sm { padding: 8px 14px; font-size: 13.5px; }
+  button { font: inherit; color: inherit; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 0; cursor: pointer; white-space: nowrap; }
+  .btn-main { background: var(--orange); color: #fff; }
+  .btn-ghost { border: 1px solid var(--line); background: transparent; }
+  .btn-sm { padding: 7px 12px; font-size: 13px; }
   .muted { color: var(--soft); }
 
-  /* hero */
-  .hero { padding: 26px 0 8px; }
-  .hero h1 { font-size: clamp(26px, 5vw, 38px); line-height: 1.15; letter-spacing: -.02em; }
-  .hero p { margin: 10px 0 16px; color: var(--soft); }
-  .prog { margin: 14px 0 4px; padding: 14px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
-  .bar { height: 8px; border-radius: 9px; background: #0c1626; overflow: hidden; margin-top: 8px; }
-  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--cyan)); transition: width .6s; }
-  .trial { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(56,225,211,.35); background: rgba(56,225,211,.07); font-size: 14.5px; }
+  /* top bar */
+  .bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 16px; background: var(--ink2); border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 700; white-space: nowrap; }
+  .logo img { width: 26px; height: 26px; border-radius: 7px; }
+  .tabs { display: flex; gap: 4px; margin-left: 10px; }
+  .tabs a { padding: 7px 12px; border-radius: 8px; color: var(--soft); font-weight: 600; font-size: 14px; }
+  .tabs a.on { background: var(--panel); color: #fff; }
+  .bar .r { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .me { width: 32px; height: 32px; border-radius: 50%; background: var(--panel2); display: grid; place-items: center; font-weight: 700; color: var(--orange); }
+  @media (max-width: 640px) { .logo span { display: none; } .tabs { margin-left: 0; } }
 
-  /* path */
-  .level { margin-top: 28px; }
-  .lh { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-  .lh .n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; flex: none; }
-  .lh b { font-size: 19px; display: block; line-height: 1.2; }
-  .lh span { font-size: 13.5px; color: var(--soft); }
-  .steps { position: relative; padding-left: 16px; margin-left: 17px; border-left: 2px dashed var(--line); display: flex; flex-direction: column; gap: 10px; }
-  .step { position: relative; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
-  .step::before { content: ""; position: absolute; left: -26px; top: 22px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--line); }
-  .step.open::before { border-color: var(--green); background: var(--green); box-shadow: 0 0 10px var(--green); }
-  .step.done::before { content: "✓"; color: #062; font-size: 10px; display: grid; place-items: center; }
-  .sh { display: flex; align-items: center; gap: 12px; padding: 14px; cursor: pointer; width: 100%; background: none; border: 0; color: inherit; text-align: left; }
-  .sh .t { flex: 1; min-width: 0; }
-  .sh .t b { display: block; font-size: 15.5px; line-height: 1.3; }
-  .sh .t small { color: var(--soft); font-size: 12.5px; }
-  .pill { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; padding: 4px 9px; border-radius: 999px; flex: none; }
-  .p-free { background: rgba(43,212,125,.14); color: var(--green); }
-  .p-open { background: rgba(56,225,211,.14); color: var(--cyan); }
-  .p-lock { background: rgba(255,255,255,.07); color: var(--soft); }
-  .p-live { background: rgba(217,164,65,.14); color: var(--gold); }
-  .step.locked .sh .t b { color: #b7c4d3; }
-  .lessons { display: none; border-top: 1px solid var(--line); }
-  .step.x .lessons { display: block; }
-  .lesson { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.04); }
-  .lesson:first-child { border-top: 0; }
-  .lesson .ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: rgba(43,212,125,.15); color: var(--green); flex: none; }
-  .lesson.ok .ic { background: var(--green); color: #052; }
-  .lesson.lk { opacity: .6; } .lesson.lk .ic { background: rgba(255,255,255,.06); color: var(--soft); }
-  .lesson span { flex: 1; font-size: 14.5px; }
-  .lockbox { padding: 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--soft); display: none; }
-  .step.x .lockbox { display: block; }
-  .lockbox .cta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  /* course layout: outline + content */
+  .shell { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 56px); height: calc(100dvh - 56px); }
+  .side { overflow-y: auto; border-right: 1px solid var(--line); background: var(--ink2); padding: 14px 10px 40px; }
+  .main { overflow-y: auto; min-width: 0; }
+  .side, .main, .body { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+  @media (max-width: 900px) { .shell { display: flex; flex-direction: column-reverse; height: auto; } .side { border: 0; background: none; padding: 0 12px 40px; } .shell.reading { height: calc(100dvh - 56px); } .shell.reading .side { display: none; } .shell.reading .main { flex: 1; } }
+  .lvl { margin: 12px 6px 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .step { border-radius: 10px; margin-bottom: 4px; }
+  .step > button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; background: none; cursor: pointer; text-align: left; border-radius: 10px; }
+  .step > button:hover { background: var(--panel); }
+  .step .no { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--panel2); color: var(--soft); flex: none; }
+  .step.done .no { background: var(--green); color: #052; }
+  .step .t { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; }
+  .step .t small { display: block; font-weight: 400; color: var(--soft); font-size: 12px; }
+  .step .chev { color: var(--soft); transition: transform .15s; }
+  .step.x .chev { transform: rotate(90deg); }
+  .items { display: none; padding: 0 0 6px 34px; }
+  .step.x .items { display: block; }
+  .it { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px; font-size: 13.5px; color: #cfd9e6; cursor: pointer; }
+  .it:hover { background: var(--panel); }
+  .it.on { background: var(--panel2); color: #fff; }
+  .it .ic { width: 18px; text-align: center; flex: none; opacity: .9; }
+  .it .nm { flex: 1; min-width: 0; }
+  .it.lk { opacity: .5; }
+  .it .ok { color: var(--green); font-size: 12px; flex: none; }
+  .tag { flex: none; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: rgba(43,212,125,.14); color: var(--green); }
+  .tag.live { background: rgba(217,164,65,.15); color: var(--gold); }
 
-  .unlock { margin: 34px 0 20px; padding: 22px; border-radius: 20px; background: linear-gradient(160deg, #1a2d4a, #13223A); border: 1px solid rgba(255,154,61,.35); }
-  .unlock h2 { font-size: 22px; line-height: 1.25; }
-  .unlock ul { margin: 12px 0 16px; padding-left: 20px; color: #cfdbe8; }
-  .unlock .cta { display: flex; gap: 10px; flex-wrap: wrap; }
-  footer { padding: 20px 0 110px; font-size: 13px; color: var(--soft); text-align: center; }
-  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(10,18,32,.96); border-top: 1px solid var(--line); display: none; }
-  .dock .btn { width: 100%; }
-  .skel { height: 64px; border-radius: 16px; margin: 10px 0; background: linear-gradient(90deg, #13223A, #1b2f4d, #13223A); background-size: 200% 100%; animation: sh 1.2s infinite; }
-  @keyframes sh { to { background-position: -200% 0; } }
+  /* welcome / panels */
+  .pad { padding: 28px 28px 30px; max-width: 860px; }
+  @media (max-width: 900px) { .pad { padding: 18px 14px 20px; } }
+  h1 { font-size: 22px; line-height: 1.25; }
+  h2 { font-size: 17px; margin: 26px 0 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .prog { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; margin: 10px 0 4px; }
+  .prog i { display: block; height: 100%; background: var(--green); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .cls { display: flex; flex-direction: column; gap: 6px; }
+  .cls img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; background: var(--panel2); }
+  .cls b { font-size: 15px; line-height: 1.3; }
+  .skel { height: 46px; border-radius: 10px; margin: 6px; background: linear-gradient(90deg, var(--panel), var(--panel2), var(--panel)); background-size: 200% 100%; animation: sk 1.2s infinite; }
+  @keyframes sk { to { background-position: -200% 0; } }
 
-  /* lesson view */
-  .lv { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-  .lv .top { display: flex; align-items: center; gap: 8px; height: 54px; padding: 0 10px; background: var(--ink2); border-bottom: 1px solid var(--line); flex: none; }
-  .lv .top .tt { flex: 1; min-width: 0; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.06); color: #fff; cursor: pointer; font-size: 18px; flex: none; }
+  /* an item */
+  .lv { display: flex; flex-direction: column; height: 100%; }
+  .lv .top { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--ink2); flex: none; }
+  .lv .top .tt { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lv .top .tt small { display: block; font-weight: 400; color: var(--soft); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+  .iconbtn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: none; cursor: pointer; display: grid; place-items: center; flex: none; }
   .lv iframe.note { flex: 1; width: 100%; border: 0; background: #fff; }
-  .strip { flex: none; height: 64px; display: flex; align-items: center; background: #0D1726; border-top: 1px solid var(--line); }
-  .strip iframe { flex: 1; height: 100%; border: 0; }
-  .ask { flex: none; display: flex; gap: 10px; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0D1726; border-top: 1px solid var(--line); }
-  .ask .muted { flex: 1; font-size: 13.5px; line-height: 1.35; }
-  .donebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0F5132; }
-  .donebar span { flex: 1; font-weight: 600; font-size: 14px; }
-  @media (max-width: 640px) { .dock { display: block; } nav .hide-s { display: none; } }
-  /* In the Android app (its user agent says AltrobyteApp) the app has its own tabs and sign-in: no site bar, no dock. */
-  .inapp nav, .inapp .dock { display: none !important; }
-  .inapp footer { padding-bottom: 30px; }
+  .lv .body { flex: 1; overflow-y: auto; }
+  .video { width: 100%; aspect-ratio: 16/9; border: 0; border-radius: 12px; background: #000; }
+  pre.code { background: #0B1424; border: 1px solid var(--line); border-radius: 12px; padding: 14px; overflow: auto; font: 13px/1.5 "Spline Sans Mono", Consolas, monospace; color: #DDE6F2; white-space: pre; }
+  .foot { flex: none; display: flex; gap: 10px; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--ink2); }
+  .foot .muted { flex: 1; font-size: 13px; }
+  .strip { flex: none; height: 64px; display: flex; border-top: 1px solid var(--line); }
+  .strip iframe { flex: 1; border: 0; }
+  @media (max-width: 900px) { .hide-s { display: none; } }
+
+  /* in the Android app the app has its own tabs and sign-in */
+  .inapp .bar { display: none; }
+  .inapp .shell, .inapp .shell.reading { height: 100vh; height: 100dvh; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
-
 </head>
 <body>
 <div id="root"></div>
@@ -109,36 +112,36 @@
 (function () {
   var API = 'https://edu.altrobytelab.com';
   var root = document.getElementById('root');
-  // The self-paced roadmap (31 Oct 2026, founder: "learning modules ready, self-paced launch"). Steps are lists of
-  // lessons, [module, lesson], in the order they are learnt, picked across the modules (the modules mix topics and
-  // repeat some lessons; the database is left as it is). A step without lessons is taught live in the programme.
-  // Free: the first step, and the first lesson of every other step (the server's learn_free_lessons decides).
+
+  // The course, step by step (same order as the syllabus). A step lists its lessons as [module, lesson]; whatever
+  // follows a lesson in its module (code, a test, a project, a video) comes with it. A step without lessons is taught
+  // live in the programme.
   var LEVELS = [
-    ['Beginner', 'Electronics and your first microcontroller', '#1E8E3E', [
+    ['Beginner', '#2BD47D', [
       ['Electronics basics', [[5, 21], [5, 22], [4, 19]]],
       ['Microcontrollers', [[5, 23], [5, 95], [5, 25], [5, 26]]],
       ['Digital input and output', [[5, 92], [5, 96], [5, 31], [5, 32]]],
       ['Git and GitHub for firmware', [[10, 61]]]]],
-    ['Basic', 'Embedded C, peripherals, boards and protocols', '#1A73E8', [
+    ['Basic', '#5B9BFF', [
       ['Embedded C', [[5, 34]]],
       ['ADC, DAC and PWM', [[5, 36], [5, 37]]],
       ['ESP32, STM32 and Raspberry Pi', [[5, 67], [5, 68], [5, 71], [8, 87], [5, 70]]],
       ['Communication protocols', [[5, 76], [5, 77], [5, 80], [5, 84], [5, 82]]]]],
-    ['Advance', 'IoT: from the device to the cloud', '#D4500A', [
+    ['Advance', '#FF8A3D', [
       ['IoT foundations', [[9, 50], [9, 51], [9, 73], [5, 66], [5, 64]]],
       ['Wi-Fi, Bluetooth and OTA on ESP32', [[9, 72], [9, 74], [9, 75], [9, 86]]],
       ['Cloud with AWS IoT', [[9, 52], [9, 53], [9, 54], [9, 59], [9, 56]]],
       ['IoT security', [[9, 99], [9, 100], [9, 101]]],
       ['ESP-IDF', [[5, 41]]],
       ['FreeRTOS']]],
-    ['Pro', 'Industrial IoT, Edge AI and your career', '#7B1FA2', [
+    ['Pro', '#C77DFF', [
       ['Industrial IoT and machine monitoring', [[8, 42], [8, 45], [8, 90], [8, 91]]],
       ['Your career: portfolio and focus', [[6, 29], [5, 39], [5, 40]]],
       ['Edge AI and ML'], ['Embedded Linux'], ['Computer vision'], ['App and web for devices']]]
   ];
   var IDS = [5, 4, 10, 9, 8, 6];
-  var ORDER = [];   // every lesson of the roadmap in order: for "Next" and "Continue"
-  LEVELS.forEach(function (L) { L[3].forEach(function (T) { (T[1] || []).forEach(function (r) { ORDER.push(r); }); }); });
+  var ICON = { notes: '📄', video: '🎬', code: '💻', test: '📝', github: '🔧', project: '🛠', resource: '📎' };
+  var KIND = { notes: 'Notes', video: 'Video', code: 'Code', test: 'Test', github: 'Project', project: 'Project', resource: 'Resource' };
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   function token() { try { var v = store('flutter.student_token'); return v ? JSON.parse(v) || '' : ''; } catch (e) { return ''; } }
@@ -155,220 +158,232 @@
   function getJSON(path, opts) {
     return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
   }
+  // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): it opens in notes only for testers (?beta=1).
+  function beta() { if (/[?&]beta=1/.test(location.search)) store('altro_beta', '1'); return store('altro_beta') === '1'; }
 
+  // ── data ──
   var mods = {}, trial = null;
-  function loadRoadmap() {
+  function cacheKey() { return 'altro_course_' + (token() ? token().slice(-10) : 'out'); }
+  function cached() { try { var c = JSON.parse(store(cacheKey()) || 'null'); if (c && c.mods) { mods = c.mods; trial = c.trial; return true; } } catch (e) {} return false; }
+  function load() {
     return Promise.all([
       getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { mods = {}; (d.modules || []).forEach(function (m) { mods[m.id] = m; }); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
     ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial })); });
   }
-  // The last roadmap this visitor saw, shown at once while a fresh one loads (31 Oct 2026, founder: "loading every time").
-  function cacheKey() { return 'altro_roadmap_' + (token() ? token().slice(-10) : 'out'); }
-  function cached() {
-    try { var c = JSON.parse(store(cacheKey()) || 'null'); if (c && c.mods) { mods = c.mods; trial = c.trial; return true; } } catch (e) {}
-    return false;
+  // A lesson and what follows it in its module, up to the next lesson.
+  function withExtras(r) {
+    var m = mods[r[0]]; if (!m) return [];
+    var its = m.items || [], i = 0;
+    while (i < its.length && its[i].id !== r[1]) i++;
+    if (i >= its.length) return [];
+    var out = [Object.assign({ m: r[0] }, its[i])];
+    for (var j = i + 1; j < its.length && its[j].type !== 'notes'; j++) out.push(Object.assign({ m: r[0] }, its[j]));
+    return out;
   }
-
-  // ── the roadmap ──
-  function roadmap() {
-    document.title = 'Your roadmap · Altrobyte Lab';
-    funnel('learn_view');
-    root.innerHTML = nav() + '<main class="wrap"><div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
-      '<p>Step by step, the way products are really made, with live classes from engineers who build them.</p></div>' +
-      '<div class="skel"></div><div class="skel"></div><div class="skel"></div></main>';
-    var shown = cached();
-    if (shown) drawRoadmap();
-    loadRoadmap().then(drawRoadmap).catch(function () {
-      if (shown) return;   // the saved roadmap stays up
-      root.querySelector('main').innerHTML = '<div class="hero"><h1>Could not load the roadmap</h1><p>Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a></div>';
-    });
-  }
-  function nav() {
-    var t = token();
-    return '<nav><div class="wrap"><a class="logo" href="/"><img src="/icons/Icon-192.png" alt="">Altrobyte Lab</a><div class="r">' +
-      '<a class="btn btn-ghost btn-sm hide-s" href="/live-sessions">Live classes</a>' +
-      (t ? '<a class="btn btn-ghost btn-sm" href="/pricing">Plans</a>' : '<a class="btn btn-ghost btn-sm" href="javascript:void 0" data-signin>Log in</a>') + '</div></div></nav>';
-  }
+  function stepItems(T) { var out = []; (T[1] || []).forEach(function (r) { out = out.concat(withExtras(r)); }); return out; }
+  function allItems() { var out = []; LEVELS.forEach(function (L) { L[2].forEach(function (T) { out = out.concat(stepItems(T)); }); }); return out; }
+  function anyLocked() { return allItems().some(function (n) { return n.locked; }); }
   function inTrial() { return trial && trial.active === true; }
-  // Someone who can already open every lesson (a plan, the team) is never offered the free week.
-  function anyLocked() { return ORDER.some(function (r) { var n = item(r); return n && n.locked; }); }
-  function offerTrial() { return (!trial || !trial.started) && anyLocked(); }
-  // A roadmap lesson as the server sent it ({id, title, locked, free} plus m, its module), or null if it is not there.
-  function item(r) {
-    var m = mods[r[0]]; if (!m) return null;
-    for (var i = 0; i < m.items.length; i++) if (m.items[i].id === r[1]) return Object.assign({ m: r[0] }, m.items[i]);
-    return null;
+  function offerTrial() { return token() && (!trial || !trial.started) && anyLocked(); }
+
+  // ── frame ──
+  function bar(tab) {
+    return '<div class="bar"><a class="logo" href="/"><img src="/icons/Icon-192.png" alt=""><span>Altrobyte Lab</span></a>' +
+      '<nav class="tabs"><a href="/learn"' + (tab === 'course' ? ' class="on"' : '') + '>Course</a><a href="/learn/live"' + (tab === 'live' ? ' class="on"' : '') + '>Live classes</a></nav>' +
+      '<div class="r"><a class="btn btn-ghost btn-sm hide-s" href="/roadmap">Syllabus</a>' +
+      (token() ? '<span class="me" title="Signed in">✓</span>' : '<button class="btn btn-main btn-sm" data-signin>Sign in</button>') + '</div></div>';
   }
-  function stepLessons(T) { return (T[1] || []).map(item).filter(Boolean); }
-  function drawRoadmap() {
-    var freeLessons = 0, doneLessons = 0, stepNo = 0, html = '';
-    ORDER.map(item).forEach(function (n) { if (n && !n.locked) { freeLessons++; if (done(n.id)) doneLessons++; } });
-    LEVELS.forEach(function (L, li) {
-      html += '<section class="level"><div class="lh"><div class="n" style="background:' + L[2] + '">' + (li + 1) + '</div><div><b style="color:' + L[2] + '">' + L[0] + '</b><span>' + L[1] + '</span></div></div><div class="steps">';
-      L[3].forEach(function (T) {
-        stepNo++;
-        var ls = stepLessons(T), cls = 'step', pill, body = '';
-        if (!T[1]) {
-          cls += ' locked'; pill = '<span class="pill p-live">LIVE</span>';
-          body = '<div class="lockbox">Taught live by our engineers in the product engineering programme, building a real product.<div class="cta"><a class="btn btn-ghost btn-sm" href="/pricing">See the programme</a><a class="btn btn-ghost btn-sm" href="/live-sessions">Join a live class</a></div></div>';
-        } else {
-          var nAll = ls.length, nOpen = ls.filter(function (n) { return !n.locked; }).length, ok = ls.filter(function (n) { return !n.locked && done(n.id); }).length;
-          cls += nOpen ? ' open' + (nAll && ok === nAll ? ' done' : '') : ' locked';
-          pill = !nOpen ? '<span class="pill p-lock">🔒 PREMIUM</span>' : nOpen < nAll ? '<span class="pill p-free">FREE START</span>' :
-            inTrial() ? '<span class="pill p-open">OPEN</span>' : '<span class="pill p-free">FREE</span>';
-          body = '<div class="lessons">' + (nAll ? ls.map(function (n) {
-            if (n.locked) return '<div class="lesson lk"><div class="ic">🔒</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:12px">Premium</b></div>';
-            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : !token() ? 'Sign in' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
-          }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
-          if (nOpen < nAll) {
-            var canTrial = offerTrial();
-            body += '<div class="lockbox">' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
-              '<div class="cta">' + (canTrial ? '<button class="btn btn-main btn-sm" data-trial>Open free for 7 days</button>' : '') + '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>';
-          }
-        }
-        var sub = !T[1] ? 'Live with a mentor' : ls.length + ' lesson' + (ls.length === 1 ? '' : 's');
-        html += '<div class="' + cls + '"><button class="sh"><span class="muted" style="font-weight:800;width:22px">' + stepNo + '</span><span class="t"><b>' + esc(T[0]) + '</b><small>' + sub + '</small></span>' + pill + '</button>' + body + '</div>';
+  function outline(cur) {
+    if (!Object.keys(mods).length) return '<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+    var html = '', no = 0;
+    LEVELS.forEach(function (L) {
+      html += '<div class="lvl" style="color:' + L[1] + '">' + L[0] + '</div>';
+      L[2].forEach(function (T) {
+        no++;
+        var its = stepItems(T), open = its.filter(function (n) { return !n.locked; });
+        var fin = its.length && open.length === its.length && open.every(function (n) { return done(n.id); });
+        var mine = cur && its.some(function (n) { return String(n.id) === String(cur); });
+        var sub = !T[1] ? 'Live with a mentor' : its.length + ' item' + (its.length === 1 ? '' : 's') + (open.length && open.length < its.length ? ' · ' + open.length + ' open' : '');
+        html += '<div class="step' + (fin ? ' done' : '') + (mine ? ' x' : '') + '"><button data-step><span class="no">' + (fin ? '✓' : no) + '</span><span class="t">' + esc(T[0]) + '<small>' + sub + '</small></span>' +
+          (!T[1] ? '<span class="tag live">LIVE</span>' : '<span class="chev">›</span>') + '</button>';
+        if (T[1]) html += '<div class="items">' + its.map(function (n) {
+          return '<a class="it' + (n.locked ? ' lk' : '') + (String(n.id) === String(cur) ? ' on' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><span class="ic">' + (n.locked ? '🔒' : ICON[n.type] || '📄') + '</span><span class="nm">' + esc(n.title) + '</span>' +
+            (done(n.id) ? '<span class="ok">✓</span>' : n.free && !n.locked ? '<span class="tag">FREE</span>' : '') + '</a>';
+        }).join('') + '</div>';
+        html += '</div>';
       });
-      html += '</div></section>';
     });
-    var pct = freeLessons ? Math.round(doneLessons * 100 / freeLessons) : 0;
-    var trialLine = inTrial() ? '<div class="trial">🎉 Your free week: <b>' + trial.days_left + ' days left</b>. Every step is open, and this week\'s live classes are free.</div>' :
-      (trial && trial.started ? '<div class="trial">Your free week is over. Your progress is saved: pick a plan to carry on.</div>' : '');
-    var first = firstOpenLesson();
-    root.querySelector('main').innerHTML = '<div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
-      '<p>Step by step, the way products are really made, with live classes from engineers who build them.</p>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : !token() ? 'Sign in and start free' : '▶ Start the first lesson') + '</a>' : '') +
-      (offerTrial() ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
-      '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
-      html + (anyLocked() ? unlockCard() : '') + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
-    var old = document.querySelector('.dock'); if (old) old.remove();
-    var dock = document.createElement('div'); dock.className = 'dock';
-    dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : !token() ? 'Sign in and start free' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
-    document.body.appendChild(dock);
-    bind();
+    return html;
   }
-  function firstOpenLesson() {
-    var firstAny = null;
-    for (var i = 0; i < ORDER.length; i++) {
-      var n = item(ORDER[i]); if (!n || n.locked) continue;
-      var u = '/learn/' + n.m + '/' + n.id; if (!firstAny) firstAny = u; if (!done(n.id)) return u;
-    }
-    return firstAny;
-  }
-  function unlockCard() {
-    return '<div class="unlock"><h2>Open every step, with a live class every week</h2><ul>' +
-      '<li>A live class with our engineers every week, and its recording</li><li>Every step of the roadmap: notes, code and tests</li><li>Build real products: PCB, firmware, cloud and AI</li><li>A certificate you can show to employers</li></ul>' +
-      '<p style="margin-bottom:14px"><b style="font-size:22px">₹4,999</b><span class="muted"> / month + GST, self-paced</span></p>' +
-      '<div class="cta"><a class="btn btn-main" href="/pricing">See all plans</a><a class="btn btn-ghost" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want to know about the Altrobyte plans.') + '">Ask on WhatsApp</a></div></div>';
-  }
-  function bind() {
-    root.querySelectorAll('.sh').forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle('x'); }; });
+  function bindOutline() {
+    root.querySelectorAll('[data-step]').forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle('x'); }; });
     root.querySelectorAll('[data-signin]').forEach(function (b) { b.onclick = signIn; });
     root.querySelectorAll('[data-trial]').forEach(function (b) { b.onclick = startTrial; });
-    // Open the first unfinished open step, so a visitor sees lessons at once.
-    var s = root.querySelector('.step.open:not(.done)') || root.querySelector('.step.open'); if (s) s.classList.add('x');
   }
   function startTrial() {
     funnel('trial_click', 'learn');
-    if (!token()) { location.href = '/signin?next=' + encodeURIComponent('/learn?trial=1'); return; }
-    getJSON('/trial/start', { method: 'POST' }).then(function () { funnel('trial_started', 'learn'); location.replace('/learn'); })
+    if (!token()) { signIn(); return; }
+    getJSON('/trial/start', { method: 'POST' }).then(function () { funnel('trial_started', 'learn'); store(cacheKey(), null); location.reload(); })
       .catch(function (e) { alert((e && e.detail) || 'The free week could not start just now. Please try again in a minute, or message us on WhatsApp.'); });
   }
+  function firstOpen() {
+    var its = allItems().filter(function (n) { return !n.locked; });
+    for (var i = 0; i < its.length; i++) if (!done(its[i].id)) return its[i];
+    return its[0] || null;
+  }
 
-  // ── a lesson ──
-  function lesson(mid, cid) {
-    root.innerHTML = '<div class="lv"><div class="top"><a class="iconbtn" href="/learn" aria-label="Roadmap" style="display:grid;place-items:center">←</a><div class="tt">Loading the lesson…</div></div><div style="flex:1;display:grid;place-items:center" class="muted">Loading…</div></div>';
-    // The lesson first; the roadmap (for "Next") follows without holding it up.
-    getJSON('/learn/lesson/' + mid + '/' + cid).then(function (item) {
-      if (!item.html_content) { location.replace('/learn'); return; }
-      drawLesson(item.module, item);
-      loadRoadmap().then(function () { var nx = nextLesson(mid, cid), top = root.querySelector('.top'); if (nx && top && !top.querySelector('.nx')) top.insertAdjacentHTML('beforeend', '<a class="btn btn-ghost btn-sm nx" href="/learn/' + nx.m + '/' + nx.n.id + '">Next ›</a>'); }).catch(function () {});
-    }).catch(function (e) {
-      if (!token()) { signIn(); return; }   // even a free lesson needs an account (31 Oct 2026, founder)
-      if (e && e.detail) { location.replace('/learn'); return; }
-      root.querySelector('.tt').textContent = 'Could not load the lesson. Check the internet and go back.';
+  // ── /learn: the course ──
+  function course() {
+    document.title = 'Course · Altrobyte Lab';
+    funnel('learn_view');
+    var draw = function () {
+      var its = allItems(), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
+      var pct = open.length ? Math.round(fin * 100 / open.length) : 0, nx = firstOpen(), locked = anyLocked(), have = Object.keys(mods).length;
+      var welcome = '<div class="pad"><h1>Product Engineering: embedded systems to IoT</h1>' +
+        '<p class="muted" style="margin-top:6px">20 steps from electronics to a shipped product. Each step has its notes, code, tests and projects; live classes and their recordings are under Live classes.</p>' +
+        (have ? '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>Your progress</b><span class="muted" style="font-size:13px">' + fin + ' of ' + open.length + ' open items done</span></div>' +
+          '<div class="prog"><i style="width:' + pct + '%"></i></div>' +
+          (inTrial() ? '<p class="muted" style="font-size:13px;margin-top:6px">Your free week: ' + trial.days_left + ' days left. Every step is open.</p>' : '') +
+          '<div class="row" style="margin-top:12px">' + (!token() ? '<button class="btn btn-main" data-signin>Sign in to start</button>' :
+            nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue' : 'Start') + ': ' + esc(nx.title) + '</a>' : '') + '</div></div>' : '') +
+        (have && locked ? '<div class="card" style="margin-top:12px"><b>' + (token() ? 'The first four lessons are open on your account.' : 'Sign in to open the first four lessons free.') + '</b>' +
+          '<p class="muted" style="margin-top:4px;font-size:14px">The whole course, the weekly live class and its recordings come with the programme.</p>' +
+          '<div class="row" style="margin-top:12px">' + (offerTrial() ? '<button class="btn btn-ghost btn-sm" data-trial>Open everything free for 7 days</button>' : '') +
+          '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>' : '') +
+        '<p class="muted" style="font-size:13px;margin-top:18px"><a href="/roadmap" style="text-decoration:underline">Syllabus</a> · <a href="https://wa.me/917222977927" style="text-decoration:underline">Help on WhatsApp</a> · <a href="/privacy" style="text-decoration:underline">Privacy</a>' +
+        (token() ? ' · <a href="/delete-account" style="text-decoration:underline">Delete account</a>' : '') + '</p></div>';
+      root.innerHTML = bar('course') + '<div class="shell"><aside class="side">' + outline(nx && nx.id) + '</aside><main class="main">' + welcome + '</main></div>';
+      bindOutline();
+    };
+    var shown = cached(); draw();
+    load().then(draw).catch(function () { if (!shown) root.querySelector('.main').innerHTML = '<div class="pad"><h1>Could not load the course</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a></div>'; });
+  }
+
+  // ── /learn/<m>/<c>: one item ──
+  function item(mid, cid) {
+    var shown = cached();
+    root.innerHTML = bar('course') + '<div class="shell reading"><aside class="side">' + outline(cid) + '</aside><main class="main"><div class="lv"><div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">Loading…</div></div></div></main></div>';
+    bindOutline();
+    var side = function () { var s = root.querySelector('.side'); if (s) { s.innerHTML = outline(cid); bindOutline(); } };
+    getJSON('/learn/lesson/' + mid + '/' + cid).then(function (it) {
+      drawItem(it);
+      load().then(function () { side(); navButtons(it); }).catch(function () {});
+    }).catch(function () {
+      if (!token()) { signIn(); return; }
+      root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">Locked</div></div><div class="pad"><h1>🔒 This part of the course is locked</h1>' +
+        '<p class="muted" style="margin:8px 0 16px">It opens with the programme: the whole course, the weekly live class and its recordings.</p><div class="row">' +
+        ((!trial || !trial.started) ? '<button class="btn btn-main" data-trial>Open everything free for 7 days</button>' : '') + '<a class="btn btn-ghost" href="/pricing">See plans</a></div></div>';
+      bindOutline();
+      if (!shown) load().then(side).catch(function () {});
     });
   }
-  function nextLesson(mid, cid) {
-    var list = ORDER.map(item).filter(function (n) { return n && !n.locked; });
-    for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(cid)) return list[i + 1] ? { m: list[i + 1].m, n: list[i + 1] } : null;
-    return null;
+  function neighbours(cid) {
+    var its = allItems().filter(function (n) { return !n.locked; });
+    for (var i = 0; i < its.length; i++) if (String(its[i].id) === String(cid)) return [its[i - 1] || null, its[i + 1] || null];
+    return [null, null];
   }
-  function drawLesson(m, item) {
-    document.title = item.title + ' · Altrobyte Lab';
-    funnel('lesson_open', String(item.id));
-    var nx = nextLesson(m.id, item.id);
-    root.innerHTML = '<div class="lv"><div class="top"><a class="iconbtn" href="/learn" aria-label="Roadmap" style="display:grid;place-items:center">←</a>' +
-      '<div class="tt">' + esc(item.title) + '<div class="muted" style="font-size:12px;font-weight:500">' + esc(m.title) + '</div></div>' +
-      (nx ? '<a class="btn btn-ghost btn-sm nx" href="/learn/' + nx.m + '/' + nx.n.id + '">Next ›</a>' : '') + '</div>' +
-      '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe><div id="foot"></div></div>';
-    var note = root.querySelector('iframe.note');
-    note.srcdoc = window.altroTutorPage(item.html_content);
-    var foot = document.getElementById('foot'), live = null;
-    var partKey = 'altro_part_' + item.id;
-    function toNote(o) { try { note.contentWindow.postMessage(JSON.stringify(o), '*'); } catch (e) {} }
-    function startAltron() {
-      var from = parseInt(store(partKey) || '0', 10);
-      foot.innerHTML = '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + item.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1' + (from > 1 ? '&from=' + from : '') + '"></iframe><button class="iconbtn" style="margin:0 8px" aria-label="Stop Altron">✕</button></div>';
-      live = foot.querySelector('iframe');
-      foot.querySelector('button').onclick = askBar;
-      funnel('altron_start', String(item.id));
+  function navButtons(it) {
+    var nb = neighbours(it.id), box = root.querySelector('.navs'); if (!box) return;
+    box.innerHTML = (nb[0] ? '<a class="iconbtn" href="/learn/' + nb[0].m + '/' + nb[0].id + '" title="Previous">‹</a>' : '') +
+      (nb[1] ? '<a class="btn btn-ghost btn-sm" href="/learn/' + nb[1].m + '/' + nb[1].id + '">Next ›</a>' : '');
+  }
+  function yt(u) {
+    var m = String(u || '').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+    return m ? 'https://www.youtube-nocookie.com/embed/' + m[1] : '';
+  }
+  function drawItem(it) {
+    document.title = it.title + ' · Altrobyte Lab';
+    funnel('lesson_open', String(it.id));
+    var main = root.querySelector('.main');
+    var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
+      '<span class="navs row" style="gap:6px"></span>' +
+      (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
+    var body;
+    if (it.type === 'notes') {
+      body = '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>';
+    } else if (yt(it.youtube_url)) {
+      body = '<div class="body"><div class="pad"><iframe class="video" src="' + yt(it.youtube_url) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe>' +
+        (it.html_content ? '<div style="margin-top:16px">' + it.html_content + '</div>' : '') + '</div></div>';
+    } else if (it.type === 'code') {
+      var txt = it.html_content || '';
+      if (/<(pre|code|div|p|span)\b/i.test(txt)) { var d = document.createElement('div'); d.innerHTML = txt; txt = d.textContent; }
+      body = '<div class="body"><div class="pad"><div class="row" style="justify-content:flex-end;margin-bottom:8px"><button class="btn btn-ghost btn-sm" id="copy">Copy code</button></div><pre class="code">' + esc(txt) + '</pre></div></div>';
+    } else if (it.type === 'test') {
+      body = '<div class="body"><div class="pad"><h1>📝 ' + esc(it.title) + '</h1><p class="muted" style="margin:8px 0 16px">Check what you learnt in this step. Your score is saved.</p>' +
+        (it.test_id ? '<a class="btn btn-main" href="/test/' + it.test_id + '">Start the test</a>' : '<p class="muted">This test is being prepared.</p>') + '</div></div>';
+    } else {
+      var link = it.resource_url || '';
+      body = '<div class="body"><div class="pad"><h1>' + (ICON[it.type] || '📎') + ' ' + esc(it.title) + '</h1>' +
+        (it.html_content ? '<div style="margin:12px 0">' + it.html_content + '</div>' : '<p class="muted" style="margin:8px 0 16px">Build it on your board, then compare with the reference project.</p>') +
+        (link ? '<a class="btn btn-main" href="' + esc(link) + '" target="_blank" rel="noopener">Open the project</a>' : '') + '</div></div>';
     }
-    function askBar() {
-      live = null;
-      foot.innerHTML = '<div class="ask"><span class="muted">' + (token() ? 'Let Altron explain this lesson by voice, part by part.' : 'Sign in with WhatsApp and Altron explains this lesson by voice, free.') + '</span><button class="btn btn-main btn-sm" id="go">' + (token() ? '▶ Learn with Altron' : 'Sign in to learn with Altron') + '</button></div>';
-      document.getElementById('go').onclick = function () { token() ? startAltron() : signIn(); };
-    }
-    function finished() {
-      nx = nextLesson(m.id, item.id);
-      store('altro_done_' + item.id, '1'); store(partKey, null);
-      funnel('lesson_done', String(item.id));
-      var n = 6;
-      foot.innerHTML = '<div class="donebar"><span id="dn"></span>' + (nx ? '<button class="btn btn-ghost btn-sm" id="stay">Stay</button><a class="btn btn-sm" style="background:#fff;color:#0F5132" href="/learn/' + nx.m + '/' + nx.n.id + '">Start now</a>' : '<a class="btn btn-sm" style="background:#fff;color:#0F5132" href="/learn">Roadmap</a>') + '</div>';
-      var dn = document.getElementById('dn');
-      if (!nx) { dn.textContent = 'Lesson complete. That was the last open lesson: unlock the next steps on the roadmap.'; return; }
-      var tick = setInterval(function () {
-        n--; dn.textContent = 'Lesson complete. Next: ' + nx.n.title + ' in ' + n + ' s';
-        if (n <= 0) { clearInterval(tick); location.href = '/learn/' + nx.m + '/' + nx.n.id; }
-      }, 1000);
-      document.getElementById('stay').onclick = function () { clearInterval(tick); dn.textContent = 'Lesson complete.'; };
-    }
+    var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' :
+      '<div class="foot"><span class="muted">' + (done(it.id) ? 'Done ✓' : 'Finished this? Mark it done to track your progress.') + '</span>' +
+      (done(it.id) ? '' : '<button class="btn btn-main btn-sm" id="markdone">Mark as done</button>') + '</div>';
+    main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
+    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '');
+    var md = document.getElementById('markdone');
+    if (md) md.onclick = function () {
+      store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));
+      var nx = neighbours(it.id)[1];
+      if (nx) location.href = '/learn/' + nx.m + '/' + nx.id;
+      else md.parentNode.innerHTML = '<span class="muted">Done ✓ That was the last open item.</span>';
+    };
+    var cp = document.getElementById('copy');
+    if (cp) cp.onclick = function () { try { navigator.clipboard.writeText(root.querySelector('pre.code').textContent); cp.textContent = 'Copied ✓'; } catch (e) {} };
+    var fs = document.getElementById('fs');
+    if (fs) fs.onclick = function () { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {}); };
+    navButtons(it);
+    // The note asks the page to open its links (it is sandboxed).
     window.onmessage = function (e) {
       if (typeof e.data !== 'string') return;
       var o; try { o = JSON.parse(e.data); } catch (x) { return; }
-      if (!o) return;
-      if (!o.type) {                                   // the note
-        if (o.open && /^https?:\/\//.test(o.open)) window.open(o.open, '_blank', 'noopener');
-        if (live && (o.needs || o.did)) { try { if (o.needs && live.contentWindow.altronNeeds) live.contentWindow.altronNeeds(o.needs); if (o.did && live.contentWindow.altronDid) live.contentWindow.altronDid(o.did); } catch (x) {} }
-        return;
-      }
-      if (e.origin !== location.origin) return;        // Altron's strip is our own page
-      if (o.type === 'section' && typeof o.part === 'number') { toNote({ show: o.part - 1 }); store(partKey, String(o.part)); }
-      else if (o.type === 'said' && typeof o.text === 'string') toNote({ said: o.text });
-      else if (o.type === 'state' && o.state === 'done') setTimeout(finished, 2500);
-      else if (o.type === 'state' && o.state === 'out_of_minutes') {
-        foot.innerHTML = '<div class="ask"><span class="muted">' + esc(o.text || "Today's time with Altron is used up.") + '</span><a class="btn btn-main btn-sm" href="/pricing">Unlock</a></div>';
-      }
+      if (o && o.open && /^https?:\/\//.test(o.open)) window.open(o.open, '_blank', 'noopener');
     };
-    // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): a lesson is the note and a "done" button;
-    // the voice strip opens only for testers (?beta=1 once, remembered on that browser).
-    if (beta()) { token() ? startAltron() : askBar(); return; }
-    foot.innerHTML = '<div class="ask"><span class="muted">Read the lesson, then mark it done.</span><button class="btn btn-main btn-sm" id="markdone">Mark as done</button></div>';
-    document.getElementById('markdone').onclick = finished;
-  }
-  function beta() {
-    if (/[?&]beta=1/.test(location.search)) store('altro_beta', '1');
-    return store('altro_beta') === '1';
   }
 
+  // ── /learn/live: live classes and recordings ──
+  function when(iso) {
+    var d = new Date(String(iso).replace(' ', 'T') + (/[zZ+]/.test(String(iso).slice(10)) ? '' : '+05:30'));
+    return d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  }
+  function ended(s) {
+    var end = new Date(String(s.session_date).replace(' ', 'T') + '+05:30').getTime() + (s.duration_minutes || 60) * 60000;
+    return end < Date.now();
+  }
+  function live() {
+    document.title = 'Live classes · Altrobyte Lab';
+    root.innerHTML = bar('live') + '<div class="pad" style="margin:0 auto"><h1>Live classes</h1><div class="skel" style="margin-top:16px"></div><div class="skel"></div></div>';
+    bindOutline();
+    getJSON('/live-sessions').then(function (d) {
+      var all = (d.sessions || []).filter(function (s) { return s.session_date; });
+      var next = all.filter(function (s) { return !ended(s); }).sort(function (a, b) { return String(a.session_date) < String(b.session_date) ? -1 : 1; });
+      var past = all.filter(ended).sort(function (a, b) { return String(a.session_date) < String(b.session_date) ? 1 : -1; });
+      var card = function (s, rec) {
+        var free = Number(s.price || 0) <= 0;
+        return '<div class="card cls">' + (s.banner_url ? '<img loading="lazy" src="' + esc(s.banner_url) + '" alt="">' : '') + '<b>' + esc(s.title) + '</b>' +
+          '<span class="muted" style="font-size:13px">' + (s.repeat_label ? '🔁 ' + esc(s.repeat_label) + ' · next ' : '') + when(s.session_date) + ' IST' + (free ? ' · Free' : '') + '</span>' +
+          (rec ? (s.recording_url ? '<a class="btn btn-main btn-sm" style="align-self:flex-start" href="' + esc(s.recording_url) + '" target="_blank" rel="noopener">▶ Watch the recording</a>' :
+                  '<span class="muted" style="font-size:13px">🔒 Recording for programme learners</span>') :
+                 '<a class="btn btn-main btn-sm" style="align-self:flex-start" href="/live-sessions/' + s.id + '">Details and join</a>') + '</div>';
+      };
+      var recs = past.filter(function (s) { return s.recording_url || Number(s.price || 0) > 0; });
+      root.querySelector('.pad').innerHTML = '<h1>Live classes</h1><p class="muted" style="margin-top:6px">Classes with our engineers. The joining link comes on WhatsApp after you register.</p>' +
+        '<h2>Coming up</h2>' + (next.length ? '<div class="grid">' + next.map(function (s) { return card(s, false); }).join('') + '</div>' :
+          '<div class="card"><b>The next class is being scheduled.</b><p class="muted" style="margin:4px 0 12px;font-size:14px">Get the date on WhatsApp the moment it opens.</p><a class="btn btn-ghost btn-sm" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, tell me when the next live class opens.') + '">Tell me on WhatsApp</a></div>') +
+        '<h2>Recordings</h2>' + (recs.length ? '<div class="grid">' + recs.map(function (s) { return card(s, true); }).join('') + '</div>' : '<p class="muted">Recordings of past classes appear here.</p>');
+    }).catch(function () {
+      root.querySelector('.pad').innerHTML = '<h1>Could not load the live classes</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a>';
+    });
+  }
+
+  // ── route ──
   var p = location.pathname.replace(/\/+$/, '');
   var mm = p.match(/^\/learn\/(\d+)\/(\d+)$/);
-  if (mm) lesson(mm[1], mm[2]);
-  else {
-    if (/[?&]trial=1/.test(location.search) && token()) { history.replaceState(null, '', '/learn'); startTrial(); }
-    roadmap();
-  }
+  if (mm) item(mm[1], mm[2]);
+  else if (p === '/learn/live') live();
+  else course();
 })();
 </script>
 </body>
