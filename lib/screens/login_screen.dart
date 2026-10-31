@@ -239,52 +239,14 @@ class _FormCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Tab bar
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16)),
-            ),
-            child: TabBar(
-              controller: tabs,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: AppColors.accent,
-              indicatorWeight: 3,
-              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              tabs: const [Tab(text: 'Sign In'), Tab(text: 'Register')],
-            ),
-          ),
-          SizedBox(
-            height: 480,
-            child: TabBarView(
-              controller: tabs,
-              children: [
-                _LoginTab(
-                  formKey: loginKey,
-                  emailCtrl: emailCtrl,
-                  passCtrl: passCtrl,
-                  showPass: showPass,
-                  togglePass: togglePass,
-                  onLogin: onLogin,
-                ),
-                _RegisterTab(
-                  formKey: regKey,
-                  nameCtrl: regNameCtrl,
-                  emailCtrl: regEmailCtrl,
-                  passCtrl: regPassCtrl,
-                  ownerCtrl: regOwnerCtrl,
-                  phoneCtrl: regPhoneCtrl,
-                  cityCtrl: regCityCtrl,
-                  showPass: showRegPass,
-                  togglePass: toggleRegPass,
-                  onRegister: onRegister,
-                  loading: registering,
-                ),
-              ],
-            ),
+          // Sign in only (31 Oct 2026, founder): the Register tab let anyone make an institute; it is closed on the server too.
+          _LoginTab(
+            formKey: loginKey,
+            emailCtrl: emailCtrl,
+            passCtrl: passCtrl,
+            showPass: showPass,
+            togglePass: togglePass,
+            onLogin: onLogin,
           ),
         ],
       ),
@@ -403,129 +365,9 @@ class _LoginTab extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Center(
-              child: Text('New here? Click Register tab above',
+              child: Text('Students: sign in at altrobytelab.com/learn',
                   style: GoogleFonts.inter(
                       color: AppColors.textSecondary, fontSize: 12)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RegisterTab extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController nameCtrl, emailCtrl, passCtrl;
-  final TextEditingController ownerCtrl, phoneCtrl, cityCtrl;
-  final bool showPass, loading;
-  final VoidCallback togglePass, onRegister;
-
-  const _RegisterTab({
-    required this.formKey,
-    required this.nameCtrl,
-    required this.emailCtrl,
-    required this.passCtrl,
-    required this.ownerCtrl,
-    required this.phoneCtrl,
-    required this.cityCtrl,
-    required this.showPass,
-    required this.togglePass,
-    required this.onRegister,
-    required this.loading,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Create Account 🚀',
-                style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 4),
-            Text('Set up your coaching institute',
-                style: GoogleFonts.inter(
-                    color: AppColors.textSecondary, fontSize: 13)),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Institute Name *',
-                  prefixIcon: Icon(Icons.business_rounded)),
-              validator: (v) => Validators.required(v, 'Institute name'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: emailCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Email *',
-                  prefixIcon: Icon(Icons.email_outlined)),
-              keyboardType: TextInputType.emailAddress,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Email required';
-                return Validators.email(v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: passCtrl,
-              obscureText: !showPass,
-              decoration: InputDecoration(
-                labelText: 'Password *',
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                      showPass ? Icons.visibility_off : Icons.visibility),
-                  onPressed: togglePass,
-                ),
-              ),
-              validator: (v) {
-                if (v == null || v.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: ownerCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Owner Name',
-                  prefixIcon: Icon(Icons.person_outline)),
-            ),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(
-                child: TextFormField(
-                  controller: phoneCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Phone', prefixIcon: Icon(Icons.phone)),
-                  keyboardType: TextInputType.phone,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: cityCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'City',
-                      prefixIcon: Icon(Icons.location_city)),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 20),
-            OrangeButton(
-              label: 'Create Account',
-              icon: Icons.rocket_launch_rounded,
-              onPressed: onRegister,
-              loading: loading,
             ),
           ],
         ),
