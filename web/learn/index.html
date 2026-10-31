@@ -104,16 +104,36 @@
 (function () {
   var API = 'https://edu.altrobytelab.com';
   var root = document.getElementById('root');
-  // The roadmap (31 Oct 2026, founder): Embedded System Foundation first, each module once, in the order it is learnt.
-  // A step names its module; a step without one is taught live in the programme (never "coming soon"). Only the first
-  // lessons are free (the server's learn_free_lessons); the rest open with the free week or a plan.
+  // The self-paced roadmap (31 Oct 2026, founder: "learning modules ready, self-paced launch"). Steps are lists of
+  // lessons, [module, lesson], in the order they are learnt, picked across the modules (the modules mix topics and
+  // repeat some lessons; the database is left as it is). A step without lessons is taught live in the programme.
+  // Free: the first step, and the first lesson of every other step (the server's learn_free_lessons decides).
   var LEVELS = [
-    ['Beginner', 'Embedded systems and electronics from zero', '#1E8E3E', [['Embedded system foundation', 5], ['Circuit design', 4], ['Programming for hardware']]],
-    ['Basic', 'Raspberry Pi, IoT and real projects', '#1A73E8', [['IoT, Raspberry Pi and Edge AI', 8], ['Git for embedded projects', 10], ['Embedded C']]],
-    ['Advance', 'Industrial-grade IoT and firmware', '#D4500A', [['Industrial IoT and AWS', 9], ['STM32'], ['FreeRTOS'], ['Robotics']]],
-    ['Pro', 'Shipping a product', '#7B1FA2', [['Product development', 6], ['Embedded Linux'], ['Computer vision'], ['App and web for devices']]]
+    ['Beginner', 'Electronics and your first microcontroller', '#1E8E3E', [
+      ['Electronics basics', [[5, 21], [5, 22], [4, 19]]],
+      ['Microcontrollers', [[5, 23], [5, 95], [5, 25], [5, 26]]],
+      ['Digital input and output', [[5, 92], [5, 96], [5, 31], [5, 32]]],
+      ['Git and GitHub for firmware', [[10, 61]]]]],
+    ['Basic', 'Embedded C, peripherals, boards and protocols', '#1A73E8', [
+      ['Embedded C', [[5, 34]]],
+      ['ADC, DAC and PWM', [[5, 36], [5, 37]]],
+      ['ESP32, STM32 and Raspberry Pi', [[5, 67], [5, 68], [5, 71], [8, 87], [5, 70]]],
+      ['Communication protocols', [[5, 76], [5, 77], [5, 80], [5, 84], [5, 82]]]]],
+    ['Advance', 'IoT: from the device to the cloud', '#D4500A', [
+      ['IoT foundations', [[9, 50], [9, 51], [9, 73], [5, 66], [5, 64]]],
+      ['Wi-Fi, Bluetooth and OTA on ESP32', [[9, 72], [9, 74], [9, 75], [9, 86]]],
+      ['Cloud with AWS IoT', [[9, 52], [9, 53], [9, 54], [9, 59], [9, 56]]],
+      ['IoT security', [[9, 99], [9, 100], [9, 101]]],
+      ['ESP-IDF', [[5, 41]]],
+      ['FreeRTOS']]],
+    ['Pro', 'Industrial IoT, Edge AI and your career', '#7B1FA2', [
+      ['Industrial IoT and machine monitoring', [[8, 42], [8, 45], [8, 90], [8, 91]]],
+      ['Your career: portfolio and focus', [[6, 29], [5, 39], [5, 40]]],
+      ['Edge AI and ML'], ['Embedded Linux'], ['Computer vision'], ['App and web for devices']]]
   ];
-  var IDS = [5, 4, 8, 10, 9, 6];   // learning order, for "Next" and "Continue"
+  var IDS = [5, 4, 10, 9, 8, 6];
+  var ORDER = [];   // every lesson of the roadmap in order: for "Next" and "Continue"
+  LEVELS.forEach(function (L) { L[3].forEach(function (T) { (T[1] || []).forEach(function (r) { ORDER.push(r); }); }); });
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   function token() { try { var v = store('flutter.student_token'); return v ? JSON.parse(v) || '' : ''; } catch (e) { return ''; } }
@@ -134,7 +154,7 @@
   var mods = {}, trial = null;
   function loadRoadmap() {
     return Promise.all([
-      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { (d.modules || []).forEach(function (m) { m.notes = (m.items || []).filter(function (i) { return i.type === 'notes'; }); m.open = m.notes.filter(function (i) { return !i.locked; }); mods[m.id] = m; }); }),
+      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { (d.modules || []).forEach(function (m) { mods[m.id] = m; }); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
     ]);
   }
@@ -157,38 +177,41 @@
       (t ? '<a class="btn btn-ghost btn-sm" href="/pricing">Plans</a>' : '<a class="btn btn-ghost btn-sm" href="javascript:void 0" data-signin>Log in</a>') + '</div></div></nav>';
   }
   function inTrial() { return trial && trial.active === true; }
+  // A roadmap lesson as the server sent it ({id, title, locked, free} plus m, its module), or null if it is not there.
+  function item(r) {
+    var m = mods[r[0]]; if (!m) return null;
+    for (var i = 0; i < m.items.length; i++) if (m.items[i].id === r[1]) return Object.assign({ m: r[0] }, m.items[i]);
+    return null;
+  }
+  function stepLessons(T) { return (T[1] || []).map(item).filter(Boolean); }
   function drawRoadmap() {
     var freeLessons = 0, doneLessons = 0, stepNo = 0, html = '';
-    Object.keys(mods).forEach(function (k) { mods[k].open.forEach(function (n) { freeLessons++; if (done(n.id)) doneLessons++; }); });
+    ORDER.map(item).forEach(function (n) { if (n && !n.locked) { freeLessons++; if (done(n.id)) doneLessons++; } });
     LEVELS.forEach(function (L, li) {
       html += '<section class="level"><div class="lh"><div class="n" style="background:' + L[2] + '">' + (li + 1) + '</div><div><b style="color:' + L[2] + '">' + L[0] + '</b><span>' + L[1] + '</span></div></div><div class="steps">';
       L[3].forEach(function (T) {
         stepNo++;
-        var m = T[1] ? mods[T[1]] : null, cls = 'step', pill, body = '';
+        var ls = stepLessons(T), cls = 'step', pill, body = '';
         if (!T[1]) {
           cls += ' locked'; pill = '<span class="pill p-live">LIVE</span>';
           body = '<div class="lockbox">Taught live by our engineers in the product engineering programme, building a real product.<div class="cta"><a class="btn btn-ghost btn-sm" href="/pricing">See the programme</a><a class="btn btn-ghost btn-sm" href="/live-sessions">Join a live class</a></div></div>';
-        } else if (!m) {
-          cls += ' locked'; pill = '<span class="pill p-lock">🔒</span>';
-          body = '<div class="lockbox">This step opens with a plan.<div class="cta"><a class="btn btn-main btn-sm" href="/pricing">Unlock</a></div></div>';
         } else {
-          var nOpen = m.open.length, nAll = m.notes.length, ok = m.open.filter(function (n) { return done(n.id); }).length;
-          cls += nOpen ? ' open' + (ok === nOpen && nOpen === nAll ? ' done' : '') : ' locked';
+          var nAll = ls.length, nOpen = ls.filter(function (n) { return !n.locked; }).length, ok = ls.filter(function (n) { return !n.locked && done(n.id); }).length;
+          cls += nOpen ? ' open' + (nAll && ok === nAll ? ' done' : '') : ' locked';
           pill = !nOpen ? '<span class="pill p-lock">🔒 PREMIUM</span>' : nOpen < nAll ? '<span class="pill p-free">FREE START</span>' :
             inTrial() ? '<span class="pill p-open">OPEN</span>' : '<span class="pill p-free">FREE</span>';
-          var shownLocked = 0;   // a long module shows a few locked lessons, not all thirty
-          body = '<div class="lessons">' + (nAll ? m.notes.map(function (n) {
-            if (n.locked && ++shownLocked > 4) return '';
+          body = '<div class="lessons">' + (nAll ? ls.map(function (n) {
             if (n.locked) return '<div class="lesson lk"><div class="ic">🔒</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:12px">Premium</b></div>';
-            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + m.id + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
+            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
           }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
           if (nOpen < nAll) {
             var canTrial = !trial || !trial.started;
-            body += '<div class="lockbox">' + (nAll - nOpen > 4 ? '…and ' + (nAll - nOpen - 4) + ' more. ' : '') + 'All ' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' with Altron open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
+            body += '<div class="lockbox">' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' with Altron open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
               '<div class="cta">' + (canTrial ? '<button class="btn btn-main btn-sm" data-trial>Open free for 7 days</button>' : '') + '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>';
           }
         }
-        html += '<div class="' + cls + '"><button class="sh"><span class="muted" style="font-weight:800;width:22px">' + stepNo + '</span><span class="t"><b>' + esc(T[0]) + '</b><small>' + esc(m ? m.title : 'Live with a mentor') + '</small></span>' + pill + '</button>' + body + '</div>';
+        var sub = !T[1] ? 'Live with a mentor' : ls.length + ' lesson' + (ls.length === 1 ? '' : 's');
+        html += '<div class="' + cls + '"><button class="sh"><span class="muted" style="font-weight:800;width:22px">' + stepNo + '</span><span class="t"><b>' + esc(T[0]) + '</b><small>' + sub + '</small></span>' + pill + '</button>' + body + '</div>';
       });
       html += '</div></section>';
     });
@@ -209,9 +232,9 @@
   }
   function firstOpenLesson() {
     var firstAny = null;
-    for (var i = 0; i < IDS.length; i++) {
-      var m = mods[IDS[i]]; if (!m) continue;
-      for (var j = 0; j < m.open.length; j++) { var u = '/learn/' + m.id + '/' + m.open[j].id; if (!firstAny) firstAny = u; if (!done(m.open[j].id)) return u; }
+    for (var i = 0; i < ORDER.length; i++) {
+      var n = item(ORDER[i]); if (!n || n.locked) continue;
+      var u = '/learn/' + n.m + '/' + n.id; if (!firstAny) firstAny = u; if (!done(n.id)) return u;
     }
     return firstAny;
   }
@@ -249,9 +272,8 @@
     });
   }
   function nextLesson(mid, cid) {
-    var list = [];
-    IDS.forEach(function (id) { var m = mods[id]; if (m) m.open.forEach(function (n) { list.push({ m: id, n: n }); }); });
-    for (var i = 0; i < list.length; i++) if (String(list[i].n.id) === String(cid)) return list[i + 1] || null;
+    var list = ORDER.map(item).filter(function (n) { return n && !n.locked; });
+    for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(cid)) return list[i + 1] ? { m: list[i + 1].m, n: list[i + 1] } : null;
     return null;
   }
   function drawLesson(m, item) {
