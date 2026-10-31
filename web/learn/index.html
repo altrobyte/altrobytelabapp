@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Your roadmap · Altrobyte Lab</title>
-<meta name="description" content="The Altrobyte roadmap: from your first LED to a shipped IoT product. Start the first steps free, with Altron, your AI trainer.">
+<meta name="description" content="The Altrobyte roadmap: from your first LED to a shipped IoT product. Notes, code, tests and live classes with engineers.">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://edu.altrobytelab.com" crossorigin>
 <!-- The learning page, as a plain page (30 Oct 2026, founder: "it's the place where people get converted"; the Flutter
@@ -175,7 +175,7 @@
     document.title = 'Your roadmap · Altrobyte Lab';
     funnel('learn_view');
     root.innerHTML = nav() + '<main class="wrap"><div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
-      '<p>Step by step, the way products are really made. The first steps are free, with Altron, your AI trainer, explaining every lesson by voice.</p></div>' +
+      '<p>Step by step, the way products are really made, with live classes from engineers who build them.</p></div>' +
       '<div class="skel"></div><div class="skel"></div><div class="skel"></div></main>';
     var shown = cached();
     if (shown) drawRoadmap();
@@ -223,7 +223,7 @@
           }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
           if (nOpen < nAll) {
             var canTrial = offerTrial();
-            body += '<div class="lockbox">' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' with Altron open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
+            body += '<div class="lockbox">' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
               '<div class="cta">' + (canTrial ? '<button class="btn btn-main btn-sm" data-trial>Open free for 7 days</button>' : '') + '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>';
           }
         }
@@ -233,11 +233,11 @@
       html += '</div></section>';
     });
     var pct = freeLessons ? Math.round(doneLessons * 100 / freeLessons) : 0;
-    var trialLine = inTrial() ? '<div class="trial">🎉 Your free week: <b>' + trial.days_left + ' days left</b>. Every step and Altron are open, and this week\'s live classes are free.</div>' :
+    var trialLine = inTrial() ? '<div class="trial">🎉 Your free week: <b>' + trial.days_left + ' days left</b>. Every step is open, and this week\'s live classes are free.</div>' :
       (trial && trial.started ? '<div class="trial">Your free week is over. Your progress is saved: pick a plan to carry on.</div>' : '');
     var first = firstOpenLesson();
     root.querySelector('main').innerHTML = '<div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
-      '<p>Step by step, the way products are really made. Altron, your AI trainer, explains every lesson by voice and answers your questions.</p>' +
+      '<p>Step by step, the way products are really made, with live classes from engineers who build them.</p>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : !token() ? 'Sign in and start free' : '▶ Start the first lesson') + '</a>' : '') +
       (offerTrial() ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
       '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
@@ -258,7 +258,7 @@
   }
   function unlockCard() {
     return '<div class="unlock"><h2>Open every step, with a live class every week</h2><ul>' +
-      '<li>Every module of the roadmap, with Altron explaining each lesson by voice</li><li>A live class with our engineers every week</li><li>Build real products: PCB, firmware, cloud and AI</li><li>A certificate you can show to employers</li></ul>' +
+      '<li>A live class with our engineers every week, and its recording</li><li>Every step of the roadmap: notes, code and tests</li><li>Build real products: PCB, firmware, cloud and AI</li><li>A certificate you can show to employers</li></ul>' +
       '<p style="margin-bottom:14px"><b style="font-size:22px">₹4,999</b><span class="muted"> / month + GST, self-paced</span></p>' +
       '<div class="cta"><a class="btn btn-main" href="/pricing">See all plans</a><a class="btn btn-ghost" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want to know about the Altrobyte plans.') + '">Ask on WhatsApp</a></div></div>';
   }
@@ -351,7 +351,15 @@
         foot.innerHTML = '<div class="ask"><span class="muted">' + esc(o.text || "Today's time with Altron is used up.") + '</span><a class="btn btn-main btn-sm" href="/pricing">Unlock</a></div>';
       }
     };
-    token() ? startAltron() : askBar();
+    // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): a lesson is the note and a "done" button;
+    // the voice strip opens only for testers (?beta=1 once, remembered on that browser).
+    if (beta()) { token() ? startAltron() : askBar(); return; }
+    foot.innerHTML = '<div class="ask"><span class="muted">Read the lesson, then mark it done.</span><button class="btn btn-main btn-sm" id="markdone">Mark as done</button></div>';
+    document.getElementById('markdone').onclick = finished;
+  }
+  function beta() {
+    if (/[?&]beta=1/.test(location.search)) store('altro_beta', '1');
+    return store('altro_beta') === '1';
   }
 
   var p = location.pathname.replace(/\/+$/, '');
