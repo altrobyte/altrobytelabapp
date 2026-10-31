@@ -2422,6 +2422,28 @@ class ApiService {
   }
 
   /// No retry: creating an invoice consumes a number.
+  // Custom-amount payment links (Invoices → Payment links): the admin makes one, shares it; paid opens access + invoice.
+  static Future<Map<String, dynamic>> payLinks() async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links'), headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> createPayLink(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links'),
+        headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  /// action: check | mark-paid | cancel
+  static Future<Map<String, dynamic>> payLinkAction(int id, String action, {String reference = ''}) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links/$id/$action'),
+        headers: _headers(token), body: jsonEncode({'reference': reference}));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> createInvoice(int instituteId, Map<String, dynamic> body) async {
     final token = await _token();
     final res = await http.post(
