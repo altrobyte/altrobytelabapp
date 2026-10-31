@@ -233,6 +233,26 @@
     try { localStorage.removeItem('flutter.student_token'); } catch (x) {}
     location.href = '/';
   };
+  // A team number (admin owner phone or Settings > Admin login numbers) also gets Admin dashboard, with no second OTP.
+  fetch('https://edu.altrobytelab.com/student/admin-access', { headers: { Authorization: 'Bearer ' + t } })
+    .then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d || !d.admin) return;
+      var a = document.createElement('a'); a.href = '#'; a.textContent = 'Admin dashboard';
+      var m = document.querySelector('.pf .m'); m.insertBefore(a, m.firstChild);
+      a.onclick = function (e) {
+        e.preventDefault();
+        fetch('https://edu.altrobytelab.com/student/admin-access', { method: 'POST', headers: { Authorization: 'Bearer ' + t } })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+          .then(function (j) {
+            localStorage.setItem('flutter.token', JSON.stringify(j.token));
+            localStorage.setItem('flutter.jwt_token', JSON.stringify(j.jwt_token));
+            localStorage.setItem('flutter.role', JSON.stringify(j.role));
+            localStorage.setItem('flutter.institute_id', String(j.institute_id));
+            localStorage.setItem('flutter.institute_name', JSON.stringify(j.name || ''));
+            location.href = '/dashboard';
+          }).catch(function (x) { alert((x && x.detail) || 'Could not open the admin just now. Please try again.'); });
+      };
+    }).catch(function () {});
   // Someone signed in continues, not "starts free".
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('a.btn-main[href="/learn"]').forEach(function (a) { if (/Start learning free/.test(a.textContent)) a.textContent = '▶ Continue learning'; });

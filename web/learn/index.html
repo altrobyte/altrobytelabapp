@@ -99,6 +99,7 @@
   .lv .top .tt { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lv .top .tt small { display: block; font-weight: 400; color: var(--soft); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
   .iconbtn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line); background: none; cursor: pointer; display: grid; place-items: center; flex: none; }
+  .lv:fullscreen { background: var(--ink); }
   .lv iframe.note { flex: 1; width: 100%; border: 0; background: #fff; }
   .lv .body { flex: 1; overflow-y: auto; }
   .video { width: 100%; aspect-ratio: 16/9; border: 0; border-radius: 12px; background: #000; }
@@ -360,6 +361,8 @@
     funnel('lesson_open', String(it.id));
     var main = root.querySelector('.main');
     var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><button class="iconbtn hide-s" data-outline title="Course list">☰</button><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
+      // Done sits in the bar, not in a strip of its own under the note (31 Oct 2026, founder).
+      (done(it.id) ? '<span class="muted hide-s" style="font-size:13px">Done ✓</span>' : '<button class="btn btn-ghost btn-sm" id="markdone" title="Mark as done">✓ Done</button>') +
       '<span class="navs row" style="gap:6px"></span>' +
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
@@ -381,9 +384,7 @@
         (it.html_content ? '<div style="margin:12px 0">' + it.html_content + '</div>' : '<p class="muted" style="margin:8px 0 16px">Build it on your board, then compare with the reference project.</p>') +
         (link ? projectLinks(link) : '') + '</div></div>';
     }
-    var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' :
-      '<div class="foot"><span class="muted">' + (done(it.id) ? 'Done ✓' : 'Finished this? Mark it done to track your progress.') + '</span>' +
-      (done(it.id) ? '' : '<button class="btn btn-main btn-sm" id="markdone">Mark as done</button>') + '</div>';
+    var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' : '';
     main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
     if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
     var md = document.getElementById('markdone');
@@ -391,12 +392,12 @@
       store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));
       var nx = neighbours(it.id)[1];
       if (nx) location.href = '/learn/' + nx.m + '/' + nx.id;
-      else md.parentNode.innerHTML = '<span class="muted">Done ✓ That was the last open item.</span>';
+      else md.outerHTML = '<span class="muted" style="font-size:13px">Done ✓ Last open item</span>';
     };
     var cp = document.getElementById('copy');
     if (cp) cp.onclick = function () { try { navigator.clipboard.writeText(root.querySelector('pre.code').textContent); cp.textContent = 'Copied ✓'; } catch (e) {} };
     var fs = document.getElementById('fs');
-    if (fs) fs.onclick = function () { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {}); };
+    if (fs) fs.onclick = function () { if (document.fullscreenElement) document.exitFullscreen(); else root.querySelector('.lv').requestFullscreen().catch(function () {}); };   // only the lesson, not the site bars
     navButtons(it);
     // The note asks the page to open its links (it is sandboxed).
     window.onmessage = function (e) {
