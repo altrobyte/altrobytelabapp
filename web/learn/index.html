@@ -219,7 +219,7 @@
             inTrial() ? '<span class="pill p-open">OPEN</span>' : '<span class="pill p-free">FREE</span>';
           body = '<div class="lessons">' + (nAll ? ls.map(function (n) {
             if (n.locked) return '<div class="lesson lk"><div class="ic">🔒</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:12px">Premium</b></div>';
-            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
+            return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : !token() ? 'Sign in' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
           }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
           if (nOpen < nAll) {
             var canTrial = offerTrial();
@@ -238,13 +238,13 @@
     var first = firstOpenLesson();
     root.querySelector('main').innerHTML = '<div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
       '<p>Step by step, the way products are really made. Altron, your AI trainer, explains every lesson by voice and answers your questions.</p>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start the first lesson') + '</a>' : '') +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : !token() ? 'Sign in and start free' : '▶ Start the first lesson') + '</a>' : '') +
       (offerTrial() ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
       '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
       html + (anyLocked() ? unlockCard() : '') + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
     var old = document.querySelector('.dock'); if (old) old.remove();
     var dock = document.createElement('div'); dock.className = 'dock';
-    dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
+    dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : !token() ? 'Sign in and start free' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
     document.body.appendChild(dock);
     bind();
   }
@@ -285,6 +285,7 @@
       drawLesson(item.module, item);
       loadRoadmap().then(function () { var nx = nextLesson(mid, cid), top = root.querySelector('.top'); if (nx && top && !top.querySelector('.nx')) top.insertAdjacentHTML('beforeend', '<a class="btn btn-ghost btn-sm nx" href="/learn/' + nx.m + '/' + nx.n.id + '">Next ›</a>'); }).catch(function () {});
     }).catch(function (e) {
+      if (!token()) { signIn(); return; }   // even a free lesson needs an account (31 Oct 2026, founder)
       if (e && e.detail) { location.replace('/learn'); return; }
       root.querySelector('.tt').textContent = 'Could not load the lesson. Check the internet and go back.';
     });
