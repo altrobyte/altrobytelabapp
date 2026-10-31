@@ -11,6 +11,7 @@ import '../../widgets/loading_widget.dart';
 import 'invoice_detail_screen.dart';
 import 'invoice_form_screen.dart';
 import 'invoice_settings_screen.dart';
+import 'pay_links_screen.dart';
 
 /// Invoices for the institute: what has been billed, collected and is overdue,
 /// with one-tap access to share or record a payment.
@@ -168,17 +169,23 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(children: [
-            Expanded(
-              child: Text('Invoices',
-                  style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            ),
+          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text('Invoices',
+                style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(width: 24),
             OutlinedButton.icon(
               onPressed: _openSettings,
               icon: const Icon(Icons.tune_rounded, size: 18),
               label: const Text('Settings'),
             ),
-            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const PayLinksScreen()));
+                if (mounted) _load();
+              },
+              icon: const Icon(Icons.add_link_rounded, size: 18),
+              label: const Text('Payment link / enrol'),
+            ),
             ElevatedButton.icon(
               onPressed: _newInvoice,
               icon: const Icon(Icons.add_rounded, size: 18),

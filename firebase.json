@@ -37,6 +37,11 @@
         "destination": "/account/index.html"
       },
       {
+        "//": "A custom-amount payment link from Invoices (31 Oct 2026): altrobytelab.com/pay/<token>.",
+        "source": "/pay/**",
+        "destination": "/pay/index.html"
+      },
+      {
         "source": "/learn/**",
         "destination": "/learn/index.html"
       },
