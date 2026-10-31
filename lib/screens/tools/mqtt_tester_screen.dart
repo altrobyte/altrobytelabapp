@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mqtt_client/mqtt_browser_client.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import '../../constants/app_colors.dart';
+import 'mqtt_connect.dart';
 
 /// Public, no-login MQTT client — connect to any broker over secure
 /// WebSocket, subscribe/publish, watch messages live. Pre-filled with
@@ -84,7 +84,7 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
       : MqttQos.atLeastOnce;
   late bool _retain = widget.initialRetain ?? false;
 
-  MqttBrowserClient? _client;
+  MqttClient? _client;
   bool _connecting = false;
   bool get _connected => _client?.connectionStatus?.state == MqttConnectionState.connected;
   final List<_MqttLogLine> _log = [];
@@ -132,7 +132,7 @@ class _MqttTesterScreenState extends State<MqttTesterScreen> {
 
     setState(() => _connecting = true);
     final clientId = 'altrobytelab_${DateTime.now().millisecondsSinceEpoch}';
-    final client = MqttBrowserClient(host, clientId);
+    final client = wsMqttClient(host, clientId);
     client.port = port;
     client.logging(on: false);
     client.keepAlivePeriod = 20;

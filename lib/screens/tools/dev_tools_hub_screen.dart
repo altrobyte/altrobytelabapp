@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
-import 'ble_tester_screen.dart';
+import 'ble_tester_screen.dart' if (dart.library.io) 'ble_tester_stub.dart';
 import 'http_tester_screen.dart';
 import 'mqtt_tester_screen.dart';
 import 'ota_updater_screen.dart';
@@ -22,8 +23,9 @@ class DevToolsHubScreen extends StatelessWidget {
           AppColors.accent, (_) => const HttpTesterScreen()),
       ('WebSocket Tester', 'Connect and exchange messages live', Icons.cable_rounded,
           AppColors.primary, (_) => const WebSocketTesterScreen()),
-      ('BLE Tester', 'Scan and connect to nearby BLE devices', Icons.bluetooth_rounded,
-          AppColors.accent, (_) => const BleTesterScreen()),
+      if (kIsWeb)   // Web Bluetooth; not in the Android app
+        ('BLE Tester', 'Scan and connect to nearby BLE devices', Icons.bluetooth_rounded,
+            AppColors.accent, (_) => const BleTesterScreen()),
       ('OTA Updater', 'Push firmware updates to ESP32 over MQTT', Icons.system_update_alt_rounded,
           AppColors.primary, (_) => const OtaUpdaterScreen()),
     ];

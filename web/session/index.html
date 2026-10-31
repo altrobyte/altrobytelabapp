@@ -53,7 +53,10 @@
   }
   .skel { height: 18px; border-radius: 8px; background: linear-gradient(90deg, #13223A, #1b2f4d, #13223A); background-size: 200% 100%; animation: sh 1.2s infinite; margin: 10px 0; }
   @keyframes sh { to { background-position: -200% 0; } }
+  .inapp nav { display: none !important; }   /* in the Android app, which has its own tabs */
 </style>
+<script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
+
 </head>
 <body>
 <nav><div class="wrap">

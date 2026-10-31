@@ -95,7 +95,12 @@
   .donebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #0F5132; }
   .donebar span { flex: 1; font-weight: 600; font-size: 14px; }
   @media (max-width: 640px) { .dock { display: block; } nav .hide-s { display: none; } }
+  /* In the Android app (its user agent says AltrobyteApp) the app has its own tabs and sign-in: no site bar, no dock. */
+  .inapp nav, .inapp .dock { display: none !important; }
+  .inapp footer { padding-bottom: 30px; }
 </style>
+<script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
+
 </head>
 <body>
 <div id="root"></div>
@@ -154,9 +159,15 @@
   var mods = {}, trial = null;
   function loadRoadmap() {
     return Promise.all([
-      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { (d.modules || []).forEach(function (m) { mods[m.id] = m; }); }),
+      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { mods = {}; (d.modules || []).forEach(function (m) { mods[m.id] = m; }); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
-    ]);
+    ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial })); });
+  }
+  // The last roadmap this visitor saw, shown at once while a fresh one loads (31 Oct 2026, founder: "loading every time").
+  function cacheKey() { return 'altro_roadmap_' + (token() ? token().slice(-10) : 'out'); }
+  function cached() {
+    try { var c = JSON.parse(store(cacheKey()) || 'null'); if (c && c.mods) { mods = c.mods; trial = c.trial; return true; } } catch (e) {}
+    return false;
   }
 
   // ── the roadmap ──
@@ -166,7 +177,10 @@
     root.innerHTML = nav() + '<main class="wrap"><div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
       '<p>Step by step, the way products are really made. The first steps are free, with Altron, your AI trainer, explaining every lesson by voice.</p></div>' +
       '<div class="skel"></div><div class="skel"></div><div class="skel"></div></main>';
+    var shown = cached();
+    if (shown) drawRoadmap();
     loadRoadmap().then(drawRoadmap).catch(function () {
+      if (shown) return;   // the saved roadmap stays up
       root.querySelector('main').innerHTML = '<div class="hero"><h1>Could not load the roadmap</h1><p>Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a></div>';
     });
   }
@@ -177,6 +191,8 @@
       (t ? '<a class="btn btn-ghost btn-sm" href="/pricing">Plans</a>' : '<a class="btn btn-ghost btn-sm" href="javascript:void 0" data-signin>Log in</a>') + '</div></div></nav>';
   }
   function inTrial() { return trial && trial.active === true; }
+  // Someone who can already open every lesson (a plan, the team) is never offered the free week.
+  function offerTrial() { return (!trial || !trial.started) && ORDER.some(function (r) { var n = item(r); return n && n.locked; }); }
   // A roadmap lesson as the server sent it ({id, title, locked, free} plus m, its module), or null if it is not there.
   function item(r) {
     var m = mods[r[0]]; if (!m) return null;
@@ -205,7 +221,7 @@
             return '<a class="lesson' + (done(n.id) ? ' ok' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><div class="ic">' + (done(n.id) ? '✓' : '▶') + '</div><span>' + esc(n.title) + '</span><b class="muted" style="font-size:13px">' + (done(n.id) ? 'Again' : n.free && !inTrial() ? 'Free' : 'Start') + '</b></a>';
           }).join('') : '<div class="lesson"><span class="muted">Lessons for this step are being added.</span></div>') + '</div>';
           if (nOpen < nAll) {
-            var canTrial = !trial || !trial.started;
+            var canTrial = offerTrial();
             body += '<div class="lockbox">' + (nAll - nOpen) + ' premium lesson' + (nAll - nOpen > 1 ? 's' : '') + ' with Altron open with ' + (canTrial ? 'the free week or ' : '') + 'a plan.' +
               '<div class="cta">' + (canTrial ? '<button class="btn btn-main btn-sm" data-trial>Open free for 7 days</button>' : '') + '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>';
           }
@@ -222,9 +238,10 @@
     root.querySelector('main').innerHTML = '<div class="hero"><h1>From your first LED to a shipped IoT product</h1>' +
       '<p>Step by step, the way products are really made. Altron, your AI trainer, explains every lesson by voice and answers your questions.</p>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start the first lesson') + '</a>' : '') +
-      (!trial || !trial.started ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
+      (offerTrial() ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
       '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
       html + unlockCard() + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
+    var old = document.querySelector('.dock'); if (old) old.remove();
     var dock = document.createElement('div'); dock.className = 'dock';
     dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
     document.body.appendChild(dock);
@@ -255,7 +272,7 @@
     funnel('trial_click', 'learn');
     if (!token()) { location.href = '/signin?next=' + encodeURIComponent('/learn?trial=1'); return; }
     getJSON('/trial/start', { method: 'POST' }).then(function () { funnel('trial_started', 'learn'); location.replace('/learn'); })
-      .catch(function (e) { alert((e && e.detail) || 'Could not start the free week just now. Please try again.'); });
+      .catch(function (e) { alert((e && e.detail) || 'The free week could not start just now. Please try again in a minute, or message us on WhatsApp.'); });
   }
 
   // ── a lesson ──

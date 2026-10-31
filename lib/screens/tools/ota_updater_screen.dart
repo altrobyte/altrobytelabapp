@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mqtt_client/mqtt_browser_client.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import '../../constants/app_colors.dart';
+import 'mqtt_connect.dart';
 import 'ota_firmware_sketch.dart';
 
 /// Public, no-login OTA updater — connects to an MQTT broker over secure
@@ -50,7 +50,7 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
   final _versionCtrl = TextEditingController();
   final _shaCtrl = TextEditingController();
 
-  MqttBrowserClient? _client;
+  MqttClient? _client;
   bool _connecting = false;
   bool get _connected => _client?.connectionStatus?.state == MqttConnectionState.connected;
   final List<_OtaLogLine> _log = [];
@@ -101,7 +101,7 @@ class _OtaUpdaterScreenState extends State<OtaUpdaterScreen> {
     }
     setState(() => _connecting = true);
     final clientId = 'altrobytelab_ota_${DateTime.now().millisecondsSinceEpoch}';
-    final client = MqttBrowserClient(host, clientId)
+    final client = wsMqttClient(host, clientId)
       ..port = port
       ..keepAlivePeriod = 20
       ..connectTimeoutPeriod = 8000

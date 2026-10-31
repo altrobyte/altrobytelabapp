@@ -248,19 +248,14 @@
 
 <div class="hero">
   <div class="wrap">
-    <div class="badges"><span class="badge hot">Admissions open</span><span class="badge" id="startBadge">New batch</span><span class="badge" id="seatsBadge">Limited seats</span><span class="badge">Offline (Indore) &amp; online</span><span class="badge">🎁 Free mini lab set-up kit*</span></div>
+    <div class="badges"><span class="badge" id="startBadge">New batch</span><span class="badge">Offline (Indore) &amp; online</span><span class="badge">Mini lab kit included</span></div>
     <h1 style="margin-top:18px">Stop building college projects.<br>Build <em>real products</em> — PCB to cloud to AI.</h1>
     <p class="lede" id="heroLede">The Product Engineering Program: you design your own PCB, write the firmware, put it online and make it think — with a trainer who has shipped this work in industry.</p>
     <div class="ctas">
-      <button class="btn primary" type="button" data-altron data-track="admissions_altron_hero">🎧 Experience live demo</button>
-      <a class="btn primary" href="/learn" data-track="admissions_start_free">▶ Start learning free</a>
-      <a class="btn ghost" href="#build">See what you will build</a>
-      <a class="btn ghost" href="#roadmap">Curriculum</a>
-      <a class="btn ghost" href="#fees">Fees &amp; EMI</a>
-      <a class="btn wa" id="heroWa" href="#talk">Talk to a mentor</a>
-      <a class="btn ghost" href="https://chat.whatsapp.com/FzAEaY7C5uHHmzEcyz3WdZ" target="_blank" rel="noopener" data-track="admissions_community">Free WhatsApp community</a>
+      <!-- Two choices, not seven (31 Oct 2026, founder: "too many buttons, it reads as marketing"); the top bar links the sections. -->
+      <a class="btn primary" href="/learn" data-track="admissions_start_free">Start learning free</a>
+      <button class="btn ghost" type="button" data-altron data-track="admissions_altron_hero">Try a live demo</button>
     </div>
-    <p style="color:#b9c7e3;font-size:13px;margin:12px 0 0">* The mini lab set-up kit comes with every plan.</p>
     <div class="stats">
       <div><b id="msCount">165+</b><span>milestones, step by step</span></div>
       <div><b>4</b><span>stages, ESP32 → STM32 → AI</span></div>
@@ -535,11 +530,9 @@
 
 <footer>© Altrobyte Lab · 5th Floor, Gravity Mall, Mechanic Nagar, Indore 452010 · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a> · <a href="https://wa.me/917222977927">+91 72229 77927</a><br><a href="/">altrobytelab.com</a> · <a href="/plans">All plans</a></footer>
 
-<div class="proof" id="proof" role="status" aria-live="polite"><span class="i">⚡</span><span class="w" id="proofT"></span><button type="button" id="proofX" aria-label="Close">×</button></div>
 <div class="bar">
-  <div class="t"><b id="barT">Admissions open</b> · experience a 15-minute live demo with Altron, our AI mentor</div>
-  <button class="btn ghost" type="button" data-altron data-track="admissions_altron_bar">🎧 Live demo</button>
-  <a class="btn primary" href="#fees">Enrol now</a>
+  <div class="t"><b id="barT">Product Engineering Program</b> · PCB, firmware, cloud and AI</div>
+  <a class="btn primary" href="#fees">See fees</a>
 </div>
 
 <script>
@@ -593,7 +586,7 @@
   fetch(API + '/program/plans').then((r) => r.json()).then((d) => {
     plans = d.plans || []; enrolSlug = d.enrol_slug || enrolSlug; waNumber = d.whatsapp_number || waNumber;
     if (d.start_label) $('startBadge').textContent = d.start_label;
-    if (d.seats_left) { $('seatsBadge').textContent = d.seats_left + ' seats left'; $('fomoSeats').textContent = '· only ' + d.seats_left + ' seats left'; }
+    if (d.seats_left) { $('fomoSeats').textContent = '· only ' + d.seats_left + ' seats left'; }
     if (d.offer_on && d.offer_ends) countdown(d.offer_ends); else $('fomo').classList.add('hidden');
     renderPlans(d);
     $('seatBtn').href = `/enroll/${encodeURIComponent(enrolSlug)}?plan=token`;
@@ -797,7 +790,7 @@
         seen.add(a.student_name);
         return true;
       });
-      if (!items.length) return;
+      if (!items.length || !$('proof')) return;   // the "X registered" pop-up is off (31 Oct 2026, founder)
       const box = $('proof');
       let i = 0, timer;
       const show = () => {
@@ -894,7 +887,6 @@
     body.altron-open { margin-right: 0; }
   }
 </style>
-<button class="altron-fab" type="button" data-altron data-track="admissions_altron_fab">🎧 Experience live demo</button>
 <div class="altron-panel" id="altronPanel" role="dialog" aria-label="Experience live demo">
   <header><span>🎧 Experience live demo</span><button type="button" id="altronClose" aria-label="Close">✕</button></header>
 </div>
@@ -908,21 +900,18 @@
       f.src = '/class/?id=demo&embed=1' + (lead ? '&l=' + encodeURIComponent(lead) : ''); f.allow = 'microphone; autoplay'; f.title = 'Altron';
       panel.appendChild(f);
     }
-    panel.classList.add('on'); document.body.classList.add('altron-open'); fab.style.display = 'none';
+    panel.classList.add('on'); document.body.classList.add('altron-open'); if (fab) fab.style.display = 'none';
     try { if (window.gtag) gtag('event', 'admissions_altron_open'); } catch (_) {}
   }
   function close() {
     const f = panel.querySelector('iframe'); if (f) f.remove();          // ends the voice session
-    panel.classList.remove('on'); document.body.classList.remove('altron-open'); fab.style.display = '';
+    panel.classList.remove('on'); document.body.classList.remove('altron-open'); if (fab) fab.style.display = '';
   }
   document.addEventListener('click', (e) => { if (e.target.closest('[data-altron]')) { e.preventDefault(); open(); } });
-  // Altron opens by itself (browsers allow the voice only after a tap, so the learner taps Start once). Someone who
-  // closed it is not shown it again on later visits.
-  const closedKey = 'altron_closed';
-  document.getElementById('altronClose').onclick = () => { close(); try { localStorage.setItem(closedKey, '1'); } catch (_) {} };
-  let wasClosed = false; try { wasClosed = localStorage.getItem(closedKey) === '1'; } catch (_) {}
+  // Altron opens when asked (Try a live demo), or from a link with ?demo=1 / #demo; it no longer pops up by itself
+  // (31 Oct 2026, founder: the page read as marketing).
+  document.getElementById('altronClose').onclick = close;
   if (new URLSearchParams(location.search).get('demo') === '1' || location.hash === '#demo') open();
-  else if (!wasClosed) setTimeout(open, 1500);
 })();
 </script>
 </body>
