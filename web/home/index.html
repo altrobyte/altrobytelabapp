@@ -214,15 +214,33 @@
 (function () {
   var t = ''; try { t = JSON.parse(localStorage.getItem('flutter.student_token') || '""'); } catch (e) {}
   if (!t) return;
+  // Only a profile button; sign out and the rest sit inside it (31 Oct 2026, founder).
+  var st = document.createElement('style');
+  st.textContent = '.pf{position:relative;margin-left:8px}.pf summary{list-style:none;cursor:pointer;width:40px;height:40px;border-radius:50%;' +
+    'background:#1b2a44;border:1px solid rgba(255,255,255,.15);display:grid;place-items:center;font-size:18px}' +
+    '.pf summary::-webkit-details-marker{display:none}.pf summary::after{display:none}' +
+    '.pf .m{position:absolute;right:0;top:48px;min-width:200px;background:#111c30;border:1px solid rgba(255,255,255,.12);border-radius:12px;' +
+    'padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:60}' +
+    '.pf .m a{display:block;padding:10px 12px;border-radius:8px;color:#e8eefc;text-decoration:none;font-size:14px}' +
+    '.pf .m a:hover{background:#1b2a44}.pf hr{border:0;border-top:1px solid rgba(255,255,255,.1);margin:4px 0}';
+  document.head.appendChild(st);
   document.getElementById('authbtns').innerHTML =
-    '<a class="btn btn-ghost" href="/student/home" style="padding:10px 16px">My account</a> ' +
-    '<a class="btn btn-ghost" href="#" id="signout" style="padding:10px 16px">Sign out</a> ' +
-    '<a class="btn btn-main" href="/learn">My learning</a>';
+    '<details class="pf"><summary title="My profile">👤</summary><div class="m">' +
+    '<a href="/learn">My learning</a><a href="/student/home">My account and profile</a><a href="/learn/live">Live classes</a>' +
+    '<hr><a href="#" id="signout">Sign out</a></div></details>';
   document.getElementById('signout').onclick = function (e) {
     e.preventDefault();
     try { localStorage.removeItem('flutter.student_token'); } catch (x) {}
     location.href = '/';
   };
+  // Someone signed in continues, not "starts free".
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('a.btn-main[href="/learn"]').forEach(function (a) { if (/Start learning free/.test(a.textContent)) a.textContent = '▶ Continue learning'; });
+  });
+  document.addEventListener('click', function (e) {
+    var d = document.querySelector('details.pf[open]');
+    if (d && !d.contains(e.target)) d.removeAttribute('open');
+  });
 })();
 </script>
 
