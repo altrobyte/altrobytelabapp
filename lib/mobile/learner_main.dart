@@ -104,6 +104,7 @@ class _HomeState extends State<_Home> {
   int _tab = 0;
   bool _fullScreen = false;   // a lesson or a live class fills the screen, without the tabs
   final _learn = GlobalKey<_WebTabState>(), _live = GlobalKey<_WebTabState>();
+  final _toolsNav = GlobalKey<NavigatorState>();
 
   Future<void> signIn({String next = ''}) async {
     final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const _SignIn()));
@@ -132,6 +133,10 @@ class _HomeState extends State<_Home> {
         if (didPop) return;
         final web = _tab == 0 ? _learn.currentState : _tab == 1 ? _live.currentState : null;
         if (web != null && await web.back()) return;
+        if (_tab == 2 && (_toolsNav.currentState?.canPop() ?? false)) {
+          _toolsNav.currentState!.pop();
+          return;
+        }
         if (_tab != 0) {
           setState(() => _tab = 0);
         } else {
@@ -144,7 +149,12 @@ class _HomeState extends State<_Home> {
           child: IndexedStack(index: _tab, children: [
             _WebTab(key: _learn, start: '/learn', onSignIn: signIn, onPath: _onPath),
             _WebTab(key: _live, start: '/live-sessions', onSignIn: signIn, onPath: _onPath),
-            const DevToolsHubScreen(),
+            // The dev tools were made for the light web app: they keep that look, in their own stack so a tool opens
+            // inside the tab.
+            Theme(
+              data: ThemeData(colorSchemeSeed: _orange, brightness: Brightness.light),
+              child: Navigator(key: _toolsNav, onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => const DevToolsHubScreen())),
+            ),
             _Profile(onSignIn: signIn, onOpen: (p) { setState(() => _tab = 0); _learn.currentState?.open(p); }),
           ]),
         ),

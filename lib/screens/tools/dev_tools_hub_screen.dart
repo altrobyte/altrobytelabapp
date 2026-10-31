@@ -40,7 +40,7 @@ class DevToolsHubScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Test brokers and endpoints right in the browser — free, no login.',
+          Text(kIsWeb ? 'Test brokers and endpoints right in the browser — free, no login.' : 'Test brokers, endpoints and firmware updates — free, no login.',
               style: GoogleFonts.inter(fontSize: 12.5, color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           ...tools.map((t) => Card(
@@ -63,7 +63,7 @@ class DevToolsHubScreen extends StatelessWidget {
           // no Web API exposes it, on any browser vendor. Only a real native
           // app (Play Store, planned) can support it. Shown here disabled
           // so it's on the radar without implying it works today.
-          Container(
+          if (kIsWeb) Container(   // the Android app shows only what works in it
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,

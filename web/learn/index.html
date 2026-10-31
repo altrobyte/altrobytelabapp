@@ -192,7 +192,8 @@
   }
   function inTrial() { return trial && trial.active === true; }
   // Someone who can already open every lesson (a plan, the team) is never offered the free week.
-  function offerTrial() { return (!trial || !trial.started) && ORDER.some(function (r) { var n = item(r); return n && n.locked; }); }
+  function anyLocked() { return ORDER.some(function (r) { var n = item(r); return n && n.locked; }); }
+  function offerTrial() { return (!trial || !trial.started) && anyLocked(); }
   // A roadmap lesson as the server sent it ({id, title, locked, free} plus m, its module), or null if it is not there.
   function item(r) {
     var m = mods[r[0]]; if (!m) return null;
@@ -240,7 +241,7 @@
       '<div style="display:flex;gap:10px;flex-wrap:wrap">' + (first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start the first lesson') + '</a>' : '') +
       (offerTrial() ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div>' +
       '<div class="prog"><div style="display:flex;justify-content:space-between;font-size:14px"><b>Your progress</b><span class="muted">' + doneLessons + ' of ' + freeLessons + ' open lessons</span></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>' + trialLine + '</div>' +
-      html + unlockCard() + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
+      html + (anyLocked() ? unlockCard() : '') + '<footer><a href="/">Home</a> · <a href="/pricing">Pricing</a> · <a href="/live-sessions">Live classes</a> · <a href="https://wa.me/917222977927">WhatsApp us</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</footer>';
     var old = document.querySelector('.dock'); if (old) old.remove();
     var dock = document.createElement('div'); dock.className = 'dock';
     dock.innerHTML = first ? '<a class="btn btn-main" href="' + first + '">' + (doneLessons ? '▶ Continue learning' : '▶ Start learning free') + '</a>' : '<a class="btn btn-main" href="/pricing">Unlock every step</a>';
