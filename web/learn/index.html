@@ -159,6 +159,19 @@
     return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
   }
   // Altron, the AI trainer, is on hold as a beta (31 Oct 2026, founder): it opens in notes only for testers (?beta=1).
+  // A GitHub project opens in VS Code (founder, 31 Oct 2026): vscode.dev in the browser, or cloned into VS Code on the laptop.
+  function projectLinks(link) {
+    var m = /^https?:\/\/github\.com\/([^\/?#]+)\/([^\/?#]+)(.*)$/.exec(link);
+    if (!m) return '<a class="btn btn-main" href="' + esc(link) + '" target="_blank" rel="noopener">Open the project</a>';
+    var repo = m[2].replace(/\.git$/, '');
+    var web = 'https://vscode.dev/github/' + m[1] + '/' + repo + m[3].replace(/\.git$/, '');
+    var clone = 'vscode://vscode.git/clone?url=' + encodeURIComponent('https://github.com/' + m[1] + '/' + repo + '.git');
+    return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+      '<a class="btn btn-main" href="' + esc(web) + '" target="_blank" rel="noopener">Open in VS Code</a>' +
+      '<a class="btn btn-ghost" href="' + esc(clone) + '">Clone into my VS Code</a>' +
+      '<a class="muted" style="font-size:14px" href="' + esc(link) + '" target="_blank" rel="noopener">View on GitHub</a></div>' +
+      '<p class="muted" style="font-size:13px;margin-top:10px">"Open in VS Code" works in the browser, nothing to install. "Clone into my VS Code" copies the project into VS Code on your laptop, so you can build and upload it with PlatformIO.</p>';
+  }
   function beta() { if (/[?&]beta=1/.test(location.search)) store('altro_beta', '1'); return store('altro_beta') === '1'; }
 
   // ── data ──
@@ -316,7 +329,7 @@
       var link = it.resource_url || '';
       body = '<div class="body"><div class="pad"><h1>' + (ICON[it.type] || '📎') + ' ' + esc(it.title) + '</h1>' +
         (it.html_content ? '<div style="margin:12px 0">' + it.html_content + '</div>' : '<p class="muted" style="margin:8px 0 16px">Build it on your board, then compare with the reference project.</p>') +
-        (link ? '<a class="btn btn-main" href="' + esc(link) + '" target="_blank" rel="noopener">Open the project</a>' : '') + '</div></div>';
+        (link ? projectLinks(link) : '') + '</div></div>';
     }
     var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' :
       '<div class="foot"><span class="muted">' + (done(it.id) ? 'Done ✓' : 'Finished this? Mark it done to track your progress.') + '</span>' +
