@@ -205,10 +205,26 @@
     <div class="links">
       <a href="#altron">Altron AI trainer</a><a href="#roadmap">Roadmap</a><a href="/pricing">Pricing</a><a href="#industrial">For industry</a><a href="/live-sessions">Live classes</a>
     </div>
-    <a class="btn btn-ghost" href="/signin" style="padding:10px 16px">Log in</a>
-    <a class="btn btn-main" href="/learn">Start free</a>
+    <span id="authbtns"><a class="btn btn-ghost" href="/signin" style="padding:10px 16px">Log in</a>
+    <a class="btn btn-main" href="/learn">Start free</a></span>
   </div>
 </nav>
+<script>
+// Signed in already (the app's saved sign-in): My learning and Sign out instead of Log in (31 Oct 2026, founder).
+(function () {
+  var t = ''; try { t = JSON.parse(localStorage.getItem('flutter.student_token') || '""'); } catch (e) {}
+  if (!t) return;
+  document.getElementById('authbtns').innerHTML =
+    '<a class="btn btn-ghost" href="/student/home" style="padding:10px 16px">My account</a> ' +
+    '<a class="btn btn-ghost" href="#" id="signout" style="padding:10px 16px">Sign out</a> ' +
+    '<a class="btn btn-main" href="/learn">My learning</a>';
+  document.getElementById('signout').onclick = function (e) {
+    e.preventDefault();
+    try { localStorage.removeItem('flutter.student_token'); } catch (x) {}
+    location.href = '/';
+  };
+})();
+</script>
 
 <header class="hero">
   <div class="wrap">
