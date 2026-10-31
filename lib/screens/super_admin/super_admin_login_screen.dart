@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
-import '../../services/google_auth_service.dart';
 import '../../widgets/custom_button_widget.dart';
 import '../../utils/validators.dart';
 
@@ -278,37 +277,6 @@ class _SuperAdminLoginScreenState extends State<SuperAdminLoginScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: _otpMode ? _buildOtpForm() : _buildPasswordForm(auth),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () async {
-                      try {
-                        final result = await GoogleAuthService.signIn();
-                        if (result.role == 'super_admin') {
-                          // ignore: use_build_context_synchronously
-                          await context.read<AuthProvider>().setFromResponse(result.data);
-                          if (context.mounted) context.go('/super/dashboard');
-                        } else if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                              content: Text('That Google account is not a super admin.')));
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.g_mobiledata_rounded, size: 22),
-                    label: Text('Sign in with Google', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
                 ),
                 const SizedBox(height: 8),

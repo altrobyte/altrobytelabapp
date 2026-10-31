@@ -167,6 +167,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // line — an empty scarcity claim is worse than none.
                 'program_start_label',
                 'program_seats_left',
+                // Who can sign in to this admin with WhatsApp OTP (31 Oct 2026, founder).
+                'admin_login_phones',
               ])
                 if (_wa(key) != null)
                   _WaSettingRow(
@@ -1321,6 +1323,7 @@ class _WaSettingRowState extends State<_WaSettingRow> {
   static const _labels = {
     'program_whatsapp_number': 'Enquiry number',
     'wa_dashboard_url': 'WhatsApp dashboard link',
+    'admin_login_phones': 'Admin login numbers (WhatsApp OTP)',
   };
 
   String get _label =>
