@@ -327,9 +327,10 @@
   function sectionFor(i) {          // what Altron is told about a section: never the answer
     const s = klass.sections[i];
     // A part named as [id] in the notes goes in front as a cue for point_at; said aloud it would sound twice ("relay relay").
-    const cue = (t) => { const ids = [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]); const said = t.replace(/\s*\[[\w-]+\]/g, '');
-                         return (ids.length ? '(point at: ' + ids.join(', ') + ') ' : '') + said; };
-    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(cue),
+    // Which part to light up goes in its own list, never inside the words to say (Altron once read "(point at: commit)" aloud).
+    const plain = (t) => t.replace(/\s*\[[\w-]+\]/g, '');
+    const pointing = s.teach.flatMap((t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => ({ part: m[1], while_you_say: plain(t).split(/[,.:;]/)[0].slice(0, 60) })));
+    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(plain), point_at_when: pointing,
              parts_you_can_point_at: s.points, check_question: s.check ? { question: s.check.q, options: s.check.options.map((o, k) => (k + 1) + '. ' + o) } : null,
              practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts };
   }
@@ -724,7 +725,7 @@
       if (sc) {
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
-        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.slice(-320); }
+        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.replace(/\(point at:[^)]*\)\s*/gi, '').slice(-320); }
         if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); lastHuman = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
         if (sc.turnComplete) {
           if (tutorLine.trim()) { waitingForThem = true; nudged = false; askedThem = /\?\s*$/.test(tutorLine.trim()); if (ending) endAt = Math.min(endAt, Date.now() + 2500); }
