@@ -143,7 +143,7 @@
       ['Wi-Fi, Bluetooth and OTA on ESP32', [[9, 72], [9, 74], [9, 75], [9, 86]]],
       ['Cloud with AWS IoT', [[9, 52], [9, 53], [9, 54], [9, 59], [9, 56]]],
       ['IoT security', [[9, 99], [9, 100], [9, 101]]],
-      ['ESP-IDF', [[5, 41]]],
+      ['ESP-IDF', [[5, 41], [5, 105]]],
       ['FreeRTOS']]],
     ['Pro', '#C77DFF', [
       ['Industrial IoT and machine monitoring', [[8, 42], [8, 45], [8, 90], [8, 91]]],
@@ -173,7 +173,7 @@
       location.href = '/learn?signed_out=1';
       return;
     }
-    if (t.closest && t.closest('[data-outline]')) { var sh = document.querySelector('.shell'); if (sh) sh.classList.toggle('outline-on'); return; }
+    if (t.closest && t.closest('[data-outline]')) { var sh = document.querySelector('.shell'); if (sh) sh.classList.toggle('outline-on'); var cu = document.querySelector('.side .it.on'); if (cu) cu.scrollIntoView({ block: 'center' }); return; }
     if (t.closest && t.closest('[data-admin]')) { e.preventDefault(); openAdmin(); return; }
     var open = document.querySelector('details.acct[open]');
     if (open && !(t.closest && t.closest('details.acct'))) open.removeAttribute('open');
@@ -258,9 +258,14 @@
         '<a href="/student/dev-tools">Dev tools</a><a href="/live-sessions">All live sessions</a><hr>' +
         '<a href="#" data-signout>Sign out</a></div></details>' : '<button class="btn btn-main btn-sm" data-signin>Sign in</button>') + '</div></div>';
   }
+  var cur_title = '';      // the open lesson's title, for a lesson no step lists yet
   function outline(cur) {
     if (!Object.keys(mods).length) return '<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
     var html = '', no = 0;
+    // A lesson opened by its link that no step lists yet (a new class's notes): still show it, on top.
+    if (cur && !allItems().some(function (n) { return String(n.id) === String(cur); }) && cur_title) {
+      html += '<div class="lvl">This lesson</div><div class="items" style="display:block"><a class="it on" href="' + esc(location.pathname) + '"><span class="ic">📄</span><span class="nm">' + esc(cur_title) + '</span></a></div>';
+    }
     LEVELS.forEach(function (L) {
       html += '<div class="lvl" style="color:' + L[1] + '">' + L[0] + '</div>';
       L[2].forEach(function (T) {
@@ -359,6 +364,10 @@
   function drawItem(it) {
     document.title = it.title + ' · Altrobyte Lab';
     funnel('lesson_open', String(it.id));
+    if (!allItems().some(function (n) { return String(n.id) === String(it.id); })) {
+      cur_title = it.title;
+      var sd = root.querySelector('.side'); if (sd) { sd.innerHTML = outline(it.id); bindOutline(); }
+    }
     var main = root.querySelector('.main');
     var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><button class="iconbtn hide-s" data-outline title="Course list">☰</button><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
       // Done sits in the bar, not in a strip of its own under the note (31 Oct 2026, founder).
