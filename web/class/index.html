@@ -97,6 +97,8 @@
   /* a practical on the learner's own PC: paste the output, or give the GitHub username; the page checks it */
   .pc { background: #fff4e8; border: 1px solid #ffd2a8; border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
   .pc .t { color: #7a3a06; font-weight: 600; }
+  .pc .wait { font-size: 13.5px; color: #9a5a1c; }
+  .pc.done .wait { display: none; }
   .pc textarea, .pc input { width: 100%; font: 13.5px/1.5 Consolas, Menlo, monospace; border: 1px solid #f0c9a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: var(--ink); }
   .pc textarea { min-height: 84px; resize: vertical; }
   .pc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -343,9 +345,9 @@
     const tap = s.practical && s.practical.task === 'tap';
     if (s.boardHtml) h += `<div class="board${tap ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
     if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
-    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div>
+    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: do it on your PC, paste here, tap Check.</div>
       <textarea id="pcIn" spellcheck="false" placeholder="Paste the output here"></textarea><div class="row"><button type="button" id="pcGo">Check</button></div><div class="res" id="pcRes"></div></div>`;
-    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div>
+    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: push from your PC, then type your username and tap Check.</div>
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
       const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
@@ -441,12 +443,16 @@
 
   // A practical on the learner's own PC. The page checks it (a pattern from the note, or GitHub's public API); Altron only
   // hears the result, and on a miss the start of what they pasted, so it can read the error and help.
+  // While they work on their PC the talk pauses (no minutes burn on silence); a Check brings Altron back with the result.
+  let afterPc = null, pcPaused = false;
   function pcResult(right, msg, said) {
     const s = klass.sections[at];
     $('pcRes').className = 'res ' + (right ? 'ok' : 'bad'); $('pcRes').textContent = msg;
     if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); }
     lastHuman = Date.now();
-    tell('[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said));
+    const line = '[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said);
+    if (!running && pcPaused) { afterPc = '[The learner is back from their PC.] ' + line; pcPaused = false; $('resume').click(); }
+    else tell(line);
   }
   function checkPaste() {
     const s = klass.sections[at]; if (pracDone) return;
@@ -700,6 +706,7 @@
         if (kind === 'first') note(isDemo
           ? `The demo has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence and begin the opening counselling: ask what they do now.`
           : `The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
+        else if (kind === 'continue' && afterPc) { note(afterPc); afterPc = null; }
         else if (kind === 'continue') note('[The learner is back after a pause. Welcome them back in a few words and carry on from section ' + (at + 1) + ': ' + JSON.stringify(sectionFor(at)) + ']');
       }
       if (m.toolCall) onTools(m.toolCall.functionCalls);
@@ -759,6 +766,11 @@
       nudged = true;
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
+    }
+    const s = klass && klass.sections[at];
+    if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && (Date.now() - lastActive) / 1000 >= 40) {
+      pcPaused = true;
+      return pause('Altron is waiting while you work on your PC. Paste the output and tap Check: the class carries on by itself.');
     }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
   }
