@@ -99,6 +99,11 @@
   .pc .t { color: #7a3a06; font-weight: 600; }
   .pc .wait { font-size: 13.5px; color: #9a5a1c; }
   .pc.done .wait { display: none; }
+  .pc .live { font: 12.5px/1.6 Consolas, Menlo, monospace; background: #0f1b2b; color: #7ee2a8; border-radius: 10px; padding: 8px 10px; max-height: 150px; overflow: auto; }
+  .pc .live:empty { display: none; }
+  .pc .live i { color: #8aa0b8; font-style: normal; }
+  .pc .cmds button { background: var(--navy); }
+  .pc .cmds button.off { background: #5a6b7d; }
   .pc textarea, .pc input { width: 100%; font: 13.5px/1.5 Consolas, Menlo, monospace; border: 1px solid #f0c9a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: var(--ink); }
   .pc textarea { min-height: 84px; resize: vertical; }
   .pc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -256,7 +261,7 @@
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const isDemo = classId === 'demo';
   // A free class a shared link opens without a sign-in (the server's GUEST_CLASSES); the WhatsApp sign-in comes after its minutes.
-  const canGuest = isDemo || classId === 'git';
+  const canGuest = !noteId;
   const IDLE_S = 120;
   let lang = P.get('lang') || (canGuest ? 'hi' : 'en');   // ad leads are most at ease in Hinglish
   if (isDemo) $('start').textContent = '▶ Start live demo';
@@ -305,6 +310,7 @@
         check: check ? { q: ((check.querySelector('p:not(.why)') || {}).textContent || '').trim(), options: [...check.querySelectorAll('li')].map((li) => li.textContent.trim()),
                          answer: Number(check.dataset.answer) - 1, why: ((check.querySelector('.why') || {}).textContent || '').trim() } : null,
         practical: prac ? { task: prac.dataset.task || 'tap', answer: prac.dataset.answer, match: prac.dataset.match || '', repo: prac.dataset.repo || '',
+                            topic: prac.dataset.topic || '', cmd: prac.dataset.cmd || '',
                             text: prac.textContent.trim() } : null,
       };
     });
@@ -338,6 +344,7 @@
 
   function render() {
     const s = klass.sections[at];
+    if (mq) { try { mq.end(true); } catch (_) {} mq = null; clearTimeout(mqWait); }
     checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; if (pcHold) holdForPc(false);
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
@@ -348,6 +355,10 @@
     if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
     else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: do it on your PC, paste here, tap Check.</div>
       <textarea id="pcIn" spellcheck="false" placeholder="Paste the output here"></textarea><div class="row"><button type="button" id="pcGo">Check</button></div><div class="res" id="pcRes"></div></div>`;
+    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: upload the code, then type your NAME and tap Listen.</div>
+      <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your NAME from the code" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Listen</button></div>
+      ${s.practical.cmd ? '<div class="row cmds hidden" id="pcCmd"><button type="button" data-cmd="ON">💡 Send ON</button><button type="button" class="off" data-cmd="OFF">Send OFF</button></div>' : ''}
+      <div class="live" id="pcLive"></div><div class="res" id="pcRes"></div></div>`;
     else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: push from your PC, then type your username and tap Check.</div>
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
@@ -369,8 +380,10 @@
       pre.appendChild(b);
     }
     if ($('pcGo')) {
-      $('pcGo').onclick = () => (s.practical.task === 'github' ? checkGithub() : checkPaste());
-      if (s.practical.task === 'github') { $('pcIn').value = store.get('altron_gh') || ''; $('pcIn').onkeydown = (e) => { if (e.key === 'Enter') checkGithub(); }; }
+      const run = { github: checkGithub, mqtt: checkMqtt }[s.practical.task] || checkPaste;
+      $('pcGo').onclick = () => run();
+      if (s.practical.task !== 'paste') { $('pcIn').value = store.get(s.practical.task === 'mqtt' ? 'altron_mq' : 'altron_gh') || ''; $('pcIn').onkeydown = (e) => { if (e.key === 'Enter') run(); }; }
+      for (const b of document.querySelectorAll('#pcCmd button')) b.onclick = () => sendCmd(b.dataset.cmd);
     }
     if (tap) {
       for (const el of document.querySelectorAll('#board [data-point]')) el.addEventListener('click', () => tapPart(el.dataset.point));
@@ -497,6 +510,54 @@
       if (r.status === 403 || r.status === 429) return pcResult(false, 'GitHub is busy (too many checks from this network). Try again in a few minutes.', 'GitHub refused the check for now (rate limit), not their mistake.');
       pcResult(false, 'GitHub could not be checked. Try again.', 'GitHub could not be reached.');
     } catch (_) { pcResult(false, 'GitHub could not be reached. Check your internet and try again.', 'GitHub could not be reached from their network.'); }
+  }
+
+  // An MQTT practical: the page joins the same public broker as the learner's board (over a websocket), listens on their
+  // topic and shows each message live; it can send their board a command. Passing = a message that matches arrives.
+  let mq = null, mqWait = 0, mqLib = null;
+  function loadMqtt() {
+    if (window.mqtt) return Promise.resolve(window.mqtt);
+    if (!mqLib) mqLib = new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js';
+      sc.onload = () => ok(window.mqtt); sc.onerror = () => { mqLib = null; bad(new Error('no mqtt')); }; document.head.appendChild(sc); });
+    return mqLib;
+  }
+  const mqTopic = (t, name) => t.replace('{name}', name);
+  async function checkMqtt() {
+    const s = klass.sections[at]; if (pracDone && !s.practical.cmd) return;
+    const name = $('pcIn').value.trim().toLowerCase();
+    if (!/^[a-z0-9_-]{1,30}$/.test(name)) return pcResult(false, 'Type the NAME from your code: small letters, no spaces.', 'The name they typed is not a valid topic name.');
+    store.set('altron_mq', name);
+    const topic = mqTopic(s.practical.topic, name);
+    $('pcRes').className = 'res'; $('pcRes').textContent = 'Connecting to broker.hivemq.com…';
+    let lib; try { lib = await loadMqtt(); } catch (_) { return pcResult(false, 'The MQTT helper could not load. Check your internet and tap Listen again.', 'The page could not load its MQTT helper (their internet).'); }
+    if (mq) { try { mq.end(true); } catch (_) {} }
+    const me = lib.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: 'altro-class-' + Math.random().toString(16).slice(2, 10), clean: true, connectTimeout: 8000, reconnectPeriod: 0 });
+    mq = me;
+    me.on('connect', () => {
+      if (mq !== me) return;
+      me.subscribe(topic);
+      $('pcRes').textContent = '👂 Listening on ' + topic + ' …';
+      if ($('pcCmd')) $('pcCmd').classList.remove('hidden');
+      clearTimeout(mqWait);
+      mqWait = setTimeout(() => { if (mq === me && !pracDone) pcResult(false, '⌛ Nothing on ' + topic + ' for 60 seconds. Open the Serial Monitor: does it say Wi-Fi connected and MQTT connected? Is NAME the same in the code and here?',
+        'No message arrived on ' + topic + ' in 60 seconds.'); }, 60000);
+    });
+    me.on('error', () => { if (mq === me) pcResult(false, 'Could not reach the broker from this network. Try again, or another network.', 'The page could not reach the MQTT broker from their network.'); });
+    me.on('message', (t, buf) => {
+      if (mq !== me) return;
+      const msg = String(buf).slice(0, 200);
+      const line = document.createElement('div'); line.innerHTML = '<i>' + new Date().toLocaleTimeString() + '</i> ' + esc(msg);
+      $('pcLive').appendChild(line); while ($('pcLive').children.length > 8) $('pcLive').firstChild.remove(); $('pcLive').scrollTop = 1e9;
+      let re = null; try { re = s.practical.match ? new RegExp(s.practical.match, 'i') : null; } catch (_) {}
+      if (!pracDone && (!re || re.test(msg))) { clearTimeout(mqWait); pcResult(true, (s.practical.cmd ? '✅ Your board obeyed and reported back: ' : '✅ Your board is on the internet. It just said: ') + msg, ''); }
+    });
+  }
+  function sendCmd(cmd) {
+    const s = klass.sections[at]; const name = store.get('altron_mq') || '';
+    if (!mq || !mq.connected || !name) return;
+    mq.publish(mqTopic(s.practical.cmd, name), cmd);
+    $('pcRes').className = 'res'; $('pcRes').textContent = '📤 Sent ' + cmd + ' to ' + mqTopic(s.practical.cmd, name) + '. Watch your LED and the messages above.';
+    lastHuman = Date.now();
   }
 
   const NUM = { one: 1, first: 1, ek: 1, pehla: 1, two: 2, second: 2, do: 2, doosra: 2, dusra: 2, three: 3, third: 3, teen: 3, teesra: 3, tisra: 3, four: 4, fourth: 4, char: 4, chaar: 4 };
