@@ -337,7 +337,7 @@
 
   function render() {
     const s = klass.sections[at];
-    checkShown = false; checkDone = false; pracDone = false;
+    checkShown = false; checkDone = false; pracDone = false; if (pcHold) holdForPc(false);
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
@@ -443,16 +443,25 @@
 
   // A practical on the learner's own PC. The page checks it (a pattern from the note, or GitHub's public API); Altron only
   // hears the result, and on a miss the start of what they pasted, so it can read the error and help.
-  // While they work on their PC the talk pauses (no minutes burn on silence); a Check brings Altron back with the result.
-  let afterPc = null, pcPaused = false;
+  // While they work on their PC the talk is on hold: the line stays open but no sound is sent, so silence costs nothing,
+  // and a Check (or the mic button) brings Altron straight back.
+  let pcHold = false;
+  function holdForPc(on) {
+    pcHold = on;
+    $('smsg').textContent = on ? 'Altron is waiting while you work on your PC. Paste the output and tap Check, or tap 🎙️ to ask something.' : '';
+    $('smsg').style.color = '#ffd8bd';
+    status(on ? 'waiting for you' : 'listening', on ? '' : 'live');
+    lastActive = Date.now();
+  }
   function pcResult(right, msg, said) {
     const s = klass.sections[at];
     $('pcRes').className = 'res ' + (right ? 'ok' : 'bad'); $('pcRes').textContent = msg;
     if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); }
     lastHuman = Date.now();
     const line = '[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said);
-    if (!running && pcPaused) { afterPc = '[The learner is back from their PC.] ' + line; pcPaused = false; $('resume').click(); }
-    else tell(line);
+    if (pcHold) holdForPc(false);
+    if (running) tell(line);
+    else $('smsg').textContent = 'Tap Continue: Altron will carry on from here.';
   }
   function checkPaste() {
     const s = klass.sections[at]; if (pracDone) return;
@@ -582,6 +591,7 @@
       if (guestDone) throw Object.assign(new Error('Sign in with your WhatsApp number to carry on.'), { signin: true });
       const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: classId, lang, visitor: visitorId }) });
       const gb = await g.json().catch(() => ({}));
+      if (g.status === 429 && !isDemo) { guestDone = true; throw Object.assign(new Error('Sign in with your WhatsApp number to carry on with the class.'), { signin: true }); }
       if (g.status === 429) throw Object.assign(new Error(gb.detail || "You have had today's free demo."), { out: true });
       if (!g.ok) { guestDone = true; throw Object.assign(new Error(gb.detail || 'Sign in with your WhatsApp number to start.'), { signin: true }); }
       guest = true; track('class_guest_started');
@@ -624,7 +634,7 @@
     await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC], { type: 'application/javascript' })));
     const node = new AudioWorkletNode(inCtx, 'mic');
     node.port.onmessage = (e) => {
-      if (!micOn || !ready()) return;
+      if (!micOn || pcHold || !ready()) return;
       const d = e.data;
       if (ratio === 1) { for (const v of d) pcm.push(v); } else { for (let i = 0; i < d.length / ratio; i++) pcm.push(d[Math.floor(i * ratio)]); }
       if (pcm.length >= 1600) {
@@ -706,7 +716,6 @@
         if (kind === 'first') note(isDemo
           ? `The demo has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence and begin the opening counselling: ask what they do now.`
           : `The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
-        else if (kind === 'continue' && afterPc) { note(afterPc); afterPc = null; }
         else if (kind === 'continue') note('[The learner is back after a pause. Welcome them back in a few words and carry on from section ' + (at + 1) + ': ' + JSON.stringify(sectionFor(at)) + ']');
       }
       if (m.toolCall) onTools(m.toolCall.functionCalls);
@@ -735,7 +744,7 @@
     endConn();
     try { const t = await fetchToken(true); wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup; conn = newConn(t);
           rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000; connect('renew'); }
-    catch (e) { stop(e.out ? e.message : 'The connection dropped. Tap Continue to carry on.', !e.out); }
+    catch (e) { if (e.signin) { stop(''); askSignin(); } else stop(e.out ? e.message : 'The connection dropped. Tap Continue to carry on.', !e.out); }
     renewing = false;
   }
   async function begin() {
@@ -769,8 +778,8 @@
     }
     const s = klass && klass.sections[at];
     if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && (Date.now() - lastActive) / 1000 >= 40) {
-      pcPaused = true;
-      return pause('Altron is waiting while you work on your PC. Paste the output and tap Check: the class carries on by itself.');
+      if (!pcHold) holdForPc(true);
+      return;
     }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
   }
@@ -790,8 +799,8 @@
   }
   $('endBtn').onclick = () => finish(isDemo ? 'Demo ended. Your plans and seat booking are below.' : 'Class ended.');
   $('pause').onclick = () => pause();
-  $('resume').onclick = async () => { try { await begin(); } catch (e) { stop(e.message, !e.out); } };
-  $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  $('resume').onclick = async () => { try { await begin(); } catch (e) { if (e.signin) askSignin(); else stop(e.message, !e.out); } };
+  $('mic').onclick = () => { if (pcHold) { holdForPc(false); tell('[Screen] The learner tapped the mic: they want to ask something about the practical. Ask what they need.'); return; } micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
   $('txbtn').onclick = () => { $('tx').classList.toggle('on'); $('txbtn').textContent = $('tx').classList.contains('on') ? 'Hide what was said ▴' : 'Show what was said ▾'; };
   window.altronPause = () => { if (running) pause(); };
   if (P.get('autostart') === '1' && token()) setTimeout(startClass, 300);   // inside the app: one less tap
@@ -826,6 +835,10 @@
   function paintLangs() { for (const b of $('langs').children) b.classList.toggle('on', b.dataset.l === lang); }
   for (const b of $('langs').children) b.onclick = () => { lang = b.dataset.l; paintLangs(); };
   paintLangs();
+  function askSignin() {
+    $('intro').classList.remove('hidden'); $('room').classList.remove('on'); $('signin').classList.remove('hidden'); $('start').classList.add('hidden');
+    try { sessionStorage.removeItem('altron_t'); } catch (_) {} store.set('adm_token', '');
+  }
   async function startClass() {
     if (!token() && !(canGuest && !guestDone)) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
     $('start').disabled = true; $('introMsg').textContent = '';
@@ -836,7 +849,7 @@
       await begin();
       track('class_started');
     } catch (e) {
-      if (e.signin) { $('intro').classList.remove('hidden'); $('room').classList.remove('on'); $('signin').classList.remove('hidden'); $('start').classList.add('hidden'); try { sessionStorage.removeItem('altron_t'); } catch (_) {} store.set('adm_token', ''); }
+      if (e.signin) askSignin();
       else if ($('room').classList.contains('on')) stop(e.name === 'NotAllowedError' ? 'Allow the microphone for this site, then tap Continue.' : e.message, !e.out);
       else $('introMsg').textContent = e.message;
       $('start').disabled = false;
