@@ -338,7 +338,7 @@
 
   function render() {
     const s = klass.sections[at];
-    checkShown = false; checkDone = false; pracDone = false; if (pcHold) holdForPc(false);
+    checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; if (pcHold) holdForPc(false);
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
@@ -429,7 +429,7 @@
     const correct = k === s.check.answer;
     btns.forEach((b, i) => { b.classList.toggle('wrong', i === k && !correct); if (correct) { b.disabled = true; b.classList.toggle('right', i === k); } });
     $('why').innerHTML = correct ? '✅ <b>Right.</b> ' + esc(s.check.why) : '❌ Not quite. Try another one.';
-    if (correct) { checkDone = true; done.add(at); saveProgress(); }
+    if (correct) { checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); }
     return { correct, chosen: s.check.options[k], why: correct ? s.check.why : 'not told yet: let them try again with a hint' };
   }
   function tapPart(part) {
@@ -438,7 +438,7 @@
     const right = part === s.practical.answer;
     el.forEach((x) => { x.classList.add(right ? 'right' : 'wrong'); if (!right) setTimeout(() => x.classList.remove('wrong'), 1200); });
     $('task').innerHTML = right ? '✅ Right! That is the one.' : '👆 Not that one. Try again: ' + esc(s.practical.text);
-    if (right) { pracDone = true; done.add(at); saveProgress(); }
+    if (right) { pracDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); }
     tell('[Screen] On the practical the learner tapped "' + part + '": ' + (right ? 'right' : 'not right, they will try again') + '.');
   }
 
@@ -457,7 +457,7 @@
   function pcResult(right, msg, said) {
     const s = klass.sections[at];
     $('pcRes').className = 'res ' + (right ? 'ok' : 'bad'); $('pcRes').textContent = msg;
-    if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); }
+    if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); resolvedAt = Date.now(); }
     lastHuman = Date.now();
     const line = '[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said);
     if (pcHold) holdForPc(false);
@@ -577,6 +577,9 @@
   let askedThem = false;            // Altron's last turn ended on a question: wait for the answer, never nudge past it
   // A walkthrough is a talk: when Altron stops and the learner stays quiet, it is told to carry on (once per pause).
   let waitingForThem = false, nudged = false;
+  // A section the learner has finished (check right, practical done): if Altron goes quiet instead of moving on (seen in a
+  // live test: it answered "..."), it is nudged once, and then the board moves on by itself.
+  let resolvedAt = 0, resNudged = false;
   function status(text, cls) {
     $('status').textContent = text;
     $('orb').className = 'orb' + (cls === 'talk' ? ' talk' : cls === 'live' ? '' : ' off');
@@ -776,6 +779,11 @@
       nudged = true;
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
+    }
+    if (klass && klass.mode !== 'walkthrough' && resolvedAt && !playing.length && !pcHold && !ending && at < klass.sections.length - 1) {
+      const quiet = Date.now() - lastActive;
+      if (!resNudged && quiet > 9000) { resNudged = true; note('[The learner has finished this section correctly. Say one short sentence about it, then call show_section "next".]'); return; }
+      if (resNudged && quiet > 22000) { resolvedAt = 0; go(at + 1, true); return; }
     }
     const s = klass && klass.sections[at];
     if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && (Date.now() - lastActive) / 1000 >= 40) {
