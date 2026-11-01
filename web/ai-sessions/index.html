@@ -132,7 +132,7 @@
 
   <section id="sessions">
     <div class="kick">SESSIONS YOU CAN TAKE TODAY</div>
-    <h2>Three sessions from zero to a connected device</h2>
+    <h2>Five sessions from zero to a connected device</h2>
     <div class="cards">
       <div class="card"><span class="n">1</span><div class="ic">⚡</div>
         <h3>Your first ESP32 program</h3>
@@ -144,11 +144,25 @@
         <div class="meta"><span class="tag">Beginner</span><span class="tag">45 min</span><span class="tag pc">GitHub checked live</span></div>
         <ul><li>Install Git, set your name and email</li><li>Make an SSH key and add it to GitHub</li><li>add, commit, push: the daily loop</li><li>Your first repo, verified on GitHub</li></ul>
         <a class="btn btn-main btn-sm" href="/class?id=git">Start session</a></div>
-      <div class="card"><span class="n">3</span><div class="ic">📡</div>
+      <div class="card"><span class="n">3</span><div class="ic">🔘</div>
+        <h3>Buttons: pull-ups, debounce, interrupts</h3>
+        <div class="meta"><span class="tag">Beginner</span><span class="tag">45 min</span><span class="tag pc">3 checks on your board</span></div>
+        <ul><li>Why a floating pin lies, and the pull-up fix</li><li>Bounce: why 5 presses count as 13</li><li>A press counter you can trust</li><li>Interrupts that never miss a press</li></ul>
+        <a class="btn btn-main btn-sm" href="/class?id=button">Start session</a></div>
+      <div class="card"><span class="n">4</span><div class="ic">🔆</div>
+        <h3>Light sensor and the ADC</h3>
+        <div class="meta"><span class="tag">Beginner</span><span class="tag">45 min</span><span class="tag pc">3 checks on your board</span></div>
+        <ul><li>The ADC: 0 to 3.3 V as 0 to 4095</li><li>The voltage divider, with real numbers</li><li>Averaging and calibrated millivolts</li><li>Detect a machine RUNNING or STOPPED</li></ul>
+        <a class="btn btn-main btn-sm" href="/class?id=ldr">Start session</a></div>
+      <div class="card"><span class="n">5</span><div class="ic">📡</div>
         <h3>MQTT: your board on the internet</h3>
         <div class="meta"><span class="tag">Beginner</span><span class="tag">50 min</span><span class="tag pc">Live data from your board</span></div>
         <ul><li>Brokers, topics and JSON messages</li><li>Wire an LDR, send a reading every 2 s</li><li>Watch your readings live in the class</li><li>Switch your board's LED from the class</li></ul>
         <a class="btn btn-main btn-sm" href="/class?id=mqtt">Start session</a></div>
+      <div class="card" style="border-style:dashed;opacity:.8"><span class="n">6</span><div class="ic">🍓</div>
+        <h3>Coming next: your own broker on a Raspberry Pi</h3>
+        <div class="meta"><span class="tag">Basic</span><span class="tag">in the making</span></div>
+        <ul><li>Mosquitto on the Pi, with a password</li><li>Point your ESP32 at your own broker</li><li>Then the live shop-floor dashboard</li></ul></div>
     </div>
   </section>
 
@@ -159,8 +173,9 @@
     <div class="path">
       <div class="step"><b>First ESP32 program</b><span>PlatformIO, upload, serial</span></div>
       <div class="step"><b>Git and GitHub</b><span>your portfolio starts</span></div>
+      <div class="step"><b>Buttons</b><span>debounce, interrupts</span></div>
+      <div class="step"><b>Light sensor</b><span>ADC, machine RUNNING</span></div>
       <div class="step"><b>MQTT</b><span>sensor to internet</span></div>
-      <div class="step soon"><b>Button and interrupts</b><span>coming next</span></div>
       <div class="step soon"><b>Raspberry Pi broker</b><span>your own private MQTT</span></div>
       <div class="step soon"><b>Live dashboard</b><span>the whole shop floor</span></div>
     </div>
@@ -180,7 +195,7 @@
   <section class="faq">
     <div class="kick">QUESTIONS</div>
     <h2>Before you start</h2>
-    <details><summary>What do I need?</summary><p>A laptop with Chrome and a microphone. For the ESP32 and MQTT sessions, an ESP32 board and a USB data cable; MQTT also needs an LDR and a 10 kΩ resistor. The Git session needs only your laptop.</p></details>
+    <details><summary>What do I need?</summary><p>A laptop with Chrome and a microphone. For the board sessions, an ESP32 (or ESP32-S3) and a USB data cable; the button session needs a push button, and the light-sensor and MQTT sessions an LDR and a 10 kΩ resistor. The Git session needs only your laptop.</p></details>
     <details><summary>Is it free?</summary><p>You can start every session free, without signing in. After a few minutes Altron asks you to sign in with your WhatsApp number to carry on.</p></details>
     <details><summary>Does the AI see my computer?</summary><p>No. You choose what to paste into the page, and the page checks it. It never reads your files. If you paste a private SSH key by mistake, the page deletes it at once and warns you.</p></details>
     <details><summary>Hindi or English?</summary><p>Altron speaks Hinglish by default and can switch to English. The notes on each slide are in simple English, so you can read along.</p></details>
