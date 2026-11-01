@@ -81,6 +81,30 @@
   .faq summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--navy); }
   .faq p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
   .faq p b { display: block; }
+  /* each slide comes in like a presentation: the board, then the notes line by line */
+  .slide-in .board { animation: slideIn .45s cubic-bezier(.2,.8,.3,1) both; }
+  .slide-in .task, .slide-in .pc { animation: slideIn .45s .15s cubic-bezier(.2,.8,.3,1) both; }
+  .slide-in .notes li { animation: noteIn .4s cubic-bezier(.2,.8,.3,1) both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes noteIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .slide-in .board, .slide-in .task, .slide-in .pc, .slide-in .notes li { animation: none; } }
+  /* commands on the board: dark terminal, one tap to copy */
+  .board pre { position: relative; background: #0f1b2b; color: #e6edf3; border-radius: 10px; padding: 10px 12px; padding-right: 64px; margin: 6px 0;
+               font: 13.5px/1.6 Consolas, "Cascadia Mono", Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .board code { background: #eef2f8; border-radius: 6px; padding: 1px 5px; font: 13px Consolas, Menlo, monospace; overflow-wrap: anywhere; }
+  .board pre .cp { position: absolute; top: 6px; right: 6px; background: #2d4f86; color: #fff; border-radius: 8px; padding: 4px 9px; font: 600 12px "Segoe UI", system-ui, sans-serif; }
+  .board pre .cp.ok { background: var(--ok); }
+  /* a practical on the learner's own PC: paste the output, or give the GitHub username; the page checks it */
+  .pc { background: #fff4e8; border: 1px solid #ffd2a8; border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+  .pc .t { color: #7a3a06; font-weight: 600; }
+  .pc textarea, .pc input { width: 100%; font: 13.5px/1.5 Consolas, Menlo, monospace; border: 1px solid #f0c9a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: var(--ink); }
+  .pc textarea { min-height: 84px; resize: vertical; }
+  .pc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pc button { background: var(--orange); color: #fff; padding: 10px 16px; font-weight: 700; }
+  .pc .res { font-size: 14px; line-height: 1.5; }
+  .pc .res.ok { color: var(--ok); font-weight: 600; }
+  .pc .res.bad { color: var(--bad); }
+  .pc.done { background: var(--okbg); border-color: #bfe6d1; }
   .task { background: #fff4e8; border: 1px solid #ffd2a8; color: #7a3a06; border-radius: 12px; padding: 10px 12px; font-weight: 600; }
   .check { background: #fff; border: 2px solid #c9d8f5; border-radius: 16px; padding: 14px; }
   .check .q { font-weight: 700; font-size: 16px; margin-bottom: 10px; }
@@ -171,7 +195,7 @@
     <div class="kick" id="kick">FREE DEMO &amp; COUNSELLING · ABOUT 15 MINUTES</div>
     <h1 id="ttl">The Live Engineering Program, explained by Altron</h1>
     <p id="lead">Altron, our AI mentor, walks you through the program by voice on a board and helps you choose. This is a demo and counselling session; the real classes are live with our mentors (online or offline) or self-paced.</p>
-    <ul>
+    <ul id="introList">
       <li>What we cover in each of the four stages</li>
       <li>Why it matters for your career, and how we teach it</li>
       <li>A few questions at the end, to suggest the plan that fits you</li>
@@ -229,8 +253,10 @@
   const classId = P.get('id') || (P.get('note') ? null : 'demo');
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const isDemo = classId === 'demo';
+  // A free class a shared link opens without a sign-in (the server's GUEST_CLASSES); the WhatsApp sign-in comes after its minutes.
+  const canGuest = isDemo || classId === 'git';
   const IDLE_S = 120;
-  let lang = P.get('lang') || (isDemo ? 'hi' : 'en');   // ad leads are most at ease in Hinglish
+  let lang = P.get('lang') || (canGuest ? 'hi' : 'en');   // ad leads are most at ease in Hinglish
   if (isDemo) $('start').textContent = '▶ Start live demo';
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
   const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
@@ -276,7 +302,8 @@
         doubts: [...s.querySelectorAll('.doubts li')].map((li) => li.textContent.trim()),
         check: check ? { q: ((check.querySelector('p:not(.why)') || {}).textContent || '').trim(), options: [...check.querySelectorAll('li')].map((li) => li.textContent.trim()),
                          answer: Number(check.dataset.answer) - 1, why: ((check.querySelector('.why') || {}).textContent || '').trim() } : null,
-        practical: prac ? { answer: prac.dataset.answer, text: prac.textContent.trim() } : null,
+        practical: prac ? { task: prac.dataset.task || 'tap', answer: prac.dataset.answer, match: prac.dataset.match || '', repo: prac.dataset.repo || '',
+                            text: prac.textContent.trim() } : null,
       };
     });
     return { lead: lead ? lead.textContent.trim() : '', mode: art.dataset ? (art.dataset.mode || 'class') : 'class', sections };
@@ -286,7 +313,13 @@
     const j = await r.json();
     if (!r.ok) throw new Error(j.detail || 'This class could not be opened.');
     klass = { title: j.title, ...parse(j.html) };
-    if (!isDemo) { $('kick').textContent = 'LIVE CLASS WITH ALTRON'; $('ttl').textContent = j.title; if (klass.lead) $('lead').textContent = klass.lead; }
+    if (!isDemo) {
+      const mins = (new DOMParser().parseFromString(j.html, 'text/html').querySelector('.altro-class') || { dataset: {} }).dataset.minutes;
+      $('kick').textContent = (canGuest ? 'FREE ' : '') + 'LIVE CLASS WITH ALTRON' + (mins ? ' · ABOUT ' + mins + ' MINUTES' : '');
+      $('ttl').textContent = j.title; if (klass.lead) $('lead').textContent = klass.lead;
+      $('introList').innerHTML = klass.sections.filter((s) => s.kind !== 'summary').map((s) => `<li>${esc(s.title)}</li>`).join('');
+      document.title = j.title + ' · Altrobyte Lab';
+    }
   }
 
   function sectionFor(i) {          // what Altron is told about a section: never the answer
@@ -307,8 +340,13 @@
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
     let h = '';
-    if (s.boardHtml) h += `<div class="board${s.kind === 'practical' ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
-    if (s.practical) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
+    const tap = s.practical && s.practical.task === 'tap';
+    if (s.boardHtml) h += `<div class="board${tap ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
+    if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
+    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div>
+      <textarea id="pcIn" spellcheck="false" placeholder="Paste the output here"></textarea><div class="row"><button type="button" id="pcGo">Check</button></div><div class="res" id="pcRes"></div></div>`;
+    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div>
+      <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
       const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
       h += `<div class="notes"><div class="nh">📝 NOTES</div><ul>${s.teach.map((t) => `<li data-ids="${esc(ids(t))}">${esc(t.replace(/\s*\[[\w-]+\]/g, ''))}</li>`).join('')}</ul></div>`;
@@ -318,7 +356,20 @@
     }
     h += '<div id="checkHost"></div><div id="endHost"></div>';
     $('bbody').innerHTML = h;
-    if (s.kind === 'practical') {
+    $('bbody').classList.remove('slide-in'); void $('bbody').offsetWidth; $('bbody').classList.add('slide-in');
+    document.querySelectorAll('.notes li').forEach((li, k) => { li.style.animationDelay = (0.25 + k * 0.12) + 's'; });
+    for (const pre of document.querySelectorAll('#board pre')) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cp'; b.textContent = 'Copy';
+      b.onclick = () => { const text = [...pre.childNodes].filter((n) => n !== b).map((n) => n.textContent).join('').trim();
+        const ok = () => { b.textContent = 'Copied'; b.classList.add('ok'); setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('ok'); }, 1500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => {}); };
+      pre.appendChild(b);
+    }
+    if ($('pcGo')) {
+      $('pcGo').onclick = () => (s.practical.task === 'github' ? checkGithub() : checkPaste());
+      if (s.practical.task === 'github') { $('pcIn').value = store.get('altron_gh') || ''; $('pcIn').onkeydown = (e) => { if (e.key === 'Enter') checkGithub(); }; }
+    }
+    if (tap) {
       for (const el of document.querySelectorAll('#board [data-point]')) el.addEventListener('click', () => tapPart(el.dataset.point));
     }
     $('dots').innerHTML = klass.sections.map((_, k) => `<i class="${k === at ? 'now' : done.has(k) ? 'done' : ''}"></i>`).join('');
@@ -386,6 +437,50 @@
     $('task').innerHTML = right ? '✅ Right! That is the one.' : '👆 Not that one. Try again: ' + esc(s.practical.text);
     if (right) { pracDone = true; done.add(at); saveProgress(); }
     tell('[Screen] On the practical the learner tapped "' + part + '": ' + (right ? 'right' : 'not right, they will try again') + '.');
+  }
+
+  // A practical on the learner's own PC. The page checks it (a pattern from the note, or GitHub's public API); Altron only
+  // hears the result, and on a miss the start of what they pasted, so it can read the error and help.
+  function pcResult(right, msg, said) {
+    const s = klass.sections[at];
+    $('pcRes').className = 'res ' + (right ? 'ok' : 'bad'); $('pcRes').textContent = msg;
+    if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); }
+    lastHuman = Date.now();
+    tell('[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said));
+  }
+  function checkPaste() {
+    const s = klass.sections[at]; if (pracDone) return;
+    const text = $('pcIn').value;
+    if (!text.trim()) return pcResult(false, 'Paste the output first.', 'Nothing was pasted yet.');
+    if (/PRIVATE KEY/.test(text)) {          // never keep, show or send a private key
+      $('pcIn').value = '';
+      return pcResult(false, '⚠️ That is your PRIVATE key. Never share it, not even here. Paste the line from the .pub file instead.',
+                      'They pasted their private key by mistake; the page removed it. Tell them never to share that file and to show the .pub file.');
+    }
+    let re; try { re = new RegExp(s.practical.match, 'im'); } catch (_) { re = null; }
+    if (!re || re.test(text)) return pcResult(true, '✅ That worked. Nice!', '');
+    pcResult(false, '❌ Not what we expect yet. Altron will help, or open the common questions below.', 'They pasted: "' + text.trim().slice(0, 400) + '"');
+  }
+  async function checkGithub() {
+    const s = klass.sections[at]; if (pracDone) return;
+    const u = $('pcIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//i, '').split('/')[0];
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(u)) return pcResult(false, 'Type your GitHub username, like pawan-dev.', 'The username they typed is not a valid GitHub username.');
+    store.set('altron_gh', u);
+    $('pcRes').className = 'res'; $('pcRes').textContent = 'Checking GitHub…';
+    try {
+      const r = await fetch('https://api.github.com/repos/' + encodeURIComponent(u) + '/' + encodeURIComponent(s.practical.repo) + '/commits?per_page=1',
+                            { headers: { Accept: 'application/vnd.github+json' } });
+      if (r.ok) {
+        const c = (await r.json())[0];
+        const m = c && c.commit ? c.commit.message.split('\n')[0] : '';
+        return pcResult(true, '✅ Found it: github.com/' + u + '/' + s.practical.repo + (m ? ', last commit "' + m + '"' : '') + '. Your code is on GitHub!', '');
+      }
+      if (r.status === 409) return pcResult(false, '❌ The repo is there but empty: your push has not reached GitHub yet.', 'The repo exists but has no commits: git push has not worked yet.');
+      if (r.status === 404) return pcResult(false, '❌ No public repo called ' + s.practical.repo + ' for ' + u + '. Check the name, and that it is Public.',
+                                            'GitHub has no public repo with that name for that username (wrong name, wrong username, or private).');
+      if (r.status === 403 || r.status === 429) return pcResult(false, 'GitHub is busy (too many checks from this network). Try again in a few minutes.', 'GitHub refused the check for now (rate limit), not their mistake.');
+      pcResult(false, 'GitHub could not be checked. Try again.', 'GitHub could not be reached.');
+    } catch (_) { pcResult(false, 'GitHub could not be reached. Check your internet and try again.', 'GitHub could not be reached from their network.'); }
   }
 
   const NUM = { one: 1, first: 1, ek: 1, pehla: 1, two: 2, second: 2, do: 2, doosra: 2, dusra: 2, three: 3, third: 3, teen: 3, teesra: 3, tisra: 3, four: 4, fourth: 4, char: 4, chaar: 4 };
@@ -477,9 +572,9 @@
   let guest = false, guestDone = false;
   const visitorId = (() => { let v = store.get('altron_vid'); if (!v) { v = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('altron_vid', v); } return v; })();
   async function fetchToken(resume) {
-    if (isDemo && !token()) {
+    if (canGuest && !token()) {
       if (guestDone) throw Object.assign(new Error('Sign in with your WhatsApp number to carry on.'), { signin: true });
-      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: 'demo', lang, visitor: visitorId }) });
+      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: classId, lang, visitor: visitorId }) });
       const gb = await g.json().catch(() => ({}));
       if (g.status === 429) throw Object.assign(new Error(gb.detail || "You have had today's free demo."), { out: true });
       if (!g.ok) { guestDone = true; throw Object.assign(new Error(gb.detail || 'Sign in with your WhatsApp number to start.'), { signin: true }); }
@@ -720,7 +815,7 @@
   for (const b of $('langs').children) b.onclick = () => { lang = b.dataset.l; paintLangs(); };
   paintLangs();
   async function startClass() {
-    if (!token() && !(isDemo && !guestDone)) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
+    if (!token() && !(canGuest && !guestDone)) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
     $('start').disabled = true; $('introMsg').textContent = '';
     try {
       outCtx = new AudioContext();                          // made on the tap, so phones allow the sound
