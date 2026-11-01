@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Lab Sessions · Altrobyte Lab</title>
+<meta name="description" content="Hands-on embedded and IoT sessions with Altron, our AI mentor: it teaches on an animated board by voice, and checks what you do on your own PC and ESP32.">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://edu.altrobytelab.com" crossorigin>
+<!-- The AI lab sessions, one page to share (2 Nov 2026, built overnight for the founder's review; not linked from the site
+     until approved). Each card opens a built-in class in the class player (/class?id=...). -->
+<style>
+  :root { --ink:#0A1220; --panel:#13223A; --panel2:#0f1c31; --line:#22344F; --text:#E8EEF6; --soft:#9DB0C6; --orange:#FF6A1A; --orange2:#FF9A3D; --cyan:#38E1D3; --green:#25D366; --ok:#2BD47D; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--ink); color: var(--text); font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  nav { position: sticky; top: 0; z-index: 5; background: rgba(10,18,32,.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.06); }
+  nav .wrap { display: flex; align-items: center; height: 60px; gap: 14px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .logo img { width: 28px; height: 28px; border-radius: 7px; }
+  nav .r { margin-left: auto; display: flex; gap: 14px; font-size: 14px; color: var(--soft); align-items: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 999px; font-weight: 700; font-size: 16px; border: 0; cursor: pointer; }
+  .btn-main { background: linear-gradient(135deg, var(--orange), var(--orange2)); color: #fff; box-shadow: 0 10px 30px -10px rgba(255,106,26,.7); }
+  .btn-ghost { border: 1px solid rgba(255,255,255,.22); color: #fff; }
+  .btn-sm { padding: 9px 16px; font-size: 14px; }
+  .muted { color: var(--soft); }
+  .kick { font-size: 12.5px; font-weight: 800; letter-spacing: .12em; color: var(--orange2); }
+  h1 { font-size: clamp(28px, 5vw, 46px); line-height: 1.12; letter-spacing: -.025em; margin: 10px 0 14px; }
+  h1 em { font-style: normal; background: linear-gradient(135deg, var(--orange), var(--orange2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: clamp(22px, 3.4vw, 30px); letter-spacing: -.02em; line-height: 1.2; margin-bottom: 8px; }
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 34px; align-items: center; padding: 44px 0 30px; }
+  .hero p.l { font-size: 18px; color: #cfdbe8; max-width: 34em; }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .fine { font-size: 13.5px; color: var(--soft); margin-top: 12px; }
+  /* the live mock of a session: board + Altron + the PC check */
+  .mock { border-radius: 22px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); }
+  .mock .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #16304f; }
+  .orb { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffb27a, var(--orange) 55%, #9c3a07); animation: talk 1.6s ease-in-out infinite; flex: none; }
+  @keyframes talk { 50% { transform: scale(1.12); box-shadow: 0 0 0 8px rgba(255,106,26,.15); } }
+  .mock .say { font-size: 13.5px; color: #e8eef6; line-height: 1.4; }
+  .mock .board { background: #fff; margin: 12px; border-radius: 14px; padding: 12px; color: #132436; }
+  .mock svg { width: 100%; height: auto; display: block; }
+  .pop { animation: pop .6s cubic-bezier(.2,.8,.3,1.2) both; transform-box: fill-box; transform-origin: center; }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.85); } to { opacity: 1; transform: none; } }
+  .mock .pc { margin: 0 12px 12px; border-radius: 12px; background: #0f1b2b; padding: 10px 12px; font: 12.5px/1.6 Consolas, Menlo, monospace; color: #e6edf3; }
+  .mock .pc .ok { color: #7ee2a8; opacity: 0; animation: fade .4s 2.6s forwards; }
+  .typing { overflow: hidden; white-space: nowrap; width: 0; display: inline-block; vertical-align: bottom; animation: type 1.4s steps(28) .6s forwards; }
+  @keyframes type { to { width: 100%; } }
+  @keyframes fade { to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .orb, .pop, .typing, .mock .pc .ok { animation: none; opacity: 1; width: auto; } }
+  section { padding: 34px 0; }
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+  .how > div { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .how b { display: block; font-size: 17px; margin: 8px 0 4px; }
+  .how .i { font-size: 26px; }
+  .how p { color: #cfdbe8; font-size: 15px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+  .card .n { position: absolute; top: 16px; right: 16px; font-size: 12px; font-weight: 800; color: var(--soft); }
+  .card .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: rgba(255,106,26,.12); }
+  .card h3 { font-size: 19px; line-height: 1.3; letter-spacing: -.01em; }
+  .card ul { padding-left: 18px; color: #cfdbe8; font-size: 14.5px; display: grid; gap: 3px; }
+  .card .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); color: var(--soft); }
+  .tag.pc { color: var(--cyan); border-color: rgba(56,225,211,.35); }
+  .card .btn { margin-top: auto; }
+  .path { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 18px; counter-reset: p; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 14.5px; position: relative; }
+  .step::before { counter-increment: p; content: counter(p); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--orange); color: #fff; font-weight: 800; font-size: 13px; margin-bottom: 6px; }
+  .step.soon { opacity: .65; border-style: dashed; }
+  .step.soon::before { background: #3a4a62; }
+  .step b { display: block; }
+  .step span { color: var(--soft); font-size: 13px; }
+  .band { background: linear-gradient(135deg, #16304f, #0f1c31); border: 1px solid var(--line); border-radius: 22px; padding: 26px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: center; }
+  .band ul { padding-left: 18px; color: #cfdbe8; display: grid; gap: 4px; }
+  .faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin-top: 10px; }
+  .faq summary { cursor: pointer; font-weight: 700; }
+  .faq p { color: #cfdbe8; margin-top: 8px; font-size: 15px; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 90px; font-size: 13.5px; color: var(--soft); margin-top: 20px; }
+  .sticky { display: none; }
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; padding-top: 24px; gap: 22px; }
+    .how, .cards { grid-template-columns: 1fr; }
+    .band { grid-template-columns: 1fr; padding: 20px; }
+    nav .r a:not(.btn) { display: none; }
+    .sticky { display: flex; position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px; background: rgba(10,18,32,.96); border-top: 1px solid var(--line); z-index: 6; }
+    .sticky .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="/"><img src="/icons/Icon-192.png" alt=""><span>Altrobyte Lab</span></a>
+  <div class="r"><a href="/roadmap">Syllabus</a><a href="/session">Live classes</a><a class="btn btn-main btn-sm" href="#sessions">Start free</a></div>
+</div></nav>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kick">AI LAB SESSIONS · BY ALTROBYTE LAB</div>
+      <h1>Don't just watch. <em>Build it on your own board</em>, with an AI mentor beside you.</h1>
+      <p class="l">Altron, our AI mentor, teaches each session by voice on an animated board. You do every step on your own PC and ESP32, and the page checks your real output: your terminal, your GitHub, even your board's live data.</p>
+      <div class="cta"><a class="btn btn-main" href="/class?id=esp32-start">▶ Try a free session</a><a class="btn btn-ghost" href="#sessions">See all sessions</a></div>
+      <p class="fine">Free to start, no sign-in for the first minutes. Works in Chrome on a laptop; you need a microphone.</p>
+    </div>
+    <div class="mock" aria-hidden="true">
+      <div class="top"><div class="orb"></div><div class="say">"Cover the LDR with your hand… see the number drop? That's your board, live on the internet."</div></div>
+      <div class="board">
+        <svg viewBox="0 0 420 150">
+          <g class="pop" style="animation-delay:.1s"><rect x="8" y="45" width="100" height="60" rx="10" fill="#16304f"/><text x="58" y="80" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">ESP32</text></g>
+          <g class="pop" style="animation-delay:.5s"><rect x="160" y="45" width="100" height="60" rx="30" fill="#e8590c"/><text x="210" y="80" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">Broker</text></g>
+          <g class="pop" style="animation-delay:.9s"><rect x="312" y="45" width="100" height="60" rx="10" fill="#1e9d66"/><text x="362" y="80" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">This class</text></g>
+          <path d="M110 75 H158 M262 75 H310" stroke="#c9d1dc" stroke-width="3"/>
+          <circle r="6" fill="#e8590c"><animateMotion dur="1.8s" repeatCount="indefinite" path="M110 75 H310"/></circle>
+          <text x="210" y="135" font-size="12" fill="#5a6b7d" text-anchor="middle">machinemonitoring/ldr/riya</text>
+        </svg>
+      </div>
+      <div class="pc"><span class="typing">{"ldr":2310,"led":"off"} …</span><br><span class="ok">✅ Your board is on the internet.</span></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="kick">HOW A SESSION WORKS</div>
+    <h2>Like a lab with a patient mentor, at any hour</h2>
+    <div class="how">
+      <div><div class="i">🎙️</div><b>Altron teaches on a board</b><p>Each idea gets an animated slide. Altron explains it by voice in Hinglish or English, lights up each part as it talks, and you can interrupt with any doubt.</p></div>
+      <div><div class="i">💻</div><b>You do it on your PC</b><p>Copy the commands, run them, paste the output. The page checks it, and if there is an error, Altron reads it and tells you the fix.</p></div>
+      <div><div class="i">📡</div><b>Your board proves it</b><p>Upload to your own ESP32. The class listens to your board live over MQTT, and checks your code on GitHub. No pass without real proof.</p></div>
+    </div>
+  </section>
+
+  <section id="sessions">
+    <div class="kick">SESSIONS YOU CAN TAKE TODAY</div>
+    <h2>Three sessions from zero to a connected device</h2>
+    <div class="cards">
+      <div class="card"><span class="n">1</span><div class="ic">⚡</div>
+        <h3>Your first ESP32 program</h3>
+        <div class="meta"><span class="tag">Beginner</span><span class="tag">45 min</span><span class="tag pc">5 checks on your PC</span></div>
+        <ul><li>Install VS Code and PlatformIO</li><li>Create, build and upload a project</li><li>Read your board in the Serial Monitor</li><li>Fix the 5 classic first-day errors</li></ul>
+        <a class="btn btn-main btn-sm" href="/class?id=esp32-start">Start session</a></div>
+      <div class="card"><span class="n">2</span><div class="ic">🔧</div>
+        <h3>Git and GitHub with SSH</h3>
+        <div class="meta"><span class="tag">Beginner</span><span class="tag">45 min</span><span class="tag pc">GitHub checked live</span></div>
+        <ul><li>Install Git, set your name and email</li><li>Make an SSH key and add it to GitHub</li><li>add, commit, push: the daily loop</li><li>Your first repo, verified on GitHub</li></ul>
+        <a class="btn btn-main btn-sm" href="/class?id=git">Start session</a></div>
+      <div class="card"><span class="n">3</span><div class="ic">📡</div>
+        <h3>MQTT: your board on the internet</h3>
+        <div class="meta"><span class="tag">Beginner</span><span class="tag">50 min</span><span class="tag pc">Live data from your board</span></div>
+        <ul><li>Brokers, topics and JSON messages</li><li>Wire an LDR, send a reading every 2 s</li><li>Watch your readings live in the class</li><li>Switch your board's LED from the class</li></ul>
+        <a class="btn btn-main btn-sm" href="/class?id=mqtt">Start session</a></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kick">WHERE THIS LEADS</div>
+    <h2>The Machine Monitoring path</h2>
+    <p class="muted">Every session builds toward one real project: an ESP32-S3 watches a machine, MQTT carries the data, and a Raspberry Pi shows the whole shop floor live.</p>
+    <div class="path">
+      <div class="step"><b>First ESP32 program</b><span>PlatformIO, upload, serial</span></div>
+      <div class="step"><b>Git and GitHub</b><span>your portfolio starts</span></div>
+      <div class="step"><b>MQTT</b><span>sensor to internet</span></div>
+      <div class="step soon"><b>Button and interrupts</b><span>coming next</span></div>
+      <div class="step soon"><b>Raspberry Pi broker</b><span>your own private MQTT</span></div>
+      <div class="step soon"><b>Live dashboard</b><span>the whole shop floor</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="band">
+      <div>
+        <div class="kick">WANT A HUMAN MENTOR TOO?</div>
+        <h2>The Live Engineering Program</h2>
+        <ul><li>Live classes with our engineers, online or offline</li><li>Every class recorded, with notes and these AI sessions</li><li>A hardware kit and real projects for your portfolio</li><li>A clear path from basics to industrial IoT</li></ul>
+      </div>
+      <div class="cta" style="margin:0"><a class="btn btn-main" href="/roadmap">See the program</a><a class="btn btn-ghost" href="https://wa.me/917222977927?text=Hi%2C%20I%20tried%20the%20AI%20lab%20sessions%20and%20want%20to%20know%20about%20the%20Live%20Engineering%20Program">💬 Ask on WhatsApp</a></div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="kick">QUESTIONS</div>
+    <h2>Before you start</h2>
+    <details><summary>What do I need?</summary><p>A laptop with Chrome and a microphone. For the ESP32 and MQTT sessions, an ESP32 board and a USB data cable; MQTT also needs an LDR and a 10 kΩ resistor. The Git session needs only your laptop.</p></details>
+    <details><summary>Is it free?</summary><p>You can start every session free, without signing in. After a few minutes Altron asks you to sign in with your WhatsApp number to carry on.</p></details>
+    <details><summary>Does the AI see my computer?</summary><p>No. You choose what to paste into the page, and the page checks it. It never reads your files. If you paste a private SSH key by mistake, the page deletes it at once and warns you.</p></details>
+    <details><summary>Hindi or English?</summary><p>Altron speaks Hinglish by default and can switch to English. The notes on each slide are in simple English, so you can read along.</p></details>
+  </section>
+</main>
+
+<footer><div class="wrap">© Altrobyte Lab · Altrobyte Automation · <a href="https://wa.me/917222977927">WhatsApp +91 72229 77927</a></div></footer>
+<div class="sticky"><a class="btn btn-main" href="/class?id=esp32-start">▶ Try a free session</a></div>
+</body>
+</html>
