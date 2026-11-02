@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -503,6 +504,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         ),
         GoRoute(
           path: '/student/training',
+          redirect: (_, __) => kIsWeb ? '/learn' : null,     // one course page on the web: /learn
           builder: (_, __) => _Lazy(e4.loadLibrary, () => e4.StudentTrainingScreen()),
         ),
         GoRoute(

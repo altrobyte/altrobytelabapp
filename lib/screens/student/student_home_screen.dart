@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -349,7 +350,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     if (result == 'upgrade') _showUpgradeSheet();
   }
 
+  // On the web the course lives in one place, /learn (2 Nov 2026, founder): the same modules, its own sign-in.
+  void _openLearn() => launchUrl(Uri.base.resolve('/learn'), webOnlyWindowName: '_self');
+
   Future<void> _openTrainingScreen() async {
+    if (kIsWeb) return _openLearn();
     if (!await _requireSignIn()) return;
     if (!mounted) return;
     Navigator.push(
@@ -359,6 +364,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   }
 
   void _openModule(TrainingModule module) async {
+    if (kIsWeb) return _openLearn();
     final provider = context.read<TrainingModuleProvider>();
     final completedIds =
         provider.getProgress(module.id)?.completedItemIds ?? <int>{};
