@@ -46,8 +46,50 @@
   .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   @media (max-width: 860px) { .grid3 { grid-template-columns: minmax(0, 1fr); } }
-  #plans { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 860px; margin-left: auto; margin-right: auto; }
-  @media (max-width: 860px) { #plans { grid-template-columns: minmax(0, 1fr); } }
+  #plans { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: 20px; }
+  @media (max-width: 960px) { #plans { grid-template-columns: minmax(0, 1fr); max-width: 520px; margin: 0 auto; } }
+  .pc { position: relative; display: flex; flex-direction: column; gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px 24px; box-shadow: 0 1px 2px rgba(11,36,80,.04); }
+  .pc.top { background: var(--navy); border-color: var(--navy); color: #fff; box-shadow: 0 18px 40px rgba(11,36,80,.22); }
+  .pc .badge { position: absolute; top: -13px; right: 22px; background: var(--accent); color: #fff; font: 700 12px Inter; letter-spacing: .04em; padding: 5px 12px; border-radius: 20px; }
+  .pc .num { font: 700 12px Inter; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .pc.top .num { color: var(--accent2); }
+  .pc h3 { font: 800 22px/1.2 Poppins; color: var(--navy); margin: 4px 0 0; }
+  .pc.top h3 { color: #fff; }
+  @media (min-width: 961px) { .pc h3 { min-height: 2.4em; } }
+  .pc .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pc .meta span { font: 600 12.5px Inter; padding: 4px 10px; border-radius: 20px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+  .pc.top .meta span { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.18); }
+  .pc .for { font-size: 14.5px; color: var(--muted); margin: 0; min-height: 44px; }
+  .pc.top .for { color: #C9D5EA; }
+  .cov { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .cov div { font: 700 11px Inter; text-align: center; padding: 7px 0; border-radius: 6px; background: var(--bg); color: #A3B0C2; border: 1px dashed var(--line); }
+  .cov div.on { background: var(--sc); color: #fff; border: 1px solid var(--sc); }
+  .pc.top .cov div:not(.on) { background: transparent; border-color: rgba(255,255,255,.2); color: rgba(255,255,255,.4); }
+  .covl { font: 600 11.5px Inter; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: -10px; }
+  .pc.top .covl { color: #C9D5EA; }
+  .pc .inc { font: 700 13.5px Inter; color: var(--accent); }
+  .pc.top .inc { color: var(--accent2); }
+  .pc ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 14.5px; line-height: 1.45; }
+  .pc li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; }
+  .pc li::before { content: "\2713"; color: var(--ok); font-weight: 800; }
+  .pc.top li::before { color: #6EE7A8; }
+  .pc .foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+  .pc.top .foot { border-color: rgba(255,255,255,.15); }
+  .pc .foot b { font: 800 20px Poppins; color: var(--navy); }
+  .pc.top .foot b { color: #fff; }
+  .pc .foot .btn { width: 100%; justify-content: center; text-align: center; }
+  .cmp { margin-top: 28px; overflow-x: auto; background: #fff; border: 1px solid var(--line); border-radius: 16px; }
+  .cmp table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14.5px; }
+  .cmp th, .cmp td { padding: 12px 18px; border-bottom: 1px solid var(--line); text-align: left; }
+  .cmp thead th { font: 700 13px Inter; color: var(--navy); background: var(--bg); }
+  .cmp th:not(:first-child), .cmp td:not(:first-child) { text-align: center; width: 120px; }
+  .cmp thead th:last-child, .cmp td:last-child { background: #F1F4FA; }
+  .cmp td.y { color: var(--ok); font-weight: 800; }
+  .cmp td.x { color: #C3CCD9; }
+  .cmp tr:last-child td { border-bottom: 0; }
+  .stage .plansfor { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: 1px; }
+  .stage .plansfor i { font: 700 10px Inter; font-style: normal; letter-spacing: .02em; padding: 2px 7px; border-radius: 10px; background: var(--bg); color: #B4BFCE; text-transform: none; }
+  .stage .plansfor i.on { background: color-mix(in srgb, var(--sc) 14%, #fff); color: var(--sc); }
   .price small { font: 600 16px Inter; color: var(--muted); }
   @media (max-width: 720px) { .grid2 { grid-template-columns: minmax(0, 1fr); } section { padding-block: 40px; } }
 
@@ -451,7 +493,24 @@
       <div><b>Weekday batch</b><br><span class="small" style="font-size:14px">Monday to Friday · 1.5 hours a day</span></div>
       <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
     </div>
-    <div class="grid3" id="plans" style="margin-top:26px"></div>
+    <div class="grid3" id="plans" style="margin-top:34px"></div>
+    <div class="cmp"><table>
+      <thead><tr><th>Compare plans</th><th>Plan 1</th><th>Plan 2</th><th>Plan 3</th></tr></thead>
+      <tbody>
+        <tr><td>Duration</td><td>3 months</td><td>3 months</td><td>4 months</td></tr>
+        <tr><td>Stage 1 · Embedded Systems, PCB design</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Stage 2 · Industrial IoT, cloud, dashboards</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Stage 3 · STM32, Modbus, CAN, advanced embedded</td><td class="x">&mdash;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>BLE and IoT security</td><td class="x">&mdash;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Stage 4 · Edge AI, computer vision</td><td class="x">&mdash;</td><td class="x">&mdash;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Altron AI teacher and live mentorship</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Placement assistance</td><td class="y">&#10003;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Live classes with a trainer</td><td class="x">&mdash;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Lab set-up kit, free</td><td class="x">&mdash;</td><td class="y">&#10003;</td><td class="y">&#10003;</td></tr>
+        <tr><td>Developer lab set-up</td><td class="x">&mdash;</td><td class="x">&mdash;</td><td class="y">&#10003;</td></tr>
+        <tr><td>6-month internship certificate</td><td class="x">&mdash;</td><td class="x">&mdash;</td><td class="y">&#10003;</td></tr>
+      </tbody>
+    </table></div>
     <div class="card emi" style="background:#FFF7EC;border-color:#f3d7b4">
       <div><div style="font-weight:700;color:var(--navy)">Not ready to pay the fee today?</div><div class="small">Book your seat in the next batch for ₹999 (with GST). It is adjusted in your fee.</div></div>
       <a class="btn primary" id="seatBtn" href="/enroll/program-enrolment?plan=token" data-track="admissions_seat_booking">Book my seat · ₹999</a>
@@ -582,7 +641,7 @@
     renderPlans();
     $('seatBtn').href = `/enroll/${encodeURIComponent(enrolSlug)}?plan=token`;
     const sel = $('tPlan');
-    for (const p of PLAN_CARDS) { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} — ${p.tag}`; sel.appendChild(o); }
+    for (const p of PLAN_CARDS) { const o = document.createElement('option'); o.value = `Plan ${p.n}: ${p.name}`; o.textContent = `Plan ${p.n}: ${p.name} (${p.months})`; sel.appendChild(o); }
     $('altronBtn').href = `https://wa.me/${waNumber}?text=${encodeURIComponent('Hi Altron, I want to know about the Product Engineering Program.')}`;
   }).catch(() => {});
 
@@ -598,25 +657,33 @@
     tick(); setInterval(tick, 1000);
   }
 
+  const STAGE_COLOURS = ['#2D6CDF', '#1E9D66', '#E08A2E', '#7C4DFF'];
   // The three plans (2 Nov 2026, founder): each adds the next part of the roadmap. Fees on WhatsApp, not on the page.
   const PLAN_CARDS = [
-    { name: 'Plan 1 · Self-Paced + Live Mentorship', tag: 'Self-paced', period: '3 months', inc: '',
-      features: ['Embedded Systems: microcontroller, Embedded C, GPIO, sensors, FreeRTOS, Wi-Fi (Stage 1)', 'PCB Design in KiCad, assembly and enclosure',
-                 'Industrial IoT: MQTT, cloud, Python dashboard, AWS IoT Core, OTA (Stage 2)', 'Altron AI teacher + live mentorship', 'Placement assistance'] },
-    { name: 'Plan 2 · Live Industrial Training', tag: 'Live classes', period: '3 months', inc: 'Everything in Plan 1, plus',
-      features: ['Lab set-up kit free', 'Live classes with a trainer', 'Advanced Embedded: STM32, FreeRTOS advanced, GDB, testing (Stage 3)',
-                 'Advanced IIoT: Modbus, CAN, HMI dashboard, BLE, IoT security'] },
-    { name: 'Plan 3 · Live Engineering Program', tag: 'All inclusive', period: '4 months', inc: 'Everything in Plan 1 and Plan 2, plus', rec: true,
-      features: ['Edge AI: computer vision, object detection, AI on IoT data (Stage 4)', 'Developer lab set-up', '6-month internship certificate'] },
+    { n: 1, name: 'Self-Paced + Live Mentorship', months: '3 months', mode: 'Online, self-paced', stages: [1, 2],
+      for: 'Learn at your own pace with Altron, plus live mentor sessions for doubts and reviews.', inc: '',
+      features: ['Embedded Systems: Embedded C, GPIO, sensors, FreeRTOS, Wi-Fi', 'PCB design in KiCad, assembly and enclosure',
+                 'Industrial IoT: MQTT, cloud dashboard, AWS IoT Core, OTA', 'Altron AI teacher for every lesson', 'Live mentorship', 'Placement assistance'] },
+    { n: 2, name: 'Live Industrial Training', months: '3 months', mode: 'Live classes', stages: [1, 2, 3],
+      for: 'Live classes with a trainer, your own lab kit, and industrial control on STM32.', inc: 'Everything in Plan 1, plus',
+      features: ['Lab set-up kit, free', 'Live classes with a trainer', 'Advanced Embedded: STM32, FreeRTOS advanced, GDB, testing',
+                 'Advanced IIoT: Modbus, CAN, HMI dashboard', 'BLE and IoT security'] },
+    { n: 3, name: 'Live Engineering Program', months: '4 months', mode: 'Live classes', stages: [1, 2, 3, 4], top: true,
+      for: 'The complete roadmap, edge AI, your own developer lab and an internship.', inc: 'Everything in Plan 2, plus',
+      features: ['Edge AI: computer vision, object detection, AI on IoT data', 'Developer lab set-up', '6-month internship certificate'] },
   ];
   function renderPlans() {
-    $('plans').innerHTML = PLAN_CARDS.map((p) => `<div class="card plan ${p.rec ? 'rec' : ''}">
-        ${p.rec ? '<span class="ribbon">All inclusive</span>' : ''}
-        <h3>${esc(p.name)}</h3><div class="tg">${esc(p.tag)} · ${esc(p.period)}</div>
-        ${p.inc ? `<div style="font-weight:700;color:var(--accent);font-size:14.5px">${esc(p.inc)}</div>` : ''}
+    $('plans').innerHTML = PLAN_CARDS.map((p) => `<div class="pc ${p.top ? 'top' : ''}">
+        ${p.top ? '<span class="badge">All inclusive</span>' : ''}
+        <div><div class="num">Plan ${p.n}</div><h3>${esc(p.name)}</h3></div>
+        <div class="meta"><span>${esc(p.months)}</span><span>${esc(p.mode)}</span></div>
+        <p class="for">${esc(p.for)}</p>
+        <div class="covl">Roadmap covered</div>
+        <div class="cov">${[1, 2, 3, 4].map((st) => `<div class="${p.stages.includes(st) ? 'on' : ''}" style="--sc:${STAGE_COLOURS[st - 1]}">Stage ${st}</div>`).join('')}</div>
+        ${p.inc ? `<div class="inc">${esc(p.inc)}</div>` : ''}
         <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        <div class="price"><b style="font-size:22px">Contact for pricing</b></div>
-        <a class="btn ${p.rec ? 'primary' : 'ghost'}" style="margin-top:auto" target="_blank" rel="noopener" data-track="admissions_plan_whatsapp" href="https://wa.me/${waNumber}?text=${encodeURIComponent('Hi, I want the fees for ' + p.name + '.')}">Ask fees on WhatsApp</a>
+        <div class="foot"><b>Contact for pricing</b>
+          <a class="btn ${p.top ? 'primary' : 'ghost'}" target="_blank" rel="noopener" data-track="admissions_plan_whatsapp" href="https://wa.me/${waNumber}?text=${encodeURIComponent('Hi, I want the fees for Plan ' + p.n + ': ' + p.name + '.')}">Ask fees on WhatsApp</a></div>
       </div>`).join('');
   }
   renderPlans();
@@ -627,8 +694,7 @@
     $('stages').innerHTML = '<p class="small">The roadmap could not load. <a href="/curriculum/product-engineering">Open it here</a>.</p>';
   });
 
-  const STAGE_COLOURS = ['#2D6CDF', '#1E9D66', '#E08A2E', '#7C4DFF'];
-  const STAGE_PLANS = ['Plan 1, 2 and 3', 'Plan 1, 2 and 3', 'Plan 2 and 3', 'Plan 3 (BLE and IoT security from Plan 2)'];
+  const STAGE_PLANS = [[1, 2, 3], [1, 2, 3], [2, 3], [3]];     // the plans each stage comes in
   // Stage 1 is open to everyone; Stages 2-4 open after a free WhatsApp sign-in, the same one the live demo uses, so the
   // CRM knows who is reading the roadmap.
   const roadmapOpen = () => !!store.get('adm_token') || siteSignedIn();
@@ -647,7 +713,7 @@
       return `<div class="stage open ${startStage === i + 1 ? 'here' : ''} ${locked ? 'locked' : ''}" data-i="${i}" style="--sc:${STAGE_COLOURS[i] || 'var(--navy)'}">
         ${locked ? '<div class="unlock"><button type="button" class="btn primary" data-unlock>🔓 See the full roadmap · free WhatsApp sign-in</button></div>' : ''}
         <button type="button" aria-expanded="true"><span class="n">${i + 1}</span>
-          <span><span class="month">Month ${i + 1} · ${STAGE_PLANS[i] || ''}</span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
+          <span><span class="month">Month ${i + 1}<span class="plansfor">${[1, 2, 3].map((n) => `<i class="${(STAGE_PLANS[i] || []).includes(n) ? 'on' : ''}">Plan ${n}</i>`).join('')}</span></span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
             <span class="tag">${esc(tagline)}</span><br><span class="lcount">${lessons} lessons</span></span>
           <span class="chev">▾</span></button>
         <div class="body">
