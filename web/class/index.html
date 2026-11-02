@@ -108,6 +108,13 @@
   .pc textarea { min-height: 84px; resize: vertical; }
   .pc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pc button { background: var(--orange); color: #fff; padding: 10px 16px; font-weight: 700; }
+  .board .os-hide { display: none !important; }
+  .board .os-all { background: none; color: #2d4f86; font-weight: 600; font-size: 13.5px; padding: 6px 0; text-decoration: underline; }
+  .pc button.later { background: #fff; color: #7a3a06; border: 1px solid #f0c9a0; }
+  .pc .opt { font-size: 13px; color: #9a5a1c; }
+  .pc details.err summary { cursor: pointer; font-size: 13.5px; color: #9a5a1c; font-weight: 600; }
+  .pc details.err[open] { display: grid; gap: 8px; }
+  .pc.done .row.dl { display: none; }
   .pc .res { font-size: 14px; line-height: 1.5; }
   .pc .res.ok { color: var(--ok); font-weight: 600; }
   .pc .res.bad { color: var(--bad); }
@@ -345,7 +352,7 @@
   function render() {
     const s = klass.sections[at];
     if (mq) { try { mq.end(true); } catch (_) {} mq = null; clearTimeout(mqWait); }
-    checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; if (pcHold) holdForPc(false);
+    checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; pracNudged = false; if (pcHold) holdForPc(false);
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
@@ -353,13 +360,15 @@
     const tap = s.practical && s.practical.task === 'tap';
     if (s.boardHtml) h += `<div class="board${tap ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
     if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
-    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: do it on your PC, paste here, tap Check.</div>
-      <textarea id="pcIn" spellcheck="false" placeholder="Paste the output here"></textarea><div class="row"><button type="button" id="pcGo">Check</button></div><div class="res" id="pcRes"></div></div>`;
-    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: upload the code, then type your NAME and tap Listen.</div>
+    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 Try it: ${esc(taskText(s.practical.text))}</div>
+      <div class="opt">Optional. The class carries on either way.</div>${DONE_LATER}
+      <details class="err"><summary>Got an error? Paste it here and Altron will help</summary>
+      <textarea id="pcIn" spellcheck="false" placeholder="Paste the error or the output here"></textarea><div class="row"><button type="button" id="pcGo">Ask Altron</button></div></details><div class="res" id="pcRes"></div></div>`;
+    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="opt">Optional: upload the code, type your NAME and tap Listen. The class carries on either way.</div>${DONE_LATER}
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your NAME from the code" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Listen</button></div>
       ${s.practical.cmd ? '<div class="row cmds hidden" id="pcCmd"><button type="button" data-cmd="ON">💡 Send ON</button><button type="button" class="off" data-cmd="OFF">Send OFF</button></div>' : ''}
       <div class="live" id="pcLive"></div><div class="res" id="pcRes"></div></div>`;
-    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="wait">⏳ Altron waits for you: push from your PC, then type your username and tap Check.</div>
+    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="opt">Optional: push from your PC, type your username and tap Check. The class carries on either way.</div>${DONE_LATER}
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
       const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
@@ -379,12 +388,14 @@
         if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => {}); };
       pre.appendChild(b);
     }
+    onlyMyOs();
     if ($('pcGo')) {
       const run = { github: checkGithub, mqtt: checkMqtt }[s.practical.task] || checkPaste;
       $('pcGo').onclick = () => run();
       if (s.practical.task !== 'paste') { $('pcIn').value = store.get(s.practical.task === 'mqtt' ? 'altron_mq' : 'altron_gh') || ''; $('pcIn').onkeydown = (e) => { if (e.key === 'Enter') run(); }; }
       for (const b of document.querySelectorAll('#pcCmd button')) b.onclick = () => sendCmd(b.dataset.cmd);
     }
+    if ($('pcDone')) { $('pcDone').onclick = () => pcSkip(true); $('pcLater').onclick = () => pcSkip(false); }
     if (tap) {
       for (const el of document.querySelectorAll('#board [data-point]')) el.addEventListener('click', () => tapPart(el.dataset.point));
     }
@@ -459,7 +470,31 @@
   // hears the result, and on a miss the start of what they pasted, so it can read the error and help.
   // While they work on their PC the talk is on hold: the line stays open but no sound is sent, so silence costs nothing,
   // and a Check (or the mic button) brings Altron straight back.
-  let pcHold = false;
+  let pcHold = false, pracNudged = false;
+  // A board with one card per operating system (data-point win / mac / linux) shows only the learner's, with a link to
+  // the others: three sets of commands at once was too much on one slide.
+  const MY_OS = /Mac|iPhone|iPad/i.test(navigator.userAgent) ? 'mac' : /Linux|Android|CrOS/i.test(navigator.userAgent) ? 'linux' : 'win';
+  function onlyMyOs() {
+    const cards = [...document.querySelectorAll('#board [data-point="win"], #board [data-point="mac"], #board [data-point="linux"]')];
+    if (cards.length < 2 || !cards.some((c) => c.dataset.point === MY_OS)) return;
+    const others = cards.filter((c) => c.dataset.point !== MY_OS);
+    others.forEach((c) => c.classList.add('os-hide'));
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'os-all';
+    b.textContent = MY_OS === 'win' ? 'Using a Mac or Linux? Show those steps' : 'Show the steps for other computers';
+    b.onclick = () => { others.forEach((c) => c.classList.remove('os-hide')); b.remove(); };
+    cards[cards.length - 1].parentElement.after(b);
+  }
+  const DONE_LATER = '<div class="row dl"><button type="button" id="pcDone">✅ Done</button><button type="button" class="later" id="pcLater">Later →</button></div>';
+  // The note's task says "...and paste what it prints": the paste is optional now, so that part is left off.
+  function taskText(t) { return String(t || '').replace(/[,;]?\s*(and |then )?(paste|type)\b.*$/i, '').replace(/[.\s]*$/, '') + '.'; }
+  // Done or Later: the practical is homework, never a stop. Altron says a line and moves on.
+  function pcSkip(didIt) {
+    pracDone = true; done.add(at); saveProgress(); $('pc').classList.add('done');
+    $('pcRes').className = 'res ok'; $('pcRes').textContent = didIt ? '✅ Nice work. Moving on.' : '👍 No problem. Do it later; it stays in the notes.';
+    lastHuman = Date.now(); resolvedAt = Date.now();
+    if (running) tell('[Screen] On the practical the learner tapped ' + (didIt ? '"Done": they did it.' : '"Later": they will do it after the class.') + ' Say one short line and call show_section "next".');
+    else setTimeout(() => go(at + 1, true), 900);
+  }
   function holdForPc(on) {
     pcHold = on;
     $('smsg').textContent = on ? 'Altron is waiting while you work on your PC. Paste the output and tap Check, or tap 🎙️ to ask something.' : '';
@@ -628,7 +663,7 @@
   }
 
   // ── Altron: Gemini Live, the same metering as the app ──
-  let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = true, ticker = null;
+  let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = isDemo, ticker = null;
   let setup = null, wsUrl = '', handle = null, playing = [], nextAt = 0, tutorLine = '', youLine = '', lastActive = Date.now();
   let conn = null, rotateAt = 0, firstStart = true, heard = '', lastState = '';
   // Someone who starts a walkthrough and walks away must not leave Altron talking to an empty room: only the learner's
@@ -847,9 +882,10 @@
       if (resNudged && quiet > 22000) { resolvedAt = 0; go(at + 1, true); return; }
     }
     const s = klass && klass.sections[at];
-    if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && (Date.now() - lastActive) / 1000 >= 40) {
-      if (!pcHold) holdForPc(true);
-      return;
+    if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && at < klass.sections.length - 1) {
+      const quiet = (Date.now() - lastActive) / 1000;
+      if (!pracNudged && quiet >= 20) { pracNudged = true; note('[The learner has not tapped Done or Later. Tell them in one short line that they can do it after the class, then call show_section "next".]'); return; }
+      if (pracNudged && quiet >= 40) { go(at + 1, true); return; }
     }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
   }
@@ -870,7 +906,13 @@
   $('endBtn').onclick = () => finish(isDemo ? 'Demo ended. Your plans and seat booking are below.' : 'Class ended.');
   $('pause').onclick = () => pause();
   $('resume').onclick = async () => { try { await begin(); } catch (e) { if (e.signin) askSignin(); else stop(e.message, !e.out); } };
-  $('mic').onclick = () => { if (pcHold) { holdForPc(false); tell('[Screen] The learner tapped the mic: they want to ask something about the practical. Ask what they need.'); return; } micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  function micLook() { $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; $('mic').title = micOn ? 'Tap when you are done speaking' : 'Tap to ask Altron'; }
+  $('mic').onclick = () => {
+    if (pcHold) holdForPc(false);
+    micOn = !micOn; micLook();
+    if (!micOn && ready()) { try { ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } })); } catch (_) {} }   // their question is over
+  };
+  micLook();
   $('txbtn').onclick = () => { $('tx').classList.toggle('on'); $('txbtn').textContent = $('tx').classList.contains('on') ? 'Hide what was said ▴' : 'Show what was said ▾'; };
   window.altronPause = () => { if (running) pause(); };
   if (P.get('autostart') === '1' && token()) setTimeout(startClass, 300);   // inside the app: one less tap
