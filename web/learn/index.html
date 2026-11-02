@@ -113,6 +113,7 @@
   /* in the Android app the app has its own tabs and sign-in */
   .inapp .bar { display: none; }
   .inapp .shell, .inapp .shell.reading { height: 100vh; height: 100dvh; }
+  .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
 </head>
@@ -225,13 +226,28 @@
 
   // ── data ──
   var mods = {}, trial = null;
-  function cacheKey() { return 'altro_course_' + (token() ? token().slice(-10) : 'out'); }
-  function cached() { try { var c = JSON.parse(store(cacheKey()) || 'null'); if (c && c.mods) { mods = c.mods; trial = c.trial; return true; } } catch (e) {} return false; }
+  function cacheKey() { return 'altro_course2_' + (token() ? token().slice(-10) : 'out'); }
+  function cached() { try { var c = JSON.parse(store(cacheKey()) || 'null'); if (c && c.mods) { mods = c.mods; trial = c.trial; buildLevels(c.order || []); return true; } } catch (e) {} return false; }
+  // The course as the team built it in the admin (2 Nov 2026, founder): each published module, in the admin's order, its
+  // topics as steps and its subtopics inside them. The list above stays only for a server that does not send topics yet.
+  var ORDER = [];
+  function buildLevels(order) {
+    ORDER = order;
+    var ms = order.map(function (id) { return mods[id]; }).filter(function (m) { return m && m.topics && m.topics.length; });
+    if (!ms.length) return;
+    LEVELS = ms.map(function (m) {
+      return [m.title, m.color || '#5B9BFF', m.topics.map(function (t) {
+        var its = [];
+        t.subtopics.forEach(function (sb) { sb.items.forEach(function (it) { its.push(Object.assign({ m: m.id, sub: sb.title }, it)); }); });
+        return [t.title, true, its];
+      })];
+    });
+  }
   function load() {
     return Promise.all([
-      getJSON('/learn/roadmap?ids=' + IDS.join(',')).then(function (d) { mods = {}; (d.modules || []).forEach(function (m) { mods[m.id] = m; }); }),
+      getJSON('/learn/roadmap').then(function (d) { mods = {}; var order = []; (d.modules || []).forEach(function (m) { mods[m.id] = m; order.push(m.id); }); buildLevels(order); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
-    ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial })); });
+    ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial, order: ORDER })); });
   }
   // A lesson and what follows it in its module, up to the next lesson.
   function withExtras(r) {
@@ -243,7 +259,7 @@
     for (var j = i + 1; j < its.length && its[j].type !== 'notes'; j++) out.push(Object.assign({ m: r[0] }, its[j]));
     return out;
   }
-  function stepItems(T) { var out = []; (T[1] || []).forEach(function (r) { out = out.concat(withExtras(r)); }); return out; }
+  function stepItems(T) { if (T[1] === true) return T[2]; var out = []; (T[1] || []).forEach(function (r) { out = out.concat(withExtras(r)); }); return out; }
   function allItems() { var out = []; LEVELS.forEach(function (L) { L[2].forEach(function (T) { out = out.concat(stepItems(T)); }); }); return out; }
   function anyLocked() { return allItems().some(function (n) { return n.locked; }); }
   function inTrial() { return trial && trial.active === true; }
@@ -279,8 +295,10 @@
         var sub = !T[1] ? 'Live with a mentor' : its.length + ' item' + (its.length === 1 ? '' : 's') + (open.length && open.length < its.length ? ' · ' + open.length + ' open' : '');
         html += '<div class="step' + (fin ? ' done' : '') + (mine ? ' x' : '') + '"><button data-step><span class="no">' + (fin ? '✓' : no) + '</span><span class="t">' + esc(T[0]) + '<small>' + sub + '</small></span>' +
           (!T[1] ? '<span class="tag live">LIVE</span>' : '<span class="chev">›</span>') + '</button>';
+        var lastSub = null;
         if (T[1]) html += '<div class="items">' + its.map(function (n) {
-          return '<a class="it' + (n.locked ? ' lk' : '') + (String(n.id) === String(cur) ? ' on' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><span class="ic">' + (n.locked ? '🔒' : ICON[n.type] || '📄') + '</span><span class="nm">' + esc(n.title) + '</span>' +
+          var head = n.sub && n.sub !== lastSub ? '<div class="subt">' + esc(n.sub) + '</div>' : ''; lastSub = n.sub;
+          return head + '<a class="it' + (n.locked ? ' lk' : '') + (String(n.id) === String(cur) ? ' on' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><span class="ic">' + (n.locked ? '🔒' : ICON[n.type] || '📄') + '</span><span class="nm">' + esc(n.title) + '</span>' +
             (done(n.id) ? '<span class="ok">✓</span>' : n.free && !n.locked ? '<span class="tag">FREE</span>' : '') + '</a>';
         }).join('') + '</div>';
         html += '</div>';
@@ -313,7 +331,7 @@
       var its = allItems(), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
       var pct = open.length ? Math.round(fin * 100 / open.length) : 0, nx = firstOpen(), locked = anyLocked(), have = Object.keys(mods).length;
       var welcome = '<div class="pad"><h1>Product Engineering: embedded systems to IoT</h1>' +
-        '<p class="muted" style="margin-top:6px">20 steps from electronics to a shipped product. Each step has its notes, code, tests and projects; live classes and their recordings are under Live classes.</p>' +
+        '<p class="muted" style="margin-top:6px">Every module, step by step: notes, code, tests and projects for each topic. Live classes and their recordings are under Live classes.</p>' +
         (have ? '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>Your progress</b><span class="muted" style="font-size:13px">' + fin + ' of ' + open.length + ' open items done</span></div>' +
           '<div class="prog"><i style="width:' + pct + '%"></i></div>' +
           (inTrial() ? '<p class="muted" style="font-size:13px;margin-top:6px">Your free week: ' + trial.days_left + ' days left. Every step is open.</p>' : '') +
