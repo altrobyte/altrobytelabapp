@@ -445,25 +445,16 @@
 <section id="fees">
   <div class="wrap">
     <div class="eyebrow">Fees</div>
-    <h2>Pay month by month. Stop or carry on, your call.</h2>
-    <p class="sub" id="feesSub">One stage a month, with the lab kit from day one. Sure you want the whole journey? Pay 3 months together and save.</p>
+    <h2>Three plans. Pick how you want to learn.</h2>
+    <p class="sub" id="feesSub">The same roadmap in every plan. Each plan adds the next part of it, from your first device to industrial control and edge AI.</p>
     <div class="sched">
       <div><b>Weekday batch</b><br><span class="small" style="font-size:14px">Monday to Friday · 1.5 hours a day</span></div>
       <div><b>Weekend batch</b><br><span class="small" style="font-size:14px">Saturday and Sunday · 3 hours a day</span></div>
     </div>
     <div class="grid3" id="plans" style="margin-top:26px"></div>
-    <div class="card emi" style="margin-top:16px;background:#F3F7FF;border-color:#cfdcf5">
-      <div><div style="font-weight:700;color:var(--navy)">Prefer to learn on your own? Self-paced: ₹4,999 a month + GST</div><div class="small">Every module and recorded lecture, Altron the AI mentor teaching each lesson by voice, and a live class every week. Try it free for 7 days first.</div></div>
-      <a class="btn ghost" href="/learn" data-track="admissions_selfpaced">Start the free week</a>
-    </div>
     <div class="card emi" style="background:#FFF7EC;border-color:#f3d7b4">
       <div><div style="font-weight:700;color:var(--navy)">Not ready to pay the fee today?</div><div class="small">Book your seat in the next batch for ₹999 (with GST). It is adjusted in your fee.</div></div>
       <a class="btn primary" id="seatBtn" href="/enroll/program-enrolment?plan=token" data-track="admissions_seat_booking">Book my seat · ₹999</a>
-    </div>
-    <div class="card emi">
-      <div><div style="font-weight:700;color:var(--navy)">Why monthly works</div><div class="small">Month 1 you build your first working device and design its PCB. Month 2 you put it online with a cloud dashboard.</div></div>
-      <div><b>₹9,999</b> <span class="small">+ GST a month</span></div>
-      <a class="btn ghost" href="#talk">Ask a mentor</a>
     </div>
   </div>
 </section>
@@ -588,10 +579,10 @@
     if (d.start_label) $('startBadge').textContent = d.start_label;
     if (d.seats_left) { $('fomoSeats').textContent = '· only ' + d.seats_left + ' seats left'; }
     if (d.offer_on && d.offer_ends) countdown(d.offer_ends); else $('fomo').classList.add('hidden');
-    renderPlans(d);
+    renderPlans();
     $('seatBtn').href = `/enroll/${encodeURIComponent(enrolSlug)}?plan=token`;
     const sel = $('tPlan');
-    for (const p of plans) { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} — ${p.tag}`; sel.appendChild(o); }
+    for (const p of PLAN_CARDS) { const o = document.createElement('option'); o.value = p.name; o.textContent = `${p.name} — ${p.tag}`; sel.appendChild(o); }
     $('altronBtn').href = `https://wa.me/${waNumber}?text=${encodeURIComponent('Hi Altron, I want to know about the Product Engineering Program.')}`;
   }).catch(() => {});
 
@@ -607,20 +598,28 @@
     tick(); setInterval(tick, 1000);
   }
 
-  function renderPlans(d) {
-    $('plans').innerHTML = plans.map((p) => {
-      const price = d.offer_on ? p.offer : (p.standard || p.offer);
-      const save = d.offer_on && p.standard > p.offer ? p.standard - p.offer : 0;     // a real saving, never a made-up "regular" price
-      return `<div class="card plan ${p.recommended ? 'rec' : ''}">
-        ${p.recommended ? '<span class="ribbon">Most chosen</span>' : ''}
+  // The three plans (2 Nov 2026, founder): each adds the next part of the roadmap. Fees on WhatsApp, not on the page.
+  const PLAN_CARDS = [
+    { name: 'Plan 1 · Self-Paced + Live Mentorship', tag: 'Self-paced', period: '3 months', inc: '',
+      features: ['Embedded Systems: microcontroller, Embedded C, GPIO, sensors, FreeRTOS, Wi-Fi (Stage 1)', 'PCB Design in KiCad, assembly and enclosure',
+                 'Industrial IoT: MQTT, cloud, Python dashboard, AWS IoT Core, OTA (Stage 2)', 'Altron AI teacher + live mentorship', 'Placement assistance'] },
+    { name: 'Plan 2 · Live Industrial Training', tag: 'Live classes', period: '3 months', inc: 'Everything in Plan 1, plus',
+      features: ['Lab set-up kit free', 'Live classes with a trainer', 'Advanced Embedded: STM32, FreeRTOS advanced, GDB, testing (Stage 3)',
+                 'Advanced IIoT: Modbus, CAN, HMI dashboard, BLE, IoT security'] },
+    { name: 'Plan 3 · Live Engineering Program', tag: 'All inclusive', period: '4 months', inc: 'Everything in Plan 1 and Plan 2, plus', rec: true,
+      features: ['Edge AI: computer vision, object detection, AI on IoT data (Stage 4)', 'Developer lab set-up', '6-month internship certificate'] },
+  ];
+  function renderPlans() {
+    $('plans').innerHTML = PLAN_CARDS.map((p) => `<div class="card plan ${p.rec ? 'rec' : ''}">
+        ${p.rec ? '<span class="ribbon">All inclusive</span>' : ''}
         <h3>${esc(p.name)}</h3><div class="tg">${esc(p.tag)} · ${esc(p.period)}</div>
-        <div class="price"><b>${inr(price)}</b><small>+ GST${p.months === 1 ? ' / month' : ''}</small>${save ? `<s>${inr(p.standard)}</s><span class="off">Save ${inr(save)}</span>` : ''}</div>
-        <div class="small">${inr(gst(price))} including 18% GST${p.months === 1 ? ' · stop or carry on each month' : ` · ${inr(Math.round(price / p.months))} a month`}</div>
-        <ul>${(p.features || []).map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-        <a class="btn ${p.recommended ? 'primary' : 'ghost'}" href="/enroll/${encodeURIComponent(enrolSlug)}?plan=${encodeURIComponent(p.key)}" data-plan="${esc(p.key)}">Enrol in ${esc(p.name)}</a>
-      </div>`;
-    }).join('');
+        ${p.inc ? `<div style="font-weight:700;color:var(--accent);font-size:14.5px">${esc(p.inc)}</div>` : ''}
+        <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+        <div class="price"><b style="font-size:22px">Contact for pricing</b></div>
+        <a class="btn ${p.rec ? 'primary' : 'ghost'}" style="margin-top:auto" target="_blank" rel="noopener" data-track="admissions_plan_whatsapp" href="https://wa.me/${waNumber}?text=${encodeURIComponent('Hi, I want the fees for ' + p.name + '.')}">Ask fees on WhatsApp</a>
+      </div>`).join('');
   }
+  renderPlans();
 
   // ── the roadmap ──
   let roadmap = null;
@@ -629,6 +628,7 @@
   });
 
   const STAGE_COLOURS = ['#2D6CDF', '#1E9D66', '#E08A2E', '#7C4DFF'];
+  const STAGE_PLANS = ['Plan 1, 2 and 3', 'Plan 1, 2 and 3', 'Plan 2 and 3', 'Plan 3 (BLE and IoT security from Plan 2)'];
   // Stage 1 is open to everyone; Stages 2-4 open after a free WhatsApp sign-in, the same one the live demo uses, so the
   // CRM knows who is reading the roadmap.
   const roadmapOpen = () => !!store.get('adm_token') || siteSignedIn();
@@ -647,7 +647,7 @@
       return `<div class="stage open ${startStage === i + 1 ? 'here' : ''} ${locked ? 'locked' : ''}" data-i="${i}" style="--sc:${STAGE_COLOURS[i] || 'var(--navy)'}">
         ${locked ? '<div class="unlock"><button type="button" class="btn primary" data-unlock>🔓 See the full roadmap · free WhatsApp sign-in</button></div>' : ''}
         <button type="button" aria-expanded="true"><span class="n">${i + 1}</span>
-          <span><span class="month">Month ${i + 1}</span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
+          <span><span class="month">Month ${i + 1} · ${STAGE_PLANS[i] || ''}</span><h3>${esc(rest.join('—').trim() || title)} <span class="herehint">You start here</span></h3>
             <span class="tag">${esc(tagline)}</span><br><span class="lcount">${lessons} lessons</span></span>
           <span class="chev">▾</span></button>
         <div class="body">
@@ -757,14 +757,12 @@
   const faq = [
     ['Do I need any experience?', 'No. Stage 1 starts from your first program on a microcontroller. Take "Analyse my profile" above to see where you would start.'],
     ['Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (Gravity Mall, Mechanic Nagar). Every class is recorded.'],
-    ['Is GST included in the price?', 'Yes. The big price on each plan includes 18% GST; the fee before GST is shown under it.'],
-    ['Can I start monthly and switch to 3 months later?', 'Yes. Within 30 days of starting, move to the 3-month plan by paying only the difference.'],
-    ['Can I pay monthly?', 'Yes. ₹9,999 + GST a month, one stage a month, and you decide each month whether to carry on. Paying 3 months together is ₹27,999 + GST, a saving of ₹1,998.'],
+    ['What are the fees?', 'Fees depend on the plan and batch. Message us on WhatsApp (+91 72229 77927) and a mentor sends you the fee for your plan.'],
     ['What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day. Online or offline in Indore.'],
-    ['What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in every plan, so you can practise outside class.'],
-    ['What if I miss a class?', 'Every plan includes the recorded lectures and doubt support to catch up.'],
-    ['Do you help with placements?', 'The 3-month plan includes placement assistance. In every plan you leave with real products, a GitHub portfolio and demo videos — what interviewers ask about.'],
-    ['Which plan should I choose?', 'Monthly if you want to start now and decide as you go. 3 months together if you are sure you want the whole journey and placement assistance; it costs less. A mentor can help you decide.'],
+    ['What is the lab set-up kit?', 'A hardware kit for your own desk, free in Plan 2 and Plan 3, so you can practise outside class.'],
+    ['What if I miss a class?', 'Recorded lectures and doubt support help you catch up.'],
+    ['Do you help with placements?', 'Yes, placement assistance is in every plan. You also leave with real products, a GitHub portfolio and demo videos, which is what interviewers ask about.'],
+    ['Which plan should I choose?', 'Plan 1 if you want to learn at your own pace with mentors. Plan 2 for live industrial classes, the free lab kit, STM32 and advanced IoT. Plan 3 for everything plus edge AI, a developer lab set-up and a 6-month internship certificate. A mentor can help you decide.'],
     ['Can I buy only the lab kit, or a lab for my college?', 'Yes. The Altrobyte mini lab kit is sold on its own too, and we set up custom labs for colleges, schools and companies. Ask for a quote in the "Kit & custom lab" section.'],
   ];
   $('faqs').innerHTML = faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('');
