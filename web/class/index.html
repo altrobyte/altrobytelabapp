@@ -876,6 +876,15 @@
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
     }
+    // A class with the mic off: the learner cannot answer by voice, so when Altron stops it is told to carry on (once per
+    // pause; a practical has its own, longer wait below).
+    const sNow = klass && klass.sections[at];
+    if (klass && klass.mode !== 'walkthrough' && !micOn && waitingForThem && !nudged && !ending && !(checkShown && !checkDone) && !playing.length
+        && !(sNow && sNow.practical && sNow.practical.task !== 'tap' && !pracDone) && Date.now() - lastActive > (askedThem ? 12000 : 5000)) {
+      nudged = true;
+      note('[The learner is listening with the mic off. Carry on with the next point of this section, in Hinglish; when its points are done, call ask_check, or show_section "next" if it has no check.]');
+      return;
+    }
     if (klass && klass.mode !== 'walkthrough' && resolvedAt && !playing.length && !pcHold && !ending && at < klass.sections.length - 1) {
       const quiet = Date.now() - lastActive;
       if (!resNudged && quiet > 9000) { resNudged = true; note('[The learner has finished this section correctly. Say one short sentence about it, then call show_section "next".]'); return; }
