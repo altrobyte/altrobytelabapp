@@ -153,6 +153,7 @@
       ['Edge AI and ML'], ['Embedded Linux'], ['Computer vision'], ['App and web for devices']]]
   ];
   var IDS = [5, 4, 10, 9, 8, 6];
+  var ALTRON_CLASS = [61, 26, 32, 36, 105, 106, 107];
   var ICON = { notes: '📄', video: '🎬', code: '💻', test: '📝', github: '🔧', project: '🛠', resource: '📎' };
   var KIND = { notes: 'Notes', video: 'Video', code: 'Code', test: 'Test', github: 'Project', project: 'Project', resource: 'Resource' };
 
@@ -396,6 +397,9 @@
         (link ? projectLinks(link) : '') + '</div></div>';
     }
     var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' : '';
+    // A lesson with a tested Altron class (the same list as LESSON_CLASS on the server): the live class on a board.
+    if (beta() && ALTRON_CLASS.indexOf(Number(it.id)) >= 0)
+      top += '<div class="pad" style="padding-bottom:0"><a class="btn btn-main" href="/class/?note=' + it.id + '">▶ Learn this lesson live with Altron</a></div>';
     main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
     if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
     var md = document.getElementById('markdone');
