@@ -391,6 +391,8 @@
     }
     var main = root.querySelector('.main');
     var top = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><button class="iconbtn hide-s" data-outline title="Course list">☰</button><div class="tt">' + esc(it.title) + '<small>' + esc((KIND[it.type] || 'Lesson') + ' · ' + it.module.title) + '</small></div>' +
+      // Altron is optional, one tap away on every note (3 Nov 2026, founder: "Learn with AI").
+      (it.type === 'notes' ? '<button class="btn btn-main btn-sm" id="learnai" title="Altron, the AI teacher, teaches this lesson by voice">✨ Learn with AI</button>' : '') +
       // Done sits in the bar, not in a strip of its own under the note (31 Oct 2026, founder).
       (done(it.id) ? '<span class="muted hide-s" style="font-size:13px">Done ✓</span>' : '<button class="btn btn-ghost btn-sm" id="markdone" title="Mark as done">✓ Done</button>') +
       '<span class="navs row" style="gap:6px"></span>' +
@@ -414,11 +416,19 @@
         (it.html_content ? '<div style="margin:12px 0">' + it.html_content + '</div>' : '<p class="muted" style="margin:8px 0 16px">Build it on your board, then compare with the reference project.</p>') +
         (link ? projectLinks(link) : '') + '</div></div>';
     }
-    var foot = beta() && it.type === 'notes' ? '<div class="strip"><iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe></div>' : '';
-    // A lesson with a tested Altron class (the same list as LESSON_CLASS on the server): the live class on a board.
-    if (beta() && ALTRON_CLASS.indexOf(Number(it.id)) >= 0)
-      top += '<div class="pad" style="padding-bottom:0"><a class="btn btn-main" href="/class/?note=' + it.id + '">▶ Learn this lesson live with Altron</a></div>';
-    main.innerHTML = '<div class="lv">' + top + body + foot + '</div>';
+    main.innerHTML = '<div class="lv">' + top + body + '</div>';
+    // Learn with AI: a lesson with a tested board class (the same list as LESSON_CLASS on the server) opens it; any other
+    // note opens the Altron strip under it, the one testers had. Nothing starts until the learner taps.
+    var ai = document.getElementById('learnai');
+    if (ai) ai.onclick = function () {
+      funnel('learn_with_ai', String(it.id));
+      if (ALTRON_CLASS.indexOf(Number(it.id)) >= 0) { location.href = '/class/?note=' + it.id; return; }
+      if (main.querySelector('.strip')) return;
+      var st = document.createElement('div'); st.className = 'strip';
+      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe>';
+      main.querySelector('.lv').appendChild(st);
+      ai.textContent = '✨ AI is on'; ai.disabled = true;
+    };
     if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
     var md = document.getElementById('markdone');
     if (md) md.onclick = function () {
