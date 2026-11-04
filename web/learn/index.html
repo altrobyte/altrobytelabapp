@@ -113,6 +113,8 @@
   /* in the Android app the app has its own tabs and sign-in */
   .inapp .bar { display: none; }
   .inapp .shell, .inapp .shell.reading { height: 100vh; height: 100dvh; }
+  .aipick { position: fixed; z-index: 50; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; width: 270px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+  .card.desk { margin: 12px 0 16px; }
   .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
@@ -420,15 +422,49 @@
     // Learn with AI: a lesson with a tested board class (the same list as LESSON_CLASS on the server) opens it; any other
     // note opens the Altron strip under it, the one testers had. Nothing starts until the learner taps.
     var ai = document.getElementById('learnai');
-    if (ai) ai.onclick = function () {
-      funnel('learn_with_ai', String(it.id));
-      if (ALTRON_CLASS.indexOf(Number(it.id)) >= 0) { location.href = '/class/?note=' + it.id; return; }
+    // The learner picks the language each time (the last one is marked): English or Hinglish.
+    function startAI(lang) {
+      store('altro_ai_lang', lang); funnel('learn_with_ai', it.id + ' ' + lang);
+      var pk = document.getElementById('aipick'); if (pk) pk.remove();
+      if (ALTRON_CLASS.indexOf(Number(it.id)) >= 0) { location.href = '/class/?note=' + it.id + '&lang=' + lang; return; }
       if (main.querySelector('.strip')) return;
       var st = document.createElement('div'); st.className = 'strip';
-      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=en&compact=1&autostart=1"></iframe>';
+      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=' + lang + '&compact=1&autostart=1"></iframe>';
       main.querySelector('.lv').appendChild(st);
       ai.textContent = '✨ AI is on'; ai.disabled = true;
+    }
+    if (ai) ai.onclick = function (e) {
+      e.stopPropagation();
+      var old = document.getElementById('aipick'); if (old) { old.remove(); return; }
+      var last = store('altro_ai_lang') || 'hi', r = ai.getBoundingClientRect();
+      var pk = document.createElement('div'); pk.id = 'aipick'; pk.className = 'aipick';
+      pk.style.top = (r.bottom + 8) + 'px'; pk.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+      pk.innerHTML = '<b>Altron teaches this lesson by voice</b><span class="muted">Pick a language</span>' +
+        '<div class="row" style="gap:8px"><button class="btn btn-sm ' + (last === 'hi' ? 'btn-main' : 'btn-ghost') + '" data-l="hi">Hinglish</button>' +
+        '<button class="btn btn-sm ' + (last === 'en' ? 'btn-main' : 'btn-ghost') + '" data-l="en">English</button></div>' +
+        '<span class="muted" style="font-size:12px">Earphones help. Ask a doubt any time, just speak.</span>';
+      document.body.appendChild(pk);
+      pk.querySelectorAll('[data-l]').forEach(function (b) { b.onclick = function () { startAI(b.dataset.l); }; });
+      setTimeout(function () { document.addEventListener('click', function off(ev) { if (!pk.contains(ev.target)) { pk.remove(); document.removeEventListener('click', off); } }); }, 0);
     };
+    // An experiment (code or a project to build): done best in the Altrobyte Trainer desktop app, which builds, uploads and
+    // checks it on the learner's own board (3 Nov 2026, founder). The download shows only once the installer is published.
+    if (it.type !== 'notes' && it.type !== 'test' && !yt(it.youtube_url)) {
+      var pad = main.querySelector('.body .pad');
+      if (pad) {
+        var card = document.createElement('div'); card.className = 'card desk';
+        card.innerHTML = '<b>🖥️ Do this experiment in the Altrobyte Trainer app</b><p class="muted" style="margin:4px 0 10px;font-size:14px">' +
+          'The desktop app opens the project, builds and uploads it to your board, and Altron checks your wiring and what your board prints, step by step. Notes and Learn with AI work there too.</p><div class="row" id="deskdl"><span class="muted" style="font-size:13px">Checking the download…</span></div>';
+        pad.insertBefore(card, pad.firstChild.nextSibling);
+        fetch('/downloads/desktop.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
+          document.getElementById('deskdl').innerHTML = '<a class="btn btn-main" href="/downloads/' + esc(d.file || 'AltrobyteTrainerSetup.exe') + '" data-dl>Download for Windows</a>' +
+            '<span class="muted" style="font-size:13px">v' + esc(d.version || '') + (d.size ? ' · ' + Math.round(d.size / 1048576) + ' MB' : '') + '</span>';
+          var a = card.querySelector('[data-dl]'); if (a) a.onclick = function () { funnel('desktop_download', String(it.id)); };
+        }).catch(function () {
+          document.getElementById('deskdl').innerHTML = '<span class="muted" style="font-size:13px">The desktop app is coming soon. Till then, follow the steps on this page.</span>';
+        });
+      }
+    }
     if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
     var md = document.getElementById('markdone');
     if (md) md.onclick = function () {
