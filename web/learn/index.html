@@ -125,6 +125,8 @@
   @media (max-width: 600px) { .livepanel { right: 12px; bottom: 132px; } }
   .livepanel .lb { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
   .livepanel .lb b { font-size: 14px; display: block; } .livepanel .lb span { font-size: 12.5px; color: var(--soft); }
+  .livepanel .lpcall { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .livepanel .lpcall input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink2); color: inherit; font: inherit; font-size: 14px; }
   .livepanel .fr { color: #38E1D3; font-weight: 800; font-size: 11px; letter-spacing: .08em; }
   .sum { flex: none; border-bottom: 1px solid var(--line); background: var(--ink2); padding: 8px 14px; font-size: 14px; }
   .sum summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; list-style: none; } .sum summary::-webkit-details-marker { display: none; }
@@ -592,8 +594,25 @@
       funnel('learn_live_open', location.pathname);
       panel = document.createElement('div'); panel.className = 'livepanel';
       panel.innerHTML = '<b style="font-size:16px">Learn live with an industrial expert</b><span class="muted" style="font-size:13.5px">Live classes with engineers who build IoT products for industry: your own lab kit, real products, mentor reviews and placement help. Start with a free demo class.</span><div id="lpList" class="muted" style="font-size:13px">Loading the batches…</div>' +
-        '<a class="btn btn-main" href="/pricing#live" data-lp="plans">See the live program</a>';
+        '<a class="btn btn-main" href="/pricing#live" data-lp="plans">See the live program</a>' +
+        // Not sure yet: they leave a number and the team calls (the roadmap's callback form, one lead list).
+        '<form class="lpcall"><b style="font-size:14px">Not sure which batch? Get a call</b><span class="muted" style="font-size:12.5px">Our team calls you about the next batch and the fees.</span>' +
+        '<input name="name" placeholder="Your name" autocomplete="name" required maxlength="60">' +
+        '<input name="phone" placeholder="WhatsApp number" inputmode="tel" autocomplete="tel" required maxlength="16">' +
+        '<button class="btn btn-ghost" type="submit">Call me</button><span class="lpmsg muted" style="font-size:12.5px"></span></form>';
       document.body.appendChild(panel);
+      panel.querySelector('.lpcall').onsubmit = function (ev) {
+        ev.preventDefault();
+        var f = ev.target, msg = f.querySelector('.lpmsg'), btn = f.querySelector('button');
+        var phone = f.phone.value.replace(/\D/g, '').slice(-10);
+        if (phone.length !== 10) { msg.textContent = 'Please enter your 10-digit WhatsApp number.'; return; }
+        btn.disabled = true; msg.textContent = 'Sending…';
+        var title = (document.querySelector('.lv .tt') || {}).textContent || '';
+        fetch(API + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: f.name.value.trim(), phone: phone, source: 'learn', note: ('Asked on /learn' + (title ? ' while reading: ' + title : '')).slice(0, 200) }) })
+          .then(function (r) { if (!r.ok) throw r; funnel('lead_asked', location.pathname); f.innerHTML = '<b style="font-size:14px">Thanks! Our team will call you soon.</b>'; })
+          .catch(function () { btn.disabled = false; msg.innerHTML = 'Could not send just now. <a href="https://wa.me/917222977927">Message us on WhatsApp</a>.'; });
+      };
       panel.addEventListener('click', function (ev) { ev.stopPropagation(); var a = ev.target.closest && ev.target.closest('[data-lp]'); if (a) funnel('learn_live_click', a.getAttribute('data-lp')); });
       setTimeout(function () { document.addEventListener('click', function off() { if (panel) { panel.remove(); panel = null; } document.removeEventListener('click', off); }); }, 0);
       fetch(API + '/live-sessions').then(function (r) { return r.json(); }).then(function (d) {

@@ -37,6 +37,11 @@ class _FunnelTabState extends State<_FunnelTab> {
     }
   }
 
+  String _ofPrev(List steps, int i) {
+    final prev = (steps[i - 1]['visitors'] as num?) ?? 0, n = (steps[i]['visitors'] as num?) ?? 0;
+    return prev == 0 ? '—' : '${(n * 100 / prev).round()}% of the step before';
+  }
+
   Widget _step(String label, Object? n, IconData icon) => Expanded(
         child: Card(
           child: Padding(
@@ -86,6 +91,18 @@ class _FunnelTabState extends State<_FunnelTab> {
             _step('pay now (after the free week)', f['paid_after_trial'], Icons.currency_rupee_rounded),
             const Expanded(child: SizedBox()),
           ]),
+          const SizedBox(height: 14),
+          // The /learn funnel top to bottom, each step against the one before it: where people stop.
+          Text('The /learn funnel', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          for (final (i, s) in (f['steps'] as List? ?? []).indexed)
+            ListTile(
+              dense: true,
+              leading: Text('${i + 1}', style: GoogleFonts.inter(color: Colors.black45)),
+              title: Text('${s['label']}'),
+              subtitle: i == 0 ? null : Text(_ofPrev(f['steps'] as List, i)),
+              trailing: Text('${s['visitors']}', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
           const SizedBox(height: 14),
           Text('Plans asked about', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
