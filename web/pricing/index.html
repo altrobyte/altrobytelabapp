@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pricing · Altrobyte Lab</title>
-<meta name="description" content="Every way to learn with Altrobyte Lab: free start, self-paced with Altron, the live product engineering programme, lab kits, corporate and institute training.">
+<meta name="description" content="Every note is free. Learn with Altron AI, or live with an industrial expert: three plans, batches to join, lab kits and corporate training.">
 <meta property="og:title" content="Pricing · Altrobyte Lab">
 <meta property="og:description" content="Free to start. Self-paced, live programme, lab kits, corporate and institute training: what each one gives you.">
 <meta property="og:image" content="https://altrobytelab.com/og-program.jpg">
@@ -68,79 +68,137 @@
   .wa { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 56px; height: 56px; border-radius: 50%; background: #25D366; display:grid; place-items:center; box-shadow: 0 10px 26px -8px rgba(37,211,102,.8); font-size: 26px; }
   .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; } .reveal.in { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+  .paths { display:grid; grid-template-columns: 1fr 1.25fr; gap: 18px; margin-top: 26px; }
+  @media (max-width: 860px) { .paths { grid-template-columns: 1fr; } }
+  .path { padding: 28px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); display:flex; flex-direction:column; gap: 10px; }
+  .path.live { background: linear-gradient(160deg, #2A1708, var(--panel) 65%); border-color: rgba(255,106,26,.6); }
+  .path h3 { font-size: 24px; } .path p { color: var(--soft); }
+  .path ul { list-style:none; padding:0; display:grid; gap: 7px; font-size: 15px; } .path li { padding-left: 24px; position: relative; } .path li::before { content:'✓'; position:absolute; left:0; color: var(--cyan); font-weight:800; }
+  .plans3 { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 26px; }
+  @media (max-width: 960px) { .plans3 { grid-template-columns: 1fr; } }
+  .plans3 .card .num { color: var(--orange2); font-weight: 800; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; }
+  .plans3 .card .meta { display:flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 8px; } .plans3 .card .meta span { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft); }
+  .plans3 .card .inc { color: var(--orange2); font-weight: 700; font-size: 13.5px; margin-top: 12px; }
+  .plans3 .card ul { margin: 8px 0 18px; }
+  .batches { display:grid; gap: 10px; margin-top: 18px; }
+  .batch { display:flex; gap: 14px; align-items:center; justify-content: space-between; flex-wrap: wrap; padding: 14px 18px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
+  .batch b { font-size: 15.5px; } .batch .when { color: var(--soft); font-size: 13.5px; } .batch .free { color: var(--cyan); font-weight: 800; font-size: 12px; letter-spacing: .08em; margin-right: 8px; }
+  .stats { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 26px; }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { padding: 20px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); text-align:center; }
+  .stat b { display:block; font-family: "Space Grotesk"; font-size: 34px; color: #fff; line-height: 1.1; } .stat span { color: var(--soft); font-size: 13.5px; }
+  .chips { display:flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; } .chips span { padding: 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; font-weight: 600; }
+  .tgrid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 20px; } @media (max-width: 760px) { .tgrid { grid-template-columns: 1fr; } }
+  .tcard { padding: 22px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); } .tcard q { display:block; font-size: 15px; color: var(--text); } .tcard .by { margin-top: 12px; font-size: 13.5px; color: var(--soft); } .tcard .by b { color: #fff; } .tcard .stars { color: var(--gold); letter-spacing: 2px; }
+  .cert { position: relative; max-width: 640px; margin: 26px auto 0; padding: 34px 38px; border-radius: 12px; background: #FBF7EE; color: #1B2433; border: 10px solid #E9DFC6; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); text-align:center; font-family: Georgia, serif; }
+  @media (max-width: 520px) { .cert { padding: 26px 18px; } .cert .row2 { flex-direction: column; } }
+  .cert .wm { position:absolute; top: 14px; right: 16px; font: 800 12px Inter, sans-serif; letter-spacing: .2em; color: #B5462B; border: 2px solid #B5462B; padding: 3px 8px; border-radius: 6px; transform: rotate(6deg); }
+  .cert h4 { font: 700 13px Inter, sans-serif; letter-spacing: .25em; color: #8A6A2B; text-transform: uppercase; } .cert .nm { font-size: 30px; margin: 14px 0 6px; font-style: italic; } .cert p { font-size: 14px; color: #3B4658; }
+  .cert .row2 { display:flex; justify-content: space-between; margin-top: 22px; font: 12px Inter, sans-serif; color: #5B6575; text-align:left; gap: 10px; }
+  .adv { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 30px; } @media (max-width: 860px) { .adv { grid-template-columns: 1fr; } }
+  .adv div { padding: 22px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); } .adv b { display:block; font-size: 17px; margin: 6px 0 4px; } .adv p { color: var(--soft); font-size: 14.5px; }
 </style>
 </head>
 <body>
 <nav><div class="wrap">
   <a class="logo" href="/"><img src="/icons/Icon-192.png" alt="">Altrobyte Lab</a>
-  <div class="links"><a href="/#altron">Altron AI trainer</a><a href="/#roadmap">Roadmap</a><a href="#programmes">Programmes</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a></div>
+  <div class="links"><a href="/#altron">Altron AI trainer</a><a href="/#roadmap">Roadmap</a><a href="#live">Live program</a><a href="#ai">Learn with AI</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a></div>
   <a class="btn btn-ghost" href="/signin" style="padding:10px 16px">Log in</a><a class="btn btn-main" href="/learn">Start free</a>
 </div></nav>
 
 <header class="wrap">
-  <div class="kicker">Pricing</div>
-  <h1>Pay for what you will build,<br>not for videos.</h1>
-  <p>Every plan below says what you walk away with. Start free for a week; pick a plan when you know it works for you.</p>
-  <div class="jump"><a href="#programmes">Programmes</a><a href="#pace">Learn at your pace</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a><a href="#compare">Compare</a></div>
+  <div class="kicker">Plans</div>
+  <h1>Every note is free.<br>Pay to learn live, or with AI.</h1>
+  <p>Read every lesson free on the roadmap. When you want a teacher, pick one: Altron, our AI teacher, any time; or live classes with an engineer who builds products for industry.</p>
+  <div class="jump"><a href="#live">Live with an industrial expert</a><a href="#ai">Learn with AI</a><a href="#proof">Why Altrobyte</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a></div>
 </header>
 
-<section id="programmes"><div class="wrap">
-  <div class="reveal"><div class="kicker">Programmes</div><h2>Become a product engineer</h2><p class="lead">Live, with mentors who build products, and a lab on your desk. The most complete way to learn.</p></div>
-  <div class="grid">
-    <div class="card reveal">
-      <div class="ic">🦾</div><h3>Product engineer: programme, lab and Jarvis</h3><div class="who">For: those who want everything, at home</div>
-      <div class="price">₹98,000</div><div class="sub">EMI available</div>
-      <ul><li>The live product engineering programme (4 real products)</li><li>The complete Iron Man 3 lab at home</li><li>Jarvis, your own voice assistant, and Altron</li><li>Mentor reviews and placement support</li></ul>
-      <div class="outcome"><b>You walk away with:</b> a portfolio of real products and the full lab to keep building.</div>
-      <a class="btn btn-ghost" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20to%20know%20about%20the%20Product%20engineer%20programme%20with%20lab%20and%20Jarvis%20(%E2%82%B998%2C000).">Talk to us</a>
+<section><div class="wrap">
+  <div class="paths">
+    <div class="path reveal">
+      <div class="kicker">Path 1</div><h3>🎙 Learn with AI</h3>
+      <p>Altron teaches each lesson by voice, in Hinglish or English, and answers your doubts while you read.</p>
+      <ul><li>Every lesson on the roadmap, taught by Altron</li><li>Ask doubts by voice, any time</li><li>Free to try on any lesson</li></ul>
+      <div style="margin-top:auto;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-ghost" href="#ai">See the AI plan</a><a class="btn btn-ghost" href="/learn">Try it free</a></div>
     </div>
-    <div class="card reveal">
-      <div class="ic">💼</div><h3>Placement programme with lab (6 months)</h3><div class="who">For: getting the first job in embedded / IoT</div>
-      <div class="price">₹58,000</div><div class="sub">EMI available</div>
-      <ul><li>Premium internship on real projects</li><li>Your lab set up, kept by you</li><li>Interview preparation and mock interviews</li><li>Placement support until you are placed</li></ul>
-      <div class="outcome"><b>You walk away with:</b> internship experience, a lab and job-ready skills.</div>
-      <a class="btn btn-ghost" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20to%20know%20about%20the%20placement%20programme%20with%20lab%20(%E2%82%B958%2C000).">Talk to us</a>
-    </div>
-    <div class="card best reveal">
-      <span class="badge">BEST VALUE</span>
-      <div class="ic">🚀</div><h3>Live product engineering programme</h3><div class="who">For: students, graduates and working engineers</div>
-      <div class="price">₹29,000</div><div class="sub">or ₹9,999 a month · seat ₹999</div>
-      <ul><li>Live classes with engineers who build products</li><li>Your lab kit from day one</li><li>Build 4 real products: PCB, firmware, cloud, AI</li><li>165 milestones, mentor reviews, certificate</li><li>Everything in self-paced, Altron included</li></ul>
-      <div class="outcome"><b>You walk away with:</b> four products you built, and the skills product companies hire for.</div>
-      <a class="btn btn-main" href="/enroll/program-enrolment?plan=token">Book my seat · ₹999</a>
+    <div class="path live reveal">
+      <div class="kicker">Path 2 · most complete</div><h3>👨‍🏭 Learn Live with an Industrial Expert</h3>
+      <p>Live classes with engineers who ship IoT products and automation for industry. Your own lab kit, real products, mentor reviews and placement help.</p>
+      <ul><li>Live classes, online or at our Indore centre, every class recorded</li><li>Build real products: PCB, firmware, cloud, AI</li><li>Mentor reviews, certificate and placement assistance</li></ul>
+      <div style="margin-top:auto;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-main" href="#batches">Check batches to join</a><a class="btn btn-ghost" href="#live">See the 3 plans</a></div>
     </div>
   </div>
 </div></section>
 
-<section id="pace"><div class="wrap">
-  <div class="reveal"><div class="kicker">Learn at your pace</div><h2>Start small, grow when you are ready</h2><p class="lead">For a smaller budget: Altron teaches every lesson, a mentor joins you every week.</p></div>
-  <div class="grid four">
+<section id="live"><div class="wrap">
+  <div class="reveal"><div class="kicker">Live with an industrial expert</div><h2>Three plans, one roadmap</h2><p class="lead">Each plan covers more of the roadmap. Fees depend on the batch and the mode; message us and we send the exact fee and the next start date.</p></div>
+  <div class="plans3" id="plans3"></div>
+  <div id="batches" style="scroll-margin-top:90px">
+    <h3 style="margin-top:40px;font-size:22px">Batches and live classes you can join</h3>
+    <p class="lead" style="font-size:15px">Start with a free live demo class: see how we teach before you decide.</p>
+    <div class="batches" id="batchList"><p class="lead" style="font-size:14px">Loading the batches…</p></div>
+  </div>
+</div></section>
+
+<section id="ai"><div class="wrap">
+  <div class="reveal"><div class="kicker">Learn with AI</div><h2>Altron, your AI teacher</h2><p class="lead">For learning on your own time, on a smaller budget.</p></div>
+  <div class="grid">
     <div class="card reveal">
       <span class="badge cyan">FREE</span>
-      <div class="ic">🎁</div><h3>Free start</h3><div class="who">For: trying it first</div>
-      <div class="price">₹0</div><div class="sub">the first 5 modules, and a free week of everything</div>
-      <ul><li>Altron AI trainer by voice</li><li>The roadmap and recorded lectures</li><li>1–2 free live classes a week</li></ul>
-      <a class="btn btn-ghost" href="/learn">Start free</a>
+      <div class="ic">📖</div><h3>Free for everyone</h3><div class="who">For: everyone</div>
+      <div class="price">₹0</div><div class="sub">no card needed</div>
+      <ul><li>Every note on the roadmap, with a short summary</li><li>Try Altron on any lesson</li><li>Free live demo classes</li></ul>
+      <a class="btn btn-ghost" href="/learn">Start learning free</a>
     </div>
-    <div class="card reveal">
-      <span class="badge">MOST CHOSEN</span>
+    <div class="card best reveal">
+      <span class="badge">LEARN WITH AI</span>
       <div class="ic">🎙</div><h3>Self-paced with Altron AI</h3><div class="who">For: learning on your own time</div>
       <div class="price">₹4,999<small> /month</small></div><div class="sub">+ GST</div>
-      <ul><li>Every module and recorded lecture</li><li>Altron explains each lesson by voice</li><li>One live class every week</li><li>GitHub projects and a certificate</li></ul>
-      <a class="btn btn-main" href="/learn">Start the free week</a>
+      <ul><li>Altron teaches every lesson by voice</li><li>Class recordings unlocked</li><li>One live class every week</li><li>GitHub projects and a certificate</li></ul>
+      <a class="btn btn-main" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20the%20self-paced%20plan%20with%20Altron%20AI.">Get the AI plan</a>
     </div>
     <div class="card reveal">
-      <div class="ic">🧰</div><h3>Lab at home</h3><div class="who">For: doing every lesson on real hardware</div>
-      <div class="price">from ₹4,000</div><div class="sub">yours to keep</div>
-      <ul><li>Your own ESP32 kit and parts</li><li>Matched to the lessons, step by step</li><li>Altron sees your board on camera</li></ul>
+      <div class="ic">🧰</div><h3>Add a lab at home</h3><div class="who">For: doing every lesson on real hardware</div>
+      <div class="price">from ₹4,800</div><div class="sub">yours to keep</div>
+      <ul><li>Your own ESP32 kit and parts</li><li>Matched to the lessons, step by step</li><li>Works with the Altrobyte Trainer desktop app</li></ul>
       <a class="btn btn-ghost" href="#labs">See lab kits</a>
     </div>
-    <div class="card reveal">
-      <div class="ic">👨‍🏫</div><h3>Learn with an industry expert</h3><div class="who">For: personal guidance every week</div>
-      <div class="price">from ₹8,800<small> /month</small></div><div class="sub">&nbsp;</div>
-      <ul><li>Live classes from engineers who build products</li><li>Reviews of your work and code</li><li>Doubts answered the same week</li></ul>
-      <a class="btn btn-ghost" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20to%20learn%20with%20an%20industry%20expert.">Talk to us</a>
-    </div>
+  </div>
+</div></section>
+
+<section id="proof"><div class="wrap">
+  <div class="reveal"><div class="kicker">Why Altrobyte</div><h2>Taught by engineers who ship for industry</h2><p class="lead">Altrobyte Lab is the training arm of Altrobyte Automation, which builds IoT products and automation for industry. What you learn here is what we deliver to clients.</p></div>
+  <div class="stats reveal">
+    <div class="stat"><b id="stReg">–</b><span>registrations for our live classes</span></div>
+    <div class="stat"><b id="stRate">–</b><span>average learner rating</span></div>
+    <div class="stat"><b>13</b><span>industry clients</span></div>
+    <div class="stat"><b>6</b><span>institute training partners</span></div>
+  </div>
+  <h3 style="margin-top:36px;font-size:18px" class="reveal">Industry clients</h3>
+  <div class="chips reveal"><span>Vedanta · BALCO</span><span>Tata Steel</span><span>Continental Conveyors</span><span>Unitech AI Solutions</span><span>My e-Kisan</span><span>Pi by 3</span><span>Renu Factory Automation</span><span>Nanotech Solutions</span><span>Oxbow Intellect</span><span>Anedya</span><span>nlink</span><span>Dhartea</span><span>NaviGo</span></div>
+  <h3 style="margin-top:24px;font-size:18px" class="reveal">Training partners</h3>
+  <div class="chips reveal"><span>NIT Warangal</span><span>IIT Bombay</span><span>ITM University, Gwalior</span><span>SISTec, Bhopal</span><span>Banasthali Vidyapith</span><span>Chameli Devi Group (CDGI)</span></div>
+
+  <div class="adv">
+    <div class="reveal"><span class="ic">🏭</span><b>Industry engineers, not lecturers</b><p>Your trainer builds IoT products and plant automation for real clients.</p></div>
+    <div class="reveal"><span class="ic">🧪</span><b>Real products, not slides</b><p>Every stage ends with something you can hold, run and show in an interview: your own PCB, a cloud dashboard, industrial control, edge AI.</p></div>
+    <div class="reveal"><span class="ic">🧰</span><b>Your own lab</b><p>An ESP32 kit on your desk from day one in the live plans, and the Altrobyte Trainer app checks your board step by step.</p></div>
+    <div class="reveal"><span class="ic">🎙</span><b>A teacher at 2 AM</b><p>Altron, our AI teacher, explains any lesson by voice and answers doubts when your mentor is offline.</p></div>
+    <div class="reveal"><span class="ic">🎥</span><b>Every class recorded</b><p>Missed a class? The recording is in your account, next to the notes.</p></div>
+    <div class="reveal"><span class="ic">💼</span><b>Placement assistance</b><p>GitHub portfolio, interview practice and referrals to the companies we work with.</p></div>
+  </div>
+
+  <div id="tWrap" style="display:none"><h3 style="margin-top:40px;font-size:22px">What learners say</h3><div class="tgrid" id="tList"></div>
+    <h3 style="margin-top:24px;font-size:18px">Our learners come from</h3><div class="chips" id="tColleges"></div></div>
+
+  <h3 style="margin-top:44px;font-size:22px;text-align:center" class="reveal">Your certificate</h3>
+  <p class="lead reveal" style="text-align:center;margin:0 auto">Each certificate has its own ID that anyone can check on <a href="/verify" style="color:var(--orange2)">altrobytelab.com/verify</a>.</p>
+  <div class="cert reveal" aria-label="Sample certificate">
+    <span class="wm">SAMPLE</span>
+    <h4>Altrobyte Lab · Certificate of completion</h4>
+    <div class="nm">Your Name</div>
+    <p>has completed the <b>Live Engineering Program</b> in Embedded Systems, Industrial IoT and Edge AI, and built four working products under industry mentors.</p>
+    <div class="row2"><span>Certificate ID<br><b>ALB-XXXX-XXXX</b></span><span>Altrobyte Automation Pvt. Ltd.<br>Indore</span><span>Verify at<br><b>altrobytelab.com/verify</b></span></div>
   </div>
 </div></section>
 
@@ -166,33 +224,19 @@
   </div>
 </div></section>
 
-<section id="compare"><div class="wrap">
-  <div class="reveal"><div class="kicker">Compare</div><h2>What each plan includes</h2></div>
-  <div class="tablewrap reveal"><table>
-    <tr><th></th><th>Free start</th><th>Self-paced<br><small style="color:var(--soft)">₹4,999/mo</small></th><th>Live programme<br><small style="color:var(--soft)">₹29,000</small></th></tr>
-    <tr><td>Altron AI trainer by voice</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
-    <tr><td>Modules</td><td>First 5</td><td>All</td><td>All</td></tr>
-    <tr><td>Live classes</td><td>1–2 free a week</td><td>One every week</td><td>Full live programme</td></tr>
-    <tr><td>Recorded lectures &amp; GitHub projects</td><td class="n">Some</td><td class="y">✓</td><td class="y">✓</td></tr>
-    <tr><td>Lab kit from day one</td><td class="n">—</td><td class="n">Optional, from ₹4,000</td><td class="y">✓</td></tr>
-    <tr><td>Build 4 real products with mentors</td><td class="n">—</td><td class="n">—</td><td class="y">✓</td></tr>
-    <tr><td>Mentor reviews &amp; placement help</td><td class="n">—</td><td class="n">—</td><td class="y">✓</td></tr>
-    <tr><td>Certificate</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td></tr>
-  </table></div>
-</div></section>
-
 <section><div class="wrap" style="max-width:820px">
-  <div class="reveal"><div class="kicker">Payment questions</div><h2>Before you pay</h2></div>
-  <details><summary>What is the ₹999 seat booking?</summary><p>It holds your seat in the next live programme batch. It counts towards the ₹29,000 fee.</p></details>
-  <details><summary>Can I pay monthly?</summary><p>Yes: the live programme is also ₹9,999 a month, and self-paced is ₹4,999 a month. EMI is available on the bigger programmes; ask us on WhatsApp.</p></details>
-  <details><summary>Is GST included?</summary><p>Self-paced is ₹4,999 + 18% GST a month. For the other plans, ask us for a quote: we send a GST invoice for every payment.</p></details>
-  <details><summary>Can I try before paying?</summary><p>Yes. The first five modules are free with Altron, and signing in with WhatsApp opens everything free for a week.</p></details>
+  <div class="reveal"><div class="kicker">Questions</div><h2>Before you join</h2></div>
+  <details><summary>Are the notes really free?</summary><p>Yes. Every note on the roadmap is free to read, with a short summary. Class recordings unlock with a paid plan.</p></details>
+  <details><summary>What does a live plan cost?</summary><p>It depends on the plan, the batch and whether you join online or at our Indore centre. Message us on WhatsApp and we send the exact fee and the next start date. EMI is available.</p></details>
+  <details><summary>What is the ₹999 seat booking?</summary><p>It holds your seat in the next live batch, and it counts towards your fee.</p></details>
+  <details><summary>Can I see a class before I pay?</summary><p>Yes. Join a free live demo class from the batches above, and try Altron on any lesson.</p></details>
+  <details><summary>Is GST included?</summary><p>Self-paced is ₹4,999 + 18% GST a month. We send a GST invoice for every payment.</p></details>
 </div></section>
 
 <div class="wrap"><div class="final reveal">
   <h2>Start free. Decide later.</h2>
-  <p class="lead" style="margin:0 auto 24px">Five modules and a full week, free, with Altron.</p>
-  <a class="btn btn-main" href="/learn">▶ Start learning free</a>
+  <p class="lead" style="margin:0 auto 24px">Every note is free, and the first live demo class is too.</p>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><a class="btn btn-main" href="#batches">Check batches to join</a><a class="btn btn-ghost" href="/learn">▶ Start learning free</a></div>
 </div></div>
 
 <footer><div class="wrap"><div>© Altrobyte Automation Pvt. Ltd., Indore</div>
@@ -200,6 +244,64 @@
 <a class="wa" href="https://wa.me/917222977927" aria-label="WhatsApp us">💬</a>
 <script>
 (function () {
+  var API = 'https://edu.altrobytelab.com';
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  // The three live plans, the same as the roadmap page (web/admissions).
+  var PLANS = [
+    { n: 1, name: 'Self-Paced + Live Mentorship', months: '3 months', mode: 'Online, self-paced', for: 'Learn at your own pace with Altron, plus live mentor sessions for doubts and reviews.', inc: '',
+      f: ['Embedded Systems: Embedded C, GPIO, sensors, FreeRTOS, Wi-Fi', 'PCB design in KiCad, assembly and enclosure', 'Industrial IoT: MQTT, cloud dashboard, AWS IoT Core, OTA', 'Altron AI teacher for every lesson', 'Live mentorship', 'Placement assistance'] },
+    { n: 2, name: 'Live Industrial Training', months: '3 months', mode: 'Live classes', for: 'Live classes with a trainer, your own lab kit, and industrial control on STM32.', inc: 'Everything in Plan 1, plus',
+      f: ['Lab set-up kit, free', 'Live classes with a trainer', 'Advanced Embedded: STM32, FreeRTOS advanced, GDB, testing', 'Advanced IIoT: Modbus, CAN, HMI dashboard', 'BLE and IoT security'] },
+    { n: 3, name: 'Live Engineering Program', months: '4 months', mode: 'Live classes', top: true, for: 'The complete roadmap, edge AI, your own developer lab and an internship.', inc: 'Everything in Plan 2, plus',
+      f: ['Edge AI: computer vision, object detection, AI on IoT data', 'Developer lab set-up', '6-month internship certificate'] }
+  ];
+  document.getElementById('plans3').innerHTML = PLANS.map(function (p) {
+    return '<div class="card' + (p.top ? ' best' : '') + '">' + (p.top ? '<span class="badge">ALL INCLUSIVE</span>' : '') +
+      '<div class="num">Plan ' + p.n + '</div><h3>' + esc(p.name) + '</h3><div class="meta"><span>' + p.months + '</span><span>' + p.mode + '</span></div>' +
+      '<div class="who">' + esc(p.for) + '</div>' + (p.inc ? '<div class="inc">' + p.inc + '</div>' : '') +
+      '<ul>' + p.f.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+      '<div class="sub" style="margin:0 0 10px"><b style="color:#fff">Contact for pricing</b> · seat ₹999</div>' +
+      '<a class="btn ' + (p.top ? 'btn-main' : 'btn-ghost') + '" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want the fees and next batch for Plan ' + p.n + ': ' + p.name + '.') + '">Ask fees and next batch</a></div>';
+  }).join('');
+
+  // Batches: published live classes still open to join (a future date, a repeating class, or open registration).
+  function nextDate(s) {
+    var d = s.session_date ? new Date(s.session_date) : null, now = new Date();
+    if (s.repeat_days) {
+      var days = String(s.repeat_days).split(',').map(function (x) { return (Number(x) + 1) % 7; }), t = d || new Date();
+      for (var i = 0; i < 8; i++) { var c = new Date(now); c.setDate(now.getDate() + i); c.setHours(t.getHours(), t.getMinutes(), 0, 0); if (days.indexOf(c.getDay()) >= 0 && c > now) return c; }
+    }
+    return d && d > now ? d : null;
+  }
+  fetch(API + '/live-sessions').then(function (r) { return r.json(); }).then(function (d) {
+    var list = (d.sessions || []).map(function (s) { s._next = nextDate(s); return s; })
+      .filter(function (s) { return s._next || s.registration_always_open; })
+      .sort(function (a, b) { return (Number(a.price) > 0) - (Number(b.price) > 0) || ((a._next || 9e15) - (b._next || 9e15)); });
+    var el = document.getElementById('batchList');
+    if (!list.length) { el.innerHTML = '<p class="lead" style="font-size:15px">The next batch dates are being set. <a style="color:var(--orange2)" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, when does the next live batch start?') + '">Ask us on WhatsApp</a>.</p>'; return; }
+    el.innerHTML = list.slice(0, 6).map(function (s) {
+      var when = s._next ? s._next.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + s._next.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : 'Joining open now';
+      if (s.repeat_label && s._next) when = s.repeat_label + ' · next ' + when;
+      var free = Number(s.price) <= 0;
+      return '<div class="batch"><div><b>' + (free ? '<span class="free">FREE DEMO</span>' : '') + esc(s.title) + '</b><div class="when">' + esc(when) + (s.duration_minutes ? ' · ' + s.duration_minutes + ' min' : '') + '</div></div>' +
+        '<a class="btn ' + (free ? 'btn-main' : 'btn-ghost') + '" style="padding:10px 18px;font-size:14px" href="/live-sessions/' + s.id + '">' + (free ? 'Join free' : 'See details') + '</a></div>';
+    }).join('');
+    // Registrations, counted from the classes themselves (never a number we chose).
+    Promise.all((d.sessions || []).map(function (s) { return fetch(API + '/live-sessions/' + s.id).then(function (r) { return r.json(); }).then(function (x) { return Number(x.registration_count) || 0; }).catch(function () { return 0; }); }))
+      .then(function (n) { var t = n.reduce(function (a, b) { return a + b; }, 0); if (t) document.getElementById('stReg').textContent = t + '+'; });
+  }).catch(function () { document.getElementById('batchList').innerHTML = '<p class="lead" style="font-size:15px"><a style="color:var(--orange2)" href="https://wa.me/917222977927">Ask us on WhatsApp</a> for the next batch.</p>'; });
+
+  fetch(API + '/testimonials').then(function (r) { return r.json(); }).then(function (d) {
+    var t = d.testimonials || []; if (!t.length) return;
+    document.getElementById('stRate').textContent = d.average_rating + '★';
+    document.getElementById('tList').innerHTML = t.slice(0, 6).map(function (x) {
+      return '<div class="tcard"><div class="stars">' + '★★★★★'.slice(0, x.rating || 5) + '</div><q>' + esc(x.quote) + '</q><div class="by"><b>' + esc(x.name) + '</b> · ' + esc(x.role || '') + (x.affiliation ? '<br>' + esc(x.affiliation) : '') + '</div></div>';
+    }).join('');
+    var seen = {};
+    document.getElementById('tColleges').innerHTML = t.map(function (x) { var a = (x.affiliation || '').trim(), k = a.toLowerCase().replace(/[^a-z]/g, '').slice(0, 18); if (!a || seen[k]) return ''; seen[k] = 1; return '<span>' + esc(a) + '</span>'; }).join('');
+    document.getElementById('tWrap').style.display = '';
+  }).catch(function () {});
+
   var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: .12 });
   document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
 })();

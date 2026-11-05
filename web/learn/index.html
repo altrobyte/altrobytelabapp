@@ -115,6 +115,17 @@
   .inapp .shell, .inapp .shell.reading { height: 100vh; height: 100dvh; }
   .aipick { position: fixed; z-index: 50; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 8px; width: 270px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
   .card.desk { margin: 12px 0 16px; }
+  .golive { position: fixed; right: 18px; bottom: 84px; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 999px; border: 0; cursor: pointer;
+    background: linear-gradient(135deg, #FF6A1A, #FF9A3D); color: #fff; font: 700 14.5px Inter, system-ui, sans-serif; box-shadow: 0 12px 30px -8px rgba(255,106,26,.75); }
+  .golive i { font-style: normal; font-size: 18px; } .golive small { display: block; font-weight: 500; font-size: 11.5px; opacity: .9; text-align: left; }
+  .golive:hover { transform: translateY(-2px); }
+  @media (max-width: 600px) { .golive { right: 12px; bottom: 78px; padding: 10px 14px; font-size: 13.5px; } .golive small { display: none; } }
+  .livepanel { position: fixed; right: 18px; bottom: 150px; z-index: 41; width: min(380px, calc(100vw - 24px)); max-height: min(70vh, 560px); overflow-y: auto; background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 18px; padding: 18px; box-shadow: 0 20px 50px rgba(0,0,0,.5); display: grid; gap: 10px; }
+  @media (max-width: 600px) { .livepanel { right: 12px; bottom: 132px; } }
+  .livepanel .lb { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .livepanel .lb b { font-size: 14px; display: block; } .livepanel .lb span { font-size: 12.5px; color: var(--soft); }
+  .livepanel .fr { color: #38E1D3; font-weight: 800; font-size: 11px; letter-spacing: .08em; }
   .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
@@ -531,6 +542,42 @@
   else if (p === '/learn/live') live();
   else course();
   checkAdmin();
+
+  // Learn Live with an industrial expert (5 Nov 2026, founder): one fixed button on every /learn page that shows the
+  // batches open to join. No prices here; the plans and fees are on /pricing.
+  (function () {
+    if (p === '/learn/live') return;
+    var b = document.createElement('button'); b.className = 'golive'; b.type = 'button';
+    b.innerHTML = '<i>👨‍🏭</i><span>Learn Live with Industrial Expert<small>Check batches to join</small></span>';
+    document.body.appendChild(b);
+    var panel = null;
+    b.onclick = function (e) {
+      e.stopPropagation();
+      if (panel) { panel.remove(); panel = null; return; }
+      funnel('learn_live_open', location.pathname);
+      panel = document.createElement('div'); panel.className = 'livepanel';
+      panel.innerHTML = '<b style="font-size:16px">Learn live with an industrial expert</b><span class="muted" style="font-size:13.5px">Live classes with engineers who build IoT products for industry: your own lab kit, real products, mentor reviews and placement help. Start with a free demo class.</span><div id="lpList" class="muted" style="font-size:13px">Loading the batches…</div>' +
+        '<a class="btn btn-main" href="/pricing#live" data-lp="plans">See the live program</a>';
+      document.body.appendChild(panel);
+      panel.addEventListener('click', function (ev) { ev.stopPropagation(); var a = ev.target.closest && ev.target.closest('[data-lp]'); if (a) funnel('learn_live_click', a.getAttribute('data-lp')); });
+      setTimeout(function () { document.addEventListener('click', function off() { if (panel) { panel.remove(); panel = null; } document.removeEventListener('click', off); }); }, 0);
+      fetch(API + '/live-sessions').then(function (r) { return r.json(); }).then(function (d) {
+        var now = new Date();
+        function next(s) {
+          var t = s.session_date ? new Date(s.session_date) : null;
+          if (s.repeat_days) { var days = String(s.repeat_days).split(',').map(function (x) { return (Number(x) + 1) % 7; }); for (var i = 0; i < 8; i++) { var c = new Date(now); c.setDate(now.getDate() + i); if (t) c.setHours(t.getHours(), t.getMinutes(), 0, 0); if (days.indexOf(c.getDay()) >= 0 && c > now) return c; } }
+          return t && t > now ? t : null;
+        }
+        var list = (d.sessions || []).map(function (s) { s._n = next(s); return s; }).filter(function (s) { return s._n || s.registration_always_open; })
+          .sort(function (a, c) { return (Number(a.price) > 0) - (Number(c.price) > 0) || ((a._n || 9e15) - (c._n || 9e15)); }).slice(0, 4);
+        var el = panel && panel.querySelector('#lpList'); if (!el) return;
+        el.outerHTML = list.length ? list.map(function (s) {
+          var free = Number(s.price) <= 0, when = s._n ? s._n.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) + ', ' + s._n.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : 'Joining open now';
+          return '<div class="lb"><div>' + (free ? '<span class="fr">FREE DEMO</span>' : '') + '<b>' + esc(s.title) + '</b><span>' + esc(when) + '</span></div><a class="btn btn-sm ' + (free ? 'btn-main' : 'btn-ghost') + '" data-lp="batch ' + s.id + '" href="/live-sessions/' + s.id + '">' + (free ? 'Join free' : 'Details') + '</a></div>';
+        }).join('') : '<a class="btn btn-ghost" data-lp="wa" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, when does the next live batch start?') + '">Ask for the next batch on WhatsApp</a>';
+      }).catch(function () { var el = panel && panel.querySelector('#lpList'); if (el) el.innerHTML = 'Could not load the batches just now.'; });
+    };
+  })();
 })();
 </script>
 </body>
