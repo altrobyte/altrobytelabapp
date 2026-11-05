@@ -4,6 +4,7 @@
     python tools/publish_downloads.py                  # keep exactly what is live now (the usual case)
     python tools/publish_downloads.py --extension      # publish the newly packaged .vsix (a public release: approve first)
     python tools/publish_downloads.py --installer      # publish dist/AltrobyteTrainerSetup.exe (a public release: approve first)
+    python tools/publish_downloads.py --team           # put dist/AltrobyteTrainerSetup.exe at downloads/team/ for the team to test
     python tools/check_web_build.py && python stamp_version.py && firebase deploy --only hosting
 
 A deploy replaces the whole site, so a download that is not put back is gone. By default this puts back the very files
@@ -45,19 +46,20 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def put(src: Path, name: str, info_name: str, version: str) -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, OUT / name)
-    data = (OUT / name).read_bytes()
+def put(src: Path, name: str, info_name: str, version: str, out: Path = OUT) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, out / name)
+    data = (out / name).read_bytes()
     info = {"version": version, "file": name, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
-    (OUT / info_name).write_text(json.dumps(info, indent=2), encoding="utf-8")
-    print(f"downloads/{name} v{version}, {len(data) / 1e6:.1f} MB, sha256 {info['sha256'][:16]}...")
+    (out / info_name).write_text(json.dumps(info, indent=2), encoding="utf-8")
+    print(f"{out.relative_to(OUT.parent).as_posix()}/{name} v{version}, {len(data) / 1e6:.1f} MB, sha256 {info['sha256'][:16]}...")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--extension", action="store_true", help="publish the .vsix packaged now (needs approval)")
     ap.add_argument("--installer", action="store_true", help="publish dist/AltrobyteTrainerSetup.exe (needs approval)")
+    ap.add_argument("--team", action="store_true", help="put dist/AltrobyteTrainerSetup.exe at downloads/team/ for the team")
     a = ap.parse_args()
     if not (ROOT / "build" / "web" / "index.html").exists():
         sys.exit("build/web does not exist. Run flutter build web first.")
@@ -96,6 +98,22 @@ def main() -> int:
                 problems.append(f"the live installer v{info['version']} is not in dist/ as published: the deploy would remove it")
         else:
             print("no desktop installer is live yet; none is published (use --installer once it is approved)")
+
+    # The team's test build (5 Nov 2026, founder: the team tests it fully before it is published). Not linked for
+    # learners: /learn offers it to admins only, and the desktop app's update check reads downloads/desktop.json.
+    if a.team:
+        info = json.loads((DIST / "desktop.json").read_text(encoding="utf-8")) if (DIST / "desktop.json").exists() else None
+        if not info or not (DIST / SETUP).exists():
+            sys.exit("dist/AltrobyteTrainerSetup.exe is not built. Run: python tools/build_installer.py")
+        put(DIST / SETUP, SETUP, "desktop.json", info["version"], OUT / "team")
+    else:
+        info = live("team/desktop.json")
+        if info:
+            src = DIST / SETUP
+            if src.exists() and sha(src) == info["sha256"]:
+                put(src, SETUP, "desktop.json", info["version"], OUT / "team")
+            else:
+                problems.append(f"the team build v{info['version']} is not in dist/ as published: the deploy would remove it")
 
     if problems:
         print("NOT SAFE TO DEPLOY:")

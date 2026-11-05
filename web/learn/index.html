@@ -456,9 +456,12 @@
         card.innerHTML = '<b>🖥️ Do this experiment in the Altrobyte Trainer app</b><p class="muted" style="margin:4px 0 10px;font-size:14px">' +
           'The desktop app opens the project, builds and uploads it to your board, and Altron checks your wiring and what your board prints, step by step. Notes and Learn with AI work there too.</p><div class="row" id="deskdl"><span class="muted" style="font-size:13px">Checking the download…</span></div>';
         pad.insertBefore(card, pad.firstChild.nextSibling);
-        fetch('/downloads/desktop.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) {
-          document.getElementById('deskdl').innerHTML = '<a class="btn btn-main" href="/downloads/' + esc(d.file || 'AltrobyteTrainerSetup.exe') + '" data-dl>Download for Windows</a>' +
-            '<span class="muted" style="font-size:13px">v' + esc(d.version || '') + (d.size ? ' · ' + Math.round(d.size / 1048576) + ' MB' : '') + '</span>';
+        // Until it is published, the team's test build (downloads/team/) shows for admins only (5 Nov 2026, founder).
+        var team = store('altro_admin') === '1';
+        function info(dir) { return fetch('/downloads/' + dir + 'desktop.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { d.dir = dir; return d; }); }
+        info('').catch(function () { if (team) return info('team/'); throw 0; }).then(function (d) {
+          document.getElementById('deskdl').innerHTML = '<a class="btn btn-main" href="/downloads/' + d.dir + esc(d.file || 'AltrobyteTrainerSetup.exe') + '" data-dl>Download for Windows</a>' +
+            '<span class="muted" style="font-size:13px">v' + esc(d.version || '') + (d.size ? ' · ' + Math.round(d.size / 1048576) + ' MB' : '') + (d.dir ? ' · team test build, learners do not see this yet' : '') + '</span>';
           var a = card.querySelector('[data-dl]'); if (a) a.onclick = function () { funnel('desktop_download', String(it.id)); };
         }).catch(function () {
           document.getElementById('deskdl').innerHTML = '<span class="muted" style="font-size:13px">The desktop app is coming soon. Till then, follow the steps on this page.</span>';
