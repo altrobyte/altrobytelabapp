@@ -2788,6 +2788,16 @@ class ApiService {
   }
 
   // Reordering — each call sends the complete new id sequence for one parent.
+  static Future<void> reorderModules(int instituteId, List<int> ids) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.trainingModules(instituteId)}/order'),
+      headers: _headers(token),
+      body: jsonEncode({'ids': ids}),
+    );
+    _parse(res);
+  }
+
   static Future<void> reorderModuleTopics(int moduleId, List<int> ids) async {
     final token = await _token();
     final res = await http.put(

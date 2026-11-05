@@ -75,6 +75,24 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
     }
   }
 
+  // The order set here is the order on /learn and in the app (5 Nov 2026, founder).
+  Future<void> _move(List<TrainingModule> modules, int index, int by) async {
+    final instituteId = _instituteId;
+    if (instituteId == null) return;
+    final ids = modules.map((m) => m.id).toList();
+    final id = ids.removeAt(index);
+    ids.insert(index + by, id);
+    try {
+      await ApiService.reorderModules(instituteId, ids);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not change the order. Refresh and try again.')));
+      }
+    }
+    if (mounted) context.read<TrainingModuleProvider>().refreshModules(instituteId);
+  }
+
   void _showCreateDialog({TrainingModule? existing}) {
     final titleCtl = TextEditingController(text: existing?.title ?? '');
     final descCtl = TextEditingController(text: existing?.description ?? '');
@@ -683,6 +701,8 @@ class _TrainingModulesScreenState extends State<TrainingModulesScreen> {
                     onTogglePublish: () => _togglePublish(modules[index]),
                     onEdit: () => _showCreateDialog(existing: modules[index]),
                     onEnrollments: () => _showEnrollments(modules[index]),
+                    onUp: index > 0 ? () => _move(modules, index, -1) : null,
+                    onDown: index < modules.length - 1 ? () => _move(modules, index, 1) : null,
                   ),
                   childCount: modules.length,
                 ),
@@ -705,6 +725,8 @@ class _ModuleCard extends StatelessWidget {
   final VoidCallback onTogglePublish;
   final VoidCallback onEdit;
   final VoidCallback onEnrollments;
+  final VoidCallback? onUp;
+  final VoidCallback? onDown;
 
   const _ModuleCard({
     required this.module,
@@ -715,6 +737,8 @@ class _ModuleCard extends StatelessWidget {
     required this.onTogglePublish,
     required this.onEdit,
     required this.onEnrollments,
+    this.onUp,
+    this.onDown,
   });
 
   @override
@@ -831,6 +855,18 @@ class _ModuleCard extends StatelessWidget {
                         '${module.totalContentItems} Items', color),
                     const Spacer(),
                     // Actions
+                    IconButton(
+                      icon: const Icon(Icons.arrow_upward_rounded, size: 20, color: AppColors.textSecondary),
+                      tooltip: 'Move up',
+                      onPressed: onUp,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_downward_rounded, size: 20, color: AppColors.textSecondary),
+                      tooltip: 'Move down',
+                      onPressed: onDown,
+                      visualDensity: VisualDensity.compact,
+                    ),
                     IconButton(
                       icon: const Icon(Icons.people_outline_rounded, size: 20, color: AppColors.textSecondary),
                       tooltip: 'Enrollments',

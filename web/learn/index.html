@@ -126,6 +126,11 @@
   .livepanel .lb { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
   .livepanel .lb b { font-size: 14px; display: block; } .livepanel .lb span { font-size: 12.5px; color: var(--soft); }
   .livepanel .fr { color: #38E1D3; font-weight: 800; font-size: 11px; letter-spacing: .08em; }
+  .sum { flex: none; border-bottom: 1px solid var(--line); background: var(--ink2); padding: 8px 14px; font-size: 14px; }
+  .sum summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; list-style: none; } .sum summary::-webkit-details-marker { display: none; }
+  .sum summary::before { content: '▸'; color: var(--orange2, #FF9A3D); } .sum[open] summary::before { content: '▾'; }
+  .sum summary span { color: var(--soft); font-size: 13px; } .sum ol { margin: 8px 0 4px 20px; columns: 2; column-gap: 28px; color: var(--soft); }
+  @media (max-width: 700px) { .sum ol { columns: 1; } }
   .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
@@ -219,7 +224,7 @@
   }
   function signIn() { location.href = '/signin?next=' + encodeURIComponent(location.pathname + location.search); }
   function getJSON(path, opts) {
-    return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
+    return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw Object.assign(j || {}, { status: r.status }); return j; }); });
   }
   // A GitHub project opens in VS Code (founder, 31 Oct 2026): vscode.dev in the browser, or cloned into VS Code on the laptop.
   function projectLinks(link) {
@@ -348,11 +353,12 @@
         (have ? '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>Your progress</b><span class="muted" style="font-size:13px">' + fin + ' of ' + open.length + ' open items done</span></div>' +
           '<div class="prog"><i style="width:' + pct + '%"></i></div>' +
           (inTrial() ? '<p class="muted" style="font-size:13px;margin-top:6px">Your free week: ' + trial.days_left + ' days left. Every step is open.</p>' : '') +
-          '<div class="row" style="margin-top:12px">' + (!token() ? '<button class="btn btn-main" data-signin>Sign in to start</button>' :
-            nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue' : 'Start') + ': ' + esc(nx.title) + '</a>' : '') + '</div></div>' : '') +
-        (have && locked ? '<div class="card" style="margin-top:12px"><b>' + (token() ? 'The first four lessons are open on your account.' : 'Sign in to open the first four lessons free.') + '</b>' +
-          '<p class="muted" style="margin-top:4px;font-size:14px">The whole course, the weekly live class and its recordings come with the programme.</p>' +
-          '<div class="row" style="margin-top:12px">' + (offerTrial() ? '<button class="btn btn-ghost btn-sm" data-trial>Open everything free for 7 days</button>' : '') +
+          '<div class="row" style="margin-top:12px">' + (nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue' : 'Start') + ': ' + esc(nx.title) + '</a>' : '') +
+            (!token() ? '<button class="btn btn-ghost" data-signin>Sign in to save your progress</button>' : '') + '</div></div>' : '') +
+        // Every note is free (5 Nov 2026, founder); a plan opens the class recordings, Altron beyond the free time, and the live program.
+        (have ? '<div class="card" style="margin-top:12px"><b>Every note, code and project here is free.</b>' +
+          '<p class="muted" style="margin-top:4px;font-size:14px">Tap ✨ Learn with AI on any note and Altron teaches it by voice. Class recordings and live classes with an industrial expert come with a plan.</p>' +
+          '<div class="row" style="margin-top:12px"><button class="btn btn-ghost btn-sm" data-golive>Check batches to join</button>' +
           '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>' : '') +
         '<p class="muted" style="font-size:13px;margin-top:18px"><a href="/roadmap" style="text-decoration:underline">Syllabus</a> · <a href="https://wa.me/917222977927" style="text-decoration:underline">Help on WhatsApp</a> · <a href="/privacy" style="text-decoration:underline">Privacy</a>' +
         (token() ? ' · <a href="/delete-account" style="text-decoration:underline">Delete account</a>' : '') + '</p></div>';
@@ -372,11 +378,12 @@
     getJSON('/learn/lesson/' + mid + '/' + cid).then(function (it) {
       drawItem(it);
       load().then(function () { side(); navButtons(it); }).catch(function () {});
-    }).catch(function () {
-      if (!token()) { signIn(); return; }
-      root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">Locked</div></div><div class="pad"><h1>🔒 This part of the course is locked</h1>' +
-        '<p class="muted" style="margin:8px 0 16px">It opens with the programme: the whole course, the weekly live class and its recordings.</p><div class="row">' +
-        ((!trial || !trial.started) ? '<button class="btn btn-main" data-trial>Open everything free for 7 days</button>' : '') + '<a class="btn btn-ghost" href="/pricing">See plans</a></div></div>';
+    }).catch(function (e) {
+      if (e && e.status === 401) { signIn(); return; }
+      root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">Class recording</div></div><div class="pad"><h1>🎥 This class recording is for enrolled learners</h1>' +
+        '<p class="muted" style="margin:8px 0 16px">Recordings of the live classes come with a plan. The notes of this step stay free: open them from the list.</p><div class="row">' +
+        '<button class="btn btn-main" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing#ai">See the AI plan</a>' +
+        (token() && (!trial || !trial.started) ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div></div>';
       bindOutline();
       if (!shown) load().then(side).catch(function () {});
     });
@@ -390,6 +397,19 @@
     var nb = neighbours(it.id), box = root.querySelector('.navs'); if (!box) return;
     box.innerHTML = (nb[0] ? '<a class="iconbtn" href="/learn/' + nb[0].m + '/' + nb[0].id + '" title="Previous">‹</a>' : '') +
       (nb[1] ? '<a class="btn btn-ghost btn-sm" href="/learn/' + nb[1].m + '/' + nb[1].id + '">Next ›</a>' : '');
+  }
+  // "In this lesson": the note's parts (its h2 headings) and about how long it takes to read, above the note.
+  function summary(html) {
+    try {
+      var d = new DOMParser().parseFromString(html || '', 'text/html');
+      d.querySelectorAll('script,style').forEach(function (x) { x.remove(); });
+      var parts = Array.prototype.map.call(d.querySelectorAll('h2'), function (h) { return (h.textContent || '').replace(/\s+/g, ' ').trim(); })
+        .filter(function (t) { return t && t.length < 90; }).slice(0, 12);
+      var mins = Math.max(2, Math.round(((d.body && d.body.textContent) || '').split(/\s+/).length / 180));
+      if (parts.length < 2) return '';
+      return '<details class="sum"><summary><b>In this lesson</b><span>' + parts.length + ' parts · about ' + mins + ' min read</span></summary><ol>' +
+        parts.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>';
+    } catch (x) { return ''; }
   }
   function yt(u) {
     var m = String(u || '').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
@@ -412,7 +432,7 @@
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
     if (it.type === 'notes') {
-      body = '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>';
+      body = summary(it.html_content) + '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>';
     } else if (yt(it.youtube_url)) {
       body = '<div class="body"><div class="pad"><iframe class="video" src="' + yt(it.youtube_url) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe>' +
         (it.html_content ? '<div style="margin-top:16px">' + it.html_content + '</div>' : '') + '</div></div>';
@@ -436,6 +456,7 @@
     // The learner picks the language each time (the last one is marked): English or Hinglish.
     function startAI(lang) {
       store('altro_ai_lang', lang); funnel('learn_with_ai', it.id + ' ' + lang);
+      if (!token()) { signIn(); return; }       // the free time with Altron is kept on the learner's account
       var pk = document.getElementById('aipick'); if (pk) pk.remove();
       if (ALTRON_CLASS.indexOf(Number(it.id)) >= 0) { location.href = '/class/?note=' + it.id + '&lang=' + lang; return; }
       if (main.querySelector('.strip')) return;
@@ -543,6 +564,19 @@
   else course();
   checkAdmin();
 
+  // The free time with Altron used up (the strip tells this page): show what continues it, once.
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin) return;
+    var m; try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+    if (!m || m.type !== 'state' || m.state !== 'out_of_minutes' || document.getElementById('aiout')) return;
+    var lv = document.querySelector('.lv'); if (!lv) return;
+    funnel('ai_credit_used', location.pathname);
+    var c = document.createElement('div'); c.id = 'aiout'; c.className = 'card'; c.style.cssText = 'margin:10px 12px;flex:none';
+    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="/pricing#ai">See the AI plan</a>' +
+      '<button class="btn btn-ghost btn-sm" data-golive>Learn Live with Industrial Expert</button></div>';
+    lv.appendChild(c);
+  });
+
   // Learn Live with an industrial expert (5 Nov 2026, founder): one fixed button on every /learn page that shows the
   // batches open to join. No prices here; the plans and fees are on /pricing.
   (function () {
@@ -551,6 +585,7 @@
     b.innerHTML = '<i>👨‍🏭</i><span>Learn Live with Industrial Expert<small>Check batches to join</small></span>';
     document.body.appendChild(b);
     var panel = null;
+    document.addEventListener('click', function (e) { var t = e.target.closest && e.target.closest('[data-golive]'); if (t) { e.preventDefault(); b.onclick(e); } });
     b.onclick = function (e) {
       e.stopPropagation();
       if (panel) { panel.remove(); panel = null; return; }
