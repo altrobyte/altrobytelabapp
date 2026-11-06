@@ -134,6 +134,45 @@
   .sum summary span { color: var(--soft); font-size: 13px; } .sum ol { margin: 8px 0 4px 20px; columns: 2; column-gap: 28px; color: var(--soft); }
   @media (max-width: 700px) { .sum ol { columns: 1; } }
   .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
+  /* /learn opens on the roadmap itself, full width (6 Nov 2026, founder: "the roadmap is what we sell, first view"). */
+  .rm { max-width: 1180px; margin: 0 auto; padding: 22px 20px 120px; }
+  @media (max-width: 600px) { .rm { padding: 16px 16px 120px; } }
+  .rm-hero { display: flex; gap: 18px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .rm-hero .k { font-size: 12px; font-weight: 800; letter-spacing: .1em; color: var(--orange); }
+  .rm-hero h1 { font-size: clamp(22px, 3.2vw, 32px); margin-top: 4px; }
+  .rm-hero .st { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .rm-hero .st span { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); color: #cfd9e6; }
+  .rm-hero .st b { color: #fff; }
+  .rm-go { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
+  .rm-go .btn { white-space: normal; text-align: left; }
+  .rm-go .prog { margin: 0; }
+  .stage { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 0 14px; padding-top: 26px; }
+  .stage::before { content: ''; position: absolute; left: 21px; top: 70px; bottom: -26px; width: 2px; background: var(--line); }
+  .stage:last-of-type::before { display: none; }
+  .stage .dot { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 16px; color: #0A1220; position: relative; z-index: 1; }
+  .stage .hd { min-height: 44px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .stage .hd h2 { margin: 0; font-size: 19px; line-height: 1.25; }
+  .stage .hd p { color: var(--soft); font-size: 13.5px; margin-top: 2px; }
+  .topics { grid-column: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 12px; align-items: start; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 34px 1fr; gap: 0 10px; } .stage .dot { width: 34px; height: 34px; font-size: 14px; } .stage::before { display: none; }
+    .topics { grid-column: 1 / -1; grid-template-columns: 1fr; } }
+  .tp { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; min-width: 0; }
+  .tp.x { grid-column: 1 / -1; }
+  .tp > button { width: 100%; text-align: left; background: none; border: 0; cursor: pointer; padding: 14px; display: grid; gap: 6px; }
+  .tp > button:hover { background: var(--panel2); }
+  .tp > button:disabled { cursor: default; background: none; }
+  .tp .tt2 { display: flex; gap: 10px; align-items: flex-start; font-weight: 700; font-size: 15px; line-height: 1.3; }
+  .tp .tt2 .chev { margin-left: auto; color: var(--soft); transition: transform .15s; }
+  .tp.x .tt2 .chev { transform: rotate(90deg); }
+  .tp .cn { font-size: 12.5px; color: var(--soft); }
+  .tp .pv { font-size: 13px; color: #b8c6d8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .tp .mini { height: 4px; border-radius: 9px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .tp .mini i { display: block; height: 100%; background: var(--green); }
+  .tp .items { padding: 4px 8px 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: 12px; border-top: 1px solid var(--line); }
+  .tp.x .items { display: grid; }
+  .tp .items .subt { grid-column: 1 / -1; padding: 10px 10px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; }
+  .rm-foot { margin-top: 36px; font-size: 13px; color: var(--soft); }
+  .rm-foot a { text-decoration: underline; }
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
 </head>
@@ -343,32 +382,74 @@
     return its[0] || null;
   }
 
-  // ── /learn: the course ──
+  // ── /learn: the course, as the roadmap ──
+  // The first view is the whole roadmap, full width: every module a stage, its topics as cards that open their lessons
+  // in place (6 Nov 2026, founder: "the roadmap is what we sell"). The side list stays only beside an open lesson.
+  var DESC = {
+    6: 'Think like a product engineer: research, block diagram, BOM and what to focus on.',
+    5: 'Electronics, microcontrollers, Embedded C, ESP32 and ESP-IDF, FreeRTOS and the protocols.',
+    4: 'Schematics and PCBs in KiCad, up to an assembled board.',
+    8: 'MQTT, Python for IoT, dashboards, computer vision and AI on device data.',
+    9: 'Wi-Fi, BLE, OTA, AWS IoT, security and fleets of devices in the field.',
+    10: 'Git and GitHub the way firmware teams use them.',
+    15: 'Costing, certification, production test, agile teams and interviews.',
+    16: 'STM32 for industry: CAN, Modbus, FreeRTOS, bootloaders, HMI and a full product.'
+  };
+  function count(its, t) { return its.filter(function (n) { return n.type === t; }).length; }
+  function counts(its) {
+    var nn = count(its, 'notes'), tt = count(its, 'test'), pr = count(its, 'project') + count(its, 'github') + count(its, 'code'), out = [];
+    if (nn) out.push(nn + ' note' + (nn > 1 ? 's' : ''));
+    if (pr) out.push(pr + ' project' + (pr > 1 ? 's' : '') + ' & code');
+    if (tt) out.push(tt + ' test' + (tt > 1 ? 's' : ''));
+    return out.join(' · ');
+  }
+  function itemLinks(its) {
+    var lastSub = null;
+    return its.map(function (n) {
+      var head = n.sub && n.sub !== lastSub ? '<div class="subt">' + esc(n.sub) + '</div>' : ''; lastSub = n.sub;
+      return head + '<a class="it' + (n.locked ? ' lk' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><span class="ic">' + (n.locked ? '🔒' : ICON[n.type] || '📄') + '</span><span class="nm">' + esc(n.title) + '</span>' +
+        (done(n.id) ? '<span class="ok">✓</span>' : '') + '</a>';
+    }).join('');
+  }
+  function roadmap() {
+    if (!Object.keys(mods).length) return '<div class="skel" style="height:120px;margin-top:24px"></div><div class="skel" style="height:120px"></div><div class="skel" style="height:120px"></div>';
+    var ms = ORDER.filter(function (id) { return mods[id] && mods[id].topics && mods[id].topics.length; });
+    return LEVELS.map(function (L, li) {
+      var mid = ms[li];
+      var all = []; L[2].forEach(function (T) { all = all.concat(stepItems(T)); });
+      var desc = DESC[mid] || (mid && String(mods[mid].description || '').length < 140 ? mods[mid].description || '' : '');
+      return '<section class="stage"><div class="dot" style="background:' + L[1] + '">' + (li + 1) + '</div><div class="hd"><h2>' + esc(L[0]) + '</h2>' +
+        '<p>' + (desc ? esc(desc) + ' · ' : '') + counts(all) + '</p></div><div class="topics">' +
+        L[2].map(function (T) {
+          if (!T[1]) return '<div class="tp"><button disabled><span class="tt2">' + esc(T[0]) + '<span class="tag live" style="margin-left:auto">LIVE</span></span><span class="cn">Taught live with a mentor</span></button></div>';
+          var its = stepItems(T), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
+          var pv = its.filter(function (n) { return n.type === 'notes'; }).slice(0, 3).map(function (n) { return n.title; }).join(' · ');
+          return '<div class="tp"><button data-tp><span class="tt2">' + esc(T[0]) + '<span class="chev">›</span></span><span class="cn">' + counts(its) + '</span>' +
+            (pv ? '<span class="pv">' + esc(pv) + '</span>' : '') + (fin ? '<span class="mini"><i style="width:' + Math.round(fin * 100 / (open.length || 1)) + '%"></i></span>' : '') +
+            '</button><div class="items">' + itemLinks(its) + '</div></div>';
+        }).join('') + '</div></section>';
+    }).join('');
+  }
   function course() {
-    document.title = 'Course · Altrobyte Lab';
+    document.title = 'Product Engineering Roadmap · Altrobyte Lab';
     funnel('learn_view');
     var draw = function () {
       var its = allItems(), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
-      var pct = open.length ? Math.round(fin * 100 / open.length) : 0, nx = firstOpen(), locked = anyLocked(), have = Object.keys(mods).length;
-      var welcome = '<div class="pad"><h1>Product Engineering: embedded systems to IoT</h1>' +
-        '<p class="muted" style="margin-top:6px">Every module, step by step: notes, code, tests and projects for each topic. Live classes and their recordings are under Live classes.</p>' +
-        (have ? '<div class="card" style="margin-top:16px"><div class="row" style="justify-content:space-between"><b>Your progress</b><span class="muted" style="font-size:13px">' + fin + ' of ' + open.length + ' open items done</span></div>' +
-          '<div class="prog"><i style="width:' + pct + '%"></i></div>' +
-          (inTrial() ? '<p class="muted" style="font-size:13px;margin-top:6px">Your free week: ' + trial.days_left + ' days left. Every step is open.</p>' : '') +
-          '<div class="row" style="margin-top:12px">' + (nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue' : 'Start') + ': ' + esc(nx.title) + '</a>' : '') +
-            (!token() ? '<button class="btn btn-ghost" data-signin>Sign in to save your progress</button>' : '') + '</div></div>' : '') +
-        // Every note is free (5 Nov 2026, founder); a plan opens the class recordings, Altron beyond the free time, and the live program.
-        (have ? '<div class="card" style="margin-top:12px"><b>Every note, code and project here is free.</b>' +
-          '<p class="muted" style="margin-top:4px;font-size:14px">Tap ✨ Learn with AI on any note and Altron teaches it by voice. Class recordings and live classes with an industrial expert come with a plan.</p>' +
-          '<div class="row" style="margin-top:12px"><button class="btn btn-ghost btn-sm" data-golive>Check batches to join</button>' +
-          '<a class="btn btn-ghost btn-sm" href="/pricing">See plans</a></div></div>' : '') +
-        '<p class="muted" style="font-size:13px;margin-top:18px"><a href="/roadmap" style="text-decoration:underline">Syllabus</a> · <a href="https://wa.me/917222977927" style="text-decoration:underline">Help on WhatsApp</a> · <a href="/privacy" style="text-decoration:underline">Privacy</a>' +
-        (token() ? ' · <a href="/delete-account" style="text-decoration:underline">Delete account</a>' : '') + '</p></div>';
-      root.innerHTML = bar('course') + '<div class="shell"><aside class="side">' + outline(nx && nx.id) + '</aside><main class="main">' + welcome + '</main></div>';
+      var pct = open.length ? Math.round(fin * 100 / open.length) : 0, nx = firstOpen(), have = Object.keys(mods).length;
+      var hero = '<div class="rm-hero"><div><div class="k">PRODUCT ENGINEERING ROADMAP</div><h1>Embedded systems to IoT products, step by step</h1>' +
+        (have ? '<div class="st"><span><b>' + LEVELS.length + '</b> modules</span><span><b>' + count(its, 'notes') + '</b> notes</span><span><b>' + count(its, 'test') + '</b> tests</span><span>Every note <b>free</b></span>' +
+          (inTrial() ? '<span>Free week: <b>' + trial.days_left + '</b> days left</span>' : '') + '</div>' : '') + '</div>' +
+        '<div class="rm-go">' + (nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue: ' : 'Start: ') + esc(nx.title) + '</a>' : '') +
+          (fin ? '<div class="prog"><i style="width:' + pct + '%"></i></div><span class="muted" style="font-size:12.5px">' + fin + ' of ' + open.length + ' done</span>' :
+            '') + '</div></div>';
+      var foot = '<p class="rm-foot">Tap ✨ Learn with AI on any note and Altron teaches it by voice. Live classes with an industrial expert: <a href="#" data-golive>check batches</a> · <a href="/pricing">plans</a>.<br>' +
+        '<a href="/roadmap">Syllabus</a> · <a href="https://wa.me/917222977927">Help on WhatsApp</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</p>';
+      root.innerHTML = bar('course') + '<main class="rm">' + hero + roadmap() + foot + '</main>';
       bindOutline();
+      root.querySelectorAll('[data-tp]').forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle('x'); }; });
     };
     var shown = cached(); draw();
-    load().then(draw).catch(function () { if (!shown) root.querySelector('.main').innerHTML = '<div class="pad"><h1>Could not load the course</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a></div>'; });
+    load().then(draw).catch(function () { if (!shown) root.querySelector('.rm').innerHTML = '<h1>Could not load the course</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a>'; });
   }
 
   // ── /learn/<m>/<c>: one item ──
