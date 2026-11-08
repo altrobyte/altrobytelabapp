@@ -347,6 +347,9 @@ const noteBridgeScript = r"""
     var st = document.createElement('style'); st.setAttribute('data-altro', '1');
     st.textContent = '.altro-off{display:none!important}body{padding-top:40px!important}' +
       '.altro-one{display:block!important}.altro-one>*{max-width:none!important;width:auto!important}' +
+      // A note's own contents rail, side menu or table of contents is for scrolling; with one part at a time it only
+      // took space beside the lesson (8 Nov 2026, founder), so it is hidden while Altron teaches.
+      '#altro-stage nav,#altro-stage aside,#altro-stage .rail,#altro-stage .toc,#altro-stage [role=navigation]{display:none!important}' +
       // wide slides: a note's column (main, or its first box) may use the screen's width, so a part takes fewer lines
       '#altro-stage>main,#altro-stage>.wrap,#altro-stage>.container,#altro-stage>.page,#altro-stage>article{max-width:var(--altro-w,96vw)!important}' +
       '.altro-bar{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;align-items:center;justify-content:center;gap:10px;' +
