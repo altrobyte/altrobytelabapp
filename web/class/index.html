@@ -128,6 +128,8 @@
   .check .opts button.right { background: var(--okbg); border-color: var(--ok); }
   .check .opts button.wrong { background: var(--badbg); border-color: var(--bad); }
   .check .why { margin-top: 10px; font-size: 14px; }
+  .chelp { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chelp button { background: #fff; border: 1px solid var(--line); padding: 9px 12px; font-size: 14px; color: var(--ink); border-radius: 10px; }
   .nav { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
   .dots { display: flex; gap: 6px; flex: 1; justify-content: center; }
   .dots i { width: 9px; height: 9px; border-radius: 50%; background: #c9d3e0; }
@@ -296,6 +298,11 @@
   let at = 0;              // section on the board
   const done = new Set();
   let checkShown = false, checkDone = false, pracDone = false;
+  // A question on the board never leaves the class stuck (8 Nov 2026, founder: Altron said "see the question" and waited
+  // forever): no answer for 20 s brings a hint, 30 s more (or two wrong tries) shows the answer, which Altron explains.
+  let checkAt = 0, checkHinted = false, wrongTries = 0;
+  // A practical on the learner's own computer cannot be done on a phone: Altron says it is for later and moves on.
+  const ON_PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, innerWidth) < 820;
 
   function clean(el) {              // the board is our note, but nothing in it may run
     el.querySelectorAll('script,iframe,object,embed,link,meta,form').forEach((x) => x.remove());
@@ -345,7 +352,8 @@
     const pointing = s.teach.flatMap((t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => ({ part: m[1], while_you_say: plain(t).split(/[,.:;]/)[0].slice(0, 60) })));
     return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(plain), point_at_when: pointing,
              parts_you_can_point_at: s.points, check_question: s.check ? { question: s.check.q, options: s.check.options.map((o, k) => (k + 1) + '. ' + o) } : null,
-             practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts };
+             practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts,
+             ...(ON_PHONE && s.practical && s.practical.task !== 'tap' ? { learner_device: 'The learner is on a phone and cannot do this computer task now. Say in one line that it is for later on their PC, describe simply what they will see when it works, then call show_section "next". Do not wait for it.' } : {}) };
   }
   function esc(t) { return String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -353,6 +361,7 @@
     const s = klass.sections[at];
     if (mq) { try { mq.end(true); } catch (_) {} mq = null; clearTimeout(mqWait); }
     checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; pracNudged = false; if (pcHold) holdForPc(false);
+    checkAt = 0; checkHinted = false; wrongTries = 0;
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
@@ -361,14 +370,14 @@
     if (s.boardHtml) h += `<div class="board${tap ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
     if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
     else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 Try it: ${esc(taskText(s.practical.text))}</div>
-      <div class="opt">Optional. The class carries on either way.</div>${DONE_LATER}
+      <div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional. The class carries on either way.'}</div>${DONE_LATER}
       <details class="err"><summary>Got an error? Paste it here and Altron will help</summary>
       <textarea id="pcIn" spellcheck="false" placeholder="Paste the error or the output here"></textarea><div class="row"><button type="button" id="pcGo">Ask Altron</button></div></details><div class="res" id="pcRes"></div></div>`;
-    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="opt">Optional: upload the code, type your NAME and tap Listen. The class carries on either way.</div>${DONE_LATER}
+    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional: upload the code, type your NAME and tap Listen. The class carries on either way.'}</div>${DONE_LATER}
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your NAME from the code" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Listen</button></div>
       ${s.practical.cmd ? '<div class="row cmds hidden" id="pcCmd"><button type="button" data-cmd="ON">💡 Send ON</button><button type="button" class="off" data-cmd="OFF">Send OFF</button></div>' : ''}
       <div class="live" id="pcLive"></div><div class="res" id="pcRes"></div></div>`;
-    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="opt">Optional: push from your PC, type your username and tap Check. The class carries on either way.</div>${DONE_LATER}
+    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional: push from your PC, type your username and tap Check. The class carries on either way.'}</div>${DONE_LATER}
       <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
       const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
@@ -442,8 +451,17 @@
   function showCheck() {
     const s = klass.sections[at]; if (!s.check || checkShown) return !!s.check;
     checkShown = true;
-    $('checkHost').innerHTML = `<div class="check"><div class="q">${esc(s.check.q)}</div><div class="opts">${s.check.options.map((o, k) => `<button type="button" data-k="${k}">${k + 1}. ${esc(o)}</button>`).join('')}</div><div class="why" id="why"></div></div>`;
-    for (const b of document.querySelectorAll('#checkHost .opts button')) b.onclick = () => { const r = answer(Number(b.dataset.k)); tell('[Screen] The learner tapped option ' + (Number(b.dataset.k) + 1) + ' (' + s.check.options[b.dataset.k] + '): ' + (r.correct ? 'right' : 'not right') + '. Why: ' + s.check.why); };
+    $('checkHost').innerHTML = `<div class="check"><div class="q">${esc(s.check.q)}</div><div class="opts">${s.check.options.map((o, k) => `<button type="button" data-k="${k}">${k + 1}. ${esc(o)}</button>`).join('')}</div><div class="why" id="why"></div><div class="chelp" id="chelp"><button type="button" id="chAgain">🤔 Not clear, explain again</button><button type="button" id="chShow">Show the answer</button></div></div>`;
+    checkAt = Date.now();
+    for (const b of document.querySelectorAll('#checkHost .opts button')) b.onclick = () => {
+      const k = Number(b.dataset.k), r = answer(k);
+      if (r.correct) return tell('[Screen] The learner tapped option ' + (k + 1) + ' (' + s.check.options[k] + '): right. Why: ' + s.check.why + ' Praise them in one short line, say why in simple words, then call show_section "next".');
+      if (wrongTries >= 2) return reveal('The learner was wrong twice (last tap: option ' + (k + 1) + ', ' + s.check.options[k] + ').');
+      tell('[Screen] The learner tapped option ' + (k + 1) + ' (' + s.check.options[k] + '): not right. Do not just say wrong: say kindly what part of that thinking is fair, give ONE hint with an everyday example, without saying the answer, and ask them to try again.');
+    };
+    $('chAgain').onclick = () => { lastHuman = Date.now(); checkAt = Date.now(); checkHinted = true;
+      tell('[Screen] The learner tapped "Not clear, explain again". Explain the idea behind this question again, slower and in a different way, for a fresher who has never seen it: one everyday example, step by step, in three or four short sentences. Do not say which option is right. Then ask them to try.'); };
+    $('chShow').onclick = () => { lastHuman = Date.now(); reveal('The learner tapped "Show the answer".'); };
     $('checkHost').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
   }
@@ -453,8 +471,20 @@
     const correct = k === s.check.answer;
     btns.forEach((b, i) => { b.classList.toggle('wrong', i === k && !correct); if (correct) { b.disabled = true; b.classList.toggle('right', i === k); } });
     $('why').innerHTML = correct ? '✅ <b>Right.</b> ' + esc(s.check.why) : '❌ Not quite. Try another one.';
-    if (correct) { checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); }
+    if (correct) { checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); if ($('chelp')) $('chelp').remove(); }
+    else wrongTries++;
     return { correct, chosen: s.check.options[k], why: correct ? s.check.why : 'not told yet: let them try again with a hint' };
+  }
+  // The page shows the right answer and Altron explains it; the class then moves on (by itself if Altron stays quiet).
+  function reveal(why) {
+    const s = klass.sections[at]; if (!s.check || checkDone) return;
+    showCheck();
+    document.querySelectorAll('#checkHost .opts button').forEach((b, i) => { b.disabled = true; b.classList.remove('wrong'); b.classList.toggle('right', i === s.check.answer); });
+    $('why').innerHTML = '💡 <b>The answer: ' + (s.check.answer + 1) + '. ' + esc(s.check.options[s.check.answer]) + '.</b> ' + esc(s.check.why);
+    if ($('chelp')) $('chelp').remove();
+    checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); resNudged = true;
+    tell('[Screen] ' + why + ' The page now shows the right answer: option ' + (s.check.answer + 1) + ' (' + s.check.options[s.check.answer] + '). Reason: ' + s.check.why +
+         ' Explain why it is right in simple words, like to a fresher, with one everyday example, in two or three short sentences. Then call show_section "next".');
   }
   function tapPart(part) {
     const s = klass.sections[at]; if (!s.practical || pracDone) return;
@@ -484,6 +514,7 @@
     b.onclick = () => { others.forEach((c) => c.classList.remove('os-hide')); b.remove(); };
     cards[cards.length - 1].parentElement.after(b);
   }
+  const PHONE_NOTE = '📱 This step is done on a laptop or PC. On the phone now? Tap <b>Later</b>: it stays in your homework and the class carries on.';
   const DONE_LATER = '<div class="row dl"><button type="button" id="pcDone">✅ Done</button><button type="button" class="later" id="pcLater">Later →</button></div>';
   // The note's task says "...and paste what it prints": the paste is optional now, so that part is left off.
   function taskText(t) { return String(t || '').replace(/[,;]?\s*(and |then )?(paste|type)\b.*$/i, '').replace(/[.\s]*$/, '') + '.'; }
@@ -890,10 +921,15 @@
       if (!resNudged && quiet > 9000) { resNudged = true; note('[The learner has finished this section correctly. Say one short sentence about it, then call show_section "next".]'); return; }
       if (resNudged && quiet > 22000) { resolvedAt = 0; go(at + 1, true); return; }
     }
+    if (klass && klass.mode !== 'walkthrough' && checkShown && !checkDone && checkAt && !playing.length && !ending) {
+      const wait = Date.now() - Math.max(checkAt, lastActive);
+      if (!checkHinted && wait > 20000) { checkHinted = true; tell('[Screen] No answer for 20 seconds: the learner may be unsure. Read the question again in simple words, give ONE hint with an everyday example, without saying the answer, and invite them to tap an option.'); return; }
+      if (checkHinted && wait > 30000) { reveal('Still no answer after the hint.'); return; }
+    }
     const s = klass && klass.sections[at];
     if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && at < klass.sections.length - 1) {
       const quiet = (Date.now() - lastActive) / 1000;
-      if (!pracNudged && quiet >= 20) { pracNudged = true; note('[The learner has not tapped Done or Later. Tell them in one short line that they can do it after the class, then call show_section "next".]'); return; }
+      if (!pracNudged && quiet >= (ON_PHONE ? 8 : 20)) { pracNudged = true; note('[The learner has not tapped Done or Later. Tell them in one short line that they can do it after the class, then call show_section "next".]'); return; }
       if (pracNudged && quiet >= 40) { go(at + 1, true); return; }
     }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
