@@ -28,6 +28,11 @@
         "destination": "/pricing/index.html"
       },
       {
+        "//": "Lab kits: ready kits and your own mix, ordered through WhatsApp (7 Nov 2026, founder).",
+        "source": "/kits",
+        "destination": "/kits/index.html"
+      },
+      {
         "//": "The roadmap and its lessons are a plain page (30 Oct 2026, founder: the place where people convert); /learn/<module>/<lesson> opens a lesson.",
         "source": "/learn",
         "destination": "/learn/index.html"
