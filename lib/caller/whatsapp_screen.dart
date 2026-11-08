@@ -440,31 +440,24 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _composer() {
-    if (!_loading && !_open) {
-      return Container(
-        width: double.infinity,
-        color: Colors.white,
-        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
-        child: SafeArea(
-          top: false,
-          child: Row(children: [
-            const Icon(Icons.lock_clock_outlined, size: 20, color: _grey),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text('No message from them in 24 hours, so WhatsApp allows only an approved template. Call them instead.',
-                  style: TextStyle(fontSize: 12.5, color: _grey, height: 1.35)),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF008069)),
-              onPressed: () => launchUrl(Uri.parse('tel:+91${widget.phone}')),
-              icon: const Icon(Icons.call, size: 17),
-              label: const Text('Call'),
-            ),
-          ]),
-        ),
-      );
-    }
+    final first = widget.name.trim().split(' ').first;
+    final box = _writeBox();
+    if (_loading || _open) return box;
+    // After 24 hours WhatsApp takes only an approved template: the words go in "Hi <name>, ..." as Jarvis sends them.
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        margin: const EdgeInsets.fromLTRB(10, 0, 10, 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(color: const Color(0xFFFFF3C4), borderRadius: BorderRadius.circular(10)),
+        child: Text('No message from them in 24 hours: yours goes as "Hi ${first.isEmpty ? 'there' : first}, <your message>" '
+            "(WhatsApp's approved format, the way Jarvis sends).",
+            style: const TextStyle(fontSize: 12.5, color: Color(0xFF54656F), height: 1.3)),
+      ),
+      box,
+    ]);
+  }
+
+  Widget _writeBox() {
     return SafeArea(
       top: false,
       child: Padding(
