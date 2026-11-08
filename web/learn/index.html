@@ -613,7 +613,8 @@
         var team = store('altro_admin') === '1';
         function info(dir) { return fetch('/downloads/' + dir + 'desktop.json', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { d.dir = dir; return d; }); }
         info('').catch(function () { if (team) return info('team/'); throw 0; }).then(function (d) {
-          document.getElementById('deskdl').innerHTML = '<a class="btn btn-main" href="/downloads/' + d.dir + esc(d.file || 'AltrobyteTrainerSetup.exe') + '" data-dl>Download for Windows</a>' +
+          var href = d.url || ('/downloads/' + d.dir + (d.file || 'AltrobyteTrainerSetup.exe'));   // a release elsewhere, or our own copy
+          document.getElementById('deskdl').innerHTML = '<a class="btn btn-main" href="' + esc(href) + '" data-dl>Download for Windows</a>' +
             '<span class="muted" style="font-size:13px">v' + esc(d.version || '') + (d.size ? ' · ' + Math.round(d.size / 1048576) + ' MB' : '') + (d.dir ? ' · team test build, learners do not see this yet' : '') + '</span>';
           var a = card.querySelector('[data-dl]'); if (a) a.onclick = function () { funnel('desktop_download', String(it.id)); };
         }).catch(function () {

@@ -112,6 +112,7 @@
   .board .os-all { background: none; color: #2d4f86; font-weight: 600; font-size: 13.5px; padding: 6px 0; text-decoration: underline; }
   .pc button.later { background: #fff; color: #7a3a06; border: 1px solid #f0c9a0; }
   .pc .opt { font-size: 13px; color: #9a5a1c; }
+  .pc .desk { font-size: 13px; color: #6b5a48; } .pc .desk a { color: #b4600f; font-weight: 700; }
   .pc details.err summary { cursor: pointer; font-size: 13.5px; color: #9a5a1c; font-weight: 600; }
   .pc details.err[open] { display: grid; gap: 8px; }
   .pc.done .row.dl { display: none; }
@@ -398,6 +399,7 @@
       pre.appendChild(b);
     }
     onlyMyOs();
+    deskHint();
     if ($('pcGo')) {
       const run = { github: checkGithub, mqtt: checkMqtt }[s.practical.task] || checkPaste;
       $('pcGo').onclick = () => run();
@@ -519,6 +521,26 @@
   // The note's task says "...and paste what it prints": the paste is optional now, so that part is left off.
   function taskText(t) { return String(t || '').replace(/[,;]?\s*(and |then )?(paste|type)\b.*$/i, '').replace(/[.\s]*$/, '') + '.'; }
   // Done or Later: the practical is homework, never a stop. Altron says a line and moves on.
+  // A practical on the PC: one small line offers the Altrobyte Trainer app, which builds, uploads and checks the board for
+  // the learner (8 Nov 2026, founder: "an option to download on the PC, light, never a barrier to learning on the web").
+  // Shown on a computer only, and only once an installer is published (downloads/desktop.json; its url may point to a
+  // release elsewhere). Nothing waits for it.
+  let deskInfo;
+  function deskHint() {
+    const box = $('pc'); if (!box || ON_PHONE || !/Windows/i.test(navigator.userAgent)) return;
+    const show = (d) => {
+      if (!d || !$('pc') || $('desk')) return;
+      const href = d.url || ('/downloads/' + (d.file || 'AltrobyteTrainerSetup.exe'));
+      const el = document.createElement('div'); el.className = 'desk'; el.id = 'desk';
+      el.innerHTML = '💻 Easier on your PC: the <a href="' + esc(href) + '" target="_blank" rel="noopener">Altrobyte Trainer app</a>' +
+        (d.size ? ' (' + Math.round(d.size / 1048576) + ' MB, Windows)' : ' (Windows)') + ' builds, uploads and checks your board for you. Optional.';
+      el.querySelector('a').onclick = () => track('desktop_download');
+      $('pc').appendChild(el);
+    };
+    if (deskInfo !== undefined) return show(deskInfo);
+    fetch('/downloads/desktop.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).catch(() => null)
+      .then((d) => { deskInfo = d && (d.url || d.file) ? d : null; show(deskInfo); });
+  }
   function pcSkip(didIt) {
     pracDone = true; done.add(at); saveProgress(); $('pc').classList.add('done');
     $('pcRes').className = 'res ok'; $('pcRes').textContent = didIt ? '✅ Nice work. Moving on.' : '👍 No problem. Do it later; it stays in the notes.';

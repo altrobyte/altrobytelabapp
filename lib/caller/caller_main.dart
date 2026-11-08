@@ -26,6 +26,7 @@ import 'models.dart';
 import 'permissions_screen.dart';
 import 'team_screen.dart';
 import 'today_screen.dart';
+import 'whatsapp_screen.dart';
 
 final callerNavKey = GlobalKey<NavigatorState>();
 
@@ -158,7 +159,7 @@ class _CallerHomeState extends State<CallerHome> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final c = context.watch<CallerController>();
     final lead = c.me?.teamLead ?? false;
-    final tabs = [('Today', Icons.today), ('Leads', Icons.people), ('Calls', Icons.history), if (lead) ('Team', Icons.leaderboard)];
+    final tabs = [('Today', Icons.today), ('Leads', Icons.people), ('Calls', Icons.history), if (lead) ('WhatsApp', Icons.chat), if (lead) ('Team', Icons.leaderboard)];
     final tab = _tab.clamp(0, tabs.length - 1);
     return Scaffold(
       appBar: AppBar(
@@ -194,6 +195,7 @@ class _CallerHomeState extends State<CallerHome> with WidgetsBindingObserver {
         'Calls' => const CallsScreen(),
         'Leads' => const LeadsScreen(),
         'Team' => const TeamScreen(),
+        'WhatsApp' => const WhatsAppScreen(),
         _ => const TodayScreen(),
       },
       bottomNavigationBar: NavigationBar(

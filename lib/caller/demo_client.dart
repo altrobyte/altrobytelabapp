@@ -84,6 +84,20 @@ class DemoClient extends http.BaseClient {
     if (path == '/manager/login' || path == '/auth/login') return {'token': 'demo', 'jwt_token': 'demo'};
     if (path == '/crm/my-queue') return {'me': _me, 'leads': _leads.values.where((l) => l['heat']['temperature'] != 'out').toList()};
     if (path == '/crm/labels') return {'labels': _labels};
+    if (path == '/crm/messages') {
+      final now = DateTime.now();
+      String ago(int m) => now.subtract(Duration(minutes: m)).toIso8601String();
+      return {
+        'totals': {'sent': 3, 'received': 1, 'replied_people': 1, 'failed': 1},
+        'messages': [
+          {'phone': '0900000001', 'name': 'Riya (sample)', 'direction': 'in', 'status': 'received', 'by': '', 'body': 'Haan, Saturday demo mein aaungi', 'at': ago(5)},
+          {'phone': '0900000001', 'name': 'Riya (sample)', 'direction': 'out', 'status': 'sent', 'by': 'Jarvis', 'body': 'Hi Riya, Saturday 6 pm ki free demo class mein aaoge?', 'at': ago(40)},
+          {'phone': '0900000002', 'name': 'Aman (sample)', 'direction': 'out', 'status': 'sent', 'by': 'Follow-up automation', 'body': 'Your seat for the ESP32 batch is still open.', 'at': ago(90)},
+          {'phone': '0900000003', 'name': '', 'direction': 'out', 'status': 'failed', 'by': 'Bulk message', 'body': 'New batch starts Monday.', 'at': ago(120)},
+          {'phone': '0900000002', 'name': 'Aman (sample)', 'direction': 'out', 'status': 'sent', 'by': 'WhatsApp AI', 'body': 'Fees ke liye hamari team aapko call karegi.', 'at': ago(200)},
+        ],
+      };
+    }
     if (path == '/crm/quick-wa') {
       return {
         'messages': [

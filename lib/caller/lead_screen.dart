@@ -124,7 +124,7 @@ class _Event extends StatelessWidget {
         title = 'Note — ${e['by'] ?? ''}';
       default:
         icon = Icons.chat_outlined;
-        title = e['direction'] == 'in' ? 'WhatsApp from them' : 'WhatsApp from us';
+        title = e['direction'] == 'in' ? 'WhatsApp from them' : 'WhatsApp from us${'${e['by'] ?? ''}'.isEmpty ? '' : ' — ${e['by']}'}';
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),

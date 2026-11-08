@@ -138,6 +138,12 @@ class CallerApi {
     return ((await _send('GET', Uri(path: '/crm/browse', queryParameters: query).toString())) as Map).cast<String, dynamic>();
   }
 
+  /// Every WhatsApp sent and received (the owner's view): filter all|sent|received|failed, over the last [days].
+  Future<Map<String, dynamic>> messages({String filter = 'all', int days = 1, String q = ''}) async =>
+      ((await _send('GET', Uri(path: '/crm/messages', queryParameters: {'filter': filter, 'days': '$days', 'q': q, 'limit': '300'}).toString()))
+              as Map)
+          .cast<String, dynamic>();
+
   Future<Map<String, dynamic>> timeline(String phone) async =>
       ((await _send('GET', '/crm/leads/$phone/timeline')) as Map).cast<String, dynamic>();
 
