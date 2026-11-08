@@ -543,11 +543,49 @@
       var pk = document.getElementById('aipick'); if (pk) pk.remove();
       if (ALTRON_CLASS.indexOf(Number(it.id)) >= 0) { location.href = '/class/?note=' + it.id + '&lang=' + lang; return; }
       if (main.querySelector('.strip')) return;
+      // Altron teaches the note as the desktop app does (7 Nov 2026, founder: the industrial lessons felt like a teacher,
+      // the website's did not): the note turns into one part at a time, the part Altron is on opens and glows, the page
+      // follows Altron's words, what the learner does on the note reaches Altron, and Altron carries on where it stopped.
+      var nf = main.querySelector('iframe.note');
+      if (nf) nf.srcdoc = window.altroTutorPage(it.html_content || '', { slides: true });
+      var from = Number(store('altro_part_' + it.id)) || 0;
       var st = document.createElement('div'); st.className = 'strip';
-      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=' + lang + '&compact=1&autostart=1"></iframe>';
+      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=' + lang + '&compact=1&autostart=1' + (from > 1 ? '&from=' + from : '') + '"></iframe>';
       main.querySelector('.lv').appendChild(st);
+      teaching = { strip: st.querySelector('iframe'), note: nf, from: from };
+      var gl = document.querySelector('.golive'); if (gl) gl.style.display = 'none';      // it covered Altron's own buttons
       ai.textContent = '✨ AI is on'; ai.disabled = true;
     }
+    var teaching = null, needs = null;
+    function toNote(m) { try { if (teaching && teaching.note) teaching.note.contentWindow.postMessage(JSON.stringify(m), '*'); } catch (x) {} }
+    function toStrip(fn, arg) { try { var w = teaching.strip.contentWindow; if (w[fn]) w[fn](arg); } catch (x) {} }
+    // Lesson complete: done, and the next lesson opens after a short countdown (the desktop app's way).
+    function lessonDone() {
+      store('altro_part_' + it.id, null);
+      store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));
+      var nx = neighbours(it.id)[1], c = document.createElement('div'); c.className = 'card'; c.style.cssText = 'margin:10px 12px;flex:none';
+      if (!nx) { c.innerHTML = '<b>Lesson complete. Great work!</b>'; main.querySelector('.lv').appendChild(c); return; }
+      var left = 8;
+      c.innerHTML = '<div class="row" style="justify-content:space-between"><b>Lesson complete! Next: ' + esc(nx.title) + '</b><span class="row">' +
+        '<a class="btn btn-main btn-sm" href="/learn/' + nx.m + '/' + nx.id + '">Next lesson (<span id="cd">' + left + '</span>)</a><button class="btn btn-ghost btn-sm" id="stay">Stay here</button></span></div>';
+      main.querySelector('.lv').appendChild(c);
+      var tick = setInterval(function () { left--; var el = document.getElementById('cd'); if (el) el.textContent = left; if (left <= 0) { clearInterval(tick); location.href = '/learn/' + nx.m + '/' + nx.id; } }, 1000);
+      document.getElementById('stay').onclick = function () { clearInterval(tick); c.remove(); };
+    }
+    window.addEventListener('message', function (e) {
+      if (!teaching) return;
+      var m; try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+      if (!m) return;
+      if (e.source === teaching.strip.contentWindow && e.origin === location.origin) {
+        if (m.type === 'section' && m.part >= 1) { toNote({ show: m.part - 1, bring: true }); if (m.part > 1) store('altro_part_' + it.id, String(m.part)); }
+        else if (m.type === 'said') toNote({ said: m.text || '' });
+        else if (m.type === 'state' && m.state === 'done') setTimeout(lessonDone, 2500);
+        else if (m.type === 'state' && m.state === 'live' && needs) { toStrip('altronNeeds', needs); }
+      } else if (teaching.note && e.source === teaching.note.contentWindow) {
+        if (m.needs) { needs = m.needs; toStrip('altronNeeds', needs); }
+        if (typeof m.did === 'string') toStrip('altronDid', m.did);
+      }
+    });
     if (ai) ai.onclick = function (e) {
       e.stopPropagation();
       var old = document.getElementById('aipick'); if (old) { old.remove(); return; }
