@@ -981,6 +981,12 @@ class ApiService {
   /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
   /// One WhatsApp message (the update template, each lead's own name) to many leads at once.
   // ── Access: who can open the course (access.py) ──
+  /// Everyone for the access switchboard: access on or off and why, requests, Altron minutes.
+  static Future<Map<String, dynamic>> accessPeople() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access/people'), headers: _headers(prefs.getString('token'))));
+  }
+
   static Future<Map<String, dynamic>> accessOverview() async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access'), headers: _headers(prefs.getString('token'))));
