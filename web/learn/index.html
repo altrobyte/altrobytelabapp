@@ -133,6 +133,13 @@
   .sum summary::before { content: '▸'; color: var(--orange2, #FF9A3D); } .sum[open] summary::before { content: '▾'; }
   .sum summary span { color: var(--soft); font-size: 13px; } .sum ol { margin: 8px 0 4px 20px; columns: 2; column-gap: 28px; color: var(--soft); }
   @media (max-width: 700px) { .sum ol { columns: 1; } }
+  .focus .bar, .focus .sum { display: none; }
+  .focus .shell, .focus .shell.reading { height: 100vh; height: 100dvh; }
+  .focus .lv .top { min-height: 42px; padding: 3px 10px; }
+  .focus .lv .top .tt small { display: none; }
+  .focus .lv .top .iconbtn { width: 32px; height: 32px; }
+  .focus .lv .top .btn-sm { padding: 5px 10px; }
+  .focus .strip { height: 56px; }
   .side .subt { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; padding: 10px 12px 4px; }
   /* /learn opens on the roadmap itself, full width (6 Nov 2026, founder: "the roadmap is what we sell, first view"). */
   .rm { max-width: 1180px; margin: 0 auto; padding: 22px 20px 120px; }
@@ -237,7 +244,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script src="/learn/bridge.js?v=20261108"></script>
+<script src="/learn/bridge.js?v=20261108b"></script>
 <script>
 (function () {
   var API = 'https://edu.altrobytelab.com';
@@ -743,6 +750,9 @@
       main.querySelector('.lv').appendChild(st);
       teaching = { strip: st.querySelector('iframe'), note: nf, from: from };
       var gl = document.querySelector('.golive'); if (gl) gl.style.display = 'none';      // it covered Altron's own buttons
+      // Focus while Altron teaches (8 Nov 2026, founder: the bars took the space, the lesson got little): the site bar and
+      // the summary go, the lesson bar slims, and the note gets the rest of the screen.
+      document.documentElement.classList.add('focus');
       ai.textContent = '✨ AI is on'; ai.disabled = true;
     }
     var teaching = null, needs = null;

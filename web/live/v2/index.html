@@ -108,7 +108,7 @@
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const labId = P.get('lab') ? Number(P.get('lab')) : null;
   const WORKER = P.get('aud') === 'worker';               // a plant's worker (industrial training): slower, more waiting
-  const QUIET_S = WORKER ? 14 : 9, QUIET_MAX = 8;                        // teaching a note: a learner who stays quiet hears the answer
+  const QUIET_S = WORKER ? 14 : 8, QUIET_MAX = 6;                        // per part: a learner who stays quiet hears the answer                        // teaching a note: a learner who stays quiet hears the answer
   let quietNudges = 0;
   const IDLE_S = FOUNDER ? 12 : 120;                       // the founder's assistant sleeps 12 s after the talk; its name wakes it
   let replyDue = false;                                    // they spoke and Altron has not answered yet: never sleep then
@@ -395,7 +395,9 @@
         } else if (want > partAt && partSince && (Date.now() - partSince < (WORKER ? 45000 : 20000) || partWords < (WORKER ? 70 : 40))) {
           response = { shown: false, error: 'Part ' + partAt + ' is not taught yet. Explain it properly first: what it is, why it matters, an example from their work, then one short question. Call show_part ' + want + ' after that.' };
         } else {
-          if (want > partAt) { partSince = Date.now(); partWords = 0; }
+          // A new part: the quiet listener's allowance starts again (8 Nov 2026: after eight quiet answers in one lesson
+          // Altron stopped at "Samjhe?" and waited two minutes).
+          if (want > partAt) { partSince = Date.now(); partWords = 0; quietNudges = 0; }
           partAt = Math.max(partAt, want);
           tellHost({ type: 'section', part: want });
           response = { shown: true };
