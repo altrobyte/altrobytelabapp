@@ -43,6 +43,19 @@ const noteBridgeScript = r"""
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (a && /^https?:/i.test(a.href)) { e.preventDefault(); post({ open: a.href }); return; }
+    // The lesson notes' own quick checks and missions (7 Nov 2026): Altron hears how the learner answered and what they
+    // finished, as it hears an industrial drill, so it can praise, correct or move on.
+    var o = e.target.closest ? e.target.closest('.opt[data-ok]') : null;
+    if (o && window.altroDid) {
+      var q = o.closest('.q'), qp = q && q.querySelector('p');
+      window.altroDid((o.getAttribute('data-ok') === '1' ? 'answered a quick check right: ' : 'answered a quick check wrong: ') +
+        ((qp && qp.innerText) || '').trim().slice(0, 80) + ' -> ' + (o.innerText || '').trim().slice(0, 60));
+    }
+    var dn = e.target.closest ? e.target.closest('.done-btn') : null;
+    if (dn && window.altroDid) {
+      var ds = dn.closest('section'), dh = ds && ds.querySelector('h2');
+      window.altroDid('finished the mission: ' + ((dh && dh.innerText) || '').trim().slice(0, 80));
+    }
     // A note built from cards that open: the heading of the card that was clicked is the section being read.
     var el = e.target;
     while (el && el !== document.body) {
