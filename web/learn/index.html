@@ -166,6 +166,13 @@
   .tp.x .tt2 .chev { transform: rotate(90deg); }
   .tp .cn { font-size: 12.5px; color: var(--soft); }
   .tp .pv { font-size: 13px; color: #b8c6d8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .tp { position: relative; }
+  .tpgo { position: absolute; right: 12px; bottom: 12px; padding: 6px 12px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 700; font-size: 13px; }
+  .tpgo:hover { filter: brightness(1.1); }
+  .tp > button { padding-bottom: 50px; }
+  .tp.x .tpgo { top: 12px; bottom: auto; right: 44px; }
+  .tp.x > button { padding-bottom: 14px; }
+  .it .go { flex: none; color: var(--orange); font-size: 11px; opacity: .85; }
   .tp .mini { height: 4px; border-radius: 9px; background: rgba(255,255,255,.07); overflow: hidden; }
   .tp .mini i { display: block; height: 100%; background: var(--green); }
   .tp .items { padding: 4px 8px 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: 12px; border-top: 1px solid var(--line); }
@@ -230,7 +237,7 @@
 </head>
 <body>
 <div id="root"></div>
-<script src="/learn/bridge.js?v=20261107"></script>
+<script src="/learn/bridge.js?v=20261108"></script>
 <script>
 (function () {
   var API = 'https://edu.altrobytelab.com';
@@ -460,7 +467,7 @@
     return its.map(function (n) {
       var head = n.sub && n.sub !== lastSub ? '<div class="subt">' + esc(n.sub) + '</div>' : ''; lastSub = n.sub;
       return head + '<a class="it' + (n.locked ? ' lk' : '') + '" href="/learn/' + n.m + '/' + n.id + '"><span class="ic">' + (n.locked ? '🔒' : ICON[n.type] || '📄') + '</span><span class="nm">' + esc(n.title) + '</span>' +
-        (done(n.id) ? '<span class="ok">✓</span>' : '') + '</a>';
+        (done(n.id) ? '<span class="ok">✓</span>' : '<span class="go">▶</span>') + '</a>';
     }).join('');
   }
   function roadmap() {
@@ -476,9 +483,12 @@
           if (!T[1]) return '<div class="tp"><button disabled><span class="tt2">' + esc(T[0]) + '<span class="tag live" style="margin-left:auto">LIVE</span></span><span class="cn">Taught live with a mentor</span></button></div>';
           var its = stepItems(T), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
           var pv = its.filter(function (n) { return n.type === 'notes'; }).slice(0, 3).map(function (n) { return n.title; }).join(' · ');
+          // Where this topic starts, or carries on: its first open lesson not done yet.
+          var first = open.filter(function (n) { return !done(n.id); })[0] || open[0];
           return '<div class="tp"><button data-tp><span class="tt2">' + esc(T[0]) + '<span class="chev">›</span></span><span class="cn">' + counts(its) + '</span>' +
             (pv ? '<span class="pv">' + esc(pv) + '</span>' : '') + (fin ? '<span class="mini"><i style="width:' + Math.round(fin * 100 / (open.length || 1)) + '%"></i></span>' : '') +
-            '</button><div class="items">' + itemLinks(its) + '</div></div>';
+            '</button>' + (first ? '<a class="tpgo" href="/learn/' + first.m + '/' + first.id + '">▶ ' + (fin ? 'Continue' : 'Start') + '</a>' : '') +
+            '<div class="items">' + itemLinks(its) + '</div></div>';
         }).join('') + '</div></section>';
     }).join('');
   }
@@ -613,7 +623,7 @@
       var its = allItems(), open = its.filter(function (n) { return !n.locked; }), fin = open.filter(function (n) { return done(n.id); }).length;
       var pct = open.length ? Math.round(fin * 100 / open.length) : 0, nx = firstOpen(), have = Object.keys(mods).length;
       var hero = '<div class="rm-hero"><div><div class="k">PRODUCT ENGINEERING ROADMAP</div><h1>Embedded systems to IoT products, step by step</h1>' +
-        (have ? '<div class="st"><span><b>' + LEVELS.length + '</b> modules</span><span><b>' + count(its, 'notes') + '</b> notes</span><span><b>' + count(its, 'test') + '</b> tests</span><span>Every note <b>free</b></span>' +
+        (have ? '<div class="st"><span><b>' + LEVELS.length + '</b> modules</span><span><b>' + count(its, 'notes') + '</b> notes</span><span><b>' + count(its, 'test') + '</b> tests</span>' +
           (inTrial() ? '<span>Free week: <b>' + trial.days_left + '</b> days left</span>' : '') + '</div>' : '') + '</div>' +
         '<div class="rm-go">' + (nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue: ' : 'Start: ') + esc(nx.title) + '</a>' : '') +
           (fin ? '<div class="prog"><i style="width:' + pct + '%"></i></div><span class="muted" style="font-size:12.5px">' + fin + ' of ' + open.length + ' done</span>' :

@@ -243,7 +243,7 @@ const noteBridgeScript = r"""
   // ── slides ──
   // Every element belongs to the last heading before it in the page; a slide shows the elements of its heading (and the
   // boxes that hold them), and the part before the first heading with the first slide. Works on any note, whatever its markup.
-  var owner = null, bar = null, goTo = -1, stage = null, fitting = false;
+  var owner = null, bar = null, goTo = -1, stage = null, fitting = false, nested = [];
   // Each slide fits the screen: the whole part is seen at once, no scrolling, nothing cut (30 Oct 2026, founder). It is
   // shrunk only as far as it stays readable (55 %); a part longer than that scrolls a little.
   function fit() {
@@ -288,13 +288,26 @@ const noteBridgeScript = r"""
         el = el.parentElement;
       }
     });
+    // A heading inside a part's own widget (a chip picker's name, "—" until a chip is tapped) is not a part of its own:
+    // it stays on the slide of the part around it (8 Nov 2026, founder: that part showed an empty widget). Its number
+    // still counts, so the parts Altron names keep matching the server's.
+    nested = [];
+    heads.forEach(function (h, i) {
+      for (var el = h.parentElement; i > 0 && el && el !== document.body && el !== stage && el.querySelectorAll('h1,h2,h3').length === 1; el = el.parentElement) {
+        var r = document.createRange(); r.setStart(el, 0); r.setEndBefore(h);
+        if (r.toString().replace(/\s+/g, ' ').trim().length > 40 && owner.get(el) >= 0 && owner.get(el) < i) { nested[i] = owner.get(el); break; }
+      }
+    });
+    owner.forEach(function (v, node) { if (nested[v] !== undefined) owner.set(node, slideOf(v)); });
   }
+  function slideOf(i) { while (nested[i] !== undefined) i = nested[i]; return i; }
+  function step(from, by) { var j = from + by; while (j > 0 && j < heads.length - 1 && nested[j] !== undefined) j += by; return nested[j] !== undefined ? from : j; }
   function visit(node, k) {
     var any = false;
     Array.prototype.forEach.call(node.children, function (c) {
       if (c.hasAttribute('data-altro') || /^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/.test(c.tagName)) return;
       var hi = heads.indexOf(c), show;
-      if (hi >= 0) show = hi === k;
+      if (hi >= 0) show = slideOf(hi) === k;
       else if (c.querySelector('h1,h2,h3')) show = visit(c, k);
       else { var o = owner.get(c); show = o === k; }
       c.classList.toggle('altro-off', !show);
@@ -305,15 +318,27 @@ const noteBridgeScript = r"""
   function paintBar() {
     if (!bar) return;
     var t = heads[slideAt] ? (heads[slideAt].innerText || '').replace(/\s+/g, ' ').trim() : '';
-    bar.querySelector('.t').textContent = (slideAt + 1) + ' / ' + heads.length + (t ? '  ·  ' + (t.length > 46 ? t.slice(0, 46) + '…' : t) : '');
-    bar.querySelector('.p').disabled = slideAt <= 0;
-    bar.querySelector('.n').disabled = slideAt >= heads.length - 1;
+    var own = 0, at = 0;
+    for (var q = 0; q < heads.length; q++) if (nested[q] === undefined) { own++; if (q <= slideAt) at = own; }
+    bar.querySelector('.t').textContent = at + ' / ' + own + (t ? '  ·  ' + (t.length > 46 ? t.slice(0, 46) + '…' : t) : '');
+    bar.querySelector('.p').disabled = step(slideAt, -1) === slideAt;
+    bar.querySelector('.n').disabled = step(slideAt, 1) === slideAt;
     var g = bar.querySelector('.g');
     if (goTo >= 0 && goTo !== slideAt) { g.style.display = ''; g.textContent = 'Altron: part ' + (goTo + 1) + '  →'; } else g.style.display = 'none';
   }
   function showSlide(k) {
     if (k < 0 || k >= heads.length) return;
+    k = slideOf(k);
     slideAt = k; visit(stage || document.body, k);
+    // A note laid out in columns (a contents rail beside the content) kept its columns with the rail hidden, and the
+    // part sat squeezed in the narrow one (8 Nov 2026, founder): every box around the part becomes one full-width column.
+    try {
+      document.querySelectorAll('.altro-one').forEach(function (x) { x.classList.remove('altro-one'); });
+      for (var el = heads[k] && heads[k].parentElement; el && el !== stage && el !== document.body; el = el.parentElement) {
+        var cs = getComputedStyle(el);
+        if (/grid/.test(cs.display) || (/flex/.test(cs.display) && !/column/.test(cs.flexDirection))) el.classList.add('altro-one');
+      }
+    } catch (e) {}
     if (goTo === k) goTo = -1;
     window.scrollTo(0, 0); paintBar(); fit(); setTimeout(fit, 400);
   }
@@ -321,6 +346,7 @@ const noteBridgeScript = r"""
     if (!SLIDES || heads.length < 2) return;
     var st = document.createElement('style'); st.setAttribute('data-altro', '1');
     st.textContent = '.altro-off{display:none!important}body{padding-top:58px!important}' +
+      '.altro-one{display:block!important}.altro-one>*{max-width:none!important;width:auto!important}' +
       // wide slides: a note's column (main, or its first box) may use the screen's width, so a part takes fewer lines
       '#altro-stage>main,#altro-stage>.wrap,#altro-stage>.container,#altro-stage>.page,#altro-stage>article{max-width:var(--altro-w,96vw)!important}' +
       '.altro-bar{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;align-items:center;justify-content:center;gap:10px;' +
@@ -333,8 +359,8 @@ const noteBridgeScript = r"""
     bar.innerHTML = '<button class="p">◀</button><span class="t"></span><button class="n">▶</button><button class="g" style="display:none"></button>';
     document.body.appendChild(bar);
     // The learner moving on their own: the app hears of it, as it did of scrolling.
-    bar.querySelector('.p').onclick = function () { showSlide(slideAt - 1); report(slideAt); };
-    bar.querySelector('.n').onclick = function () { showSlide(slideAt + 1); report(slideAt); };
+    bar.querySelector('.p').onclick = function () { showSlide(step(slideAt, -1)); report(slideAt); };
+    bar.querySelector('.n').onclick = function () { showSlide(step(slideAt, 1)); report(slideAt); };
     bar.querySelector('.g').onclick = function () { showSlide(goTo); report(slideAt); };
     // Everything of the note goes in one box, so it can be fitted to the screen as one; the bar stays outside it.
     stage = document.createElement('div'); stage.id = 'altro-stage'; stage.setAttribute('data-altro-stage', '1');
@@ -352,7 +378,7 @@ const noteBridgeScript = r"""
     window.__altroShow = function (i, bring) {
       collect(); if (!owner || heads.length < 2) return plain(i, bring);
       // Altron's part always opens its slide (30 Oct 2026, founder: a tap on a drill held the slide back).
-      if (bring && i !== slideAt) { showSlide(i); last = i; }
+      if (bring && slideOf(i) !== slideAt) { showSlide(i); last = i; }
       plain(i, false);
     };
   }
