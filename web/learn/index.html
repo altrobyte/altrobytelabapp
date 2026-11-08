@@ -491,7 +491,7 @@
     ['Your own PCB', 'You design it in KiCad, ready to manufacture', 'Not covered'],
     ['Doubts and checks', 'A trainer, and an AI that checks each step', 'A comment section']
   ];
-  var CLIENTS = ['Vedanta · BALCO', 'Continental Conveyors', 'Unitech AI Solutions', 'My e-Kisan', 'Pi by 3', 'Renu Factory Automation',
+  var CLIENTS = ['Vedanta · BALCO', 'Tata Steel', 'Continental Conveyors', 'Unitech AI Solutions', 'My e-Kisan', 'Pi by 3', 'Renu Factory Automation',
                  'Nanotech Solutions', 'Oxbow Intellect', 'Anedya', 'nlink', 'Dhartea', 'NaviGo'];
   var PARTNERS = ['NIT Warangal', 'IIT Bombay', 'ITM University, Gwalior', 'SISTec, Bhopal', 'Banasthali Vidyapith', 'Chameli Devi Group (CDGI)'];
   var PEOPLE = [['Shrikant Mahato', 'B.Tech ECE, 2nd year'], ['Roshni', 'Embedded HW/SW Engineer, Bistable Control Solutions'],
@@ -585,7 +585,7 @@
       var g = document.getElementById('sxGallery');
       if (g) { if (d.gal.length) g.innerHTML = d.gal.map(function (x) { return '<a href="' + esc(x.href) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(x.pic) + '" alt=""><span>' + esc(x.title) + '</span></a>'; }).join('');
         else document.getElementById('sxGal').style.display = 'none'; }
-      if (d.kitPrice) document.getElementById('sxKitPrice').textContent = '₹' + Number(d.kitPrice).toLocaleString('en-IN');
+      if (d.kitPrice) document.getElementById('sxKitPrice').textContent = 'from ₹' + Number(d.kitPrice).toLocaleString('en-IN');
     };
     if (salesData) return fill(salesData);
     var ytId = function (u) { return (String(u || '').match(/(?:shorts\/|youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/) || [])[1]; };
