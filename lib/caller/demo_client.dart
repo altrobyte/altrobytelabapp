@@ -122,6 +122,33 @@ class DemoClient extends http.BaseClient {
           ? {'known': false, 'phone': parts[2]}
           : {'known': true, ...l, 'next_step': l['next_followup_at'] == null ? '' : 'Follow-up due', 'mine': true};
     }
+    if (path == '/crm/conversations') {
+      final now = DateTime.now();
+      String ago(int m) => now.subtract(Duration(minutes: m)).toIso8601String();
+      final all = [
+        {'phone': '0900000001', 'name': 'Riya (sample)', 'last': 'Haan, Saturday demo mein aaungi', 'last_direction': 'in', 'last_by': '', 'failed': false, 'waiting': 2, 'at': ago(5), 'jarvis': true},
+        {'phone': '0900000002', 'name': 'Aman (sample)', 'last': 'Fees ke liye hamari team aapko call karegi.', 'last_direction': 'out', 'last_by': 'WhatsApp AI', 'failed': false, 'waiting': 0, 'at': ago(200), 'jarvis': false},
+        {'phone': '0900000003', 'name': '', 'last': 'New batch starts Monday.', 'last_direction': 'out', 'last_by': 'Bulk message', 'failed': true, 'waiting': 0, 'at': ago(120), 'jarvis': false},
+      ];
+      final f = query['filter'] ?? 'all';
+      return {
+        'conversations': all.where((c) => f == 'all' || (f == 'reply' && c['last_direction'] == 'in') || (f == 'jarvis' && c['jarvis'] == true) || (f == 'failed' && c['failed'] == true)).toList(),
+        'waiting': 1,
+      };
+    }
+    if (parts.length == 4 && parts[1] == 'leads' && parts[3] == 'mode') return {'mode': body is Map ? '${body['status']}' : 'bot'};
+    if (parts.length == 4 && parts[1] == 'leads' && parts[3] == 'send') return {'sent': true, 'mode': 'human'};
+    if (parts.length == 3 && parts[1] == 'leads') {
+      final now = DateTime.now().toUtc();
+      String ago(int m) => now.subtract(Duration(minutes: m)).toIso8601String();
+      return {
+        'window_open': true,
+        'messages': [
+          {'direction': 'out', 'body': 'Hi Riya, Saturday 6 pm ki free demo class mein aaoge?', 'created_at': ago(40), 'sent_by': 'Jarvis'},
+          {'direction': 'in', 'body': 'Haan, Saturday demo mein aaungi', 'created_at': ago(5), 'sent_by': ''},
+        ],
+      };
+    }
     if (parts.length == 4 && parts[1] == 'leads') {
       final phone = parts[2];
       if (parts[3] == 'calls') return _log(phone, (body as Map).cast<String, dynamic>());

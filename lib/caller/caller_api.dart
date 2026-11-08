@@ -144,6 +144,23 @@ class CallerApi {
               as Map)
           .cast<String, dynamic>();
 
+  /// The chats, newest first, one per person (filter all|reply|jarvis|failed).
+  Future<Map<String, dynamic>> conversations({String filter = 'all', String q = '', int days = 60}) async =>
+      ((await _send('GET', Uri(path: '/crm/conversations', queryParameters: {'filter': filter, 'days': '$days', if (q.isNotEmpty) 'q': q}).toString()))
+              as Map)
+          .cast<String, dynamic>();
+
+  /// One lead with their recent WhatsApp messages and whether WhatsApp's 24-hour window is open.
+  Future<Map<String, dynamic>> lead(String phone) async => ((await _send('GET', '/crm/leads/$phone')) as Map).cast<String, dynamic>();
+
+  /// Write to them on WhatsApp (inside the 24-hour window). Returns who answers the chat now.
+  Future<Map<String, dynamic>> sendWhatsApp(String phone, String text) async =>
+      ((await _send('POST', '/crm/leads/$phone/send', {'text': text})) as Map).cast<String, dynamic>();
+
+  /// Who answers this chat: "bot" (the WhatsApp AI) or "human" (the team). [set] changes it.
+  Future<String> chatMode(String phone, {String? set}) async =>
+      '${((await _send(set == null ? 'GET' : 'PUT', '/crm/leads/$phone/mode', set == null ? null : {'status': set})) as Map)['mode'] ?? ''}';
+
   Future<Map<String, dynamic>> timeline(String phone) async =>
       ((await _send('GET', '/crm/leads/$phone/timeline')) as Map).cast<String, dynamic>();
 
