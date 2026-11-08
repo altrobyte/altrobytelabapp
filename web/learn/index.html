@@ -173,6 +173,58 @@
   .tp .items .subt { grid-column: 1 / -1; padding: 10px 10px 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a9bb3; }
   .rm-foot { margin-top: 36px; font-size: 13px; color: var(--soft); }
   .rm-foot a { text-decoration: underline; }
+  /* Below the roadmap (8 Nov 2026, founder): why learn here, who teaches, what learners say and build, the kit, the
+     questions, and a mentor to talk to, ending on the plans. One column on a phone, two or three on a wide screen. */
+  .sx { margin-top: 56px; }
+  .sx .ey { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--orange); }
+  .sx h2 { font-size: clamp(21px, 2.6vw, 28px); margin: 6px 0 6px; line-height: 1.2; }
+  .sx .ld { color: var(--soft); font-size: 15px; max-width: 720px; }
+  .g2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  .g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  .g4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  @media (max-width: 900px) { .g3, .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .g2, .g3, .g4 { grid-template-columns: 1fr; } }
+  .bx { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+  .vs b { display: block; font-size: 15.5px; margin-bottom: 8px; }
+  .vs .us, .vs .them { display: flex; gap: 8px; font-size: 14px; line-height: 1.45; }
+  .vs .us { color: #E8EEF6; } .vs .us::before { content: '✓'; color: var(--green); font-weight: 800; flex: none; }
+  .vs .them { color: #7F91A8; margin-top: 6px; } .vs .them::before { content: '✕'; color: #7F91A8; font-weight: 800; flex: none; }
+  .fd { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; margin-top: 18px; }
+  @media (max-width: 860px) { .fd { grid-template-columns: 1fr; } }
+  .fd .who { display: flex; gap: 14px; align-items: center; }
+  .fd .av { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--orange), #FF9A3D); display: grid; place-items: center; font: 800 22px Inter; color: #fff; flex: none; }
+  .fd ul { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; font-size: 14px; color: #cfd9e6; }
+  .fd li { padding-left: 16px; position: relative; } .fd li::before { content: ''; position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; } .pills span { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--soft); }
+  .logos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .logos span { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 10px; background: var(--ink2); border: 1px solid var(--line); color: #cfd9e6; }
+  .logos.edu span { color: var(--cyan); }
+  .sub3 { font-size: 13px; font-weight: 700; color: var(--soft); margin-top: 16px; text-transform: uppercase; letter-spacing: .06em; }
+  .rv .st { color: var(--gold); letter-spacing: 2px; } .rv p { font-size: 14.5px; margin: 8px 0 10px; color: #E8EEF6; }
+  .rv .nm { font-weight: 700; font-size: 14px; } .rv .af { font-size: 12.5px; color: var(--soft); }
+  .ppl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  @media (max-width: 900px) { .ppl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ppl div { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); min-width: 0; }
+  .ppl i { font-style: normal; width: 34px; height: 34px; border-radius: 50%; background: var(--panel2); display: grid; place-items: center; font-weight: 800; color: var(--orange); flex: none; }
+  .ppl b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ppl small { display: block; font-size: 12px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gal a { display: block; border-radius: 14px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
+  .gal img { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; background: var(--panel2); }
+  .gal span { display: block; padding: 10px 12px; font-size: 14px; font-weight: 600; }
+  .kit2 h3 { font-size: 17px; margin-bottom: 6px; } .kit2 p { color: var(--soft); font-size: 14px; }
+  .kit2 .pr { font: 700 22px Inter; color: #fff; margin-top: 8px; }
+  .faq2 details { border-bottom: 1px solid var(--line); padding: 14px 2px; }
+  .faq2 summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  .faq2 summary::-webkit-details-marker { display: none; }
+  .faq2 summary::after { content: '+'; color: var(--orange); font-size: 20px; line-height: 1; } .faq2 details[open] summary::after { content: '−'; }
+  .faq2 p { color: var(--soft); margin-top: 8px; font-size: 14.5px; }
+  .talk form { display: grid; gap: 10px; margin-top: 12px; }
+  .talk input, .talk select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--ink2); color: inherit; font: inherit; font-size: 15px; }
+  .talk .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 420px) { .talk .two { grid-template-columns: 1fr; } }
+  .talk .dark { background: linear-gradient(160deg, #1B2C4A, var(--panel)); }
+  .end { margin-top: 40px; padding: 26px 20px; border-radius: 20px; text-align: center; background: radial-gradient(500px 200px at 50% 0%, rgba(255,106,26,.22), transparent), var(--ink2); border: 1px solid var(--line); }
+  .end h2 { font-size: clamp(20px, 2.4vw, 26px); }
+  .end .row { justify-content: center; margin-top: 14px; }
+
 </style>
 <script>if (/AltrobyteApp/.test(navigator.userAgent)) document.documentElement.className += ' inapp';</script>
 </head>
@@ -430,6 +482,130 @@
         }).join('') + '</div></section>';
     }).join('');
   }
+
+  // ── below the roadmap: why here, who teaches, learners, the lab, the kit, questions, a mentor, then the plans ──
+  // The same facts as the admissions page (/roadmap/product-engineering): nothing here is new or made up.
+  var COMPARE = [
+    ['How you learn', 'Build a real product, stage by stage', 'Watch videos, then a quiz'],
+    ['Hardware', 'Real boards and a lab kit on your desk', 'Simulators, or nothing'],
+    ['Your own PCB', 'You design it in KiCad, ready to manufacture', 'Not covered'],
+    ['Doubts and checks', 'A trainer, and an AI that checks each step', 'A comment section']
+  ];
+  var CLIENTS = ['Vedanta · BALCO', 'Continental Conveyors', 'Unitech AI Solutions', 'My e-Kisan', 'Pi by 3', 'Renu Factory Automation',
+                 'Nanotech Solutions', 'Oxbow Intellect', 'Anedya', 'nlink', 'Dhartea', 'NaviGo'];
+  var PARTNERS = ['NIT Warangal', 'IIT Bombay', 'ITM University, Gwalior', 'SISTec, Bhopal', 'Banasthali Vidyapith', 'Chameli Devi Group (CDGI)'];
+  var PEOPLE = [['Shrikant Mahato', 'B.Tech ECE, 2nd year'], ['Roshni', 'Embedded HW/SW Engineer, Bistable Control Solutions'],
+    ['Praveen Kumar', 'Electronics professional, Govt. Digital Assistant'], ['Siva Krishna', 'Graduate student, ASU'],
+    ['Sumit Sharma', 'GenAI Technical Architect (Senior), founder'], ['Shruti Verma', 'Trainee Engineer, Muvro'],
+    ['Rahul Balabhadruni', 'Embedded Hardware Engineer'], ['Pusuluri Jathin', 'B.Tech ECE, 2nd year'],
+    ['Aradhya Sharma', 'Freelancer, embedded systems & IoT'], ['Hrishabh Jaiswal', 'Physics Wallah'],
+    ['Mukul Parmar', 'Embedded Hardware Engineer'], ['Sharath', 'Startup founder']];
+  var FAQ = [
+    ['Do I need any experience?', 'No. The roadmap starts from your first program on a microcontroller, and every note is free to read.'],
+    ['Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (Gravity Mall, Mechanic Nagar). Every class is recorded.'],
+    ['What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day.'],
+    ['What are the fees?', 'They depend on the plan and the batch. See the plans below, or ask a mentor on WhatsApp (+91 72229 77927) for the fee of your plan.'],
+    ['What if I miss a class?', 'Recorded lectures and doubt support help you catch up.'],
+    ['Do you help with placements?', 'Yes, placement assistance is in every live plan. You also leave with real products, a GitHub portfolio and demo videos, which is what interviewers ask about.'],
+    ['Can I buy only the lab kit, or a lab for my college?', 'Yes. The mini lab kit is sold on its own too, and we set up custom labs for colleges, schools and companies. Ask for the price in the form below.']
+  ];
+  function sales() {
+    var ytId = function (u) { return (String(u || '').match(/(?:shorts\/|youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/) || [])[1]; };
+    return '<div id="sales">' +
+      // why here
+      '<section class="sx"><div class="ey">Why learn here</div><h2>You can find the theory on YouTube.</h2>' +
+        '<p class="ld">What you cannot find there is someone checking your circuit, a mentor reviewing your own PCB, and a product you can show in an interview.</p>' +
+        '<div class="g4">' + COMPARE.map(function (c) { return '<div class="bx vs"><b>' + esc(c[0]) + '</b><div class="us">' + esc(c[1]) + '</div><div class="them">' + esc(c[2]) + '</div></div>'; }).join('') + '</div>' +
+        '<p class="muted" style="font-size:12.5px;margin-top:8px">✓ Altrobyte Lab &nbsp; ✕ a typical recorded course</p></section>' +
+      // who teaches
+      '<section class="sx"><div class="ey">Who teaches you</div><h2>Engineers who ship IoT products for industry</h2>' +
+        '<div class="fd"><div class="bx"><div class="who"><span class="av">P</span><div><b style="font-size:17px">Pawan Meena</b><div class="muted" style="font-size:13.5px">Founder &amp; lead trainer, Altrobyte Lab</div></div></div>' +
+          '<p style="margin-top:12px;font-size:14.5px;color:#cfd9e6">Builds embedded and IoT products for industry and teaches the same work. Four years in vehicle telematics and CAN systems that went into real vehicles.</p>' +
+          '<ul><li><b>Altrobyte Automation</b>: Product Engineer &amp; Consultant, 2025 to now</li><li><b>Heximpact Tech</b>: Sr. IoT Engineer, CAN and telematics for Eicher Motors</li>' +
+          '<li><b>Navigo Tech Lab</b>: Sr. IoT Engineer, vehicle tracking</li><li><b>Scientech</b>, <b>Mahindra TEQO</b>, <b>DRMZ Automation</b>: embedded &amp; IoT</li></ul>' +
+          '<div class="pills"><span>STM32</span><span>ESP32</span><span>FreeRTOS</span><span>CAN bus</span><span>PCB design</span><span>MQTT</span><span>AWS</span><span>Computer vision</span></div></div>' +
+        '<div class="bx"><b style="font-size:15px">Our team builds for</b><div class="logos">' + CLIENTS.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</div>' +
+          '<div class="sub3">Training partners</div><div class="logos edu">' + PARTNERS.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</div></div></div></section>' +
+      // learners
+      '<section class="sx" id="sxLearners"><div class="ey">Learners</div><h2>What our students say</h2><div class="g3" id="sxRevs"></div>' +
+        '<div class="sub3">Students and professionals already building with us</div>' +
+        '<div class="ppl">' + PEOPLE.map(function (x) { return '<div><i>' + esc(x[0][0]) + '</i><span style="min-width:0"><b>' + esc(x[0]) + '</b><small>' + esc(x[1]) + '</small></span></div>'; }).join('') + '</div></section>' +
+      // inside the lab
+      '<section class="sx" id="sxGal"><div class="ey">Inside the lab</div><h2>Videos, stories and the community</h2><div class="g3 gal" id="sxGallery"></div>' +
+        '<div class="row" style="margin-top:14px"><a class="btn btn-ghost btn-sm" href="https://www.youtube.com/@pawanmeena.official" target="_blank" rel="noopener">▶ YouTube channel</a>' +
+        '<a class="btn btn-ghost btn-sm" href="https://chat.whatsapp.com/FzAEaY7C5uHHmzEcyz3WdZ" target="_blank" rel="noopener">Join the Embedded IoT WhatsApp group</a></div></section>' +
+      // the kit
+      '<section class="sx"><div class="ey">Lab kit</div><h2>A real lab on your desk</h2><div class="g2 kit2">' +
+        '<div class="bx"><h3>🔌 Altrobyte mini lab kit</h3><p>The kit our students build with: an ESP32 board with the sensors, display, relay and servo the first projects use, a breadboard and wires. It comes with every live plan, and is sold on its own.</p><div class="pr" id="sxKitPrice"></div>' +
+          '<div class="row" style="margin-top:12px"><button class="btn btn-main btn-sm" type="button" data-ask="Mini lab kit">Ask for the price</button></div></div>' +
+        '<div class="bx"><h3>🏫 A lab for your college or company</h3><p>For a college, school (ATL) or company we put together the hardware, the curriculum and the trainer, on your campus or online, for embedded systems, IoT and industrial automation, sized to your batch.</p>' +
+          '<div class="row" style="margin-top:12px"><button class="btn btn-ghost btn-sm" type="button" data-ask="Custom lab set-up">Get a quote</button></div></div></div></section>' +
+      // questions
+      '<section class="sx faq2"><div class="ey">Questions</div><h2>Frequently asked</h2><div style="margin-top:8px">' +
+        FAQ.map(function (f) { return '<details><summary>' + esc(f[0]) + '</summary><p>' + esc(f[1]) + '</p></details>'; }).join('') + '</div></section>' +
+      // a mentor
+      '<section class="sx talk" id="sxTalk"><div class="ey">Talk to us</div><h2>Not sure where to start? Talk to a mentor</h2><div class="g2">' +
+        '<div class="bx"><b>Request a call back</b><p class="muted" style="font-size:14px;margin-top:4px">Tell us when to call. We help you choose, no pressure.</p>' +
+          '<form id="sxForm"><div class="two"><input name="name" placeholder="Your name" autocomplete="name" required maxlength="60"><input name="phone" placeholder="WhatsApp number" inputmode="tel" autocomplete="tel" required maxlength="16"></div>' +
+          '<select name="plan"><option value="">What are you interested in?</option><option>Live classes with an industrial expert</option><option>Learn with AI (self-paced)</option><option>Mini lab kit</option><option>Custom lab set-up</option></select>' +
+          '<input name="when" placeholder="Best time to call (e.g. today after 6 pm)" maxlength="80">' +
+          '<button class="btn btn-main" type="submit">Request a call back</button><span class="muted" id="sxMsg" style="font-size:13.5px"></span></form></div>' +
+        '<div class="bx dark"><b>Ask on WhatsApp, any time</b><p class="muted" style="font-size:14px;margin-top:4px">Syllabus, schedule, fees, EMI, the kit: we answer on WhatsApp.</p>' +
+          '<div class="row" style="margin-top:12px"><a class="btn btn-main btn-sm" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I saw the roadmap on altrobytelab.com/learn and have a question.') + '" target="_blank" rel="noopener">💬 WhatsApp us</a></div>' +
+          '<p style="margin-top:18px;font-size:14px;color:#cfd9e6;line-height:1.7"><b style="color:#fff">Visit us</b><br>5th Floor, Gravity Mall, Mechanic Nagar, Indore 452010<br><a href="mailto:pawan@altrobytelab.com" style="color:#FF9A3D">pawan@altrobytelab.com</a> · <a href="tel:+917222977927" style="color:#FF9A3D">+91 72229 77927</a></p></div></div></section>' +
+      // the plans, last
+      '<div class="end"><h2>Ready to go further than the free notes?</h2><p class="muted" style="font-size:15px;margin-top:4px">Live classes with an industrial expert, or Altron AI as your teacher. Three plans, one roadmap.</p>' +
+        '<div class="row"><a class="btn btn-main" href="/pricing" data-plans>See plans &amp; fees →</a><button class="btn btn-ghost" type="button" data-golive>Check batches to join</button></div></div>' +
+      '</div>';
+  }
+  var salesData = null;
+  function bindSales() {
+    var box = document.getElementById('sales'); if (!box) return;
+    box.querySelectorAll('[data-ask]').forEach(function (b) { b.onclick = function () {
+      var f = document.getElementById('sxForm'); f.plan.value = b.getAttribute('data-ask');
+      document.getElementById('sxTalk').scrollIntoView({ behavior: 'smooth', block: 'start' }); setTimeout(function () { f.name.focus(); }, 600);
+    }; });
+    var pl = box.querySelector('[data-plans]'); if (pl) pl.onclick = function () { funnel('plan_click', 'learn_end'); };
+    document.getElementById('sxForm').onsubmit = function (ev) {
+      ev.preventDefault();
+      var f = ev.target, msg = document.getElementById('sxMsg'), btn = f.querySelector('button');
+      var phone = f.phone.value.replace(/\D/g, '').slice(-10);
+      if (phone.length !== 10) { msg.textContent = 'Please enter your 10-digit WhatsApp number.'; return; }
+      btn.disabled = true; msg.textContent = 'Sending…';
+      fetch(API + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: f.name.value.trim(), phone: phone, source: 'learn', plan: f.plan.value,
+          note: ('Asked on /learn (talk to a mentor)' + (f.when.value.trim() ? '. Call: ' + f.when.value.trim() : '')).slice(0, 200) }) })
+        .then(function (r) { if (!r.ok) throw r; funnel('lead_asked', 'learn_talk'); f.outerHTML = '<p style="margin-top:12px"><b>Thanks! A mentor will call you soon.</b></p>'; })
+        .catch(function () { btn.disabled = false; msg.innerHTML = 'Could not send just now. <a href="https://wa.me/917222977927" style="text-decoration:underline">Message us on WhatsApp</a>.'; });
+    };
+    var fill = function (d) {
+      var rv = document.getElementById('sxRevs');
+      if (rv) { if (d.revs.length) rv.innerHTML = d.revs.slice(0, 6).map(function (t) { return '<div class="bx rv"><div class="st">' + '★★★★★'.slice(0, t.rating || 5) + '</div><p>“' + esc(t.quote) + '”</p><div class="nm">' + esc(t.name) + '</div><div class="af">' + esc([t.role, t.affiliation].filter(Boolean).join(' · ')) + '</div></div>'; }).join('');
+        else rv.style.display = 'none'; }
+      var g = document.getElementById('sxGallery');
+      if (g) { if (d.gal.length) g.innerHTML = d.gal.map(function (x) { return '<a href="' + esc(x.href) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(x.pic) + '" alt=""><span>' + esc(x.title) + '</span></a>'; }).join('');
+        else document.getElementById('sxGal').style.display = 'none'; }
+      if (d.kitPrice) document.getElementById('sxKitPrice').textContent = '₹' + Number(d.kitPrice).toLocaleString('en-IN');
+    };
+    if (salesData) return fill(salesData);
+    var ytId = function (u) { return (String(u || '').match(/(?:shorts\/|youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/) || [])[1]; };
+    var pic = function (x) {
+      if (x.cover_url) return x.cover_url;
+      for (var i = 0; i < (x.media || []).length; i++) { var m = x.media[i], id = ytId(m.url); if (id) return 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg';
+        if (/\/uploads\/image\/|\.(png|jpe?g|webp|gif)(\?|$)/i.test(m.url || '')) return m.url; }
+      return '';
+    };
+    var get = function (u) { return fetch(API + u).then(function (r) { return r.json(); }).catch(function () { return {}; }); };
+    Promise.all([get('/testimonials?place=roadmap'), get('/showcase?kind=story'), get('/showcase?kind=lab_setup')]).then(function (r) {
+      var labs = r[2].items || [];
+      var gal = (r[1].items || []).concat(labs).map(function (x) {
+        var yt = (x.media || []).filter(function (m) { return ytId(m.url); })[0];
+        return { title: x.title, pic: pic(x), href: x.cta_url || (yt && yt.url) || 'https://www.youtube.com/@pawanmeena.official' };
+      }).filter(function (x) { return x.pic; }).slice(0, 6);
+      salesData = { revs: r[0].testimonials || [], gal: gal, kitPrice: labs[0] && labs[0].price_label };
+      fill(salesData);
+    });
+  }
   function course() {
     document.title = 'Product Engineering Roadmap · Altrobyte Lab';
     funnel('learn_view');
@@ -442,9 +618,12 @@
         '<div class="rm-go">' + (nx ? '<a class="btn btn-main" href="/learn/' + nx.m + '/' + nx.id + '">' + (fin ? 'Continue: ' : 'Start: ') + esc(nx.title) + '</a>' : '') +
           (fin ? '<div class="prog"><i style="width:' + pct + '%"></i></div><span class="muted" style="font-size:12.5px">' + fin + ' of ' + open.length + ' done</span>' :
             '') + '</div></div>';
-      var foot = '<p class="rm-foot">Tap ✨ Learn with AI on any note and Altron teaches it by voice. Live classes with an industrial expert: <a href="#" data-golive>check batches</a> · <a href="/pricing">plans</a>.<br>' +
-        '<a href="/roadmap">Syllabus</a> · <a href="https://wa.me/917222977927">Help on WhatsApp</a> · <a href="/privacy">Privacy</a>' + (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</p>';
-      root.innerHTML = bar('course') + '<main class="rm">' + hero + roadmap() + foot + '</main>';
+      var foot = '<p class="rm-foot"><a href="/roadmap">Syllabus</a> · <a href="https://wa.me/917222977927">Help on WhatsApp</a> · <a href="/privacy">Privacy</a>' +
+        (token() ? ' · <a href="/delete-account">Delete account</a>' : '') + '</p>';
+      // The roadmap redraws when fresh data comes; what is below it is drawn once, so a half-filled form is never lost.
+      var top = document.getElementById('rmTop');
+      if (top) top.innerHTML = hero + roadmap();
+      else { root.innerHTML = bar('course') + '<main class="rm"><div id="rmTop">' + hero + roadmap() + '</div>' + sales() + foot + '</main>'; bindSales(); }
       bindOutline();
       root.querySelectorAll('[data-tp]').forEach(function (b) { b.onclick = function () { b.parentNode.classList.toggle('x'); }; });
     };
