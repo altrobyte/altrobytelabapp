@@ -59,15 +59,30 @@ class _AccessScreenState extends State<AccessScreen> {
   /// The switch: on gives access, off takes back what the team gave. Undo is one tap.
   Future<void> _set(Map<String, dynamic> p, bool on, {bool undo = true}) async {
     final phone = '${p['phone']}';
+    if (!on && p['paid'] == true && undo) {
+      final why = [for (final w in (p['why'] as List? ?? const [])) '$w'].where((w) => !w.startsWith('Given')).join(', ');
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: Text('Turn off ${_nameOf(p)}?'),
+          content: Text('They have access because: $why.\n\nTurning off closes the course and Altron for them until you turn it on again. '
+              'Their payment record stays as it is.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+            FilledButton(style: FilledButton.styleFrom(backgroundColor: AppColors.error), onPressed: () => Navigator.pop(d, true), child: const Text('Turn off')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
     setState(() => _busy.add(phone));
     try {
       if (on) {
-        await ApiService.accessGrant(phone);
+        await ApiService.accessGrant(phone);           // also lifts a turn-off
+      } else if (p['paid'] == true) {
+        await ApiService.accessBlock(phone);           // paid or enrolled: turned off until turned on
       } else {
-        final r = await ApiService.accessRemove(phone);
-        if (r['still_has_access'] == true) {
-          _toast('They still have access: ${(r['because'] as List).join(', ')}');
-        }
+        await ApiService.accessRemove(phone);
       }
       await _load();
       if (undo && mounted) {
@@ -240,7 +255,7 @@ class _AccessScreenState extends State<AccessScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text('Full access = every module and note, the GitHub projects and Altron the trainer. A paid plan, a bought module, '
-                        'a paid seat or the CRM stage Token paid / Enrolled keeps it on: that switch is locked.',
+                        'a paid seat or the CRM stage Token paid / Enrolled turns it on by itself; turning such a person off asks first.',
                         style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary, height: 1.45)),
                   ]),
                 ),
@@ -251,13 +266,14 @@ class _AccessScreenState extends State<AccessScreen> {
 
   Widget _row(Map<String, dynamic> p) {
     final on = p['access'] == true;
-    final locked = p['locked'] == true;
+    final blocked = p['blocked'] == true;
     final busy = _busy.contains('${p['phone']}');
     final why = [for (final w in (p['why'] as List? ?? const [])) '$w'];
     final mins = (p['ai_minutes'] as num?)?.toInt() ?? 0;
     final month = (p['ai_minutes_month'] as num?)?.toInt() ?? 0;
     final name = _nameOf(p);
     final tags = <Widget>[
+      if (blocked) _tag('Turned off by the team', AppColors.error),
       if (p['requested'] == true) _tag('Asking for access', Colors.orange),
       for (final w in why) _tag(w, w.startsWith('Given') ? AppColors.primary : AppColors.success),
       if (p['signed_up'] != true) _tag('Not signed up yet', AppColors.textSecondary),
@@ -301,11 +317,15 @@ class _AccessScreenState extends State<AccessScreen> {
         busy
             ? const SizedBox(width: 48, height: 24, child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))))
             : Tooltip(
-                message: locked ? 'On because: ${why.where((w) => !w.startsWith('Given')).join(', ')}' : (on ? 'Tap to remove access' : 'Tap to give access'),
+                message: on ? 'On: tap to turn off' : 'Off: tap to give access',
                 child: Switch(
                   value: on,
-                  activeThumbColor: AppColors.success,
-                  onChanged: locked ? null : (v) => _set(p, v),
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: AppColors.success,
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: const Color(0xFFCBD2DC),
+                  trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                  onChanged: (v) => _set(p, v),
                 ),
               ),
       ]),

@@ -1004,6 +1004,13 @@ class ApiService {
         headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone, 'note': note})));
   }
 
+  /// Turns off someone who paid (or is enrolled in the CRM): no access until it is turned on again.
+  static Future<Map<String, dynamic>> accessBlock(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/block'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone})));
+  }
+
   static Future<Map<String, dynamic>> accessRemove(String phone) async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/remove'),
