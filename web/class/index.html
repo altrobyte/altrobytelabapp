@@ -300,7 +300,7 @@
   const done = new Set();
   let checkShown = false, checkDone = false, pracDone = false;
   // A question on the board never leaves the class stuck (8 Nov 2026, founder: Altron said "see the question" and waited
-  // forever): no answer for 20 s brings a hint, 30 s more (or two wrong tries) shows the answer, which Altron explains.
+  // forever): no answer for 5 s (or two wrong tries) shows the answer, which Altron explains, and the class goes on.
   let checkAt = 0, checkHinted = false, wrongTries = 0;
   // A practical on the learner's own computer cannot be done on a phone: Altron says it is for later and moves on.
   const ON_PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, innerWidth) < 820;
@@ -945,8 +945,9 @@
     }
     if (klass && klass.mode !== 'walkthrough' && checkShown && !checkDone && checkAt && !playing.length && !ending) {
       const wait = Date.now() - Math.max(checkAt, lastActive);
-      if (!checkHinted && wait > 20000) { checkHinted = true; tell('[Screen] No answer for 20 seconds: the learner may be unsure. Read the question again in simple words, give ONE hint with an everyday example, without saying the answer, and invite them to tap an option.'); return; }
-      if (checkHinted && wait > 30000) { reveal('Still no answer after the hint.'); return; }
+      // 5 seconds with no tap and no word after Altron stops: the answer is shown and explained, and the class goes on
+      // (8 Nov 2026, founder: never wait more than 5 seconds, never stop).
+      if (wait > 5000) { reveal('No answer for 5 seconds.'); return; }
     }
     const s = klass && klass.sections[at];
     if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && at < klass.sections.length - 1) {
