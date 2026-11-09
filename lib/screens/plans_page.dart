@@ -178,6 +178,17 @@ class _PlansPageState extends State<PlansPage> {
     }
   }
 
+  /// Seat booking (9 Nov 2026, founder: ₹999 is fine): ₹847 + GST holds a seat and is adjusted in the fee.
+  Future<void> _bookSeat() async {
+    if (_slug.isEmpty) await _load();
+    if (!mounted) return;
+    if (_slug.trim().isNotEmpty) {
+      context.go('/enroll/${Uri.encodeComponent(_slug.trim())}?plan=token');
+    } else {
+      await _open('Hi! I want to book my seat for ₹999 in the next batch.');
+    }
+  }
+
   // ── pieces ─────────────────────────────────────────────────────────────────
 
   Widget _unit(int value, String label) => Container(
@@ -346,6 +357,13 @@ class _PlansPageState extends State<PlansPage> {
             ),
             const SizedBox(height: 6),
             Center(child: Text('Two steps: your details, then payment by UPI.', style: GoogleFonts.inter(color: _muted, fontSize: 11.5))),
+            Center(
+              child: TextButton(
+                onPressed: _bookSeat,
+                child: Text('Not ready? Book your seat for ₹999 (adjusted in your fee)',
+                    textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: _navy)),
+              ),
+            ),
           ]),
         ),
       ]),
@@ -519,6 +537,11 @@ class _PlansPageState extends State<PlansPage> {
             icon: const Icon(Icons.send_rounded, size: 18),
             label: Text('Enrol in ${best.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
             style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
+          ),
+          OutlinedButton(
+            onPressed: _bookSeat,
+            style: OutlinedButton.styleFrom(foregroundColor: _yellow, side: const BorderSide(color: _yellow), padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16)),
+            child: Text('Book my seat · ₹999', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
           ),
           OutlinedButton(
             onPressed: () => _open('Hi! I have a question about the Altrobyte programme plans (IOT).'),
