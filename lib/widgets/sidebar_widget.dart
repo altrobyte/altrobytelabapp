@@ -116,6 +116,7 @@ class _Nav extends StatelessWidget {
       _NavItem(Icons.emoji_events_rounded, 'Challenges', '/challenges-admin'),
       _NavItem(Icons.view_stream_rounded, 'Home Strip', '/home-strip-admin'),
       _NavItem(Icons.collections_rounded, 'Stories & Lab', '/showcase-admin'),
+      _NavItem(Icons.inventory_2_rounded, 'Lab kits shop', '/kits-admin'),
       _NavItem(Icons.route_rounded, 'Curriculum', '/curriculum-admin'),
       // Free demos are just Live Sessions with no price — there is no second
       // thing to manage, and a separate tab for them was always empty.

@@ -1056,6 +1056,17 @@ class ApiService {
         headers: _headers(prefs.getString('token'))));
   }
 
+  /// The /kits shop catalogue (parts, lab kits, projects): read, and replaced whole from the admin (9 Nov 2026).
+  static Future<Map<String, dynamic>> kitsCatalog() async {
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/kits/catalog')));
+  }
+
+  static Future<Map<String, dynamic>> kitsCatalogSave(Map<String, dynamic> catalog) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.put(Uri.parse('${ApiConstants.baseUrl}/kits/catalog'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode(catalog)));
+  }
+
   static Future<Map<String, dynamic>> crmAuto() async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/auto'), headers: _headers(prefs.getString('token'))));

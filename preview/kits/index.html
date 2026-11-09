@@ -51,7 +51,8 @@
   .kits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
   @media (max-width: 900px) { .kits { grid-template-columns: 1fr; } }
   .kit { text-align: left; padding: 16px; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); display: flex; flex-direction: column; gap: 7px; position: relative; }
-  .kit .art svg { display: block; width: 100%; height: auto; border-radius: 12px; }
+  .kit .art svg, .kit .art img { display: block; width: 100%; height: auto; border-radius: 12px; } .kit .art img { aspect-ratio: 2 / 1; object-fit: cover; background: #0F1B2E; }
+  .part .em img { width: 36px; height: 36px; object-fit: cover; border-radius: 8px; display: block; }
   .kit .worth { font-size: 12.5px; color: var(--green); font-weight: 600; } .kit .worth s { color: var(--soft); font-weight: 400; }
   .kit .learn { font-size: 13.5px; color: #cfd9e6; } .kit .learn b { color: var(--orange2); }
   .kit .all summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--cyan); }
@@ -182,7 +183,7 @@
   <h2>Questions</h2>
   <details><summary>Are the parts original and tested?</summary><p>We test every board and module before it ships: boards are flashed with a test program and sensors are read once. If a part arrives dead, send us a photo or video on WhatsApp within 7 days and we replace it.</p></details>
   <details><summary>How do I pay?</summary><p>After you order, our team confirms stock and the delivery charge on WhatsApp and sends a Cashfree payment link (UPI, cards, net banking). Your kit ships after payment.</p></details>
-  <details><summary>How long does delivery take?</summary><p>Usually 4 to 7 days across India after payment. We share the tracking number on WhatsApp.</p></details>
+  <details><summary>How long does delivery take?</summary><p>Usually 4 to 10 days across India after payment. We share the tracking number on WhatsApp.</p></details>
   <details><summary>I don't know what I need. Can you help?</summary><p>Yes. Write what you want to build in the order form, or message us on WhatsApp, and an engineer suggests the parts. Every part also has free lessons on our roadmap.</p></details>
   <details><summary>Do you make kits for colleges and labs?</summary><p>Yes, in bulk for colleges, schools and company labs, with training. Write the number of kits in the form or message us.</p></details>
 </div></section>
@@ -254,22 +255,22 @@
     { id: 'starter', ic: '🔌', name: 'Starter Lab', price: 4999, for: 'Students starting embedded and IoT', art: 'starter',
       learn: 'Blink to Wi-Fi: sensors, display, relay, servo and your first IoT dashboard. Solder and measure like an engineer.',
       parts: { esp32: 2, bread: 1, comp: 1, cable: 1, dht22: 1, ldr: 1, ir: 1, sr04: 1, pir: 1, oled: 1, servo: 1, relay: 1, buzzer: 1, ws2812: 1, ds18b20: 1, mq2: 1, dmm: 1, solder: 1, boxx: 1 } },
-    { id: 'robot', ic: '🤖', name: 'Robotics Lab', price: 5999, for: 'Robot cars, arms and Wi-Fi camera bots', art: 'robot',
-      learn: 'An obstacle-avoiding, line-following car you drive from your phone, with a live camera and a motion sensor.',
-      parts: { esp32: 1, esp32cam: 1, bocar: 1, l298n: 1, cells: 1, sr04: 1, ir: 2, servo: 2, mpu6050: 1, oled: 1, lcd: 1, ws2812: 1, bread: 1, comp: 1, cable: 1, buzzer: 1, dmm: 1, solder: 1, boxx: 1 } },
+    { id: 'robot', ic: '🤖', name: 'Robotics Lab', price: 5999, for: 'Robot cars and arms on ESP32 and STM32', art: 'robot',
+      learn: 'An obstacle-avoiding, line-following car you drive from your phone, with a motion sensor and STM32 motor control.',
+      parts: { esp32: 1, nucleo: 1, bocar: 1, l298n: 1, cells: 1, sr04: 1, ir: 2, servo: 2, mpu6050: 1, oled: 1, lcd: 1, ws2812: 1, bread: 1, comp: 1, cable: 1, buzzer: 1, dmm: 1, solder: 1, boxx: 1 } },
     { id: 'iot', ic: '🏠', name: 'IoT & Smart Home Lab', price: 6999, for: 'The full IoT track of the roadmap', tag: 'MOST CHOSEN', art: 'iot',
       learn: 'Smart home, weather station, smart irrigation and gas alarm on MQTT, plus long-range LoRa and SMS alerts.',
       parts: { esp32: 2, bread: 1, comp: 1, cable: 2, dht22: 1, bmp280: 1, ldr: 1, pir: 1, mq2: 1, ds18b20: 1, soil: 1, pump: 1, relay: 1, oled: 1, lcd: 1, ws2812: 1, buzzer: 1, lora: 2, gsm: 1, dmm: 1, solder: 1, boxx: 1 } },
-    { id: 'ai', ic: '🎙', name: 'AI Voice & Vision Lab', price: 6999, for: 'Edge AI: voice assistant and camera projects', art: 'ai',
-      learn: 'Your own talking assistant on the ESP32-S3, a Wi-Fi camera with motion alerts and a touch-screen control panel.',
-      parts: { esp32s3: 1, esp32cam: 1, esp32: 1, mic: 1, spk: 1, ws2812: 1, tft: 1, oled: 1, pir: 1, sr04: 1, dht22: 1, relay: 1, bread: 1, comp: 1, cable: 2, dmm: 1, solder: 1, boxx: 1 } },
+    { id: 'ai', ic: '🎙', name: 'AI Voice & Vision Lab', price: 6999, for: 'Edge AI: voice assistant and smart devices', art: 'ai',
+      learn: 'Your own talking assistant on the ESP32-S3, a touch-screen control panel and STM32 firmware for the real-time parts.',
+      parts: { esp32s3: 1, nucleo: 1, esp32: 1, mic: 1, spk: 1, ws2812: 1, tft: 1, oled: 1, pir: 1, sr04: 1, dht22: 1, relay: 1, bread: 1, comp: 1, cable: 2, dmm: 1, solder: 1, boxx: 1 } },
     { id: 'ind', ic: '🏭', name: 'Industrial Automation Lab', price: 11499, for: 'Factory skills: Modbus, CAN, 24 V and STM32', art: 'ind',
       learn: 'Read a real energy meter on Modbus, talk CAN between boards, count parts with a 24 V sensor and build a machine monitor.',
       parts: { esp32: 1, nucleo: 1, rs485: 2, can: 2, meter: 1, smps24: 1, prox: 2, opto: 1, estop: 1, acs712: 1, ds18b20: 1, mpu6050: 1, relay: 1, oled: 1, lcd: 1, logic: 1, dmm: 1, solder: 1, bread: 1, comp: 1, cable: 2, boxx: 1 } },
     { id: 'iron', ic: '🦾', name: 'Iron Man 1', price: 28000, for: 'Everything above, plus a Raspberry Pi 5 and GPS', art: 'iron',
       learn: 'Every project on this page and the whole roadmap: IoT, robotics, voice AI and industrial, with a Pi 5 as your own server.',
       parts: { esp32: 2, bread: 1, comp: 1, cable: 2, dht22: 1, ldr: 1, ir: 2, sr04: 1, pir: 1, oled: 1, servo: 2, relay: 1, buzzer: 1, ws2812: 1, ds18b20: 1, mq2: 1, dmm: 1, solder: 1, boxx: 1,
-               bmp280: 1, soil: 1, pump: 1, lcd: 1, lora: 2, gsm: 1, esp32cam: 1, bocar: 1, l298n: 1, cells: 1, mpu6050: 1, esp32s3: 1, mic: 1, spk: 1, tft: 1, nucleo: 1, rs485: 2, can: 2,
+               bmp280: 1, soil: 1, pump: 1, lcd: 1, lora: 2, gsm: 1, bocar: 1, l298n: 1, cells: 1, mpu6050: 1, esp32s3: 1, mic: 1, spk: 1, tft: 1, nucleo: 1, rs485: 2, can: 2,
                meter: 1, smps24: 1, prox: 2, opto: 1, estop: 1, acs712: 1, logic: 1, rpi: 1, gps: 1 } }
   ];
   function worth(k) { var t = 0; for (var id in k.parts) t += k.parts[id] * CATALOG[id][4]; return t; }
@@ -304,13 +305,15 @@
   function plant(x, y) { return '<path d="M' + x + ' ' + y + 'c-10-14-4-26 0-30c4 4 10 16 0 30z" fill="#16a34a"/>' + R(x - 9, y, 18, 20, '#a16207', 3); }
   var ART = {
     starter: function () { return bb(14, 96, 124) + esp(34, 70) + dht(150, 28) + sonar(148, 66) + pir(106, 26) + oled(196, 24) + relay(192, 68) + servo(246, 38) + ring(266, 76) + dmm(276, 104) + iron(150, 132); },
-    robot: function () { return car(70, 74) + esp(82, 76) + sonar(150, 32) + cam(196, 22) + servo(236, 42) + oled(30, 22) + ring(282, 76) + dmm(274, 102) + iron(150, 138); },
+    robot: function () { return car(70, 74) + esp(82, 76) + sonar(150, 32) + nucleo(190, 20) + servo(236, 42) + oled(30, 22) + ring(282, 76) + dmm(274, 102) + iron(150, 138); },
     iot: function () { return bb(14, 98, 110) + esp(24, 72) + esp(96, 30) + dht(166, 24) + oled(204, 22) + relay(246, 24) + pir(166, 62) + ring(220, 88) + plant(260, 118) + dmm(286, 100) + iron(130, 140); },
-    ai: function () { return esp(20, 28, 'ESP32-S3') + mic(96, 32) + spk(146, 44) + cam(176, 24) + tft(214, 20) + ring(56, 108) + oled(92, 92) + pir(140, 94) + dmm(282, 100) + iron(176, 134); },
+    ai: function () { return esp(20, 28, 'ESP32-S3') + mic(96, 32) + spk(146, 44) + nucleo(170, 74) + tft(214, 20) + ring(56, 108) + oled(92, 92) + pir(140, 94) + dmm(282, 100) + iron(176, 134); },
     ind: function () { return R(8, 22, 304, 6, '#6b7280', 2) + psu(14, 32) + meter(54, 32) + nucleo(102, 30) + relay(168, 34) + estop(236, 50) + prox(266, 32) + prox(290, 32) + esp(20, 108) + oled(92, 106) + dmm(140, 100) + iron(184, 132); },
     iron: function () { return rpi(14, 20) + nucleo(96, 20) + esp(164, 26, 'ESP32-S3') + tft(240, 18) + car(30, 104) + spk(160, 120) + meter(196, 94) + estop(262, 118) + ring(296, 84); }
   };
-  function art(k) { return '<svg viewBox="0 0 320 160" role="img" aria-label="Drawing of the parts in the ' + esc(k.name) + '">' + R(0, 0, 320, 160, '#0F1B2E', 12) + ART[k.art]() + '</svg>'; }
+  function art(k) {
+    if (k.img) return '<img src="' + esc(k.img) + '" alt="' + esc(k.name) + '" loading="lazy">';
+    return '<svg viewBox="0 0 320 160" role="img" aria-label="Drawing of the parts in the ' + esc(k.name) + '">' + R(0, 0, 320, 160, '#0F1B2E', 12) + (ART[k.art] || ART.starter)() + '</svg>'; }
 
   // What people want to build: the parts each project needs (the ones a kit already has are not added again).
   var PROJECTS = [
@@ -380,7 +383,7 @@
     for (var pid in CATALOG) {
       var it = CATALOG[pid]; if (it[0] !== tab) continue;
       var q = extra[pid] || 0, k = inKit(pid);
-      html += '<div class="part' + (q ? ' in' : '') + '"><span class="em">' + it[1] + '</span><div class="info"><b>' + esc(it[2]) + '</b><div class="use">' + esc(it[3]) + '</div>' +
+      html += '<div class="part' + (q ? ' in' : '') + '"><span class="em">' + (it[5] ? '<img src="' + esc(it[5]) + '" alt="" loading="lazy">' : it[1]) + '</span><div class="info"><b>' + esc(it[2]) + '</b><div class="use">' + esc(it[3]) + '</div>' +
         '<div class="pp">' + rs(it[4]) + (k ? '<span class="inkit">' + k + ' IN YOUR KIT</span>' : '') + '</div></div>' +
         (q ? '<div class="qty"><button type="button" data-dec="' + pid + '" aria-label="One less">−</button><span>' + q + '</span><button type="button" data-inc="' + pid + '" aria-label="One more">+</button></div>'
            : '<button type="button" class="btn btn-ghost btn-sm add" data-inc="' + pid + '">' + (k ? 'Add more' : 'Add') + '</button>') + '</div>';
@@ -454,7 +457,22 @@
       .catch(function () { btn.disabled = false; msg.innerHTML = 'Could not send just now. <a href="https://wa.me/' + WA + '?text=' + encodeURIComponent('Hi, I want to order a lab kit: ' + orderText()) + '" style="text-decoration:underline">Order on WhatsApp instead</a>.'; });
   };
 
-  load(); draw(); funnel('kit_view', kit ? kit.id : '');
+  // The catalogue the team edits in the admin (Lab kits); the copy above is used only if it cannot be fetched in 4 s.
+  function useCatalog(c) {
+    if (!c || !c.parts || !c.parts.length || !c.kits) return;
+    var cat = {};
+    c.parts.forEach(function (p) { cat[p.id] = [p.cat, p.ic || '📦', p.name, p.use || '', Number(p.price) || 0, p.img || '']; });
+    CATALOG = cat;
+    KITS = c.kits.map(function (k) { return { id: k.id, ic: k.ic || '📦', name: k.name, price: Number(k.price) || 0, for: k['for'] || '', learn: k.learn || '', tag: k.tag || '', art: k.art || '', img: k.img || '', parts: k.parts || {} }; });
+    if (c.projects) PROJECTS = c.projects;
+    for (var id in CATALOG) { tab = CATALOG[id][0]; break; }
+  }
+  var started = false;
+  function start() { if (started) return; started = true; load(); draw(); funnel('kit_view', kit ? kit.id : ''); }
+  var timer = setTimeout(start, 4000);
+  fetch(API + '/kits/catalog').then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (c) { if (!started) { useCatalog(c); clearTimeout(timer); start(); } })
+    .catch(function () { clearTimeout(timer); start(); });
 })();
 </script>
 </body>
