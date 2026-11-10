@@ -111,6 +111,8 @@ class PlansPage extends StatefulWidget {
 class _PlansPageState extends State<PlansPage> {
   String _wa = '';
   String _slug = ''; // the enrolment form a student fills
+  // 10 Nov 2026 (founder): the live programme's fee is 'contact for pricing'; the server says so (contact_pricing).
+  bool _contact = true;
   List<ProgramPlan> _plans = programPlans; // the poster's numbers until the server answers
   String _seats = '';
   String _startLabel = '';
@@ -146,6 +148,7 @@ class _PlansPageState extends State<PlansPage> {
         _seats = '${r['seats_left'] ?? ''}'.trim();
         _startLabel = '${r['start_label'] ?? ''}'.trim();
         _ends = r['offer_ends'] as String?;
+        _contact = r['contact_pricing'] != false;
       });
     } catch (_) {}
   }
@@ -305,17 +308,23 @@ class _PlansPageState extends State<PlansPage> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (on && p.saving > 0)
+            if (_contact) ...[
+              Text('Contact for pricing', style: GoogleFonts.poppins(color: _ink, fontSize: 26, fontWeight: FontWeight.w800, height: 1.1)),
+              const SizedBox(height: 4),
+              Text('The fee depends on the batch and the mode. Hold your seat for ₹999, adjusted in your fee.',
+                  style: GoogleFonts.inter(color: _muted, fontSize: 12.5, height: 1.4)),
+            ],
+            if (!_contact && on && p.saving > 0)
               Text(inr(p.standard), style: GoogleFonts.inter(color: _muted, fontSize: 15, decoration: TextDecoration.lineThrough)),
-            const SizedBox(height: 4),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (!_contact) const SizedBox(height: 4),
+            if (!_contact) Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text(inr(price), style: GoogleFonts.poppins(color: _ink, fontSize: 36, fontWeight: FontWeight.w800, height: 1.05)),
               const SizedBox(width: 8),
               Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(p.months == 1 ? '+ GST / month' : '+ GST', style: GoogleFonts.inter(color: _muted, fontSize: 13))),
             ]),
-            Text('${inr(withGst(price))} including 18% GST · ${p.period}', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
+            if (!_contact) Text('${inr(withGst(price))} including 18% GST · ${p.period}', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 6),
-            if (on && p.saving > 0) Text('You save ${inr(p.saving)} against paying monthly', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
+            if (!_contact && on && p.saving > 0) Text('You save ${inr(p.saving)} against paying monthly', style: GoogleFonts.inter(color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
             if (p.months == 1) Text('Stop or carry on each month', style: GoogleFonts.inter(color: _muted, fontSize: 12.5)),
             const SizedBox(height: 14),
             Container(
@@ -344,7 +353,7 @@ class _PlansPageState extends State<PlansPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _enrol(p),
+                onPressed: () => _contact ? _bookSeat() : _enrol(p),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: hot ? _yellow : _navy,
                   foregroundColor: hot ? _navy : Colors.white,
@@ -352,15 +361,15 @@ class _PlansPageState extends State<PlansPage> {
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Enrol in ${p.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15)),
+                child: Text(_contact ? 'Book my seat · ₹999' : 'Enrol in ${p.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
             const SizedBox(height: 6),
             Center(child: Text('Two steps: your details, then payment by UPI.', style: GoogleFonts.inter(color: _muted, fontSize: 11.5))),
             Center(
               child: TextButton(
-                onPressed: _bookSeat,
-                child: Text('Not ready? Book your seat for ₹999 (adjusted in your fee)',
+                onPressed: _contact ? () => _open('Hi! What is the fee for ${p.name} (${p.tag}) at Altrobyte, and when does the next batch start?') : _bookSeat,
+                child: Text(_contact ? 'Ask the fee on WhatsApp' : 'Not ready? Book your seat for ₹999 (adjusted in your fee)',
                     textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: _navy)),
               ),
             ),
@@ -390,8 +399,8 @@ class _PlansPageState extends State<PlansPage> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(color: const Color(0xFFFFF6CC), borderRadius: BorderRadius.circular(12)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(inr(9999), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
-              Text('+ GST a month (3 months together: ₹27,999 + GST)', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
+              Text(_contact ? 'Contact for pricing' : inr(9999), style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 22, color: _ink, height: 1.1)),
+              Text(_contact ? 'Seat booking ₹999, adjusted in your fee' : '+ GST a month (3 months together: ₹27,999 + GST)', style: GoogleFonts.inter(fontSize: 12, color: _muted)),
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -487,10 +496,10 @@ class _PlansPageState extends State<PlansPage> {
 
   Widget _faq() {
     const qa = <(String, String)>[
-      ('Is GST included in the price?', 'No. The big price is the fee; 18% GST is added, and the total with GST is shown under it.'),
+      ('What is the fee?', 'It depends on the batch and the mode (online or in Indore). Message us on WhatsApp and a mentor shares the exact fee. Your seat is held for ₹999, adjusted in the fee.'),
       ('Can I start monthly and switch to 3 months?', 'Yes. Within 30 days of starting, move to the 3-month plan by paying only the difference.'),
       ('Is there a scholarship?', 'Yes. The free scholarship test can take up to ₹3,000 off your first month.'),
-      ('Can I pay monthly?', 'Yes. ₹9,999 + GST a month, one stage a month, and you decide each month whether to carry on. 3 months together is ₹27,999 + GST.'),
+      ('Can I pay monthly?', 'Yes. Pay one month at a time, one stage a month, and decide each month whether to carry on. Or pay for 3 months together and save.'),
       ('What are the class timings?', 'Weekday batch: Monday to Friday, 1.5 hours a day. Weekend batch: Saturday and Sunday, 3 hours a day.'),
       ('Are classes online or offline?', 'Both. Live classes run online and offline at our Indore centre (5th Floor, Gravity Mall, Mechanic Nagar).'),
       ('What is the mini lab set-up kit?', 'A hardware kit for your own desk, included in every plan, so you can practise outside class.'),
@@ -533,9 +542,9 @@ class _PlansPageState extends State<PlansPage> {
         const SizedBox(height: 18),
         Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
           ElevatedButton.icon(
-            onPressed: () => _enrol(best),
+            onPressed: () => _contact ? _open('Hi! What is the fee for the Altrobyte live programme, and when does the next batch start?') : _enrol(best),
             icon: const Icon(Icons.send_rounded, size: 18),
-            label: Text('Enrol in ${best.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+            label: Text(_contact ? 'Ask the fee on WhatsApp' : 'Enrol in ${best.name}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
             style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
           ),
           OutlinedButton(
@@ -569,14 +578,14 @@ class _PlansPageState extends State<PlansPage> {
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text('From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)}', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
-                      Text('+ GST a month', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
+                      Text(_contact ? 'Seat ₹999' : 'From ${inr(_offerOn ? _plans.first.offer : _plans.first.standard)}', style: GoogleFonts.poppins(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                      Text(_contact ? 'adjusted in your fee' : '+ GST a month', style: GoogleFonts.inter(fontSize: 11.5, color: _muted)),
                     ]),
                   ),
                   ElevatedButton(
-                    onPressed: () => _enrol(_plans.firstWhere((p) => p.recommended, orElse: () => _plans.first)),
+                    onPressed: () => _contact ? _bookSeat() : _enrol(_plans.firstWhere((p) => p.recommended, orElse: () => _plans.first)),
                     style: ElevatedButton.styleFrom(backgroundColor: _yellow, foregroundColor: _navy, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13)),
-                    child: Text('Enrol now', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                    child: Text(_contact ? 'Book my seat' : 'Enrol now', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                   ),
                 ]),
               ),

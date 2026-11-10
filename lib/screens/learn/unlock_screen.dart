@@ -28,7 +28,7 @@ const _premium = [
   _Offer('Placement programme with lab (6 months)', '₹58,000', 'Premium internship, lab setup and placement support.',
       Icons.work_rounded),
   _Offer('Live product engineering programme', '₹29,000',
-      'Live classes with industry engineers, your lab kit from day one, four real products. Or ₹9,999 a month.',
+      'Live classes with industry engineers, your lab kit from day one, four real products. Hold your seat for ₹999.',
       Icons.groups_rounded,
       badge: 'Best value', link: '/enroll/program-enrolment?plan=token', linkLabel: 'Book my seat · ₹999'),
 ];
