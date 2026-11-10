@@ -26,6 +26,16 @@
   .btn-main { background: var(--orange); color: #fff; }
   .btn-ghost { border: 1px solid var(--line); background: transparent; }
   .btn-sm { padding: 7px 12px; font-size: 13px; }
+  /* Altron meter (10 Nov 2026): the learner's minutes, why to upgrade, and the buttons, on every page */
+  .meter { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 12.5px Inter, sans-serif; cursor: pointer; white-space: nowrap; }
+  .meter.low { border-color: var(--orange); color: #FFB37A; background: #2A1708; }
+  .meter.out { border-color: #ef4444; color: #fca5a5; background: #2a0f12; }
+  .meterbox { position: fixed; top: 60px; right: 12px; z-index: 40; width: min(340px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 18px 50px -12px rgba(0,0,0,.6); }
+  .meterbox h4 { font-size: 15px; margin: 0 0 8px; } .meterbox .gauge { height: 8px; border-radius: 99px; background: var(--ink2); overflow: hidden; margin: 6px 0 4px; }
+  .meterbox .gauge i { display: block; height: 100%; background: linear-gradient(90deg, #38E1D3, var(--orange)); }
+  .meterbox .fomo { font-size: 13px; color: #FFB37A; margin: 10px 0 0; } .meterbox .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .meterbox .ct { font-size: 12.5px; color: var(--soft); margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; } .meterbox .ct a { color: #FF9A3D; }
+  @media (max-width: 520px) { .meter .w { display: none; } }
   .muted { color: var(--soft); }
 
   /* top bar */
@@ -329,6 +339,52 @@
       location.href = '/dashboard';
     }).catch(function (e) { alert((e && e.detail) || 'Could not open the admin just now. Please try again.'); });
   }
+  // ── the Altron meter (10 Nov 2026, founder after testing as a new user: show the usage, a reason to upgrade and the
+  // upgrade buttons, and how to reach us). Numbers come from /trainer/live/credit: nothing on it is made up. ──
+  var credit = null;
+  function meterChip() {
+    var c = credit;
+    if (!c || c.plan === 'unknown' || c.plan === 'staff') return '<button class="meter" data-meter hidden></button>';
+    var left = Number(c.left_min) || 0, cls = '', txt;
+    if (c.plan === 'paid') txt = '⏱ ' + left + ' min<span class="w"> this month</span>';
+    else { cls = left <= 0 ? ' out' : (left <= 10 ? ' low' : ''); txt = (left <= 0 ? '⛔ 0 min' : '⏱ ' + left + ' min') + '<span class="w"> ' + (c.plan === 'trial' ? 'today' : 'free Altron') + '</span>'; }
+    return '<button class="meter' + cls + '" data-meter title="Your time with Altron">' + txt + '</button>';
+  }
+  function loadMeter() {
+    if (!token()) return;
+    getJSON('/trainer/live/credit').then(function (c) {
+      credit = c;
+      document.querySelectorAll('[data-meter]').forEach(function (b) { var d = document.createElement('div'); d.innerHTML = meterChip(); b.replaceWith(d.firstChild); });
+      if (c.plan === 'free' && Number(c.left_min) <= 10 && store('altro_meter_seen') !== String(c.left_min)) { store('altro_meter_seen', String(c.left_min)); funnel('meter_low', String(c.left_min)); }
+    }).catch(function () {});
+  }
+  function meterBox() {
+    var old = document.getElementById('meterbox'); if (old) { old.remove(); return; }
+    var c = credit; if (!c) return;
+    funnel('meter_open', c.plan + ' ' + c.left_min);
+    var left = Number(c.left_min) || 0, total = Number(c.total_min) || 0, used = Math.max(0, total - left);
+    var pct = total ? Math.min(100, Math.round(used * 100 / total)) : 0;
+    var head = c.plan === 'paid' ? 'Your Altron plan' : c.plan === 'trial' ? 'Your free week with Altron' : 'Your free time with Altron';
+    var line = c.plan === 'paid' ? left + ' minutes left this month' : c.plan === 'trial' ? left + ' of ' + total + ' minutes left today'
+      : (left > 0 ? left + ' of ' + total + ' free minutes left' : 'Your ' + total + ' free minutes are used');
+    var fomo = '';
+    if (c.plan !== 'paid') {
+      if (left <= 0) fomo += '<p class="fomo">⛔ Altron has stopped for you. Every note stays free to read, but the teaching, the doubts and the quizzes by voice need a plan.</p>';
+      else if (left <= 10) fomo += '<p class="fomo">⚡ Only ' + left + ' minutes left: about one lesson. Don\'t stop halfway.</p>';
+      if (c.seats_left || c.start_label) fomo += '<p class="fomo">🔥 Live batch' + (c.start_label ? ': ' + esc(c.start_label).toLowerCase() : '') + (c.seats_left ? ' · only ' + esc(c.seats_left) + ' seats left' : '') + '. Hold yours for ₹999, adjusted in your fee.</p>';
+    }
+    var box = document.createElement('div'); box.id = 'meterbox'; box.className = 'meterbox';
+    box.innerHTML = '<h4>' + head + '</h4><div class="gauge"><i style="width:' + pct + '%"></i></div><div style="font-size:13px;color:var(--soft)">' + line + '</div>' + fomo +
+      (c.plan === 'paid' ? '' : '<div class="row"><a class="btn btn-main btn-sm" href="' + esc(c.seat_link || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">Book a live seat · ₹999</a>' +
+        '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><a class="btn btn-ghost btn-sm" href="/pricing#live" data-mgo="live">Compare plans</a></div>') +
+      '<div class="ct">Questions? <a href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I am learning on Altrobyte Lab and have a question about the plans.') + '" target="_blank" rel="noopener">WhatsApp +91 72229 77927</a> · <a href="tel:+917222977927">Call</a> · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a></div>';
+    document.body.appendChild(box);
+    setTimeout(function () { document.addEventListener('click', function off(ev) { if (!box.contains(ev.target) && !(ev.target.closest && ev.target.closest('[data-meter]'))) { box.remove(); document.removeEventListener('click', off); } }); }, 0);
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-meter]'); if (t) { e.preventDefault(); meterBox(); return; }
+    var g = e.target.closest && e.target.closest('[data-mgo]'); if (g) funnel('meter_' + g.getAttribute('data-mgo'), credit ? credit.plan + ' ' + credit.left_min : '');
+  });
   function signIn() { location.href = '/signin?next=' + encodeURIComponent(location.pathname + location.search); }
   function getJSON(path, opts) {
     return fetch(API + path, Object.assign({ headers: hdr() }, opts || {})).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw Object.assign(j || {}, { status: r.status }); return j; }); });
@@ -394,7 +450,7 @@
   function bar(tab) {
     return '<div class="bar"><a class="logo" href="/"><img src="/icons/Icon-192.png" alt=""><span>Altrobyte Lab</span></a>' +
       '<nav class="tabs"><a href="/learn"' + (tab === 'course' ? ' class="on"' : '') + '>Course</a><a href="/learn/live"' + (tab === 'live' ? ' class="on"' : '') + '>Live classes</a></nav>' +
-      '<div class="r"><a class="btn btn-ghost btn-sm hide-s" href="/roadmap">Syllabus</a>' +
+      '<div class="r">' + (token() ? meterChip() : '') + '<a class="btn btn-ghost btn-sm hide-s" href="/roadmap">Syllabus</a>' +
       (token() ? '<details class="acct"><summary class="me" title="My account">👤</summary><div class="menu">' +
         // The rest of the learner's app (profile, tests, tools) is the Flutter app on the same site (31 Oct 2026, founder).
         (store('altro_admin') === '1' ? '<a href="#" data-admin>Admin dashboard</a>' : '') +
@@ -884,6 +940,12 @@
   else if (p === '/learn/live') live();
   else course();
   checkAdmin();
+  loadMeter();
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin) return;
+    var m; try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+    if (m && m.type === 'state' && /out_of_minutes|done|paused/.test(String(m.state))) loadMeter();
+  });
 
   // The free time with Altron used up (the strip tells this page): show what continues it, once.
   window.addEventListener('message', function (e) {
@@ -893,8 +955,8 @@
     var lv = document.querySelector('.lv'); if (!lv) return;
     funnel('ai_credit_used', location.pathname);
     var c = document.createElement('div'); c.id = 'aiout'; c.className = 'card'; c.style.cssText = 'margin:10px 12px;flex:none';
-    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="/pricing#ai">See the AI plan</a>' +
-      '<button class="btn btn-ghost btn-sm" data-golive>Learn Live with Industrial Expert</button></div>';
+    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="' + esc((credit && credit.seat_link) || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">Book a live seat · ₹999</a>' +
+      '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><button class="btn btn-ghost btn-sm" data-golive>Learn Live with Industrial Expert</button></div>';
     lv.appendChild(c);
   });
 
