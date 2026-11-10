@@ -73,8 +73,10 @@
   body.strip .bar { flex: none; padding: 0; margin: 0; gap: 6px; }
   body.strip .round { width: 38px; height: 38px; font-size: 15px; }
   body.strip .go { padding: 8px 14px; font-size: 13px; }
-  body.strip .msg { position: fixed; left: 140px; right: 170px; top: 50%; transform: translateY(-50%); margin: 0; font-size: 12.5px; }
-  body.strip .ask { position: fixed; right: 170px; top: 50%; transform: translateY(-50%); margin: 0; }
+  body.strip .msg { position: fixed; left: 140px; right: 258px; top: 50%; transform: translateY(-50%); margin: 0; font-size: 12.5px; }
+  body.strip .ask { position: fixed; right: 258px; top: 50%; transform: translateY(-50%); margin: 0; }
+  /* a phone: the camera button shows only when Altron asks for it or it is on, so the four that matter fit */
+  @media (max-width: 560px) { body.strip #camBtn.off:not(.want) { display: none !important; } body.strip .msg { left: 8px; right: 184px; } body.strip .ask { right: 184px; } }
 </style>
 </head>
 <body>
@@ -97,8 +99,12 @@
   <button class="round hidden" id="mic" type="button" title="Mute the microphone">🎙️</button>
   <button class="round off hidden" id="camBtn" type="button" title="Camera is off. Tap to show Altron your board.">📷<small>off</small></button>
   <button class="round hidden" id="pause" type="button" title="Pause">⏸</button>
+  <button class="round hidden" id="again" type="button" title="Not clear? Altron explains it again, simpler and slower">🤔</button>
+  <button class="round hidden" id="pace" type="button" title="Altron's speed">🚶<small id="paceT">easy</small></button>
 </div>
+<script src="/live/pace.js"></script>
 <script>
+  const PACE = window.AltronPace || null;                  // Altron's speaking pace (web/live/pace.js)
 (() => {
   const API = 'https://edu.altrobytelab.com';
   const P = new URLSearchParams(location.search);
@@ -261,15 +267,19 @@
     if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
     const raw = atob(data), n = raw.length / 2, f = new Float32Array(n);
     for (let i = 0; i < n; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v >= 0x8000) v -= 0x10000; f[i] = v / 0x8000; }
-    const buf = outCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
-    const node = outCtx.createBufferSource(); node.buffer = buf; node.connect(outCtx.destination);
-    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration;
+    const g = PACE ? PACE.stretch(f) : f, rate = PACE ? PACE.rate() : 1;      // an easier pace: longer pauses, a slower voice
+    const buf = outCtx.createBuffer(1, g.length, 24000); buf.copyToChannel(g, 0);
+    const node = outCtx.createBufferSource(); node.buffer = buf; node.playbackRate.value = rate; node.connect(outCtx.destination);
+    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration / rate;
     playing.push(node);
     node.onended = () => { playing = playing.filter((x) => x !== node); lastActive = Date.now(); if (!playing.length && running) status('listening', 'live'); };
     lastActive = Date.now();
     status('talking', 'talk');
   }
-  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; }
+  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; if (PACE) PACE.reset(); }
+  // The board and the note move when the voice gets there, not when the words were made: the voice is played slower than
+  // it arrives (pace.js), so a tool call waits for what was already said to be heard (15 s at most).
+  async function voiceCaughtUp() { const t0 = Date.now(); while (running && outCtx && nextAt - outCtx.currentTime > 0.25 && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 120)); }
 
   // ── the camera: off until the learner turns it on ──
   const canvas = document.createElement('canvas');
@@ -387,6 +397,7 @@
         tellHost({ type: 'score', right });
         lessonDone = true;
       } else if (call.name === 'show_part') {
+        await voiceCaughtUp();
         // the note is open in the app: the app scrolls to that section and makes it glow
         // In order, no jumping ahead (29 Oct 2026: it went to the last section, the checklist, mid-lesson). A jump of more
         // than one part is refused and Altron is told which part comes next; the page does not move.
@@ -526,7 +537,7 @@
       clearInterval(ticker);
       ticker = setInterval(tick, 1000);
       $('go').classList.add('hidden'); $('langs').classList.add('hidden');
-      for (const id of ['mic', 'camBtn', 'pause']) $(id).classList.remove('hidden');
+      for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace']) $(id).classList.remove('hidden');
       if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';
     } catch (e) {
       cleanup(); $('go').disabled = false; status('voice tutor');
@@ -577,7 +588,7 @@
   }
   function stop(message, bad) {
     cleanup();
-    for (const id of ['mic', 'camBtn', 'pause']) $(id).classList.add('hidden');
+    for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace']) $(id).classList.add('hidden');
     $('go').classList.remove('hidden'); $('go').disabled = false; $('go').textContent = '▶ Talk to Altron';
     status('voice tutor');
     if (message) say(message, bad);
@@ -598,6 +609,20 @@
 
   $('go').onclick = start;
   $('pause').onclick = () => pause();
+  // ── the pace is the learner's (10 Nov 2026, founder: too fast for a beginner). 🚶/🐢/🏃 sets how fast Altron's voice
+  // plays (pace.js); 🤔 "not clear" makes it one step slower and has the last idea explained again, more simply. ──
+  function paceLook() {
+    if (!PACE) { $('pace').style.display = 'none'; return; }
+    $('pace').innerHTML = PACE.icon() + '<small id="paceT">' + PACE.label() + '</small>';
+    $('pace').title = "Altron's speed: " + PACE.label() + '. Tap to change.';
+  }
+  $('pace').onclick = () => { if (!PACE) return; PACE.next(); paceLook(); lastHuman = Date.now(); };
+  $('again').onclick = () => {
+    if (!running) return;
+    lastHuman = Date.now(); if (PACE) { PACE.slower(); paceLook(); }
+    hush(); note('[Screen] The learner tapped "Not clear": you went too fast for them. Stop. Explain the idea you were just on again from the start, much more simply and slowly: plain everyday words, a different everyday example, one short sentence at a time, no new technical word. Then ask in one short line whether it is clear now, and carry on from where you were.');
+  };
+  paceLook();
   $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
   addEventListener('pagehide', cleanup);
   if (!token()) say('Please sign in to Altrobyte first.', true);

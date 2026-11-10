@@ -12,7 +12,7 @@ from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "build" / "web"
 NEEDED = ["index.html", "app.html", "main.dart.js", "flutter_bootstrap.js", "flutter.js", "manifest.json", "favicon.png", "version.json",
-          "assets/FontManifest.json", "assets/AssetManifest.bin.json", "canvaskit/canvaskit.wasm", "live/index.html", "live/v2/index.html", "pricing/index.html", "session/index.html", "learn/index.html", "learn/bridge.js", "account/index.html", "home/index.html", "home/img/workshop.jpg", "class/index.html", "admissions/index.html"]
+          "assets/FontManifest.json", "assets/AssetManifest.bin.json", "canvaskit/canvaskit.wasm", "live/index.html", "live/v2/index.html", "live/pace.js", "pricing/index.html", "session/index.html", "learn/index.html", "learn/bridge.js", "account/index.html", "home/index.html", "home/img/workshop.jpg", "class/index.html", "admissions/index.html"]
 JSON = ["manifest.json", "assets/FontManifest.json", "version.json"]
 
 missing = [f for f in NEEDED if not (WEB / f).is_file() or (WEB / f).stat().st_size == 0]

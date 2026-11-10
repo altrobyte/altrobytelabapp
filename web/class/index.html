@@ -152,6 +152,8 @@
   .ctrls { display: flex; gap: 10px; justify-content: center; padding: 10px 14px; }
   .round { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 19px; display: grid; place-items: center; }
   .round.off { background: #fff; color: var(--ink); }
+  .round { position: relative; } .round.hidden { display: none; }
+  .round small { position: absolute; bottom: -3px; right: -4px; font-size: 9px; background: #5b6b7b; color: #fff; border-radius: 6px; padding: 0 3px; }
   .resume { background: var(--orange); color: #fff; padding: 11px 18px; font-weight: 700; }
   .endbtn { background: #C62828; color: #fff; padding: 11px 16px; font-weight: 700; border-radius: 99px; }
   .endbtn.hidden { display: none; }
@@ -249,6 +251,8 @@
       <button class="round" id="mic" type="button" title="Mute">🎙️</button>
       <button class="resume hidden" id="resume" type="button">▶ Continue</button>
       <button class="round" id="pause" type="button" title="Pause">⏸</button>
+      <button class="round" id="again" type="button" title="Not clear? Altron explains it again, simpler and slower">🤔</button>
+      <button class="round" id="pace" type="button" title="Altron's speed">🚶<small id="paceT">easy</small></button>
       <button class="endbtn" id="endBtn" type="button">End</button>
     </div>
     <button class="txbtn" id="txbtn" type="button">Show what was said ▾</button>
@@ -256,7 +260,9 @@
   </div>
 </div>
 
+<script src="/live/pace.js"></script>
 <script>
+  const PACE = window.AltronPace || null;                  // Altron's speaking pace (web/live/pace.js)
 (() => {
   const API = 'https://edu.altrobytelab.com';
   const WA = '917222977927';
@@ -804,13 +810,17 @@
     if (!outCtx) outCtx = new AudioContext();
     const raw = atob(data), n = raw.length / 2, f = new Float32Array(n);
     for (let i = 0; i < n; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v >= 0x8000) v -= 0x10000; f[i] = v / 0x8000; }
-    const buf = outCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
-    const node = outCtx.createBufferSource(); node.buffer = buf; node.connect(outCtx.destination);
-    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration;
+    const g = PACE ? PACE.stretch(f) : f, rate = PACE ? PACE.rate() : 1;      // an easier pace: longer pauses, a slower voice
+    const buf = outCtx.createBuffer(1, g.length, 24000); buf.copyToChannel(g, 0);
+    const node = outCtx.createBufferSource(); node.buffer = buf; node.playbackRate.value = rate; node.connect(outCtx.destination);
+    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration / rate;
     playing.push(node); node.onended = () => { playing = playing.filter((x) => x !== node); lastActive = Date.now(); if (!playing.length && running) status('listening', 'live'); };
     lastActive = Date.now(); status('talking', 'talk');
   }
-  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; }
+  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; if (PACE) PACE.reset(); }
+  // The board and the note move when the voice gets there, not when the words were made: the voice is played slower than
+  // it arrives (pace.js), so a tool call waits for what was already said to be heard (15 s at most).
+  async function voiceCaughtUp() { const t0 = Date.now(); while (running && outCtx && nextAt - outCtx.currentTime > 0.25 && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 120)); }
   function ready() { return ws && ws.readyState === 1 && ws.__ready; }
   function note(text) { if (!ready()) return false; ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } })); lastActive = Date.now(); return true; }
   function tell(text) { heard = ''; return note(String(text).slice(0, 1800)); }
@@ -820,6 +830,7 @@
     const responses = [];
     for (const c of calls || []) {
       const a = c.args || {}; let r;
+      if (c.name === 'show_section' || c.name === 'point_at' || c.name === 'ask_check') await voiceCaughtUp();
       if (c.name === 'get_section') r = sectionFor(at);
       else if (c.name === 'show_section') {
         const v = String(a.section || 'next').toLowerCase();
@@ -966,13 +977,27 @@
   // The end: Altron stops, and the demo's plans and seat booking stay on the screen.
   function finish(message) {
     cleanup(); status('finished', ''); ending = false;
-    $('resume').classList.add('hidden'); $('pause').classList.add('hidden'); $('mic').classList.add('hidden'); $('endBtn').classList.add('hidden');
+    $('resume').classList.add('hidden'); $('pause').classList.add('hidden'); $('mic').classList.add('hidden'); $('again').classList.add('hidden'); $('pace').classList.add('hidden'); $('endBtn').classList.add('hidden');
     $('smsg').textContent = message || (isDemo ? 'Demo finished. Your plan and seat booking are below.' : 'Class ended.'); $('smsg').style.color = '#ffd8bd';
     if (isDemo && !$('endHost').innerHTML) showEnd('', '');
     track('class_ended');
   }
   $('endBtn').onclick = () => finish(isDemo ? 'Demo ended. Your plans and seat booking are below.' : 'Class ended.');
   $('pause').onclick = () => pause();
+  // ── the pace is the learner's (10 Nov 2026, founder: too fast for a beginner). 🚶/🐢/🏃 sets how fast Altron's voice
+  // plays (pace.js); 🤔 "not clear" makes it one step slower and has the last idea explained again, more simply. ──
+  function paceLook() {
+    if (!PACE) { $('pace').style.display = 'none'; return; }
+    $('pace').innerHTML = PACE.icon() + '<small id="paceT">' + PACE.label() + '</small>';
+    $('pace').title = "Altron's speed: " + PACE.label() + '. Tap to change.';
+  }
+  $('pace').onclick = () => { if (!PACE) return; PACE.next(); paceLook(); lastHuman = Date.now(); };
+  $('again').onclick = () => {
+    if (!running) return;
+    lastHuman = Date.now(); if (PACE) { PACE.slower(); paceLook(); }
+    hush(); note('[Screen] The learner tapped "Not clear": you went too fast for them. Stop. Explain the idea you were just on again from the start, much more simply and slowly: plain everyday words, a different everyday example, one short sentence at a time, no new technical word. Then ask in one short line whether it is clear now, and carry on from where you were.');
+  };
+  paceLook();
   $('resume').onclick = async () => { try { await begin(); } catch (e) { if (e.signin) askSignin(); else stop(e.message, !e.out); } };
   function micLook() { $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; $('mic').title = micOn ? 'Tap when you are done speaking' : 'Tap to ask Altron'; }
   $('mic').onclick = () => {
