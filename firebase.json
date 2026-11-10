@@ -28,6 +28,11 @@
         "destination": "/pricing/index.html"
       },
       {
+        "//": "IoT & Edge AI corporate training (10 Nov 2026, founder).",
+        "source": "/corporate-training",
+        "destination": "/corporate-training/index.html"
+      },
+      {
         "//": "Lab kits: ready kits and your own mix, ordered through WhatsApp (7 Nov 2026, founder).",
         "source": "/kits",
         "destination": "/kits/index.html"
