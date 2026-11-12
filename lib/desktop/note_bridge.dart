@@ -246,6 +246,9 @@ const noteBridgeScript = r"""
   var owner = null, bar = null, goTo = -1, stage = null, fitting = false, nested = [];
   // Each slide fits the screen: the whole part is seen at once, no scrolling, nothing cut (30 Oct 2026, founder). It is
   // shrunk only as far as it stays readable (55 %); a part longer than that scrolls a little.
+  // The text stays readable (12 Nov 2026, founder's screenshot: a long part shrunk to 45 % was too small to read, worst
+  // for a beginner). A part is shrunk to 85 % at most; a longer one scrolls, and the page follows Altron's words.
+  var MINZ = 0.85;
   function fit() {
     if (!stage || fitting) return;
     fitting = true;
@@ -256,19 +259,19 @@ const noteBridgeScript = r"""
       stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
       stage.style.zoom = 1;
       var h = stage.scrollHeight;
-      var next = Math.max(0.45, Math.min(1, availH / Math.max(1, h)));
+      var next = Math.max(MINZ, Math.min(1, availH / Math.max(1, h)));
       if (Math.abs(next - r) < 0.02) { r = next; break; }
       r = next;
     }
     stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
     stage.style.zoom = 1;                                  // the last width settled: measure once more, so nothing is cut
-    stage.style.zoom = Math.max(0.45, Math.min(1, availH / Math.max(1, stage.scrollHeight + 24)));
+    stage.style.zoom = Math.max(MINZ, Math.min(1, availH / Math.max(1, stage.scrollHeight + 24)));
     // The page's own margins and padding count too: shrink a little more until the page itself does not scroll.
     var de = document.documentElement;
     for (var m = 0; m < 4 && de.scrollHeight > window.innerHeight + 1; m++) {
       var z = parseFloat(stage.style.zoom) || 1;
-      stage.style.zoom = Math.max(0.45, z * (window.innerHeight - 40) / Math.max(1, de.scrollHeight - 40));
-      if (parseFloat(stage.style.zoom) <= 0.45) break;
+      stage.style.zoom = Math.max(MINZ, z * (window.innerHeight - 40) / Math.max(1, de.scrollHeight - 40));
+      if (parseFloat(stage.style.zoom) <= MINZ) break;
     }
     setTimeout(function () { fitting = false; }, 60);
   }
