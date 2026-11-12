@@ -718,11 +718,15 @@
       var hit = allItems().filter(function (n) { return String(n.id) === String(cid); })[0], lt = hit && hit.title ? String(hit.title) : '';
       funnel('lesson_locked', mid + '/' + cid);
       root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(lt || 'Lesson') + '</div></div><div class="pad"><h1>🔒 ' + (lt ? esc(lt) + ' is' : 'This lesson is') + ' for enrolled learners</h1>' +
-        '<p class="muted" style="margin:8px 0 16px">You do not have access to this lesson yet. Ask us for it on WhatsApp. The free notes stay open: find them in the list.</p><div class="row">' +
-        '<a class="btn btn-main" id="askaccess" target="_blank" rel="noopener" href="' + askAccess(lt) + '">Request access on WhatsApp</a>' +
+        '<p class="muted" style="margin:8px 0 16px">You do not have access to this lesson yet. Ask for it here and our team will see your request. The free notes stay open: find them in the list.</p><div class="row">' +
+        '<button class="btn btn-main" id="askaccess">Request access</button>' +
         '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing#ai">See the AI plan</a>' +
         (token() && (!trial || !trial.started) ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div></div>';
-      var aa = document.getElementById('askaccess'); if (aa) aa.addEventListener('click', function () { funnel('lesson_request', mid + '/' + cid); });
+      var aa = document.getElementById('askaccess');
+      if (aa) {
+        var am = document.createElement('p'); am.className = 'muted'; am.style.cssText = 'margin:10px 0 0;font-size:14px'; aa.closest('.pad').appendChild(am);
+        aa.onclick = function () { askAccess(mid, cid, aa, am); };
+      }
       bindOutline();
       if (!shown) load().then(side).catch(function () {});
     });
@@ -746,9 +750,20 @@
     };
     setTimeout(function () { document.addEventListener('click', function off(ev) { if (!box.contains(ev.target) && ev.target !== btn) { box.remove(); document.removeEventListener('click', off); } }); }, 0);
   }
-  function askAccess(title) {
-    return 'https://wa.me/917222977927?text=' + encodeURIComponent('Hi, please give me access to this lesson on Altrobyte Lab: ' +
-      (title ? '"' + title + '" ' : '') + location.origin + location.pathname);
+  // Asking for a locked lesson: it lands on the learner's lead in the CRM for the team (12 Nov 2026, founder: "not on
+  // WhatsApp, it should just show in the CRM"). No message goes to anyone.
+  function askAccess(mid, cid, btn, msg) {
+    if (!token()) { signIn(); return; }
+    btn.disabled = true; funnel('lesson_request', mid + '/' + cid);
+    getJSON('/learn/access-request', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ module_id: Number(mid), content_id: Number(cid) }) })
+      .then(function (r) {
+        if (!r || !r.sent) throw r;
+        btn.textContent = 'Request sent ✓'; msg.textContent = 'Our team has your request for this lesson.';
+      })
+      .catch(function (e) {
+        if (e && e.status === 401) { signIn(); return; }
+        btn.disabled = false; msg.textContent = 'Could not send just now. Please try again in a minute.';
+      });
   }
   function neighbours(cid) {
     var its = allItems().filter(function (n) { return !n.locked; });
