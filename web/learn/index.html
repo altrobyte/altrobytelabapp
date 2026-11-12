@@ -715,13 +715,40 @@
       load().then(function () { side(); navButtons(it); }).catch(function () {});
     }).catch(function (e) {
       if (e && e.status === 401) { signIn(); return; }
-      root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">Class recording</div></div><div class="pad"><h1>🎥 This class recording is for enrolled learners</h1>' +
-        '<p class="muted" style="margin:8px 0 16px">Recordings of the live classes come with a plan. The notes of this step stay free: open them from the list.</p><div class="row">' +
-        '<button class="btn btn-main" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing#ai">See the AI plan</a>' +
+      var hit = allItems().filter(function (n) { return String(n.id) === String(cid); })[0], lt = hit && hit.title ? String(hit.title) : '';
+      funnel('lesson_locked', mid + '/' + cid);
+      root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(lt || 'Lesson') + '</div></div><div class="pad"><h1>🔒 ' + (lt ? esc(lt) + ' is' : 'This lesson is') + ' for enrolled learners</h1>' +
+        '<p class="muted" style="margin:8px 0 16px">You do not have access to this lesson yet. Ask us for it on WhatsApp. The free notes stay open: find them in the list.</p><div class="row">' +
+        '<a class="btn btn-main" id="askaccess" target="_blank" rel="noopener" href="' + askAccess(lt) + '">Request access on WhatsApp</a>' +
+        '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing#ai">See the AI plan</a>' +
         (token() && (!trial || !trial.started) ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div></div>';
+      var aa = document.getElementById('askaccess'); if (aa) aa.addEventListener('click', function () { funnel('lesson_request', mid + '/' + cid); });
       bindOutline();
       if (!shown) load().then(side).catch(function () {});
     });
+  }
+  // Share a lesson (12 Nov 2026, founder: every lesson can be shared with a candidate; whoever has access opens it, the
+  // rest ask us on WhatsApp). The link is the lesson's own address: the server decides who may open it, as before.
+  function shareLesson(title, btn) {
+    var url = location.origin + location.pathname;
+    var text = '"' + title + '" on Altrobyte Lab. If it is locked for you, tap Request access on the page.';
+    funnel('lesson_share', location.pathname);
+    if (navigator.share) { navigator.share({ title: title + ' · Altrobyte Lab', text: text, url: url }).catch(function () {}); return; }
+    var old = document.getElementById('sharebox'); if (old) { old.remove(); return; }
+    var box = document.createElement('div'); box.id = 'sharebox'; box.className = 'meterbox';
+    box.innerHTML = '<h4>Share this lesson</h4><div style="font-size:13px;color:var(--soft)">Anyone with access opens it. Others can ask us for access from the page.</div>' +
+      '<div class="row"><a class="btn btn-main btn-sm" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(text + ' ' + url) + '">Share on WhatsApp</a>' +
+      '<button class="btn btn-ghost btn-sm" id="sharecopy">Copy link</button></div>';
+    document.body.appendChild(box);
+    document.getElementById('sharecopy').onclick = function () {
+      var b = this, ok = function () { b.textContent = 'Link copied ✓'; };
+      try { navigator.clipboard.writeText(url).then(ok, function () { prompt('Copy this link', url); }); } catch (e) { prompt('Copy this link', url); }
+    };
+    setTimeout(function () { document.addEventListener('click', function off(ev) { if (!box.contains(ev.target) && ev.target !== btn) { box.remove(); document.removeEventListener('click', off); } }); }, 0);
+  }
+  function askAccess(title) {
+    return 'https://wa.me/917222977927?text=' + encodeURIComponent('Hi, please give me access to this lesson on Altrobyte Lab: ' +
+      (title ? '"' + title + '" ' : '') + location.origin + location.pathname);
   }
   function neighbours(cid) {
     var its = allItems().filter(function (n) { return !n.locked; });
@@ -763,6 +790,7 @@
       (it.type === 'notes' ? '<button class="btn btn-main btn-sm" id="learnai" title="Altron, the AI teacher, teaches this lesson by voice">✨ Learn with AI</button>' : '') +
       // Done sits in the bar, not in a strip of its own under the note (31 Oct 2026, founder).
       (done(it.id) ? '<span class="muted hide-s" style="font-size:13px">Done ✓</span>' : '<button class="btn btn-ghost btn-sm" id="markdone" title="Mark as done">✓ Done</button>') +
+      '<button class="iconbtn" id="share" title="Share this lesson" aria-label="Share this lesson">⤴</button>' +
       '<span class="navs row" style="gap:6px"></span>' +
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
@@ -785,6 +813,7 @@
         (link ? projectLinks(link) : '') + '</div></div>';
     }
     main.innerHTML = '<div class="lv">' + top + body + '</div>';
+    var sh = document.getElementById('share'); if (sh) sh.onclick = function () { shareLesson(it.title, sh); };
     // Learn with AI: a lesson with a tested board class (the same list as LESSON_CLASS on the server) opens it; any other
     // note opens the Altron strip under it, the one testers had. Nothing starts until the learner taps.
     var ai = document.getElementById('learnai');
