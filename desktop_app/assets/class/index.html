@@ -81,6 +81,45 @@
   .faq summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--navy); }
   .faq p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
   .faq p b { display: block; }
+  /* each slide comes in like a presentation: the board, then the notes line by line */
+  .slide-in .board { animation: slideIn .45s cubic-bezier(.2,.8,.3,1) both; }
+  .slide-in .task, .slide-in .pc { animation: slideIn .45s .15s cubic-bezier(.2,.8,.3,1) both; }
+  .slide-in .notes li { animation: noteIn .4s cubic-bezier(.2,.8,.3,1) both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes noteIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .slide-in .board, .slide-in .task, .slide-in .pc, .slide-in .notes li { animation: none; } }
+  /* commands on the board: dark terminal, one tap to copy */
+  .board pre { position: relative; background: #0f1b2b; color: #e6edf3; border-radius: 10px; padding: 10px 12px; padding-right: 64px; margin: 6px 0;
+               font: 13.5px/1.6 Consolas, "Cascadia Mono", Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .board code { background: #eef2f8; border-radius: 6px; padding: 1px 5px; font: 13px Consolas, Menlo, monospace; overflow-wrap: anywhere; }
+  .board pre .cp { position: absolute; top: 6px; right: 6px; background: #2d4f86; color: #fff; border-radius: 8px; padding: 4px 9px; font: 600 12px "Segoe UI", system-ui, sans-serif; }
+  .board pre .cp.ok { background: var(--ok); }
+  /* a practical on the learner's own PC: paste the output, or give the GitHub username; the page checks it */
+  .pc { background: #fff4e8; border: 1px solid #ffd2a8; border-radius: 14px; padding: 12px; display: grid; gap: 8px; }
+  .pc .t { color: #7a3a06; font-weight: 600; }
+  .pc .wait { font-size: 13.5px; color: #9a5a1c; }
+  .pc.done .wait { display: none; }
+  .pc .live { font: 12.5px/1.6 Consolas, Menlo, monospace; background: #0f1b2b; color: #7ee2a8; border-radius: 10px; padding: 8px 10px; max-height: 150px; overflow: auto; }
+  .pc .live:empty { display: none; }
+  .pc .live i { color: #8aa0b8; font-style: normal; }
+  .pc .cmds button { background: var(--navy); }
+  .pc .cmds button.off { background: #5a6b7d; }
+  .pc textarea, .pc input { width: 100%; font: 13.5px/1.5 Consolas, Menlo, monospace; border: 1px solid #f0c9a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: var(--ink); }
+  .pc textarea { min-height: 84px; resize: vertical; }
+  .pc .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pc button { background: var(--orange); color: #fff; padding: 10px 16px; font-weight: 700; }
+  .board .os-hide { display: none !important; }
+  .board .os-all { background: none; color: #2d4f86; font-weight: 600; font-size: 13.5px; padding: 6px 0; text-decoration: underline; }
+  .pc button.later { background: #fff; color: #7a3a06; border: 1px solid #f0c9a0; }
+  .pc .opt { font-size: 13px; color: #9a5a1c; }
+  .pc .desk { font-size: 13px; color: #6b5a48; } .pc .desk a { color: #b4600f; font-weight: 700; }
+  .pc details.err summary { cursor: pointer; font-size: 13.5px; color: #9a5a1c; font-weight: 600; }
+  .pc details.err[open] { display: grid; gap: 8px; }
+  .pc.done .row.dl { display: none; }
+  .pc .res { font-size: 14px; line-height: 1.5; }
+  .pc .res.ok { color: var(--ok); font-weight: 600; }
+  .pc .res.bad { color: var(--bad); }
+  .pc.done { background: var(--okbg); border-color: #bfe6d1; }
   .task { background: #fff4e8; border: 1px solid #ffd2a8; color: #7a3a06; border-radius: 12px; padding: 10px 12px; font-weight: 600; }
   .check { background: #fff; border: 2px solid #c9d8f5; border-radius: 16px; padding: 14px; }
   .check .q { font-weight: 700; font-size: 16px; margin-bottom: 10px; }
@@ -90,6 +129,8 @@
   .check .opts button.right { background: var(--okbg); border-color: var(--ok); }
   .check .opts button.wrong { background: var(--badbg); border-color: var(--bad); }
   .check .why { margin-top: 10px; font-size: 14px; }
+  .chelp { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chelp button { background: #fff; border: 1px solid var(--line); padding: 9px 12px; font-size: 14px; color: var(--ink); border-radius: 10px; }
   .nav { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
   .dots { display: flex; gap: 6px; flex: 1; justify-content: center; }
   .dots i { width: 9px; height: 9px; border-radius: 50%; background: #c9d3e0; }
@@ -111,7 +152,13 @@
   .ctrls { display: flex; gap: 10px; justify-content: center; padding: 10px 14px; }
   .round { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 19px; display: grid; place-items: center; }
   .round.off { background: #fff; color: var(--ink); }
+  .round { position: relative; } .round.hidden { display: none; }
+  .round small { position: absolute; bottom: -3px; right: -4px; font-size: 9px; background: #5b6b7b; color: #fff; border-radius: 6px; padding: 0 3px; }
   .resume { background: var(--orange); color: #fff; padding: 11px 18px; font-weight: 700; }
+  .endbtn { background: #C62828; color: #fff; padding: 11px 16px; font-weight: 700; border-radius: 99px; }
+  .endbtn.hidden { display: none; }
+  .seat { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: #FFF7EC; border: 1px solid #f3d7b4; border-radius: 14px; padding: 12px 14px; }
+  .seat a { background: var(--orange); color: #fff; border-radius: 10px; padding: 10px 14px; font-weight: 700; text-decoration: none; }
   .tx { flex: 1; min-height: 0; overflow: auto; margin: 4px 14px 14px; font-size: 13px; color: #c9d5e6; display: none; }
   .tx.on { display: block; }
   .tx p { margin: 0 0 6px; } .tx p b { color: #fff; }
@@ -131,6 +178,22 @@
   .plan.rec a { background: var(--orange); }
   .mentor { display: inline-block; margin-top: 4px; background: #25d366; color: #fff; text-decoration: none; padding: 11px 16px; border-radius: 12px; font-weight: 700; }
 
+  /* inside the roadmap page: one column, a slim Altron bar on top, no captions */
+  html.embed .room.on { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  html.embed .side { order: -1; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  html.embed .who { flex: 1 1 auto; min-width: 0; padding: 6px 10px; }
+  html.embed .who .orb { width: 34px; height: 34px; }
+  html.embed .round { width: 38px; height: 38px; font-size: 16px; }
+  html.embed .endbtn { padding: 8px 12px; }
+  html.embed .intro ul, html.embed .orb-big { display: none; }
+  html.embed .intro p { font-size: 14px; margin-bottom: 10px; }
+  html.embed .caption, html.embed .tx, html.embed .txbtn { display: none !important; }
+  html.embed .ctrls { padding: 6px 10px; }
+  html.embed .smsg { width: 100%; margin: 0 12px 6px; }
+  html.embed .intro { align-items: flex-start; padding: 16px 14px; }
+  html.embed .intro h1 { font-size: 24px; }
+  html.embed .orb-big { width: 56px; height: 56px; }
+  html.embed .boardwrap { padding: 10px 12px; }
   @media (max-width: 860px) {
     .room.on { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
     .side { order: -1; }
@@ -148,10 +211,10 @@
 <div class="intro" id="intro">
   <div class="card">
     <div class="orb-big"></div>
-    <div class="kick" id="kick">PROGRAM WALKTHROUGH · ABOUT 10 MINUTES</div>
+    <div class="kick" id="kick">FREE DEMO &amp; COUNSELLING · ABOUT 15 MINUTES</div>
     <h1 id="ttl">The Live Engineering Program, explained by Altron</h1>
-    <p id="lead">Altron, our AI mentor, walks you through the program by voice on a board. Ask anything, interrupt any time.</p>
-    <ul>
+    <p id="lead">Altron, our AI mentor, walks you through the program by voice on a board and helps you choose. This is a demo and counselling session; the real classes are live with our mentors (online or offline) or self-paced.</p>
+    <ul id="introList">
       <li>What we cover in each of the four stages</li>
       <li>Why it matters for your career, and how we teach it</li>
       <li>A few questions at the end, to suggest the plan that fits you</li>
@@ -188,23 +251,36 @@
       <button class="round" id="mic" type="button" title="Mute">🎙️</button>
       <button class="resume hidden" id="resume" type="button">▶ Continue</button>
       <button class="round" id="pause" type="button" title="Pause">⏸</button>
+      <button class="round" id="again" type="button" title="Not clear? Altron explains it again, simpler and slower">🤔</button>
+      <button class="round" id="pace" type="button" title="Altron's speed">🚶<small id="paceT">easy</small></button>
+      <button class="endbtn" id="endBtn" type="button">End</button>
     </div>
     <button class="txbtn" id="txbtn" type="button">Show what was said ▾</button>
     <div class="tx" id="tx"></div>
   </div>
 </div>
 
+<script src="/live/pace.js"></script>
 <script>
+  const PACE = window.AltronPace || null;                  // Altron's speaking pace (web/live/pace.js)
 (() => {
   const API = 'https://edu.altrobytelab.com';
   const WA = '917222977927';
   const P = new URLSearchParams(location.search);
+  // Opened inside the roadmap page: compact layout, and plan / mentor links open the whole page, not the frame.
+  if (P.get('embed') === '1') {
+    document.documentElement.classList.add('embed');
+    const base = document.createElement('base'); base.target = '_top'; document.head.appendChild(base);
+  }
   const $ = (id) => document.getElementById(id);
   const classId = P.get('id') || (P.get('note') ? null : 'demo');
   const noteId = P.get('note') ? Number(P.get('note')) : null;
   const isDemo = classId === 'demo';
+  // A free class a shared link opens without a sign-in (the server's GUEST_CLASSES); the WhatsApp sign-in comes after its minutes.
+  const canGuest = !noteId;
   const IDLE_S = 120;
-  let lang = P.get('lang') || 'en';
+  let lang = P.get('lang') || (canGuest ? 'hi' : 'en');   // ad leads are most at ease in Hinglish
+  if (isDemo) $('start').textContent = '▶ Start live demo';
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
   const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
   function track(e) { try { if (window.gtag) gtag('event', e); } catch (_) {} }
@@ -229,6 +305,11 @@
   let at = 0;              // section on the board
   const done = new Set();
   let checkShown = false, checkDone = false, pracDone = false;
+  // A question on the board never leaves the class stuck (8 Nov 2026, founder: Altron said "see the question" and waited
+  // forever): no answer for 5 s (or two wrong tries) shows the answer, which Altron explains, and the class goes on.
+  let checkAt = 0, checkHinted = false, wrongTries = 0;
+  // A practical on the learner's own computer cannot be done on a phone: Altron says it is for later and moves on.
+  const ON_PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, innerWidth) < 820;
 
   function clean(el) {              // the board is our note, but nothing in it may run
     el.querySelectorAll('script,iframe,object,embed,link,meta,form').forEach((x) => x.remove());
@@ -249,7 +330,9 @@
         doubts: [...s.querySelectorAll('.doubts li')].map((li) => li.textContent.trim()),
         check: check ? { q: ((check.querySelector('p:not(.why)') || {}).textContent || '').trim(), options: [...check.querySelectorAll('li')].map((li) => li.textContent.trim()),
                          answer: Number(check.dataset.answer) - 1, why: ((check.querySelector('.why') || {}).textContent || '').trim() } : null,
-        practical: prac ? { answer: prac.dataset.answer, text: prac.textContent.trim() } : null,
+        practical: prac ? { task: prac.dataset.task || 'tap', answer: prac.dataset.answer, match: prac.dataset.match || '', repo: prac.dataset.repo || '',
+                            topic: prac.dataset.topic || '', cmd: prac.dataset.cmd || '',
+                            text: prac.textContent.trim() } : null,
       };
     });
     return { lead: lead ? lead.textContent.trim() : '', mode: art.dataset ? (art.dataset.mode || 'class') : 'class', sections };
@@ -259,29 +342,50 @@
     const j = await r.json();
     if (!r.ok) throw new Error(j.detail || 'This class could not be opened.');
     klass = { title: j.title, ...parse(j.html) };
-    if (!isDemo) { $('kick').textContent = 'LIVE CLASS WITH ALTRON'; $('ttl').textContent = j.title; if (klass.lead) $('lead').textContent = klass.lead; }
+    if (!isDemo) {
+      const mins = (new DOMParser().parseFromString(j.html, 'text/html').querySelector('.altro-class') || { dataset: {} }).dataset.minutes;
+      $('kick').textContent = (canGuest ? 'FREE ' : '') + 'LIVE CLASS WITH ALTRON' + (mins ? ' · ABOUT ' + mins + ' MINUTES' : '');
+      $('ttl').textContent = j.title; if (klass.lead) $('lead').textContent = klass.lead;
+      $('introList').innerHTML = klass.sections.filter((s) => s.kind !== 'summary').map((s) => `<li>${esc(s.title)}</li>`).join('');
+      document.title = j.title + ' · Altrobyte Lab';
+    }
   }
 
   function sectionFor(i) {          // what Altron is told about a section: never the answer
     const s = klass.sections[i];
     // A part named as [id] in the notes goes in front as a cue for point_at; said aloud it would sound twice ("relay relay").
-    const cue = (t) => { const ids = [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]); const said = t.replace(/\s*\[[\w-]+\]/g, '');
-                         return (ids.length ? '(point at: ' + ids.join(', ') + ') ' : '') + said; };
-    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(cue),
+    // Which part to light up goes in its own list, never inside the words to say (Altron once read "(point at: commit)" aloud).
+    const plain = (t) => t.replace(/\s*\[[\w-]+\]/g, '');
+    const pointing = s.teach.flatMap((t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => ({ part: m[1], while_you_say: plain(t).split(/[,.:;]/)[0].slice(0, 60) })));
+    return { section: (i + 1) + ' of ' + klass.sections.length, kind: s.kind, title: s.title, points_to_teach: s.teach.map(plain), point_at_when: pointing,
              parts_you_can_point_at: s.points, check_question: s.check ? { question: s.check.q, options: s.check.options.map((o, k) => (k + 1) + '. ' + o) } : null,
-             practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts };
+             practical_task: s.practical ? s.practical.text : null, usual_doubts: s.doubts,
+             ...(ON_PHONE && s.practical && s.practical.task !== 'tap' ? { learner_device: 'The learner is on a phone and cannot do this computer task now. Say in one line that it is for later on their PC, describe simply what they will see when it works, then call show_section "next". Do not wait for it.' } : {}) };
   }
   function esc(t) { return String(t || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
   function render() {
     const s = klass.sections[at];
-    checkShown = false; checkDone = false; pracDone = false;
+    if (mq) { try { mq.end(true); } catch (_) {} mq = null; clearTimeout(mqWait); }
+    checkShown = false; checkDone = false; pracDone = false; resolvedAt = 0; resNudged = false; pracNudged = false; if (pcHold) holdForPc(false);
+    checkAt = 0; checkHinted = false; wrongTries = 0;
     $('bn').textContent = at + 1; $('bt').textContent = s.title;
     $('bk').textContent = s.kind === 'practical' ? 'TRY IT' : s.kind === 'summary' ? 'SUMMARY' : 'CONCEPT';
     $('bk').className = 'tag ' + s.kind;
     let h = '';
-    if (s.boardHtml) h += `<div class="board${s.kind === 'practical' ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
-    if (s.practical) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
+    const tap = s.practical && s.practical.task === 'tap';
+    if (s.boardHtml) h += `<div class="board${tap ? ' tappable' : ''}" id="board">${s.boardHtml}</div>`;
+    if (tap) h += `<div class="task" id="task">👆 ${esc(s.practical.text)}</div>`;
+    else if (s.practical && s.practical.task === 'paste') h += `<div class="pc" id="pc"><div class="t">💻 Try it: ${esc(taskText(s.practical.text))}</div>
+      <div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional. The class carries on either way.'}</div>${DONE_LATER}
+      <details class="err"><summary>Got an error? Paste it here and Altron will help</summary>
+      <textarea id="pcIn" spellcheck="false" placeholder="Paste the error or the output here"></textarea><div class="row"><button type="button" id="pcGo">Ask Altron</button></div></details><div class="res" id="pcRes"></div></div>`;
+    else if (s.practical && s.practical.task === 'mqtt') h += `<div class="pc" id="pc"><div class="t">📡 ${esc(s.practical.text)}</div><div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional: upload the code, type your NAME and tap Listen. The class carries on either way.'}</div>${DONE_LATER}
+      <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your NAME from the code" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Listen</button></div>
+      ${s.practical.cmd ? '<div class="row cmds hidden" id="pcCmd"><button type="button" data-cmd="ON">💡 Send ON</button><button type="button" class="off" data-cmd="OFF">Send OFF</button></div>' : ''}
+      <div class="live" id="pcLive"></div><div class="res" id="pcRes"></div></div>`;
+    else if (s.practical && s.practical.task === 'github') h += `<div class="pc" id="pc"><div class="t">💻 ${esc(s.practical.text)}</div><div class="opt">${ON_PHONE ? PHONE_NOTE : 'Optional: push from your PC, type your username and tap Check. The class carries on either way.'}</div>${DONE_LATER}
+      <div class="row"><input id="pcIn" style="flex:1;min-width:160px" placeholder="your GitHub username" autocapitalize="off" spellcheck="false"><button type="button" id="pcGo">Check on GitHub</button></div><div class="res" id="pcRes"></div></div>`;
     if (s.teach.length) {
       const ids = (t) => [...t.matchAll(/\[([\w-]+)\]/g)].map((m) => m[1]).join(' ');
       h += `<div class="notes"><div class="nh">📝 NOTES</div><ul>${s.teach.map((t) => `<li data-ids="${esc(ids(t))}">${esc(t.replace(/\s*\[[\w-]+\]/g, ''))}</li>`).join('')}</ul></div>`;
@@ -291,17 +395,47 @@
     }
     h += '<div id="checkHost"></div><div id="endHost"></div>';
     $('bbody').innerHTML = h;
-    if (s.kind === 'practical') {
+    $('bbody').classList.remove('slide-in'); void $('bbody').offsetWidth; $('bbody').classList.add('slide-in');
+    document.querySelectorAll('.notes li').forEach((li, k) => { li.style.animationDelay = (0.25 + k * 0.12) + 's'; });
+    for (const pre of document.querySelectorAll('#board pre')) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'cp'; b.textContent = 'Copy';
+      b.onclick = () => { const text = [...pre.childNodes].filter((n) => n !== b).map((n) => n.textContent).join('').trim();
+        const ok = () => { b.textContent = 'Copied'; b.classList.add('ok'); setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('ok'); }, 1500); };
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => {}); };
+      pre.appendChild(b);
+    }
+    onlyMyOs();
+    deskHint();
+    if ($('pcGo')) {
+      const run = { github: checkGithub, mqtt: checkMqtt }[s.practical.task] || checkPaste;
+      $('pcGo').onclick = () => run();
+      if (s.practical.task !== 'paste') { $('pcIn').value = store.get(s.practical.task === 'mqtt' ? 'altron_mq' : 'altron_gh') || ''; $('pcIn').onkeydown = (e) => { if (e.key === 'Enter') run(); }; }
+      for (const b of document.querySelectorAll('#pcCmd button')) b.onclick = () => sendCmd(b.dataset.cmd);
+    }
+    if ($('pcDone')) { $('pcDone').onclick = () => pcSkip(true); $('pcLater').onclick = () => pcSkip(false); }
+    if (tap) {
       for (const el of document.querySelectorAll('#board [data-point]')) el.addEventListener('click', () => tapPart(el.dataset.point));
     }
     $('dots').innerHTML = klass.sections.map((_, k) => `<i class="${k === at ? 'now' : done.has(k) ? 'done' : ''}"></i>`).join('');
     $('prev').disabled = at === 0; $('next').disabled = at >= klass.sections.length - 1;
     document.querySelector('.boardwrap').scrollTop = 0;
   }
+  // The CRM line says how far into the demo they got (one report each time they reach a further part).
+  let furthest = -1;
+  const leadCode = (() => { const l = P.get('l'); if (l) store.set('altron_lead', l); return l || store.get('altron_lead') || ''; })();
+  function reachedPart() {
+    if (!isDemo || at <= furthest || (!token() && !leadCode)) return;
+    furthest = at;
+    const detail = `${at + 1} of ${klass.sections.length}`;
+    try {
+      if (token()) fetch(API + '/crm/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ what: 'demo', detail }) });
+      else fetch(API + '/public/lead/seen', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead: leadCode, what: 'demo', detail }) });
+    } catch (_) {}
+  }
   let movedAt = 0, spokeHere = true;      // when the board last moved, and whether Altron has spoken since
   function go(i, byLearner) {
     if (i < 0 || i >= klass.sections.length) return false;
-    done.add(at); at = i; render(); movedAt = Date.now(); spokeHere = !!byLearner;
+    done.add(at); at = i; render(); movedAt = Date.now(); spokeHere = !!byLearner; reachedPart();
     if (byLearner) tell('[Screen] The learner moved the board to section ' + (i + 1) + '. Teach it: ' + JSON.stringify(sectionFor(i)));
     if (klass.sections[at].kind === 'summary') { done.add(at); if (!isDemo && at === klass.sections.length - 1) showDone(); }
     saveProgress();
@@ -325,19 +459,40 @@
   function showCheck() {
     const s = klass.sections[at]; if (!s.check || checkShown) return !!s.check;
     checkShown = true;
-    $('checkHost').innerHTML = `<div class="check"><div class="q">${esc(s.check.q)}</div><div class="opts">${s.check.options.map((o, k) => `<button type="button" data-k="${k}">${k + 1}. ${esc(o)}</button>`).join('')}</div><div class="why" id="why"></div></div>`;
-    for (const b of document.querySelectorAll('#checkHost .opts button')) b.onclick = () => { const r = answer(Number(b.dataset.k)); tell('[Screen] The learner tapped option ' + (Number(b.dataset.k) + 1) + ' (' + s.check.options[b.dataset.k] + '): ' + (r.correct ? 'right' : 'not right') + '. Why: ' + s.check.why); };
+    $('checkHost').innerHTML = `<div class="check"><div class="q">${esc(s.check.q)}</div><div class="opts">${s.check.options.map((o, k) => `<button type="button" data-k="${k}">${k + 1}. ${esc(o)}</button>`).join('')}</div><div class="why" id="why"></div><div class="chelp" id="chelp"><button type="button" id="chAgain">🤔 Not clear, explain again</button><button type="button" id="chShow">Show the answer</button></div></div>`;
+    checkAt = Date.now();
+    for (const b of document.querySelectorAll('#checkHost .opts button')) b.onclick = () => {
+      const k = Number(b.dataset.k), r = answer(k);
+      if (r.correct) return tell('[Screen] The learner tapped option ' + (k + 1) + ' (' + s.check.options[k] + '): right. Why: ' + s.check.why + ' Praise them in one short line, say why in simple words, then call show_section "next".');
+      if (wrongTries >= 2) return reveal('The learner was wrong twice (last tap: option ' + (k + 1) + ', ' + s.check.options[k] + ').');
+      tell('[Screen] The learner tapped option ' + (k + 1) + ' (' + s.check.options[k] + '): not right. Do not just say wrong: say kindly what part of that thinking is fair, give ONE hint with an everyday example, without saying the answer, and ask them to try again.');
+    };
+    $('chAgain').onclick = () => { lastHuman = Date.now(); checkAt = Date.now(); checkHinted = true;
+      tell('[Screen] The learner tapped "Not clear, explain again". Explain the idea behind this question again, slower and in a different way, for a fresher who has never seen it: one everyday example, step by step, in three or four short sentences. Do not say which option is right. Then ask them to try.'); };
+    $('chShow').onclick = () => { lastHuman = Date.now(); reveal('The learner tapped "Show the answer".'); };
     $('checkHost').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
   }
   function answer(k) {               // the page checks: the model never knows the answer before this
-    const s = klass.sections[at]; showCheck();
+    const s = klass.sections[at]; showCheck(); lastHuman = Date.now();
     const btns = document.querySelectorAll('#checkHost .opts button');
     const correct = k === s.check.answer;
     btns.forEach((b, i) => { b.classList.toggle('wrong', i === k && !correct); if (correct) { b.disabled = true; b.classList.toggle('right', i === k); } });
     $('why').innerHTML = correct ? '✅ <b>Right.</b> ' + esc(s.check.why) : '❌ Not quite. Try another one.';
-    if (correct) { checkDone = true; done.add(at); saveProgress(); }
+    if (correct) { checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); if ($('chelp')) $('chelp').remove(); }
+    else wrongTries++;
     return { correct, chosen: s.check.options[k], why: correct ? s.check.why : 'not told yet: let them try again with a hint' };
+  }
+  // The page shows the right answer and Altron explains it; the class then moves on (by itself if Altron stays quiet).
+  function reveal(why) {
+    const s = klass.sections[at]; if (!s.check || checkDone) return;
+    showCheck();
+    document.querySelectorAll('#checkHost .opts button').forEach((b, i) => { b.disabled = true; b.classList.remove('wrong'); b.classList.toggle('right', i === s.check.answer); });
+    $('why').innerHTML = '💡 <b>The answer: ' + (s.check.answer + 1) + '. ' + esc(s.check.options[s.check.answer]) + '.</b> ' + esc(s.check.why);
+    if ($('chelp')) $('chelp').remove();
+    checkDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); resNudged = true;
+    tell('[Screen] ' + why + ' The page now shows the right answer: option ' + (s.check.answer + 1) + ' (' + s.check.options[s.check.answer] + '). Reason: ' + s.check.why +
+         ' Explain why it is right in simple words, like to a fresher, with one everyday example, in two or three short sentences. Then call show_section "next".');
   }
   function tapPart(part) {
     const s = klass.sections[at]; if (!s.practical || pracDone) return;
@@ -345,8 +500,158 @@
     const right = part === s.practical.answer;
     el.forEach((x) => { x.classList.add(right ? 'right' : 'wrong'); if (!right) setTimeout(() => x.classList.remove('wrong'), 1200); });
     $('task').innerHTML = right ? '✅ Right! That is the one.' : '👆 Not that one. Try again: ' + esc(s.practical.text);
-    if (right) { pracDone = true; done.add(at); saveProgress(); }
+    if (right) { pracDone = true; done.add(at); saveProgress(); resolvedAt = Date.now(); }
     tell('[Screen] On the practical the learner tapped "' + part + '": ' + (right ? 'right' : 'not right, they will try again') + '.');
+  }
+
+  // A practical on the learner's own PC. The page checks it (a pattern from the note, or GitHub's public API); Altron only
+  // hears the result, and on a miss the start of what they pasted, so it can read the error and help.
+  // While they work on their PC the talk is on hold: the line stays open but no sound is sent, so silence costs nothing,
+  // and a Check (or the mic button) brings Altron straight back.
+  let pcHold = false, pracNudged = false;
+  // A board with one card per operating system (data-point win / mac / linux) shows only the learner's, with a link to
+  // the others: three sets of commands at once was too much on one slide.
+  const MY_OS = /Mac|iPhone|iPad/i.test(navigator.userAgent) ? 'mac' : /Linux|Android|CrOS/i.test(navigator.userAgent) ? 'linux' : 'win';
+  function onlyMyOs() {
+    const cards = [...document.querySelectorAll('#board [data-point="win"], #board [data-point="mac"], #board [data-point="linux"]')];
+    if (cards.length < 2 || !cards.some((c) => c.dataset.point === MY_OS)) return;
+    const others = cards.filter((c) => c.dataset.point !== MY_OS);
+    others.forEach((c) => c.classList.add('os-hide'));
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'os-all';
+    b.textContent = MY_OS === 'win' ? 'Using a Mac or Linux? Show those steps' : 'Show the steps for other computers';
+    b.onclick = () => { others.forEach((c) => c.classList.remove('os-hide')); b.remove(); };
+    cards[cards.length - 1].parentElement.after(b);
+  }
+  const PHONE_NOTE = '📱 This step is done on a laptop or PC. On the phone now? Tap <b>Later</b>: it stays in your homework and the class carries on.';
+  const DONE_LATER = '<div class="row dl"><button type="button" id="pcDone">✅ Done</button><button type="button" class="later" id="pcLater">Later →</button></div>';
+  // The note's task says "...and paste what it prints": the paste is optional now, so that part is left off.
+  function taskText(t) { return String(t || '').replace(/[,;]?\s*(and |then )?(paste|type)\b.*$/i, '').replace(/[.\s]*$/, '') + '.'; }
+  // Done or Later: the practical is homework, never a stop. Altron says a line and moves on.
+  // A practical on the PC: one small line offers the Altrobyte Trainer app, which builds, uploads and checks the board for
+  // the learner (8 Nov 2026, founder: "an option to download on the PC, light, never a barrier to learning on the web").
+  // Shown on a computer only, and only once an installer is published (downloads/desktop.json; its url may point to a
+  // release elsewhere). Nothing waits for it.
+  let deskInfo;
+  function deskHint() {
+    const box = $('pc'); if (!box || ON_PHONE || !/Windows/i.test(navigator.userAgent)) return;
+    const show = (d) => {
+      if (!d || !$('pc') || $('desk')) return;
+      const href = d.url || ('/downloads/' + (d.file || 'AltrobyteTrainerSetup.exe'));
+      const el = document.createElement('div'); el.className = 'desk'; el.id = 'desk';
+      el.innerHTML = '💻 Easier on your PC: the <a href="' + esc(href) + '" target="_blank" rel="noopener">Altrobyte Trainer app</a>' +
+        (d.size ? ' (' + Math.round(d.size / 1048576) + ' MB, Windows)' : ' (Windows)') + ' builds, uploads and checks your board for you. Optional.';
+      el.querySelector('a').onclick = () => track('desktop_download');
+      $('pc').appendChild(el);
+    };
+    if (deskInfo !== undefined) return show(deskInfo);
+    fetch('/downloads/desktop.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).catch(() => null)
+      .then((d) => { deskInfo = d && (d.url || d.file) ? d : null; show(deskInfo); });
+  }
+  function pcSkip(didIt) {
+    pracDone = true; done.add(at); saveProgress(); $('pc').classList.add('done');
+    $('pcRes').className = 'res ok'; $('pcRes').textContent = didIt ? '✅ Nice work. Moving on.' : '👍 No problem. Do it later; it stays in the notes.';
+    lastHuman = Date.now(); resolvedAt = Date.now();
+    if (running) tell('[Screen] On the practical the learner tapped ' + (didIt ? '"Done": they did it.' : '"Later": they will do it after the class.') + ' Say one short line and call show_section "next".');
+    else setTimeout(() => go(at + 1, true), 900);
+  }
+  function holdForPc(on) {
+    pcHold = on;
+    $('smsg').textContent = on ? 'Altron is waiting while you work on your PC. Paste the output and tap Check, or tap 🎙️ to ask something.' : '';
+    $('smsg').style.color = '#ffd8bd';
+    status(on ? 'waiting for you' : 'listening', on ? '' : 'live');
+    lastActive = Date.now();
+  }
+  function pcResult(right, msg, said) {
+    const s = klass.sections[at];
+    $('pcRes').className = 'res ' + (right ? 'ok' : 'bad'); $('pcRes').textContent = msg;
+    if (right) { pracDone = true; done.add(at); $('pc').classList.add('done'); saveProgress(); resolvedAt = Date.now(); }
+    lastHuman = Date.now();
+    const line = '[Screen] On the practical "' + s.practical.text + '" the page says: ' + (right ? 'done, it worked.' : 'not yet. ' + said);
+    if (pcHold) holdForPc(false);
+    if (running) tell(line);
+    else $('smsg').textContent = 'Tap Continue: Altron will carry on from here.';
+  }
+  function checkPaste() {
+    const s = klass.sections[at]; if (pracDone) return;
+    const text = $('pcIn').value;
+    if (!text.trim()) return pcResult(false, 'Paste the output first.', 'Nothing was pasted yet.');
+    if (/PRIVATE KEY/.test(text)) {          // never keep, show or send a private key
+      $('pcIn').value = '';
+      return pcResult(false, '⚠️ That is your PRIVATE key. Never share it, not even here. Paste the line from the .pub file instead.',
+                      'They pasted their private key by mistake; the page removed it. Tell them never to share that file and to show the .pub file.');
+    }
+    let re; try { re = new RegExp(s.practical.match, 'im'); } catch (_) { re = null; }
+    if (!re || re.test(text)) return pcResult(true, '✅ That worked. Nice!', '');
+    pcResult(false, '❌ Not what we expect yet. Altron will help, or open the common questions below.', 'They pasted: "' + text.trim().slice(0, 400) + '"');
+  }
+  async function checkGithub() {
+    const s = klass.sections[at]; if (pracDone) return;
+    const u = $('pcIn').value.trim().replace(/^@/, '').replace(/^https?:\/\/github\.com\//i, '').split('/')[0];
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(u)) return pcResult(false, 'Type your GitHub username, like pawan-dev.', 'The username they typed is not a valid GitHub username.');
+    store.set('altron_gh', u);
+    $('pcRes').className = 'res'; $('pcRes').textContent = 'Checking GitHub…';
+    try {
+      const r = await fetch('https://api.github.com/repos/' + encodeURIComponent(u) + '/' + encodeURIComponent(s.practical.repo) + '/commits?per_page=1',
+                            { headers: { Accept: 'application/vnd.github+json' } });
+      if (r.ok) {
+        const c = (await r.json())[0];
+        const m = c && c.commit ? c.commit.message.split('\n')[0] : '';
+        return pcResult(true, '✅ Found it: github.com/' + u + '/' + s.practical.repo + (m ? ', last commit "' + m + '"' : '') + '. Your code is on GitHub!', '');
+      }
+      if (r.status === 409) return pcResult(false, '❌ The repo is there but empty: your push has not reached GitHub yet.', 'The repo exists but has no commits: git push has not worked yet.');
+      if (r.status === 404) return pcResult(false, '❌ No public repo called ' + s.practical.repo + ' for ' + u + '. Check the name, and that it is Public.',
+                                            'GitHub has no public repo with that name for that username (wrong name, wrong username, or private).');
+      if (r.status === 403 || r.status === 429) return pcResult(false, 'GitHub is busy (too many checks from this network). Try again in a few minutes.', 'GitHub refused the check for now (rate limit), not their mistake.');
+      pcResult(false, 'GitHub could not be checked. Try again.', 'GitHub could not be reached.');
+    } catch (_) { pcResult(false, 'GitHub could not be reached. Check your internet and try again.', 'GitHub could not be reached from their network.'); }
+  }
+
+  // An MQTT practical: the page joins the same public broker as the learner's board (over a websocket), listens on their
+  // topic and shows each message live; it can send their board a command. Passing = a message that matches arrives.
+  let mq = null, mqWait = 0, mqLib = null;
+  function loadMqtt() {
+    if (window.mqtt) return Promise.resolve(window.mqtt);
+    if (!mqLib) mqLib = new Promise((ok, bad) => { const sc = document.createElement('script'); sc.src = 'https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js';
+      sc.onload = () => ok(window.mqtt); sc.onerror = () => { mqLib = null; bad(new Error('no mqtt')); }; document.head.appendChild(sc); });
+    return mqLib;
+  }
+  const mqTopic = (t, name) => t.replace('{name}', name);
+  async function checkMqtt() {
+    const s = klass.sections[at]; if (pracDone && !s.practical.cmd) return;
+    const name = $('pcIn').value.trim().toLowerCase();
+    if (!/^[a-z0-9_-]{1,30}$/.test(name)) return pcResult(false, 'Type the NAME from your code: small letters, no spaces.', 'The name they typed is not a valid topic name.');
+    store.set('altron_mq', name);
+    const topic = mqTopic(s.practical.topic, name);
+    $('pcRes').className = 'res'; $('pcRes').textContent = 'Connecting to broker.hivemq.com…';
+    let lib; try { lib = await loadMqtt(); } catch (_) { return pcResult(false, 'The MQTT helper could not load. Check your internet and tap Listen again.', 'The page could not load its MQTT helper (their internet).'); }
+    if (mq) { try { mq.end(true); } catch (_) {} }
+    const me = lib.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: 'altro-class-' + Math.random().toString(16).slice(2, 10), clean: true, connectTimeout: 8000, reconnectPeriod: 0 });
+    mq = me;
+    me.on('connect', () => {
+      if (mq !== me) return;
+      me.subscribe(topic);
+      $('pcRes').textContent = '👂 Listening on ' + topic + ' …';
+      if ($('pcCmd')) $('pcCmd').classList.remove('hidden');
+      clearTimeout(mqWait);
+      mqWait = setTimeout(() => { if (mq === me && !pracDone) pcResult(false, '⌛ Nothing on ' + topic + ' for 60 seconds. Open the Serial Monitor: does it say Wi-Fi connected and MQTT connected? Is NAME the same in the code and here?',
+        'No message arrived on ' + topic + ' in 60 seconds.'); }, 60000);
+    });
+    me.on('error', () => { if (mq === me) pcResult(false, 'Could not reach the broker from this network. Try again, or another network.', 'The page could not reach the MQTT broker from their network.'); });
+    me.on('message', (t, buf) => {
+      if (mq !== me) return;
+      const msg = String(buf).slice(0, 200);
+      const line = document.createElement('div'); line.innerHTML = '<i>' + new Date().toLocaleTimeString() + '</i> ' + esc(msg);
+      $('pcLive').appendChild(line); while ($('pcLive').children.length > 8) $('pcLive').firstChild.remove(); $('pcLive').scrollTop = 1e9;
+      let re = null; try { re = s.practical.match ? new RegExp(s.practical.match, 'i') : null; } catch (_) {}
+      if (!pracDone && (!re || re.test(msg))) { clearTimeout(mqWait); pcResult(true, (s.practical.cmd ? '✅ Your board obeyed and reported back: ' : '✅ Your board is on the internet. It just said: ') + msg, ''); }
+    });
+  }
+  function sendCmd(cmd) {
+    const s = klass.sections[at]; const name = store.get('altron_mq') || '';
+    if (!mq || !mq.connected || !name) return;
+    mq.publish(mqTopic(s.practical.cmd, name), cmd);
+    $('pcRes').className = 'res'; $('pcRes').textContent = '📤 Sent ' + cmd + ' to ' + mqTopic(s.practical.cmd, name) + '. Watch your LED and the messages above.';
+    lastHuman = Date.now();
   }
 
   const NUM = { one: 1, first: 1, ek: 1, pehla: 1, two: 2, second: 2, do: 2, doosra: 2, dusra: 2, three: 3, third: 3, teen: 3, teesra: 3, tisra: 3, four: 4, fourth: 4, char: 4, chaar: 4 };
@@ -400,38 +705,66 @@
     const cards = plans.map((p) => {
       const price = plansData.offer_on ? p.offer : (p.standard || p.offer);
       return `<div class="plan${p.key === recKey ? ' rec' : ''}">${p.key === recKey ? '<span class="rb">ALTRON SUGGESTS</span>' : ''}<h3>${esc(p.name || p.key)}</h3>
-        <div class="price">${inr(gst(price))}${p.standard && plansData.offer_on ? `<s>${inr(gst(p.standard))}</s>` : ''}</div>
-        <div class="small">incl. GST · ${esc(p.period || '')}</div><div class="small">${esc((p.features || [])[0] || '')}</div>
+        <div class="price">${inr(price)} <span class="small">+ GST</span>${p.standard > price ? `<s>${inr(p.standard)}</s>` : ''}</div>
+        <div class="small">${esc(p.period || '')} · ${inr(gst(price))} incl. GST</div><div class="small">${esc((p.features || [])[0] || '')}</div>
         <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'product-engineering')}?plan=${encodeURIComponent(p.key)}">Book my seat</a></div>`;
     }).join('');
-    const text = encodeURIComponent(`Hi, I just took the free Altron class.${rec ? ' Altron suggested ' + rec + '.' : ''} I want to know more.`);
+    const text = encodeURIComponent(`Hi, I just took the free Altron demo.${rec ? ' Altron suggested: ' + rec + '.' : ''}${why ? ' (' + why + ')' : ''} Please send me my plan and the next batch details.`);
     $('endHost').innerHTML = `<div style="margin-top:12px"><h3 style="margin:0 0 4px">Your path${rec ? ': ' + esc(rec) : ''}</h3>
       ${why ? `<p style="margin:0 0 10px;color:var(--soft)">${esc(why)}</p>` : ''}
       ${cards ? `<div class="plans">${cards}</div>` : ''}
+      <div class="seat"><div><b>Not ready to pay the fee today?</b><div class="small">Book your seat in the next batch for ₹999 with GST. It is adjusted in your fee.</div></div>
+        <a href="/enroll/${encodeURIComponent(plansData.enrol_slug || 'program-enrolment')}?plan=token">Book my seat · ₹999</a></div>
       <p style="margin:12px 0 4px;color:var(--soft)">Not sure yet? A mentor answers on WhatsApp, no pressure.</p>
-      <a class="mentor" href="https://wa.me/${WA}?text=${text}" target="_blank" rel="noopener">💬 Talk to a mentor</a></div>`;
+      <a class="mentor" href="https://wa.me/${WA}?text=${text}" target="_blank" rel="noopener" style="font-size:16px;padding:13px 18px">💬 Get my plan on WhatsApp</a></div>`;
     $('endHost').scrollIntoView({ behavior: 'smooth', block: 'start' });
     track('class_plans_shown');
   }
 
   // ── Altron: Gemini Live, the same metering as the app ──
-  let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = true, ticker = null;
+  let running = false, ws = null, micStream = null, inCtx = null, outCtx = null, micOn = isDemo, ticker = null;
   let setup = null, wsUrl = '', handle = null, playing = [], nextAt = 0, tutorLine = '', youLine = '', lastActive = Date.now();
   let conn = null, rotateAt = 0, firstStart = true, heard = '', lastState = '';
+  // Someone who starts a walkthrough and walks away must not leave Altron talking to an empty room: only the learner's
+  // voice or taps count as them being there. After the closing counselling the session ends by itself.
+  let lastHuman = Date.now(), ending = false, endAt = 0;
+  const AWAY_S = 180;
+  let askedThem = false;            // Altron's last turn ended on a question: wait for the answer, never nudge past it
   // A walkthrough is a talk: when Altron stops and the learner stays quiet, it is told to carry on (once per pause).
   let waitingForThem = false, nudged = false;
+  // A section the learner has finished (check right, practical done): if Altron goes quiet instead of moving on (seen in a
+  // live test: it answered "..."), it is nudged once, and then the board moves on by itself.
+  let resolvedAt = 0, resNudged = false;
   function status(text, cls) {
     $('status').textContent = text;
     $('orb').className = 'orb' + (cls === 'talk' ? ' talk' : cls === 'live' ? '' : ' off');
     if (text !== lastState) { lastState = text; try { if (host) host.postMessage(JSON.stringify({ type: 'state', state: cls || 'idle' })); } catch (_) {} }
   }
   function txLine(who, text) { const p = document.createElement('p'); p.innerHTML = `<b>${who}:</b> ${esc(text)}`; $('tx').appendChild(p); $('tx').scrollTop = 1e9; }
+  // The demo runs whole without a sign-in (the server's guest token, renewed like any session); leads come from WhatsApp,
+  // so the plan at the end is sent to us there. A visitor id on this device keeps the daily minutes fair.
+  let guest = false, guestDone = false;
+  const visitorId = (() => { let v = store.get('altron_vid'); if (!v) { v = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('altron_vid', v); } return v; })();
   async function fetchToken(resume) {
+    if (canGuest && !token()) {
+      if (guestDone) throw Object.assign(new Error('Sign in with your WhatsApp number to carry on.'), { signin: true });
+      const g = await fetch(API + '/trainer/live/guest-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_id: classId, lang, visitor: visitorId }) });
+      const gb = await g.json().catch(() => ({}));
+      if (g.status === 429 && !isDemo) { guestDone = true; throw Object.assign(new Error('Sign in with your WhatsApp number to carry on with the class.'), { signin: true }); }
+      if (g.status === 429) throw Object.assign(new Error(gb.detail || "You have had today's free demo."), { out: true });
+      if (!g.ok) { guestDone = true; throw Object.assign(new Error(gb.detail || 'Sign in with your WhatsApp number to start.'), { signin: true }); }
+      guest = true; track('class_guest_started');
+      return gb;
+    }
+    guest = false;
     const r = await fetch(API + '/trainer/live/token', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() },
       body: JSON.stringify({ class_id: classId, content_id: noteId, lang, resume: !!resume }) });
     const b = await r.json().catch(() => ({}));
     if (r.status === 401) throw Object.assign(new Error('Please sign in first.'), { signin: true });
+    // A Google account has no WhatsApp number: Altron asks for the WhatsApp sign-in, so the team can follow up.
+    if (r.status === 403 && String(b.detail || '').startsWith('PHONE_NEEDED')) throw Object.assign(new Error(String(b.detail).replace(/^PHONE_NEEDED:\s*/, '')), { signin: true });
     if (r.status === 429) throw Object.assign(new Error(b.detail || 'Your class time is used up for today.'), { out: true });
+    if (r.status === 402) throw Object.assign(new Error(String(b.detail || '').replace(/^ACCESS_NEEDED:\s*/, '') || 'Altron as your trainer is part of Self-paced.'), { out: true });
     if (!r.ok) throw new Error(b.detail || 'Altron could not start. Try again in a minute.');
     return b;
   }
@@ -460,7 +793,7 @@
     await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC], { type: 'application/javascript' })));
     const node = new AudioWorkletNode(inCtx, 'mic');
     node.port.onmessage = (e) => {
-      if (!micOn || !ready()) return;
+      if (!micOn || pcHold || !ready()) return;
       const d = e.data;
       if (ratio === 1) { for (const v of d) pcm.push(v); } else { for (let i = 0; i < d.length / ratio; i++) pcm.push(d[Math.floor(i * ratio)]); }
       if (pcm.length >= 1600) {
@@ -477,13 +810,17 @@
     if (!outCtx) outCtx = new AudioContext();
     const raw = atob(data), n = raw.length / 2, f = new Float32Array(n);
     for (let i = 0; i < n; i++) { let v = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8); if (v >= 0x8000) v -= 0x10000; f[i] = v / 0x8000; }
-    const buf = outCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
-    const node = outCtx.createBufferSource(); node.buffer = buf; node.connect(outCtx.destination);
-    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration;
+    const g = PACE ? PACE.stretch(f) : f, rate = PACE ? PACE.rate() : 1;      // an easier pace: longer pauses, a slower voice
+    const buf = outCtx.createBuffer(1, g.length, 24000); buf.copyToChannel(g, 0);
+    const node = outCtx.createBufferSource(); node.buffer = buf; node.playbackRate.value = rate; node.connect(outCtx.destination);
+    nextAt = Math.max(nextAt, outCtx.currentTime + 0.02); node.start(nextAt); nextAt += buf.duration / rate;
     playing.push(node); node.onended = () => { playing = playing.filter((x) => x !== node); lastActive = Date.now(); if (!playing.length && running) status('listening', 'live'); };
     lastActive = Date.now(); status('talking', 'talk');
   }
-  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; }
+  function hush() { for (const n of playing) { try { n.stop(); } catch (_) {} } playing = []; nextAt = 0; if (PACE) PACE.reset(); }
+  // The board and the note move when the voice gets there, not when the words were made: the voice is played slower than
+  // it arrives (pace.js), so a tool call waits for what was already said to be heard (15 s at most).
+  async function voiceCaughtUp() { const t0 = Date.now(); while (running && outCtx && nextAt - outCtx.currentTime > 0.25 && Date.now() - t0 < 15000) await new Promise((r) => setTimeout(r, 120)); }
   function ready() { return ws && ws.readyState === 1 && ws.__ready; }
   function note(text) { if (!ready()) return false; ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text }] }], turnComplete: true } })); lastActive = Date.now(); return true; }
   function tell(text) { heard = ''; return note(String(text).slice(0, 1800)); }
@@ -493,6 +830,7 @@
     const responses = [];
     for (const c of calls || []) {
       const a = c.args || {}; let r;
+      if (c.name === 'show_section' || c.name === 'point_at' || c.name === 'ask_check') await voiceCaughtUp();
       if (c.name === 'get_section') r = sectionFor(at);
       else if (c.name === 'show_section') {
         const v = String(a.section || 'next').toLowerCase();
@@ -515,9 +853,13 @@
           heard = '';
         }
       } else if (c.name === 'save_counselling') {
-        try { await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) }); } catch (_) {}
+        try {
+          if (token()) await fetch(API + '/trainer/live/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() }, body: JSON.stringify({ class_id: classId, ...a }) });
+          else if (leadCode) await fetch(API + '/public/lead/counselling', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead: leadCode, ...a }) });
+        } catch (_) {}
         showEnd(a.plan, a.why); track('class_counselling_done');
-        r = { saved: true, screen: 'the plans are on their screen now, the suggested one marked, with Book my seat and Talk to a mentor buttons' };
+        r = { saved: true, screen: 'the plans are on their screen now, the suggested one marked, with a Rs 999 seat booking and a Talk to a mentor button. Say your two sentences and goodbye; the session then ends.' };
+        ending = true; endAt = Date.now() + 45000;          // ends after the goodbye (or in 45 s at the latest)
       } else r = { error: 'Unknown tool.' };
       responses.push({ id: c.id, name: c.name, response: r });
     }
@@ -535,7 +877,9 @@
       if (m.setupComplete) {
         me.__ready = true; status('listening', 'live');
         const name = (store.get('adm_name') || '').split(' ')[0];
-        if (kind === 'first') note(`The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
+        if (kind === 'first') note(isDemo
+          ? `The demo has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence and begin the opening counselling: ask what they do now.`
+          : `The class has started${name ? '; the learner is ' + name : ''}. Greet them in one short sentence, call get_section and teach section 1.`);
         else if (kind === 'continue') note('[The learner is back after a pause. Welcome them back in a few words and carry on from section ' + (at + 1) + ': ' + JSON.stringify(sectionFor(at)) + ']');
       }
       if (m.toolCall) onTools(m.toolCall.functionCalls);
@@ -544,10 +888,10 @@
       if (sc) {
         if (sc.interrupted) hush();
         for (const p of (sc.modelTurn && sc.modelTurn.parts) || []) if (p.inlineData && p.inlineData.data) play(p.inlineData.data);
-        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.slice(-320); }
-        if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
+        if (sc.outputTranscription && sc.outputTranscription.text) { tutorLine += sc.outputTranscription.text; spokeHere = true; $('capT').textContent = tutorLine.replace(/\(point at:[^)]*\)\s*/gi, '').slice(-320); }
+        if (sc.inputTranscription && sc.inputTranscription.text) { waitingForThem = false; youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); lastHuman = Date.now(); $('capY').textContent = 'You: ' + youLine.slice(-140); }
         if (sc.turnComplete) {
-          if (tutorLine.trim()) { waitingForThem = true; nudged = false; }
+          if (tutorLine.trim()) { waitingForThem = true; nudged = false; askedThem = /\?\s*$/.test(tutorLine.trim()); if (ending) endAt = Math.min(endAt, Date.now() + 2500); }
           if (youLine.trim()) txLine('You', youLine.trim()); if (tutorLine.trim()) txLine('Altron', tutorLine.trim()); tutorLine = ''; youLine = '';
         }
       }
@@ -564,7 +908,7 @@
     endConn();
     try { const t = await fetchToken(true); wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup; conn = newConn(t);
           rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000; connect('renew'); }
-    catch (e) { stop(e.out ? e.message : 'The connection dropped. Tap Continue to carry on.', !e.out); }
+    catch (e) { if (e.signin) { stop(''); askSignin(); } else stop(e.out ? e.message : 'The connection dropped. Tap Continue to carry on.', !e.out); }
     renewing = false;
   }
   async function begin() {
@@ -573,20 +917,54 @@
     wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
     await startMic();
     outCtx = outCtx || new AudioContext(); if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
+    if (outCtx.state !== 'running') {
+      $('smsg').textContent = 'Tap anywhere to hear Altron.';
+      document.addEventListener('pointerdown', () => { outCtx.resume().catch(() => {}); $('smsg').textContent = ''; }, { once: true });
+    }
     running = true; conn = newConn(t); rotateAt = Date.now() + Math.max(30, (t.seconds || 600) - 10) * 1000;
-    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now();
+    connect(firstStart ? 'first' : 'continue'); firstStart = false; lastActive = Date.now(); lastHuman = Date.now(); reachedPart();
     clearInterval(ticker); ticker = setInterval(tick, 1000);
     $('resume').classList.add('hidden'); $('pause').classList.remove('hidden'); $('mic').classList.remove('hidden');
     if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';
   }
   function tick() {
     if (!running) return;
+
     if (Date.now() >= rotateAt) return renew();
     // ...but never while a question on the board waits for their answer
-    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !(checkShown && !checkDone) && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
+    if (ending && Date.now() >= endAt && !playing.length) return finish();
+    if (klass && klass.mode === 'walkthrough' && !playing.length && (Date.now() - lastHuman) / 1000 >= AWAY_S)
+      return pause('Paused because you seem to be away. Tap Continue when you are back.');
+    if (klass && klass.mode === 'walkthrough' && waitingForThem && !nudged && !ending && !askedThem && !(checkShown && !checkDone) && !playing.length && !$('doneCard') && Date.now() - lastActive > 7000) {
       nudged = true;
       note('[The learner is listening quietly and has no question. Carry on: finish this section, or call show_section "next".]');
       return;
+    }
+    // A class with the mic off: the learner cannot answer by voice, so when Altron stops it is told to carry on (once per
+    // pause; a practical has its own, longer wait below).
+    const sNow = klass && klass.sections[at];
+    if (klass && klass.mode !== 'walkthrough' && !micOn && waitingForThem && !nudged && !ending && !(checkShown && !checkDone) && !playing.length
+        && !(sNow && sNow.practical && sNow.practical.task !== 'tap' && !pracDone) && Date.now() - lastActive > (askedThem ? 12000 : 5000)) {
+      nudged = true;
+      note('[The learner is listening with the mic off. Carry on with the next point of this section, in Hinglish; when its points are done, call ask_check, or show_section "next" if it has no check.]');
+      return;
+    }
+    if (klass && klass.mode !== 'walkthrough' && resolvedAt && !playing.length && !pcHold && !ending && at < klass.sections.length - 1) {
+      const quiet = Date.now() - lastActive;
+      if (!resNudged && quiet > 9000) { resNudged = true; note('[The learner has finished this section correctly. Say one short sentence about it, then call show_section "next".]'); return; }
+      if (resNudged && quiet > 22000) { resolvedAt = 0; go(at + 1, true); return; }
+    }
+    if (klass && klass.mode !== 'walkthrough' && checkShown && !checkDone && checkAt && !playing.length && !ending) {
+      const wait = Date.now() - Math.max(checkAt, lastActive);
+      // 5 seconds with no tap and no word after Altron stops: the answer is shown and explained, and the class goes on
+      // (8 Nov 2026, founder: never wait more than 5 seconds, never stop).
+      if (wait > 5000) { reveal('No answer for 5 seconds.'); return; }
+    }
+    const s = klass && klass.sections[at];
+    if (s && s.practical && s.practical.task !== 'tap' && !pracDone && !playing.length && at < klass.sections.length - 1) {
+      const quiet = (Date.now() - lastActive) / 1000;
+      if (!pracNudged && quiet >= (ON_PHONE ? 8 : 20)) { pracNudged = true; note('[The learner has not tapped Done or Later. Tell them in one short line that they can do it after the class, then call show_section "next".]'); return; }
+      if (pracNudged && quiet >= 40) { go(at + 1, true); return; }
     }
     if (!playing.length && (Date.now() - lastActive) / 1000 >= IDLE_S) pause('Paused because nobody spoke for two minutes.');
   }
@@ -596,9 +974,38 @@
     if (message) { $('smsg').textContent = message; $('smsg').style.color = bad ? '#ffb3b3' : '#ffd8bd'; }
   }
   function pause(message) { stop(message || 'Paused. Tap Continue when you are ready.'); }
+  // The end: Altron stops, and the demo's plans and seat booking stay on the screen.
+  function finish(message) {
+    cleanup(); status('finished', ''); ending = false;
+    $('resume').classList.add('hidden'); $('pause').classList.add('hidden'); $('mic').classList.add('hidden'); $('again').classList.add('hidden'); $('pace').classList.add('hidden'); $('endBtn').classList.add('hidden');
+    $('smsg').textContent = message || (isDemo ? 'Demo finished. Your plan and seat booking are below.' : 'Class ended.'); $('smsg').style.color = '#ffd8bd';
+    if (isDemo && !$('endHost').innerHTML) showEnd('', '');
+    track('class_ended');
+  }
+  $('endBtn').onclick = () => finish(isDemo ? 'Demo ended. Your plans and seat booking are below.' : 'Class ended.');
   $('pause').onclick = () => pause();
-  $('resume').onclick = async () => { try { await begin(); } catch (e) { stop(e.message, !e.out); } };
-  $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  // ── the pace is the learner's (10 Nov 2026, founder: too fast for a beginner). 🚶/🐢/🏃 sets how fast Altron's voice
+  // plays (pace.js); 🤔 "not clear" makes it one step slower and has the last idea explained again, more simply. ──
+  function paceLook() {
+    if (!PACE) { $('pace').style.display = 'none'; return; }
+    $('pace').innerHTML = PACE.icon() + '<small id="paceT">' + PACE.label() + '</small>';
+    $('pace').title = "Altron's speed: " + PACE.label() + '. Tap to change.';
+  }
+  $('pace').onclick = () => { if (!PACE) return; PACE.next(); paceLook(); lastHuman = Date.now(); };
+  $('again').onclick = () => {
+    if (!running) return;
+    lastHuman = Date.now(); if (PACE) { PACE.slower(); paceLook(); }
+    hush(); note('[Screen] The learner tapped "Not clear": you went too fast for them. Stop. Explain the idea you were just on again from the start, much more simply and slowly: plain everyday words, a different everyday example, one short sentence at a time, no new technical word. Then ask in one short line whether it is clear now, and carry on from where you were.');
+  };
+  paceLook();
+  $('resume').onclick = async () => { try { await begin(); } catch (e) { if (e.signin) askSignin(); else stop(e.message, !e.out); } };
+  function micLook() { $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; $('mic').title = micOn ? 'Tap when you are done speaking' : 'Tap to ask Altron'; }
+  $('mic').onclick = () => {
+    if (pcHold) holdForPc(false);
+    micOn = !micOn; micLook();
+    if (!micOn && ready()) { try { ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } })); } catch (_) {} }   // their question is over
+  };
+  micLook();
   $('txbtn').onclick = () => { $('tx').classList.toggle('on'); $('txbtn').textContent = $('tx').classList.contains('on') ? 'Hide what was said ▴' : 'Show what was said ▾'; };
   window.altronPause = () => { if (running) pause(); };
   if (P.get('autostart') === '1' && token()) setTimeout(startClass, 300);   // inside the app: one less tap
@@ -633,8 +1040,12 @@
   function paintLangs() { for (const b of $('langs').children) b.classList.toggle('on', b.dataset.l === lang); }
   for (const b of $('langs').children) b.onclick = () => { lang = b.dataset.l; paintLangs(); };
   paintLangs();
+  function askSignin() {
+    $('intro').classList.remove('hidden'); $('room').classList.remove('on'); $('signin').classList.remove('hidden'); $('start').classList.add('hidden');
+    try { sessionStorage.removeItem('altron_t'); } catch (_) {} store.set('adm_token', '');
+  }
   async function startClass() {
-    if (!token()) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
+    if (!token() && !(canGuest && !guestDone)) { $('signin').classList.remove('hidden'); $('sName').focus(); $('start').classList.add('hidden'); return; }
     $('start').disabled = true; $('introMsg').textContent = '';
     try {
       outCtx = new AudioContext();                          // made on the tap, so phones allow the sound
@@ -643,14 +1054,19 @@
       await begin();
       track('class_started');
     } catch (e) {
-      if (e.signin) { $('intro').classList.remove('hidden'); $('room').classList.remove('on'); $('signin').classList.remove('hidden'); $('start').classList.add('hidden'); try { sessionStorage.removeItem('altron_t'); } catch (_) {} store.set('adm_token', ''); }
+      if (e.signin) askSignin();
       else if ($('room').classList.contains('on')) stop(e.name === 'NotAllowedError' ? 'Allow the microphone for this site, then tap Continue.' : e.message, !e.out);
       else $('introMsg').textContent = e.message;
       $('start').disabled = false;
     }
   }
   $('start').onclick = startClass;
-  loadClass().catch((e) => { $('introMsg').textContent = e.message; });
+  loadClass().then(() => {
+    if (!isDemo || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((st) => { st.getTracks().forEach((t) => t.stop()); track('class_mic_allowed'); startClass(); })
+      .catch(() => { track('class_mic_refused'); });
+  }).catch((e) => { $('introMsg').textContent = e.message; });
 })();
 </script>
 </body>

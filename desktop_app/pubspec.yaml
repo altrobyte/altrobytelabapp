@@ -33,3 +33,5 @@ flutter:
   assets:
     - assets/live/   # Altron Live, shipped with the app (copied from web/live/v2 by tools/sync_desktop_app.py)
     - assets/class/  # the live class player (copied from web/class)
+    - assets/live/live/   # pace.js for the Altron Live page
+    - assets/class/live/  # pace.js for the class player

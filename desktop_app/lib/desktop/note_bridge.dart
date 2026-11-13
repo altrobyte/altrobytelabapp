@@ -43,6 +43,19 @@ const noteBridgeScript = r"""
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (a && /^https?:/i.test(a.href)) { e.preventDefault(); post({ open: a.href }); return; }
+    // The lesson notes' own quick checks and missions (7 Nov 2026): Altron hears how the learner answered and what they
+    // finished, as it hears an industrial drill, so it can praise, correct or move on.
+    var o = e.target.closest ? e.target.closest('.opt[data-ok]') : null;
+    if (o && window.altroDid) {
+      var q = o.closest('.q'), qp = q && q.querySelector('p');
+      window.altroDid((o.getAttribute('data-ok') === '1' ? 'answered a quick check right: ' : 'answered a quick check wrong: ') +
+        ((qp && qp.innerText) || '').trim().slice(0, 80) + ' -> ' + (o.innerText || '').trim().slice(0, 60));
+    }
+    var dn = e.target.closest ? e.target.closest('.done-btn') : null;
+    if (dn && window.altroDid) {
+      var ds = dn.closest('section'), dh = ds && ds.querySelector('h2');
+      window.altroDid('finished the mission: ' + ((dh && dh.innerText) || '').trim().slice(0, 80));
+    }
     // A note built from cards that open: the heading of the card that was clicked is the section being read.
     var el = e.target;
     while (el && el !== document.body) {
@@ -230,32 +243,35 @@ const noteBridgeScript = r"""
   // ── slides ──
   // Every element belongs to the last heading before it in the page; a slide shows the elements of its heading (and the
   // boxes that hold them), and the part before the first heading with the first slide. Works on any note, whatever its markup.
-  var owner = null, bar = null, goTo = -1, stage = null, fitting = false;
+  var owner = null, bar = null, goTo = -1, stage = null, fitting = false, nested = [];
   // Each slide fits the screen: the whole part is seen at once, no scrolling, nothing cut (30 Oct 2026, founder). It is
   // shrunk only as far as it stays readable (55 %); a part longer than that scrolls a little.
+  // The text stays readable (12 Nov 2026, founder's screenshot: a long part shrunk to 45 % was too small to read, worst
+  // for a beginner). A part is shrunk to 85 % at most; a longer one scrolls, and the page follows Altron's words.
+  var MINZ = 0.85;
   function fit() {
     if (!stage || fitting) return;
     fitting = true;
     // The whole part on one screen, always (30 Oct 2026, founder). Shrinking a narrow column left the sides empty and the
     // text tiny, so the column is widened to fill the screen at the size it is shrunk to, a few times until it settles.
-    var availH = window.innerHeight - 66, availW = window.innerWidth * 0.96, r = 1;
+    var availH = window.innerHeight - 46, availW = window.innerWidth * 0.96, r = 1;
     for (var n = 0; n < 4; n++) {
       stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
       stage.style.zoom = 1;
       var h = stage.scrollHeight;
-      var next = Math.max(0.45, Math.min(1, availH / Math.max(1, h)));
+      var next = Math.max(MINZ, Math.min(1, availH / Math.max(1, h)));
       if (Math.abs(next - r) < 0.02) { r = next; break; }
       r = next;
     }
     stage.style.setProperty('--altro-w', Math.min(2200, Math.round(availW / r)) + 'px');
     stage.style.zoom = 1;                                  // the last width settled: measure once more, so nothing is cut
-    stage.style.zoom = Math.max(0.45, Math.min(1, availH / Math.max(1, stage.scrollHeight + 24)));
+    stage.style.zoom = Math.max(MINZ, Math.min(1, availH / Math.max(1, stage.scrollHeight + 24)));
     // The page's own margins and padding count too: shrink a little more until the page itself does not scroll.
     var de = document.documentElement;
     for (var m = 0; m < 4 && de.scrollHeight > window.innerHeight + 1; m++) {
       var z = parseFloat(stage.style.zoom) || 1;
-      stage.style.zoom = Math.max(0.45, z * (window.innerHeight - 58) / Math.max(1, de.scrollHeight - 58));
-      if (parseFloat(stage.style.zoom) <= 0.45) break;
+      stage.style.zoom = Math.max(MINZ, z * (window.innerHeight - 40) / Math.max(1, de.scrollHeight - 40));
+      if (parseFloat(stage.style.zoom) <= MINZ) break;
     }
     setTimeout(function () { fitting = false; }, 60);
   }
@@ -275,13 +291,26 @@ const noteBridgeScript = r"""
         el = el.parentElement;
       }
     });
+    // A heading inside a part's own widget (a chip picker's name, "—" until a chip is tapped) is not a part of its own:
+    // it stays on the slide of the part around it (8 Nov 2026, founder: that part showed an empty widget). Its number
+    // still counts, so the parts Altron names keep matching the server's.
+    nested = [];
+    heads.forEach(function (h, i) {
+      for (var el = h.parentElement; i > 0 && el && el !== document.body && el !== stage && el.querySelectorAll('h1,h2,h3').length === 1; el = el.parentElement) {
+        var r = document.createRange(); r.setStart(el, 0); r.setEndBefore(h);
+        if (r.toString().replace(/\s+/g, ' ').trim().length > 40 && owner.get(el) >= 0 && owner.get(el) < i) { nested[i] = owner.get(el); break; }
+      }
+    });
+    owner.forEach(function (v, node) { if (nested[v] !== undefined) owner.set(node, slideOf(v)); });
   }
+  function slideOf(i) { while (nested[i] !== undefined) i = nested[i]; return i; }
+  function step(from, by) { var j = from + by; while (j > 0 && j < heads.length - 1 && nested[j] !== undefined) j += by; return nested[j] !== undefined ? from : j; }
   function visit(node, k) {
     var any = false;
     Array.prototype.forEach.call(node.children, function (c) {
       if (c.hasAttribute('data-altro') || /^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/.test(c.tagName)) return;
       var hi = heads.indexOf(c), show;
-      if (hi >= 0) show = hi === k;
+      if (hi >= 0) show = slideOf(hi) === k;
       else if (c.querySelector('h1,h2,h3')) show = visit(c, k);
       else { var o = owner.get(c); show = o === k; }
       c.classList.toggle('altro-off', !show);
@@ -292,27 +321,43 @@ const noteBridgeScript = r"""
   function paintBar() {
     if (!bar) return;
     var t = heads[slideAt] ? (heads[slideAt].innerText || '').replace(/\s+/g, ' ').trim() : '';
-    bar.querySelector('.t').textContent = (slideAt + 1) + ' / ' + heads.length + (t ? '  ·  ' + (t.length > 46 ? t.slice(0, 46) + '…' : t) : '');
-    bar.querySelector('.p').disabled = slideAt <= 0;
-    bar.querySelector('.n').disabled = slideAt >= heads.length - 1;
+    var own = 0, at = 0;
+    for (var q = 0; q < heads.length; q++) if (nested[q] === undefined) { own++; if (q <= slideAt) at = own; }
+    bar.querySelector('.t').textContent = at + ' / ' + own + (t ? '  ·  ' + (t.length > 46 ? t.slice(0, 46) + '…' : t) : '');
+    bar.querySelector('.p').disabled = step(slideAt, -1) === slideAt;
+    bar.querySelector('.n').disabled = step(slideAt, 1) === slideAt;
     var g = bar.querySelector('.g');
     if (goTo >= 0 && goTo !== slideAt) { g.style.display = ''; g.textContent = 'Altron: part ' + (goTo + 1) + '  →'; } else g.style.display = 'none';
   }
   function showSlide(k) {
     if (k < 0 || k >= heads.length) return;
+    k = slideOf(k);
     slideAt = k; visit(stage || document.body, k);
+    // A note laid out in columns (a contents rail beside the content) kept its columns with the rail hidden, and the
+    // part sat squeezed in the narrow one (8 Nov 2026, founder): every box around the part becomes one full-width column.
+    try {
+      document.querySelectorAll('.altro-one').forEach(function (x) { x.classList.remove('altro-one'); });
+      for (var el = heads[k] && heads[k].parentElement; el && el !== stage && el !== document.body; el = el.parentElement) {
+        var cs = getComputedStyle(el);
+        if (/grid/.test(cs.display) || (/flex/.test(cs.display) && !/column/.test(cs.flexDirection))) el.classList.add('altro-one');
+      }
+    } catch (e) {}
     if (goTo === k) goTo = -1;
     window.scrollTo(0, 0); paintBar(); fit(); setTimeout(fit, 400);
   }
   function setupSlides() {
     if (!SLIDES || heads.length < 2) return;
     var st = document.createElement('style'); st.setAttribute('data-altro', '1');
-    st.textContent = '.altro-off{display:none!important}body{padding-top:58px!important}' +
+    st.textContent = '.altro-off{display:none!important}body{padding-top:40px!important}' +
+      '.altro-one{display:block!important}.altro-one>*{max-width:none!important;width:auto!important}' +
+      // A note's own contents rail, side menu or table of contents is for scrolling; with one part at a time it only
+      // took space beside the lesson (8 Nov 2026, founder), so it is hidden while Altron teaches.
+      '#altro-stage nav,#altro-stage aside,#altro-stage .rail,#altro-stage .toc,#altro-stage [role=navigation]{display:none!important}' +
       // wide slides: a note's column (main, or its first box) may use the screen's width, so a part takes fewer lines
       '#altro-stage>main,#altro-stage>.wrap,#altro-stage>.container,#altro-stage>.page,#altro-stage>article{max-width:var(--altro-w,96vw)!important}' +
       '.altro-bar{position:fixed;left:0;right:0;top:0;z-index:99999;display:flex;align-items:center;justify-content:center;gap:10px;' +
-      'background:#0D1726;color:#fff;padding:8px 14px;box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 14px system-ui,sans-serif}' +
-      '.altro-bar button{border:0;border-radius:999px;padding:8px 16px;font:700 14px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +
+      'background:#0D1726;color:#fff;padding:3px 10px;box-shadow:0 2px 10px rgba(0,0,0,.18);font:600 13px system-ui,sans-serif}' +
+      '.altro-bar button{border:0;border-radius:999px;padding:5px 14px;font:700 13px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.12);color:#fff}' +
       '.altro-bar button:disabled{opacity:.3;cursor:default}.altro-bar .g{background:#D9A441;color:#0D1726}' +
       '.altro-bar .t{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}';
     (document.head || document.documentElement).appendChild(st);
@@ -320,8 +365,8 @@ const noteBridgeScript = r"""
     bar.innerHTML = '<button class="p">◀</button><span class="t"></span><button class="n">▶</button><button class="g" style="display:none"></button>';
     document.body.appendChild(bar);
     // The learner moving on their own: the app hears of it, as it did of scrolling.
-    bar.querySelector('.p').onclick = function () { showSlide(slideAt - 1); report(slideAt); };
-    bar.querySelector('.n').onclick = function () { showSlide(slideAt + 1); report(slideAt); };
+    bar.querySelector('.p').onclick = function () { showSlide(step(slideAt, -1)); report(slideAt); };
+    bar.querySelector('.n').onclick = function () { showSlide(step(slideAt, 1)); report(slideAt); };
     bar.querySelector('.g').onclick = function () { showSlide(goTo); report(slideAt); };
     // Everything of the note goes in one box, so it can be fitted to the screen as one; the bar stays outside it.
     stage = document.createElement('div'); stage.id = 'altro-stage'; stage.setAttribute('data-altro-stage', '1');
@@ -339,7 +384,7 @@ const noteBridgeScript = r"""
     window.__altroShow = function (i, bring) {
       collect(); if (!owner || heads.length < 2) return plain(i, bring);
       // Altron's part always opens its slide (30 Oct 2026, founder: a tap on a drill held the slide back).
-      if (bring && i !== slideAt) { showSlide(i); last = i; }
+      if (bring && slideOf(i) !== slideAt) { showSlide(i); last = i; }
       plain(i, false);
     };
   }

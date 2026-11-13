@@ -1,17 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Altrobyte Lab on the Play Store (entry point lib/mobile/learner_main.dart): the lessons with Altron's voice. It needs
-         the internet and the microphone; Bluetooth, location and the camera are not used, and asking for them would only
-         slow the Play review. -->
-    <uses-permission android:name="android.permission.BLUETOOTH" tools:node="remove" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" tools:node="remove" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:node="remove" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:node="remove" />
+    <!-- Altrobyte Lab on the Play Store (entry point lib/mobile/learner_main.dart): the lessons with Altron's voice and the
+         dev tools. It needs the internet, the microphone and Bluetooth: the BLE tool scans for and talks to the learner's
+         board (13 Nov 2026). The scan is never used for location, so on Android 12+ no location permission is asked; older
+         phones cannot scan without it, so it is kept for them only. The camera and Bluetooth advertising are not used. -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" tools:node="remove" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" tools:replace="android:maxSdkVersion" />
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
-    <uses-feature android:name="android.hardware.bluetooth_le" tools:node="remove" />
+    <!-- a phone without BLE can still install the app for the lessons -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" tools:replace="android:required" />
     <uses-feature android:name="android.hardware.camera" tools:node="remove" />
 </manifest>

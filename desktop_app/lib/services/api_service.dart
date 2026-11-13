@@ -981,6 +981,12 @@ class ApiService {
   /// A WhatsApp message to the lead, from the CRM (only within the 24-hour window).
   /// One WhatsApp message (the update template, each lead's own name) to many leads at once.
   // ── Access: who can open the course (access.py) ──
+  /// Everyone for the access switchboard: access on or off and why, requests, Altron minutes.
+  static Future<Map<String, dynamic>> accessPeople() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access/people'), headers: _headers(prefs.getString('token'))));
+  }
+
   static Future<Map<String, dynamic>> accessOverview() async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/access'), headers: _headers(prefs.getString('token'))));
@@ -996,6 +1002,13 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/grant'),
         headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone, 'note': note})));
+  }
+
+  /// Turns off someone who paid (or is enrolled in the CRM): no access until it is turned on again.
+  static Future<Map<String, dynamic>> accessBlock(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/access/block'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode({'phone': phone})));
   }
 
   static Future<Map<String, dynamic>> accessRemove(String phone) async {
@@ -1041,6 +1054,17 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/funnel/sales?days=$days'),
         headers: _headers(prefs.getString('token'))));
+  }
+
+  /// The /kits shop catalogue (parts, lab kits, projects): read, and replaced whole from the admin (9 Nov 2026).
+  static Future<Map<String, dynamic>> kitsCatalog() async {
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/kits/catalog')));
+  }
+
+  static Future<Map<String, dynamic>> kitsCatalogSave(Map<String, dynamic> catalog) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.put(Uri.parse('${ApiConstants.baseUrl}/kits/catalog'),
+        headers: _headers(prefs.getString('token')), body: jsonEncode(catalog)));
   }
 
   static Future<Map<String, dynamic>> crmAuto() async {
@@ -2422,6 +2446,28 @@ class ApiService {
   }
 
   /// No retry: creating an invoice consumes a number.
+  // Custom-amount payment links (Invoices → Payment links): the admin makes one, shares it; paid opens access + invoice.
+  static Future<Map<String, dynamic>> payLinks() async {
+    final token = await _token();
+    final res = await safeGet(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links'), headers: _headers(token));
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> createPayLink(Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links'),
+        headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
+  }
+
+  /// action: check | mark-paid | cancel
+  static Future<Map<String, dynamic>> payLinkAction(int id, String action, {String reference = ''}) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/pay-links/$id/$action'),
+        headers: _headers(token), body: jsonEncode({'reference': reference}));
+    return _parse(res);
+  }
+
   static Future<Map<String, dynamic>> createInvoice(int instituteId, Map<String, dynamic> body) async {
     final token = await _token();
     final res = await http.post(
@@ -2766,6 +2812,16 @@ class ApiService {
   }
 
   // Reordering — each call sends the complete new id sequence for one parent.
+  static Future<void> reorderModules(int instituteId, List<int> ids) async {
+    final token = await _token();
+    final res = await http.put(
+      Uri.parse('${ApiConstants.trainingModules(instituteId)}/order'),
+      headers: _headers(token),
+      body: jsonEncode({'ids': ids}),
+    );
+    _parse(res);
+  }
+
   static Future<void> reorderModuleTopics(int moduleId, List<int> ids) async {
     final token = await _token();
     final res = await http.put(
@@ -3491,6 +3547,13 @@ class ApiService {
       headers: _headers(token),
     );
     _parse(res);
+  }
+
+  /// Someone who registered offline (cash, UPI, at the office), added to the workshop's list by the team.
+  static Future<Map<String, dynamic>> addLiveSessionAttendee(int sessionId, Map<String, dynamic> body) async {
+    final token = await _token();
+    final res = await http.post(Uri.parse(ApiConstants.liveSessionAttendees(sessionId)), headers: _headers(token), body: jsonEncode(body));
+    return _parse(res);
   }
 
   static Future<List<dynamic>> getLiveSessionAttendees(int id) async {
