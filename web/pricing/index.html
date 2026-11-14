@@ -72,6 +72,7 @@
   @media (max-width: 860px) { .paths { grid-template-columns: 1fr; } }
   .path { padding: 28px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); display:flex; flex-direction:column; gap: 10px; }
   .path.live { background: linear-gradient(160deg, #2A1708, var(--panel) 65%); border-color: rgba(255,106,26,.6); }
+  .unl { list-style:none; padding:0; margin: 18px 0 4px; display:grid; gap: 8px; font-size: 16px; max-width: 640px; } .unl li { padding-left: 26px; position: relative; } .unl li::before { content:'🔓'; position:absolute; left:0; font-size: 14px; top: 2px; }
   .path h3 { font-size: 24px; } .path p { color: var(--soft); }
   .path ul { list-style:none; padding:0; display:grid; gap: 7px; font-size: 15px; } .path li { padding-left: 24px; position: relative; } .path li::before { content:'✓'; position:absolute; left:0; color: var(--cyan); font-weight:800; }
   .plans3 { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 26px; }
@@ -107,9 +108,10 @@
 </div></nav>
 
 <header class="wrap">
-  <div class="kicker">Plans</div>
-  <h1>Become an industry-ready<br>embedded &amp; IoT engineer.</h1>
-  <p>Start with our free course notes. Go further with Altron, our AI teacher, or with live industrial training from engineers who build products for industry.</p>
+  <div class="kicker" id="hdK">Plans</div>
+  <h1 id="hdH">Become an industry-ready<br>embedded &amp; IoT engineer.</h1>
+  <p id="hdP">Start with our free course notes. Go further with Altron, our AI teacher, or with live industrial training from engineers who build products for industry.</p>
+  <ul class="unl" id="hdU" hidden><li>Every lesson of the roadmap: notes, class recordings, experiments and projects</li><li>Altron, the AI teacher, on every lesson</li><li>Live classes with industrial engineers, online or in Indore</li><li>Your own lab kit, mentor reviews and placement help</li></ul>
   <div class="jump"><a href="#live">Live with an industrial expert</a><a href="#ai">Learn with AI</a><a href="#proof">Why Altrobyte</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a></div>
 </header>
 
@@ -125,7 +127,8 @@
       <div class="kicker">Path 2 · most complete</div><h3>👨‍🏭 Learn Live with an Industrial Expert</h3>
       <p>Live classes with engineers who ship IoT products and automation for industry. Your own lab kit, real products, mentor reviews and placement help.</p>
       <ul><li>Live classes, online or at our Indore centre, every class recorded</li><li>Build real products: PCB, firmware, cloud, AI</li><li>Mentor reviews, certificate and placement assistance</li></ul>
-      <div style="margin-top:auto;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-main" href="#batches">Check batches to join</a><a class="btn btn-ghost" href="#live">See the 3 plans</a></div>
+      <div class="chips" id="liveChips"></div>
+      <div style="margin-top:auto;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-main" id="seatGo" href="/enroll/program-enrolment?plan=token">Book my seat</a><a class="btn btn-ghost" href="#batches">Check batches</a><a class="btn btn-ghost" href="#live">See the 3 plans</a></div>
     </div>
   </div>
 </div></section>
@@ -292,6 +295,22 @@
     }
     return d && d > now ? d : null;
   }
+  // Arrived from an Unlock button (14 Nov 2026): what opens comes first, the plans and prices after.
+  if (/^\/unlock/.test(location.pathname)) {
+    document.getElementById('hdK').textContent = 'Unlock';
+    document.getElementById('hdH').innerHTML = '🔓 Unlock every lesson.';
+    document.getElementById('hdP').textContent = 'The first 20 lessons are free. Unlock the rest and learn the way that suits you: live with our engineers, or on your own with Altron.';
+    document.getElementById('hdU').hidden = false;
+    document.title = 'Unlock every lesson · Altrobyte Lab';
+  }
+  // The live batch as the server has it (never a number we chose): when it starts and the seats left.
+  fetch(API + '/program/plans').then(function (r) { return r.json(); }).then(function (p) {
+    var c = [];
+    if (p.start_label) c.push('<span>📅 ' + esc(p.start_label) + '</span>');
+    if (p.seats_left) c.push('<span>🔥 ' + esc(p.seats_left) + ' seats left</span>');
+    document.getElementById('liveChips').innerHTML = c.join('');
+    if (p.enrol_slug) document.getElementById('seatGo').href = '/enroll/' + encodeURIComponent(p.enrol_slug) + '?plan=token';
+  }).catch(function () {});
   fetch(API + '/live-sessions').then(function (r) { return r.json(); }).then(function (d) {
     var list = (d.sessions || []).map(function (s) { s._next = nextDate(s); return s; })
       .filter(function (s) { return s._next || s.registration_always_open; })

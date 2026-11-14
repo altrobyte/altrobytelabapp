@@ -382,7 +382,7 @@
     }
     var box = document.createElement('div'); box.id = 'meterbox'; box.className = 'meterbox';
     box.innerHTML = '<h4>' + head + '</h4><div class="gauge"><i style="width:' + pct + '%"></i></div><div style="font-size:13px;color:var(--soft)">' + line + '</div>' + fomo +
-      (c.plan === 'paid' ? '' : '<div class="row"><a class="btn btn-main btn-sm" href="' + esc(c.seat_link || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">🔓 Unlock</a>' +
+      (c.plan === 'paid' ? '' : '<div class="row"><a class="btn btn-main btn-sm" href="/unlock" data-mgo="seat">🔓 Unlock</a>' +
         '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><a class="btn btn-ghost btn-sm" href="/pricing#live" data-mgo="live">Compare plans</a></div>') +
       '<div class="ct">Questions? <a href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I am learning on Altrobyte Lab and have a question about the plans.') + '" target="_blank" rel="noopener">WhatsApp +91 72229 77927</a> · <a href="tel:+917222977927">Call</a> · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a></div>';
     document.body.appendChild(box);
@@ -559,7 +559,7 @@
             (pv ? '<span class="pv">' + esc(pv) + '</span>' : '') + (fin ? '<span class="mini"><i style="width:' + Math.round(fin * 100 / (open.length || 1)) + '%"></i></span>' : '') +
             '</button>' + (first ? '<a class="tpgo" href="/learn/' + first.m + '/' + first.id + '">▶ ' + (fin ? 'Continue' : 'Start') + '</a>'
               // a step with nothing open: the way to open it, right on the card (14 Nov 2026, founder)
-              : its.length ? '<a class="tpgo lk" data-mgo="seat" href="/enroll/program-enrolment?plan=token" title="Unlock every lesson of this step">🔒 Unlock</a>' : '') +
+              : its.length ? '<a class="tpgo lk" data-mgo="seat" href="/unlock" title="Unlock every lesson of this step">🔒 Unlock</a>' : '') +
             '<div class="items">' + itemLinks(its) + '</div></div>';
         }).join('') + '</div></section>';
     }).join('');
@@ -728,7 +728,7 @@
       funnel('lesson_locked', mid + '/' + cid);
       root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(lt || 'Lesson') + '</div></div><div class="pad"><h1>🔒 ' + (lt ? esc(lt) + ' is' : 'This lesson is') + ' for enrolled learners</h1>' +
         '<p class="muted" style="margin:8px 0 16px">The first 20 lessons of the roadmap are free. Unlock this one and the rest: every note, recording and experiment, with Altron and live classes.</p><div class="row">' +
-        '<a class="btn btn-main" data-lockseat href="/enroll/program-enrolment?plan=token">🔓 Unlock</a>' +
+        '<a class="btn btn-main" data-lockseat href="/unlock">🔓 Unlock</a>' +
         '<button class="btn btn-ghost" id="askaccess">Request access</button>' +
         '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing">See plans</a></div></div>';
       var ls = root.querySelector('[data-lockseat]'); if (ls) ls.addEventListener('click', function () { funnel('meter_seat', 'lock ' + mid + '/' + cid); });
@@ -1014,7 +1014,7 @@
     var lv = document.querySelector('.lv'); if (!lv) return;
     funnel('ai_credit_used', location.pathname);
     var c = document.createElement('div'); c.id = 'aiout'; c.className = 'card'; c.style.cssText = 'margin:10px 12px;flex:none';
-    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="' + esc((credit && credit.seat_link) || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">🔓 Unlock</a>' +
+    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="/unlock" data-mgo="seat">🔓 Unlock</a>' +
       '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><button class="btn btn-ghost btn-sm" data-golive>Learn Live with Industrial Expert</button></div>';
     lv.appendChild(c);
   });

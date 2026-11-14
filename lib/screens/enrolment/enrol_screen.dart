@@ -191,11 +191,28 @@ class _EnrolScreenState extends State<EnrolScreen> {
         Text('Altrobyte Lab', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.primary)),
       ]),
       const SizedBox(height: 16),
-      if (checkout != null) PlanBanner(checkout: checkout),
-      Text('${form['title']}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 22)),
+      Text('${form['title']}', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 22, color: AppColors.textPrimary)),
       if ('${form['description']}'.isNotEmpty) ...[
         const SizedBox(height: 8),
         Text('${form['description']}', style: GoogleFonts.inter(height: 1.5, color: AppColors.textSecondary)),
+      ],
+      // What the seat opens, before any price (14 Nov 2026, founder: the price comes after, not first).
+      if (checkout != null) ...[
+        const SizedBox(height: 14),
+        for (final line in const [
+          'Every lesson of the roadmap: notes, recordings, experiments and projects',
+          'Altron, the AI teacher, on every lesson',
+          'Live classes with industrial engineers, online or in Indore',
+          'Your own lab kit, mentor reviews and placement help',
+        ])
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.success),
+              const SizedBox(width: 8),
+              Expanded(child: Text(line, style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: AppColors.textPrimary))),
+            ]),
+          ),
       ],
       const SizedBox(height: 20),
       if (form['is_open'] != true)
@@ -212,6 +229,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
             label: Text(_busy ? 'Opening…' : 'Sign in with WhatsApp'),
           ),
         ),
+        if (checkout != null) ...[const SizedBox(height: 18), PlanBanner(checkout: checkout)],
       ] else ...[
         Container(
           padding: const EdgeInsets.all(12),
@@ -234,6 +252,7 @@ class _EnrolScreenState extends State<EnrolScreen> {
           _question(fields[i]),
         ],
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: GoogleFonts.inter(color: AppColors.error, fontSize: 13))),
+        if (checkout != null) ...[const SizedBox(height: 18), PlanBanner(checkout: checkout)],
         const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,

@@ -60,11 +60,8 @@ import 'screens/students/platform_users_screen.dart' deferred as d26;
 import 'screens/enquiries/partner_enquiry_screen.dart' deferred as e14;
 import 'screens/enquiries/enquiries_admin_screen.dart' deferred as d27;
 import 'screens/mock_interview/mock_interview_screen.dart' deferred as e15;
-import 'screens/pricing/pricing_screen.dart' deferred as e16;
 import 'screens/learn/sign_in_screen.dart';
-import 'screens/learn/unlock_screen.dart';
 import 'screens/program_page.dart' deferred as e17;
-import 'screens/plans_page.dart' deferred as e18;
 import 'screens/book_call_screen.dart' deferred as e19;
 import 'screens/admin/bookings_screen.dart' deferred as d28;
 import 'screens/admin/errors_screen.dart' deferred as d29;
@@ -378,17 +375,18 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
         // Partner enquiry — public, no login.
         GoRoute(path: '/partner', builder: (_, __) => _Lazy(e14.loadLibrary, () => e14.PartnerEnquiryScreen())),
         // Pricing — public, no login.
-        GoRoute(path: '/pricing', builder: (_, __) => _Lazy(e16.loadLibrary, () => e16.PricingScreen())),
+        // One pricing page, the static one (14 Nov 2026, founder): the app hands over to it.
+        GoRoute(path: '/pricing', builder: (_, __) => const FullPage('/pricing')),
         // The roadmap with a free start, and every plan after it: public, no login (29 Oct 2026).
         // The roadmap is the plain page web/learn (30 Oct 2026); the app hands over to it.
         GoRoute(path: '/learn', builder: (_, __) => const FullPage('/learn')),
         GoRoute(path: '/signin', builder: (_, state) => SignInScreen(next: state.uri.queryParameters['next'])),
-        GoRoute(path: '/unlock', builder: (_, __) => const UnlockScreen()),
+        GoRoute(path: '/unlock', builder: (_, __) => const FullPage('/unlock')),
         // Deliberately not linked from anywhere. Its URL is the product: it is
         // sent directly to someone who asked, while the public pricing page
         // still quotes programmes on request.
         GoRoute(path: '/program', builder: (_, __) => _Lazy(e17.loadLibrary, () => e17.ProgramPage())),
-        GoRoute(path: '/plans', builder: (_, __) => _Lazy(e18.loadLibrary, () => e18.PlansPage())),
+        GoRoute(path: '/plans', builder: (_, __) => const FullPage('/pricing')),
         // Public and shareable, like the roadmap: the whole point is that a
         // link turns into a time in the diary without anyone signing in.
         GoRoute(path: '/book', builder: (_, __) => _Lazy(e19.loadLibrary, () => e19.BookCallScreen())),
