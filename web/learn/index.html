@@ -559,7 +559,7 @@
             (pv ? '<span class="pv">' + esc(pv) + '</span>' : '') + (fin ? '<span class="mini"><i style="width:' + Math.round(fin * 100 / (open.length || 1)) + '%"></i></span>' : '') +
             '</button>' + (first ? '<a class="tpgo" href="/learn/' + first.m + '/' + first.id + '">▶ ' + (fin ? 'Continue' : 'Start') + '</a>'
               // a step with nothing open: the way to open it, right on the card (14 Nov 2026, founder)
-              : its.length ? '<a class="tpgo lk" data-mgo="seat" href="/enroll/program-enrolment?plan=token" title="Book your seat (₹999, adjusted in your fee) to open every lesson">🔒 Unlock · ₹999</a>' : '') +
+              : its.length ? '<a class="tpgo lk" data-mgo="seat" href="/enroll/program-enrolment?plan=token" title="Unlock every lesson of this step">🔒 Unlock</a>' : '') +
             '<div class="items">' + itemLinks(its) + '</div></div>';
         }).join('') + '</div></section>';
     }).join('');
@@ -727,8 +727,8 @@
       var hit = allItems().filter(function (n) { return String(n.id) === String(cid); })[0], lt = hit && hit.title ? String(hit.title) : '';
       funnel('lesson_locked', mid + '/' + cid);
       root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(lt || 'Lesson') + '</div></div><div class="pad"><h1>🔒 ' + (lt ? esc(lt) + ' is' : 'This lesson is') + ' for enrolled learners</h1>' +
-        '<p class="muted" style="margin:8px 0 16px">The first 20 lessons of the roadmap are free. This one and the rest open when you book your seat: ₹999, adjusted in your fee. Every note, recording and experiment, with Altron and live classes.</p><div class="row">' +
-        '<a class="btn btn-main" data-lockseat href="/enroll/program-enrolment?plan=token">Book my seat · ₹999</a>' +
+        '<p class="muted" style="margin:8px 0 16px">The first 20 lessons of the roadmap are free. Unlock this one and the rest: every note, recording and experiment, with Altron and live classes.</p><div class="row">' +
+        '<a class="btn btn-main" data-lockseat href="/enroll/program-enrolment?plan=token">🔓 Unlock</a>' +
         '<button class="btn btn-ghost" id="askaccess">Request access</button>' +
         '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing">See plans</a></div></div>';
       var ls = root.querySelector('[data-lockseat]'); if (ls) ls.addEventListener('click', function () { funnel('meter_seat', 'lock ' + mid + '/' + cid); });

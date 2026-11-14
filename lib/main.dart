@@ -78,6 +78,7 @@ import 'screens/admin/scholarship_admin_screen.dart' deferred as d32;
 import 'screens/student/test_series_page.dart' deferred as e23;
 import 'screens/admin/showcase_admin_screen.dart' deferred as d33;
 import 'screens/admin/kits_admin_screen.dart' deferred as dkits;
+import 'screens/admin/tasks_screen.dart' deferred as dtasks;
 import 'screens/admin/roadmap_admin_screen.dart' deferred as d34;
 import 'screens/admin/crm_screen.dart' deferred as d35;
 import 'screens/admin/access_screen.dart' deferred as d36;
@@ -204,6 +205,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
           '/platform-users', '/challenges-admin', '/home-strip-admin', '/activity-feed-admin',
           '/showcase-admin',
           '/kits-admin',
+          '/tasks',
           '/curriculum-admin',
           '/crm',
           '/access',
@@ -397,6 +399,7 @@ class _AltrobyteLabAppState extends State<AltrobyteLabApp> {
             path: '/showcase-admin',
             builder: (_, __) => _Lazy(d33.loadLibrary, () => d33.ShowcaseAdminScreen())),
         GoRoute(path: '/kits-admin', builder: (_, __) => _Lazy(dkits.loadLibrary, () => dkits.KitsAdminScreen())),
+        GoRoute(path: '/tasks', builder: (_, __) => _Lazy(dtasks.loadLibrary, () => dtasks.TasksScreen())),
         GoRoute(
             path: '/curriculum-admin',
             builder: (_, __) => _Lazy(d34.loadLibrary, () => d34.RoadmapAdminScreen())),
