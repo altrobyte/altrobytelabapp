@@ -77,6 +77,24 @@
   body.strip .ask { position: fixed; right: 258px; top: 50%; transform: translateY(-50%); margin: 0; }
   /* a phone: the camera button shows only when Altron asks for it or it is on, so the four that matter fit */
   @media (max-width: 560px) { body.strip #camBtn.off:not(.want) { display: none !important; } body.strip .msg { left: 8px; right: 184px; } body.strip .ask { right: 184px; } }
+  /* side=1: Altron in a panel beside the lesson, with the talk written down and a box to type a doubt (14 Nov 2026,
+     learner feedback: the strip was hard to follow, and with no working mic there was no way to ask). On a phone the
+     strip opens into the same panel with 💬. */
+  .chat, .type { display: none; }
+  body.side .stage { flex: none; height: 96px; margin: 4px 10px; }
+  body.side .orb { width: 56px; height: 56px; }
+  body.side .cap { display: none !important; }
+  body.side .chat { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; overflow-y: auto; margin: 6px 10px 0; padding: 4px 2px; }
+  body.side .chat .b { max-width: 88%; padding: 8px 11px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  body.side .chat .al { align-self: flex-start; background: rgba(255,255,255,.1); border-bottom-left-radius: 4px; }
+  body.side .chat .me { align-self: flex-end; background: var(--orange); border-bottom-right-radius: 4px; }
+  body.side .chat .hint { align-self: center; color: var(--soft); font-size: 12px; text-align: center; padding: 6px 10px; }
+  body.side .type { display: flex; gap: 6px; padding: 0 10px 10px; }
+  body.side .type input { flex: 1; min-width: 0; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: #fff; border-radius: 20px; padding: 9px 13px; font: inherit; font-size: 14px; outline: none; }
+  body.side .type input:focus { border-color: var(--orange); }
+  body.side .type button { background: var(--orange); color: #fff; padding: 0 14px; }
+  body.side .bar { flex-wrap: wrap; padding: 8px 10px; }
+  body.sidefix #chatBtn { display: none !important; }
 </style>
 </head>
 <body>
@@ -93,6 +111,7 @@
 </div>
 <div class="ask" id="ask"><span>📷 <span id="askT">Altron wants to see your board</span></span><button type="button" id="askGo">Turn camera on</button></div>
 <div class="msg" id="msg"></div>
+<div class="chat" id="chat"><div class="hint">Altron's words show here. Have a doubt? Type it below, or just speak.</div></div>
 <div class="bar">
   <div class="langs" id="langs"><button type="button" data-l="en">English</button><button type="button" data-l="hi">Hinglish</button><button type="button" data-l="hd">हिंदी</button></div>
   <button class="go" id="go" type="button">▶ Talk to Altron</button>
@@ -101,7 +120,9 @@
   <button class="round hidden" id="pause" type="button" title="Pause">⏸</button>
   <button class="round hidden" id="again" type="button" title="Not clear? Altron explains it again, simpler and slower">🤔</button>
   <button class="round hidden" id="pace" type="button" title="Altron's speed">🚶<small id="paceT">easy</small></button>
+  <button class="round hidden" id="chatBtn" type="button" title="Type a doubt, and see what Altron said">💬</button>
 </div>
+<form class="type" id="typeRow" autocomplete="off"><input id="typeIn" maxlength="400" placeholder="Type your doubt…" enterkeyhint="send"><button type="submit">Send</button></form>
 <script src="/live/pace.js"></script>
 <script>
   const PACE = window.AltronPace || null;                  // Altron's speaking pace (web/live/pace.js)
@@ -133,6 +154,8 @@
   if (P.get('compact') !== '1') document.body.classList.add('full');
   const STRIP = P.get('strip') === '1';
   if (STRIP) document.body.classList.add('strip');
+  const SIDE = P.get('side') === '1';                      // a panel beside the lesson (laptop): the chat is always open
+  if (SIDE) document.body.classList.add('side', 'sidefix');
   const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;   // inside the desktop app
 
   // ── sign-in: the app hands it over in the #fragment, which no server receives ──
@@ -295,6 +318,41 @@
     didQueue.push(w.slice(0, 160)); lastActive = Date.now(); quietNudges = 0; lastHuman = Date.now();
     clearTimeout(didTimer);
     didTimer = setTimeout(() => { const t = didQueue.join('; '); didQueue = []; note('[On the screen the learner just did: ' + t + ']'); }, 1800);
+  };
+  // ── the chat: what Altron and the learner said, and doubts typed instead of spoken ──
+  let chatCur = { al: null, me: null };
+  function chatSay(who, text) {
+    const box = $('chat'); if (!box || !String(text || '').trim()) return;
+    let el = chatCur[who];
+    if (!el) {
+      if (who === 'al') chatCur.me = null;             // Altron answering closes what the learner was saying
+      el = document.createElement('div'); el.className = 'b ' + who; box.appendChild(el); chatCur[who] = el;
+      while (box.children.length > 80) box.removeChild(box.firstChild);
+    }
+    el.textContent = String(text).trim();
+    const near = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+    if (near || who === 'me') box.scrollTop = box.scrollHeight;
+  }
+  function chatOpen(on) {
+    if (SIDE) return;
+    document.body.classList.toggle('side', on);
+    document.body.classList.toggle('strip', STRIP && !on);
+    $('chatBtn').classList.toggle('off', on);
+    tellHost({ type: 'size', tall: on });
+    if (on) setTimeout(() => { $('chat').scrollTop = $('chat').scrollHeight; $('typeIn').focus(); }, 50);
+  }
+  $('chatBtn').onclick = () => chatOpen(!document.body.classList.contains('side'));
+  $('typeRow').onsubmit = (e) => {
+    e.preventDefault();
+    const t = $('typeIn').value.trim();
+    if (!t) return;
+    if (!running || !ready()) { say('Tap ▶ to start Altron, then type your doubt.'); setTimeout(unsay, 4000); return; }
+    $('typeIn').value = '';
+    chatCur = { al: null, me: null }; chatSay('me', t); chatCur.me = null;
+    hush(); tutorLine = '';
+    lastActive = Date.now(); lastHuman = Date.now(); quietNudges = 0; replyDue = true; heardAt = Date.now(); nudgedReply = false; lastWords = Date.now();
+    note('[The learner TYPED this doubt (their microphone may not work, so answer by voice and they will read your words on the screen): "' +
+         t.replace(/"/g, "'") + '". Answer it simply, with an everyday example, then ask in one short line whether it is clear, and carry on where you were.]');
   };
   function note(text) {                                   // tell Altron something that is not the learner speaking
     if (!ready()) return false;
@@ -475,13 +533,16 @@
           tutorLine += sc.outputTranscription.text;
           partWords += sc.outputTranscription.text.split(/\s+/).filter(Boolean).length;
           $('capT').textContent = tutorLine.slice(STRIP ? -140 : -260); $('cap').classList.add('on');
+          chatSay('al', tutorLine);
           if (Date.now() - saidSent > 1500) { saidSent = Date.now(); tellHost({ type: 'said', text: tutorLine.slice(-220) }); }   // the note follows
         }
         if (sc.inputTranscription && sc.inputTranscription.text) {
           youLine += sc.inputTranscription.text; heard += sc.inputTranscription.text; lastActive = Date.now(); quietNudges = 0; lastHuman = Date.now(); replyDue = true; lastWords = Date.now(); heardAt = Date.now(); nudgedReply = false;
           $('capY').textContent = 'You: ' + youLine.slice(-140); $('cap').classList.add('on');
+          chatSay('me', youLine);
         }
         if (sc.turnComplete) {
+          chatCur = { al: null, me: null };
           tutorLine = ''; youLine = ''; replyDue = false; nudgedReply = false; lastActive = Date.now();
           // The lesson is over (founder: it must switch off after completion): once the goodbye has been heard, stop.
           if (lessonDone) {
@@ -527,7 +588,11 @@
     try {
       const t = await fetchToken(!firstStart);
       wsUrl = t.ws_url + '?access_token=' + encodeURIComponent(t.token); setup = t.setup;
-      await startMic();
+      // No microphone (blocked, missing or busy): Altron still teaches, and doubts are typed (14 Nov 2026, learner
+      // feedback: "voice not working"). The mic button tries again.
+      let noMic = '';
+      try { if (micOn || !micStream) await startMic(); }
+      catch (me) { noMic = me && me.name === 'NotAllowedError' ? 'blocked' : 'missing'; micStream = null; micOn = false; }
       outCtx = outCtx || new AudioContext({ sampleRate: 24000 });
       if (outCtx.state === 'suspended') { try { await outCtx.resume(); } catch (_) {} }
       running = true; conn = newConn(t);
@@ -537,7 +602,14 @@
       clearInterval(ticker);
       ticker = setInterval(tick, 1000);
       $('go').classList.add('hidden'); $('langs').classList.add('hidden');
-      for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace']) $(id).classList.remove('hidden');
+      for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace', 'chatBtn']) $(id).classList.remove('hidden');
+      if (noMic) {
+        $('mic').classList.add('off'); $('mic').textContent = '🔇';
+        say(noMic === 'blocked' ? 'Your microphone is blocked, so Altron cannot hear you. Type your doubts in the chat, or allow the mic and tap 🔇.'
+                                : 'No microphone found. Altron still teaches; type your doubts in the chat.');
+        setTimeout(unsay, 9000);
+        chatOpen(true);
+      }
       if (t.left_minutes != null) $('clock').textContent = (t.left_minutes + Math.round((t.seconds || 0) / 60)) + ' min left today';
     } catch (e) {
       cleanup(); $('go').disabled = false; status('voice tutor');
@@ -588,7 +660,7 @@
   }
   function stop(message, bad) {
     cleanup();
-    for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace']) $(id).classList.add('hidden');
+    for (const id of ['mic', 'camBtn', 'pause', 'again', 'pace', 'chatBtn']) $(id).classList.add('hidden');
     $('go').classList.remove('hidden'); $('go').disabled = false; $('go').textContent = '▶ Talk to Altron';
     status('voice tutor');
     if (message) say(message, bad);
@@ -623,7 +695,13 @@
     hush(); note('[Screen] The learner tapped "Not clear": you went too fast for them. Stop. Explain the idea you were just on again from the start, much more simply and slowly: plain everyday words, a different everyday example, one short sentence at a time, no new technical word. Then ask in one short line whether it is clear now, and carry on from where you were.');
   };
   paceLook();
-  $('mic').onclick = () => { micOn = !micOn; $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇'; };
+  $('mic').onclick = async () => {
+    if (!micStream) {                                  // it did not start: ask for it again
+      try { micOn = true; await startMic(); unsay(); }
+      catch (e) { micOn = false; micStream = null; say(e && e.name === 'NotAllowedError' ? 'The microphone is still blocked: allow it in the browser (the 🔒 next to the address), then tap 🔇 again. You can type your doubts meanwhile.' : 'No microphone found. Type your doubts in the chat.', true); setTimeout(unsay, 9000); }
+    } else micOn = !micOn;
+    $('mic').classList.toggle('off', !micOn); $('mic').textContent = micOn ? '🎙️' : '🔇';
+  };
   addEventListener('pagehide', cleanup);
   if (!token()) say('Please sign in to Altrobyte first.', true);
   else if (P.get('autostart') === '1') start();

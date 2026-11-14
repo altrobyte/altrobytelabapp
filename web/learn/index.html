@@ -118,6 +118,12 @@
   .foot .muted { flex: 1; font-size: 13px; }
   .strip { flex: none; height: 64px; display: flex; border-top: 1px solid var(--line); }
   .strip iframe { flex: 1; border: 0; }
+  .strip.tall, .focus .strip.tall { height: min(58vh, 460px); }
+  /* Altron beside the lesson on a laptop (14 Nov 2026, learner feedback): the note on the left, Altron and the chat on the right */
+  .lvrow { flex: 1; display: flex; min-height: 0; }
+  .lvrow iframe.note { flex: 1; min-width: 0; height: auto; }
+  .aiside { width: 340px; flex: none; display: flex; border-left: 1px solid var(--line); background: var(--ink2); }
+  .aiside iframe { flex: 1; border: 0; }
   @media (max-width: 900px) { .hide-s { display: none; } }
 
   /* in the Android app the app has its own tabs and sign-in */
@@ -845,9 +851,13 @@
       var nf = main.querySelector('iframe.note');
       if (nf) nf.srcdoc = window.altroTutorPage(it.html_content || '', { slides: true });
       var from = Number(store('altro_part_' + it.id)) || 0;
-      var st = document.createElement('div'); st.className = 'strip';
-      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&strip=1&lang=' + lang + '&compact=1&autostart=1' + (from > 1 ? '&from=' + from : '') + '"></iframe>';
-      main.querySelector('.lv').appendChild(st);
+      // A laptop: Altron in a panel beside the note, with the chat. A phone: the slim strip under it, which opens into the
+      // chat with 💬 (14 Nov 2026, learner feedback).
+      var wide = window.innerWidth >= 900 && nf;
+      var st = document.createElement('div'); st.className = wide ? 'aiside' : 'strip';
+      st.innerHTML = '<iframe allow="microphone; autoplay" src="/live/v2/index.html?note=' + it.id + '&teach=1&' + (wide ? 'side=1' : 'strip=1') + '&lang=' + lang + '&compact=1&autostart=1' + (from > 1 ? '&from=' + from : '') + '"></iframe>';
+      if (wide) { var row = document.createElement('div'); row.className = 'lvrow'; nf.parentNode.insertBefore(row, nf); row.appendChild(nf); row.appendChild(st); }
+      else main.querySelector('.lv').appendChild(st);
       teaching = { strip: st.querySelector('iframe'), note: nf, from: from };
       var gl = document.querySelector('.golive'); if (gl) gl.style.display = 'none';      // it covered Altron's own buttons
       // Focus while Altron teaches (8 Nov 2026, founder: the bars took the space, the lesson got little): the site bar and
@@ -879,6 +889,7 @@
         if (m.type === 'section' && m.part >= 1) { toNote({ show: m.part - 1, bring: true }); if (m.part > 1) store('altro_part_' + it.id, String(m.part)); }
         else if (m.type === 'said') toNote({ said: m.text || '' });
         else if (m.type === 'state' && m.state === 'done') setTimeout(lessonDone, 2500);
+        else if (m.type === 'size') teaching.strip.parentNode.classList.toggle('tall', !!m.tall);
         else if (m.type === 'state' && m.state === 'live' && needs) { toStrip('altronNeeds', needs); }
       } else if (teaching.note && e.source === teaching.note.contentWindow) {
         if (m.needs) { needs = m.needs; toStrip('altronNeeds', needs); }
