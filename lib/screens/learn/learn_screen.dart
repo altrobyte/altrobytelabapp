@@ -103,7 +103,7 @@ class _LearnScreenState extends State<LearnScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(t['active'] == true
-              ? 'Your free week has started: every module and Altron are open for ${t['days_left']} days.'
+              ? 'Your free week has started: Altron is with you for ${t['days_left']} days on the free lessons.'
               : 'Your free week is over. The plans are on the next page.')));
       if (t['active'] != true) context.push('/unlock');
     } catch (_) {
@@ -131,8 +131,8 @@ class _LearnScreenState extends State<LearnScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<TrainingModuleProvider>();
     final byId = {for (final m in p.modules) m.id: m};
-    // In the free week every module is open (the server says so too); otherwise the first five.
-    final free = _inTrial ? p.modules.map((m) => m.id).toSet() : _free(p.modules);
+    // The free week no longer opens modules (14 Nov 2026, founder): the server decides what is open.
+    final free = _free(p.modules);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -177,10 +177,10 @@ class _LearnScreenState extends State<LearnScreen> {
           const SizedBox(height: 8),
           Text(
               _inTrial
-                  ? 'Your free week: ${_trial!['days_left']} days left. Every module, the recorded lectures and Altron, '
-                      'our AI trainer, are open to you, and this week\'s live classes are free.'
-                  : 'Try the whole course free for 7 days: every module, recorded lectures, Altron our AI trainer '
-                      'explaining each lesson by voice, and this week\'s live classes. No payment needed.',
+                  ? 'Your free week: ${_trial!['days_left']} days left with Altron, our AI trainer, on the free lessons. '
+                      'Book your seat (₹999) to open every lesson.'
+                  : 'The first 20 lessons are free. Try Altron, our AI trainer, on them for 7 days. '
+                      'Book your seat (₹999, adjusted in your fee) to open every lesson.',
               style: GoogleFonts.inter(color: Colors.white70, fontSize: 14.5, height: 1.5)),
           const SizedBox(height: 16),
           Wrap(spacing: 10, runSpacing: 10, children: [

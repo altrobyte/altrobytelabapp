@@ -724,10 +724,11 @@
       var hit = allItems().filter(function (n) { return String(n.id) === String(cid); })[0], lt = hit && hit.title ? String(hit.title) : '';
       funnel('lesson_locked', mid + '/' + cid);
       root.querySelector('.lv').innerHTML = '<div class="top"><a class="iconbtn" href="/learn" aria-label="Course">←</a><div class="tt">' + esc(lt || 'Lesson') + '</div></div><div class="pad"><h1>🔒 ' + (lt ? esc(lt) + ' is' : 'This lesson is') + ' for enrolled learners</h1>' +
-        '<p class="muted" style="margin:8px 0 16px">You do not have access to this lesson yet. Ask for it here and our team will see your request. The free notes stay open: find them in the list.</p><div class="row">' +
-        '<button class="btn btn-main" id="askaccess">Request access</button>' +
-        '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing#ai">See the AI plan</a>' +
-        (token() && (!trial || !trial.started) ? '<button class="btn btn-ghost" data-trial>Open everything free for 7 days</button>' : '') + '</div></div>';
+        '<p class="muted" style="margin:8px 0 16px">The first 20 lessons of the roadmap are free. This one and the rest open when you book your seat: ₹999, adjusted in your fee. Every note, recording and experiment, with Altron and live classes.</p><div class="row">' +
+        '<a class="btn btn-main" data-lockseat href="/enroll/program-enrolment?plan=token">Book my seat · ₹999</a>' +
+        '<button class="btn btn-ghost" id="askaccess">Request access</button>' +
+        '<button class="btn btn-ghost" data-golive>Learn Live with Industrial Expert</button><a class="btn btn-ghost" href="/pricing">See plans</a></div></div>';
+      var ls = root.querySelector('[data-lockseat]'); if (ls) ls.addEventListener('click', function () { funnel('meter_seat', 'lock ' + mid + '/' + cid); });
       var aa = document.getElementById('askaccess');
       if (aa) {
         var am = document.createElement('p'); am.className = 'muted'; am.style.cssText = 'margin:10px 0 0;font-size:14px'; aa.closest('.pad').appendChild(am);
