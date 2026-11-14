@@ -378,11 +378,11 @@
     if (c.plan !== 'paid') {
       if (left <= 0) fomo += '<p class="fomo">⛔ Altron has stopped for you. Every note stays free to read, but the teaching, the doubts and the quizzes by voice need a plan.</p>';
       else if (left <= 10) fomo += '<p class="fomo">⚡ Only ' + left + ' minutes left: about one lesson. Don\'t stop halfway.</p>';
-      if (c.seats_left || c.start_label) fomo += '<p class="fomo">🔥 Live batch' + (c.start_label ? ': ' + esc(c.start_label).toLowerCase() : '') + (c.seats_left ? ' · only ' + esc(c.seats_left) + ' seats left' : '') + '. Hold yours for ₹999, adjusted in your fee.</p>';
+      if (c.seats_left || c.start_label) fomo += '<p class="fomo">🔥 Live batch' + (c.start_label ? ': ' + esc(c.start_label).toLowerCase() : '') + (c.seats_left ? ' · only ' + esc(c.seats_left) + ' seats left' : '') + '. Hold yours now.</p>';
     }
     var box = document.createElement('div'); box.id = 'meterbox'; box.className = 'meterbox';
     box.innerHTML = '<h4>' + head + '</h4><div class="gauge"><i style="width:' + pct + '%"></i></div><div style="font-size:13px;color:var(--soft)">' + line + '</div>' + fomo +
-      (c.plan === 'paid' ? '' : '<div class="row"><a class="btn btn-main btn-sm" href="' + esc(c.seat_link || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">Book a live seat · ₹999</a>' +
+      (c.plan === 'paid' ? '' : '<div class="row"><a class="btn btn-main btn-sm" href="' + esc(c.seat_link || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">🔓 Unlock</a>' +
         '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><a class="btn btn-ghost btn-sm" href="/pricing#live" data-mgo="live">Compare plans</a></div>') +
       '<div class="ct">Questions? <a href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I am learning on Altrobyte Lab and have a question about the plans.') + '" target="_blank" rel="noopener">WhatsApp +91 72229 77927</a> · <a href="tel:+917222977927">Call</a> · <a href="mailto:pawan@altrobytelab.com">pawan@altrobytelab.com</a></div>';
     document.body.appendChild(box);
@@ -1014,7 +1014,7 @@
     var lv = document.querySelector('.lv'); if (!lv) return;
     funnel('ai_credit_used', location.pathname);
     var c = document.createElement('div'); c.id = 'aiout'; c.className = 'card'; c.style.cssText = 'margin:10px 12px;flex:none';
-    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="' + esc((credit && credit.seat_link) || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">Book a live seat · ₹999</a>' +
+    c.innerHTML = '<b>' + esc(m.text || 'Your free time with Altron is used.') + '</b><div class="row" style="margin-top:10px"><a class="btn btn-main btn-sm" href="' + esc((credit && credit.seat_link) || '/enroll/program-enrolment?plan=token') + '" data-mgo="seat">🔓 Unlock</a>' +
       '<a class="btn btn-ghost btn-sm" href="/pricing#ai" data-mgo="ai">AI plan · ₹4,999/mo</a><button class="btn btn-ghost btn-sm" data-golive>Learn Live with Industrial Expert</button></div>';
     lv.appendChild(c);
   });
