@@ -192,6 +192,7 @@
   .tp { position: relative; }
   .tpgo { position: absolute; right: 12px; bottom: 12px; padding: 6px 12px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 700; font-size: 13px; }
   .tpgo:hover { filter: brightness(1.1); }
+  .tpgo.lk { background: #fff; color: #0A1220; }
   .tp > button { padding-bottom: 50px; }
   .tp.x .tpgo { top: 12px; bottom: auto; right: 44px; }
   .tp.x > button { padding-bottom: 14px; }
@@ -556,7 +557,9 @@
           var first = open.filter(function (n) { return !done(n.id); })[0] || open[0];
           return '<div class="tp"><button data-tp><span class="tt2">' + esc(T[0]) + '<span class="chev">›</span></span><span class="cn">' + counts(its) + '</span>' +
             (pv ? '<span class="pv">' + esc(pv) + '</span>' : '') + (fin ? '<span class="mini"><i style="width:' + Math.round(fin * 100 / (open.length || 1)) + '%"></i></span>' : '') +
-            '</button>' + (first ? '<a class="tpgo" href="/learn/' + first.m + '/' + first.id + '">▶ ' + (fin ? 'Continue' : 'Start') + '</a>' : '') +
+            '</button>' + (first ? '<a class="tpgo" href="/learn/' + first.m + '/' + first.id + '">▶ ' + (fin ? 'Continue' : 'Start') + '</a>'
+              // a step with nothing open: the way to open it, right on the card (14 Nov 2026, founder)
+              : its.length ? '<a class="tpgo lk" data-mgo="seat" href="/enroll/program-enrolment?plan=token" title="Book your seat (₹999, adjusted in your fee) to open every lesson">🔒 Unlock · ₹999</a>' : '') +
             '<div class="items">' + itemLinks(its) + '</div></div>';
         }).join('') + '</div></section>';
     }).join('');
