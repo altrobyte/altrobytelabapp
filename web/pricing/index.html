@@ -28,7 +28,9 @@
   nav .wrap { display:flex; align-items:center; gap: 22px; height: 66px; }
   .logo { display:flex; align-items:center; gap:10px; font-weight: 800; font-family: "Space Grotesk"; font-size: 19px; } .logo img { width: 30px; height: 30px; border-radius: 8px; }
   .links { display:flex; gap: 22px; margin-left: auto; font-size: 14.5px; color: var(--soft); } .links a:hover { color:#fff; }
-  nav .btn { padding: 10px 18px; font-size: 14px; }
+  nav .btn { padding: 10px 18px; font-size: 14px; white-space: nowrap; }
+  .logo { white-space: nowrap; }
+  @media (max-width: 480px) { nav .wrap { gap: 8px; } .logo { font-size: 16px; gap: 8px; } nav .btn { padding: 8px 12px !important; font-size: 13px; } }
   @media (max-width: 860px) { .links { display:none; } nav .wrap { justify-content: space-between; } }
   header { padding: 70px 0 20px; text-align:center; position: relative; }
   header::before { content:''; position:absolute; inset:0; background: radial-gradient(700px 260px at 50% 0%, rgba(255,106,26,.2), transparent 70%); pointer-events:none; }
@@ -72,7 +74,7 @@
   @media (max-width: 860px) { .paths { grid-template-columns: 1fr; } }
   .path { padding: 28px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); display:flex; flex-direction:column; gap: 10px; }
   .path.live { background: linear-gradient(160deg, #2A1708, var(--panel) 65%); border-color: rgba(255,106,26,.6); }
-  .unl { list-style:none; padding:0; margin: 18px 0 4px; display:grid; gap: 8px; font-size: 16px; max-width: 640px; } .unl li { padding-left: 26px; position: relative; } .unl li::before { content:'🔓'; position:absolute; left:0; font-size: 14px; top: 2px; }
+  .unl { list-style:none; padding:0; margin: 18px auto 4px; text-align: left; display:grid; gap: 8px; font-size: 16px; max-width: 640px; } .unl li { padding-left: 26px; position: relative; } .unl li::before { content:'🔓'; position:absolute; left:0; font-size: 14px; top: 2px; }
   .path h3 { font-size: 24px; } .path p { color: var(--soft); }
   .path ul { list-style:none; padding:0; display:grid; gap: 7px; font-size: 15px; } .path li { padding-left: 24px; position: relative; } .path li::before { content:'✓'; position:absolute; left:0; color: var(--cyan); font-weight:800; }
   .plans3 { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 26px; }
@@ -111,7 +113,7 @@
   <div class="kicker" id="hdK">Plans</div>
   <h1 id="hdH">Become an industry-ready<br>embedded &amp; IoT engineer.</h1>
   <p id="hdP">Start with our free course notes. Go further with Altron, our AI teacher, or with live industrial training from engineers who build products for industry.</p>
-  <ul class="unl" id="hdU" hidden><li>Every lesson of the roadmap: notes, class recordings, experiments and projects</li><li>Altron, the AI teacher, on every lesson</li><li>Live classes with industrial engineers, online or in Indore</li><li>Your own lab kit, mentor reviews and placement help</li></ul>
+  <ul class="unl" id="hdU" hidden><li>Every lesson of the roadmap: notes, class recordings, experiments and projects</li><li>Altron, the AI teacher, on every lesson</li><li>Live classes with industrial engineers, online or in Indore</li><li>Mentor reviews, placement help, and a lab kit add-on</li></ul>
   <div class="jump"><a href="#live">Live with an industrial expert</a><a href="#ai">Learn with AI</a><a href="#proof">Why Altrobyte</a><a href="#labs">Lab kits</a><a href="#teams">Corporate training</a></div>
 </header>
 
@@ -172,7 +174,7 @@
       <span class="badge" style="background:var(--gold)">LIVE · MOST COMPLETE</span>
       <div class="ic">👨‍🏭</div><h3>Learn Live with an Industrial Expert</h3><div class="who">For: a job or a career switch</div>
       <div class="price">₹999<small> to book</small></div><div class="sub">holds your seat, adjusted in your fee</div>
-      <ul><li>Live classes online or at our Indore centre</li><li>Altron AI included for every lesson</li><li>Your own lab kit and real products</li><li>Mentor reviews and placement help</li></ul>
+      <ul><li>Live classes online or at our Indore centre</li><li>Altron AI included for every lesson</li><li>Real products, with a lab kit add-on</li><li>Mentor reviews and placement help</li></ul>
       <a class="btn btn-main" href="/enroll/program-enrolment?plan=token" data-seat>Book my seat · ₹999</a>
       <a class="btn btn-ghost" href="#live" style="margin-top:8px">See batches and plans</a>
     </div>
