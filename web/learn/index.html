@@ -42,7 +42,21 @@
   .bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 16px; background: var(--ink2); border-bottom: 1px solid var(--line); }
   .logo { display: flex; align-items: center; gap: 9px; font-weight: 700; white-space: nowrap; }
   .logo img { width: 26px; height: 26px; border-radius: 7px; }
-  .tabs { display: flex; gap: 4px; margin-left: 10px; }
+  .tabs { display: flex; gap: 4px; margin-left: 10px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { white-space: nowrap; }
+  .wklist { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin: 10px 0 22px; }
+  .wkrow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--panel); }
+  .wkrow:first-child { border-top: 0; }
+  .wkrow .ic { font-size: 18px; }
+  .wkrow .nm { flex: 1; min-width: 0; }
+  .wkrow .nm small { display: block; color: var(--soft); font-size: 12.5px; margin-top: 2px; }
+  .wkrow .ok { color: #3DDC97; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .wkgo { padding: 6px 12px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .wkgo.lk { background: #fff; color: #0A1220; }
+  .handin { flex: none; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--panel); }
+  .handin input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink2); color: var(--text); font: 14px Inter, sans-serif; }
+  .handin a { color: var(--orange); word-break: break-all; }
   .tabs a { padding: 7px 12px; border-radius: 8px; color: var(--soft); font-weight: 600; font-size: 14px; }
   .tabs a.on { background: var(--panel); color: #fff; }
   .bar .r { margin-left: auto; display: flex; gap: 8px; align-items: center; }
@@ -297,8 +311,8 @@
   ];
   var IDS = [5, 4, 10, 9, 8, 6];
   var ALTRON_CLASS = [61, 26, 32, 36, 105, 106, 107];
-  var ICON = { notes: '📄', video: '🎬', code: '💻', test: '📝', github: '🔧', project: '🛠', resource: '📎' };
-  var KIND = { notes: 'Notes', video: 'Video', code: 'Code', test: 'Test', github: 'Project', project: 'Project', resource: 'Resource' };
+  var ICON = { notes: '📄', video: '🎬', code: '💻', test: '📝', github: '🔧', project: '🛠', resource: '📎', assignment: '📋' };
+  var KIND = { notes: 'Notes', video: 'Video', code: 'Code', test: 'Test', github: 'Project', project: 'Project', resource: 'Resource', assignment: 'Assignment' };
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   function token() { try { var v = store('flutter.student_token'); return v ? JSON.parse(v) || '' : ''; } catch (e) { return ''; } }
@@ -433,9 +447,15 @@
   }
   function load() {
     return Promise.all([
-      getJSON('/learn/roadmap').then(function (d) { mods = {}; var order = []; (d.modules || []).forEach(function (m) { mods[m.id] = m; order.push(m.id); }); buildLevels(order); }),
+      getJSON('/learn/roadmap').then(function (d) { mods = {}; var order = []; (d.modules || []).forEach(function (m) { noAsg(m); mods[m.id] = m; order.push(m.id); }); buildLevels(order); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
     ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial, order: ORDER })); });
+  }
+  // Assignments are on the Assignments tab only (15 Nov 2026, founder), never in the course list or its counts.
+  function noAsg(m) {
+    var keep = function (it) { return it.type !== 'assignment'; };
+    m.items = (m.items || []).filter(keep); m.item_count = m.items.length;
+    (m.topics || []).forEach(function (t) { t.subtopics.forEach(function (s) { s.items = s.items.filter(keep); }); t.subtopics = t.subtopics.filter(function (s) { return s.items.length; }); });
   }
   // A lesson and what follows it in its module, up to the next lesson.
   function withExtras(r) {
@@ -456,7 +476,7 @@
   // ── frame ──
   function bar(tab) {
     return '<div class="bar"><a class="logo" href="/"><img src="/icons/Icon-192.png" alt=""><span>Altrobyte Lab</span></a>' +
-      '<nav class="tabs"><a href="/learn"' + (tab === 'course' ? ' class="on"' : '') + '>Course</a><a href="/learn/live"' + (tab === 'live' ? ' class="on"' : '') + '>Live classes</a></nav>' +
+      '<nav class="tabs"><a href="/learn"' + (tab === 'course' ? ' class="on"' : '') + '>Course</a><a href="/learn/live"' + (tab === 'live' ? ' class="on"' : '') + '>Live classes</a><a href="/learn/assignments"' + (tab === 'assignments' ? ' class="on"' : '') + '>Assignments</a><a href="/learn/projects"' + (tab === 'projects' ? ' class="on"' : '') + '>Projects</a></nav>' +
       '<div class="r">' + (token() ? meterChip() : '') + '<a class="btn btn-ghost btn-sm hide-s" href="/roadmap">Syllabus</a>' +
       (token() ? '<details class="acct"><summary class="me" title="My account">👤</summary><div class="menu">' +
         // The rest of the learner's app (profile, tests, tools) is the Flutter app on the same site (31 Oct 2026, founder).
@@ -819,8 +839,9 @@
       '<span class="navs row" style="gap:6px"></span>' +
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
-    if (it.type === 'notes') {
-      body = summary(it.html_content) + '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>';
+    if (it.type === 'notes' || it.type === 'assignment') {
+      body = summary(it.html_content) + '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>' +
+        (it.type === 'assignment' ? '<div class="handin"></div>' : '');
     } else if (yt(it.youtube_url)) {
       body = '<div class="body"><div class="pad"><iframe class="video" src="' + yt(it.youtube_url) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe>' +
         (it.html_content ? '<div style="margin-top:16px">' + it.html_content + '</div>' : '') + '</div></div>';
@@ -936,7 +957,8 @@
         });
       }
     }
-    if (it.type === 'notes') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
+    if (it.type === 'notes' || it.type === 'assignment') root.querySelector('iframe.note').srcdoc = window.altroTutorPage(it.html_content || '', { slides: false });
+    if (it.type === 'assignment') handIn(it);
     var md = document.getElementById('markdone');
     if (md) md.onclick = function () {
       store('altro_done_' + it.id, '1'); funnel('lesson_done', String(it.id));
@@ -955,6 +977,68 @@
       var o; try { o = JSON.parse(e.data); } catch (x) { return; }
       if (o && o.open && /^https?:\/\//.test(o.open)) window.open(o.open, '_blank', 'noopener');
     };
+  }
+
+  // Hand in an assignment (15 Nov 2026, founder): a link to the work; it lands on the learner's CRM lead for the trainer.
+  function handIn(it) {
+    var box = root.querySelector('.handin'); if (!box) return;
+    var paint = function (got, msg) {
+      box.innerHTML = '<b style="flex:1 1 100%;font-size:14px">' + (got ? '✓ Handed in: <a href="' + esc(got.link) + '" target="_blank" rel="noopener">' + esc(got.link) + '</a>' : '📋 Hand in your work') + '</b>' +
+        '<input id="hlink" type="url" inputmode="url" placeholder="Link to your work: https://github.com/you/project" value="' + esc(got ? got.link : '') + '">' +
+        '<input id="hnote" maxlength="1000" placeholder="A note for your trainer (optional)" value="' + esc(got ? got.note : '') + '">' +
+        '<button class="btn btn-main btn-sm" id="hgo">' + (got ? 'Hand in again' : 'Hand in') + '</button>' +
+        '<span class="muted" id="hmsg" style="flex:1 1 100%;font-size:13px">' + esc(msg || (got ? 'Your trainer reviews it. You can hand in a newer link any time.' : 'GitHub, Google Drive or a video link. Make sure it opens for anyone with the link.')) + '</span>';
+      document.getElementById('hgo').onclick = go;
+    };
+    function go() {
+      if (!token()) { signIn(); return; }
+      var link = document.getElementById('hlink').value.trim(), note = document.getElementById('hnote').value.trim(), msg = document.getElementById('hmsg');
+      if (!/^https?:\/\/\S{4,}$/.test(link)) { msg.textContent = 'Paste the full link, starting with https://'; return; }
+      var b = document.getElementById('hgo'); b.disabled = true; b.textContent = 'Sending…';
+      getJSON('/learn/assignment/' + it.module.id + '/' + it.id + '/submit', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ link: link, note: note }) })
+        .then(function () { funnel('assignment_handin', String(it.id)); paint({ link: link, note: note }, 'Handed in ✓ Your trainer will review it.'); })
+        .catch(function (e) {
+          if (e && e.status === 401) { signIn(); return; }
+          b.disabled = false; b.textContent = 'Hand in';
+          msg.textContent = (e && e.status === 400 && typeof e.detail === 'string') ? e.detail : 'Could not send just now. Please try again in a minute.';
+        });
+    }
+    paint(null);
+    if (token()) getJSON('/learn/assignments/mine').then(function (d) { var g = d.submitted && d.submitted[String(it.id)]; if (g) paint(g); }).catch(function () {});
+  }
+
+  // ── /learn/assignments and /learn/projects (15 Nov 2026, founder): every assignment and every project of the course,
+  // section by section, locked or free exactly as on the roadmap.
+  function works(kind) {
+    var A = kind === 'assignments', name = A ? 'Assignments' : 'Projects';
+    document.title = name + ' · Altrobyte Lab';
+    root.innerHTML = bar(kind) + '<div class="pad" style="margin:0 auto;max-width:900px"><h1>' + name + '</h1><div class="skel" style="margin-top:16px"></div><div class="skel"></div></div>';
+    bindOutline();
+    var want = A ? function (t) { return t === 'assignment'; } : function (t) { return t === 'project' || t === 'github'; };
+    Promise.all([getJSON('/learn/roadmap'), A && token() ? getJSON('/learn/assignments/mine').catch(function () { return {}; }) : Promise.resolve({})]).then(function (r) {
+      var sub = r[1].submitted || {}, n = 0, nl = 0, nd = 0, out = '';
+      (r[0].modules || []).forEach(function (m) {
+        var rows = '';
+        (m.topics || []).forEach(function (t) { t.subtopics.forEach(function (s) { s.items.forEach(function (it) {
+          if (!want(it.type)) return;
+          var got = sub[String(it.id)]; n++; if (it.locked) nl++; if (got) nd++;
+          rows += '<div class="wkrow"><span class="ic">' + (it.locked ? '🔒' : ICON[it.type] || '📄') + '</span><span class="nm"><b>' + esc(String(it.title).replace(/^Assignment:\s*/, '')) + '</b><small>' + esc(t.title + ' · ' + s.title) + '</small></span>' +
+            (it.locked ? '<a class="wkgo lk" data-mgo="seat" href="/unlock">🔒 Unlock</a>'
+                       : (got ? '<span class="ok">✓ Handed in</span>' : '') + '<a class="wkgo" href="/learn/' + m.id + '/' + it.id + '">' + (got ? 'View' : 'Open') + '</a>') + '</div>';
+        }); }); });
+        if (rows) out += '<h2>' + esc(m.title) + '</h2><div class="wklist">' + rows + '</div>';
+      });
+      var intro = A ? 'One assignment for every section of the course. Do it after the section\'s notes, then hand in the link to your work: your trainer reviews it.'
+                    : 'The projects of the course, section by section: build them on your board and compare with the reference code.';
+      var stat = n + ' ' + name.toLowerCase() + (A && token() ? ' · ' + nd + ' handed in' : '') + (nl ? ' · ' + nl + ' locked' : '');
+      root.querySelector('.pad').innerHTML = '<h1>' + name + '</h1><p class="muted" style="margin:6px 0 4px">' + intro + '</p><p class="muted" style="font-size:13px;margin-bottom:6px">' + stat + '</p>' +
+        (nl ? '<div class="row" style="margin:10px 0 4px"><a class="btn btn-main btn-sm" data-mgo="seat" href="/unlock">🔓 Unlock</a>' + (token() ? '' : '<button class="btn btn-ghost btn-sm" id="wksign">Sign in</button>') + '</div>' : '') +
+        (out || '<p class="muted">Nothing here yet.</p>');
+      var si = document.getElementById('wksign'); if (si) si.onclick = signIn;
+      root.querySelectorAll('.pad [data-mgo="seat"]').forEach(function (a) { a.addEventListener('click', function () { funnel('meter_seat', kind); }); });
+    }).catch(function () {
+      root.querySelector('.pad').innerHTML = '<h1>Could not load the ' + name.toLowerCase() + '</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a>';
+    });
   }
 
   // ── /learn/live: live classes and recordings ──
@@ -997,6 +1081,7 @@
   var mm = p.match(/^\/learn\/(\d+)\/(\d+)$/);
   if (mm) item(mm[1], mm[2]);
   else if (p === '/learn/live') live();
+  else if (p === '/learn/assignments' || p === '/learn/projects') works(p.slice(7));
   else course();
   checkAdmin();
   loadMeter();

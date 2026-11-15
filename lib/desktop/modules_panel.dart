@@ -92,6 +92,26 @@ class _ModulesPanelState extends State<ModulesPanel> {
 
   List<TrainingModule> _parseList(List raw) => [for (final m in raw) TrainingModule.fromJson(Map<String, dynamic>.from(m as Map))];
 
+  /// A module's lessons without its assignments (15 Nov 2026): learners find and hand in assignments on the website's
+  /// Assignments tab, not in the lesson list.
+  static TrainingModule lessonsOnly(Map raw) {
+    final m = Map<String, dynamic>.from(raw);
+    m['topics'] = [
+      for (final t in (m['topics'] as List? ?? const []))
+        {
+          ...Map<String, dynamic>.from(t as Map),
+          'subtopics': [
+            for (final s in ((t['subtopics'] as List?) ?? const []))
+              {
+                ...Map<String, dynamic>.from(s as Map),
+                'content_items': [for (final c in ((s['content_items'] as List?) ?? const [])) if ((c as Map)['type'] != 'assignment') c],
+              },
+          ],
+        },
+    ];
+    return TrainingModule.fromJson(m);
+  }
+
   void _applyProgress(Map p, int id) {
     _done[id] = {for (final x in (p['completed_item_ids'] as List? ?? const [])) (x as num).toInt()};
     _total[id] = (p['total_items'] as num?)?.toInt() ?? 0;
@@ -116,7 +136,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
             final p = c.read('progress-${m.id}');
             if (p is Map) _applyProgress(p, m.id);
             final d = c.read('module-${m.id}');
-            if (d is Map) _detail[m.id] = TrainingModule.fromJson(Map<String, dynamic>.from(d));
+            if (d is Map) _detail[m.id] = lessonsOnly(d);
           }
           if (mounted) setState(() {});
         } catch (_) {}
@@ -152,7 +172,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
     if (_fresh.contains(m.id)) return;
     try {
       final raw = await ApiService.desktopModule(m.id);
-      _detail[m.id] = TrainingModule.fromJson(raw);
+      _detail[m.id] = lessonsOnly(raw);
       _detailProblem.remove(m.id);
       _fresh.add(m.id);
       _cache?.write('module-${m.id}', raw);
@@ -195,7 +215,7 @@ class _ModulesPanelState extends State<ModulesPanel> {
     });
     try {
       final raw = await ApiService.desktopModule(m.id);
-      _detail[m.id] = TrainingModule.fromJson(raw);
+      _detail[m.id] = lessonsOnly(raw);
       _cache?.write('module-${m.id}', raw);
     } catch (e) {
       _detailProblem[m.id] = modulesProblem(e);

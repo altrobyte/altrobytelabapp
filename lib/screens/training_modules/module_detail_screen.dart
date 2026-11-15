@@ -360,7 +360,20 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(child: SizedBox()),
+                // An assignment (15 Nov 2026, founder): a brief in HTML; learners hand in a link from /learn, and it is
+                // listed only on the Assignments tab.
+                Expanded(
+                  child: _ContentTypeCard(
+                    icon: Icons.assignment_rounded,
+                    label: 'Assignment',
+                    subtitle: 'A task learners hand in (Assignments tab)',
+                    color: const Color(0xFFE65100),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addNotesContent(topicId, subtopic, type: 'assignment');
+                    },
+                  ),
+                ),
                 const SizedBox(width: 12),
                 const Expanded(child: SizedBox()),
               ],
@@ -397,7 +410,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     return parts.join(' > ');
   }
 
-  void _addNotesContent(int topicId, ModuleSubtopic subtopic) async {
+  void _addNotesContent(int topicId, ModuleSubtopic subtopic, {String type = 'notes'}) async {
     final result = await Navigator.push<Map<String, String>>(
       context,
       MaterialPageRoute(
@@ -412,8 +425,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       final item = ContentItem(
         id: 0,
         subtopicId: subtopic.id,
-        type: 'notes',
-        title: result['title'] ?? 'Untitled Notes',
+        type: type,
+        title: result['title'] ?? (type == 'assignment' ? 'Untitled assignment' : 'Untitled Notes'),
         htmlContent: result['html'] ?? '',
         order: subtopic.contentItems.length,
       );
@@ -974,7 +987,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   /// Notes open the full editor; every other type gets a small form for the
   /// fields it actually has (title, plus a link or the code text).
   Future<void> _editContent(int topicId, int subtopicId, ContentItem item, Color color) async {
-    if (item.type == 'notes') {
+    if (item.type == 'notes' || item.type == 'assignment') {
       _editNotesContent(topicId, subtopicId, item);
       return;
     }
@@ -1468,6 +1481,8 @@ class _SubtopicTile extends StatelessWidget {
         return 'GitHub repo';
       case 'project':
         return 'Project task · ${item.resourceUrl ?? 'esp32dev'}';
+      case 'assignment':
+        return 'Assignment';
       default:
         return item.type;
     }
@@ -1489,6 +1504,8 @@ class _SubtopicTile extends StatelessWidget {
         return FontAwesomeIcons.github.data;
       case 'project':
         return Icons.developer_board_rounded;
+      case 'assignment':
+        return Icons.assignment_rounded;
       default:
         return Icons.description_rounded;
     }
@@ -1510,6 +1527,8 @@ class _SubtopicTile extends StatelessWidget {
         return Colors.black87;
       case 'project':
         return const Color(0xFF00897B);
+      case 'assignment':
+        return const Color(0xFFE65100);
       default:
         return Colors.grey;
     }
