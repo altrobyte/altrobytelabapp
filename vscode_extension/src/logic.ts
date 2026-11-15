@@ -135,6 +135,16 @@ export function choosePython(setting: string, bundled: string | null): string {
 
 /** What a link like vscode://altrobytelab.altrobyte-trainer/lab?lab=4 asks for: one experiment (lab=), or, from an older page,
  * a module's first experiment (module=). Null if it is neither. */
+/** vscode://altrobytelab.altrobyte-trainer/project?m=9&c=694: a course project to open in VS Code (15 Nov 2026). */
+export function projectLink(pathname: string, query: string): { module: number; content: number } | null {
+  if (pathname !== '/project') {
+    return null;
+  }
+  const m = /(?:^|&)m=(\d{1,9})(?:&|$)/.exec(query);
+  const c = /(?:^|&)c=(\d{1,9})(?:&|$)/.exec(query);
+  return m && c ? { module: Number(m[1]), content: Number(c[1]) } : null;
+}
+
 export function labLink(pathname: string, query: string): { lab?: number; module?: number } | null {
   if (pathname !== '/lab') {
     return null;

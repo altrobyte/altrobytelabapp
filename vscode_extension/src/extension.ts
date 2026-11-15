@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { HelperClient, HelperError, RunningHelper, connectHelper, helperHome, shutdownHelper } from './helper';
 import * as os from 'node:os';
-import { choosePython, describeError, editorLine, formatAudit, labLink, mapDiagnostics, needsPlatformIO, quizAnswerText, starterFolderPath, visualPage } from './logic';
+import { choosePython, describeError, editorLine, formatAudit, labLink, projectLink, mapDiagnostics, needsPlatformIO, quizAnswerText, starterFolderPath, visualPage } from './logic';
 import { panelHtml } from './panelHtml';
 
 const TOKEN_KEY = 'altrobyte.cloudToken';
@@ -531,6 +531,10 @@ export class Controller implements vscode.WebviewViewProvider {
 
   /** A link from the Altrobyte app ("Start in VS Code"). Anything on the web can open a link, so the learner confirms first. */
   async handleLink(uri: vscode.Uri): Promise<void> {
+    const proj = projectLink(uri.path, uri.query);
+    if (proj) {
+      return this.openProject(proj.module, proj.content);
+    }
     const link = labLink(uri.path, uri.query);
     if (link === null) {
       return;
@@ -540,6 +544,75 @@ export class Controller implements vscode.WebviewViewProvider {
       await vscode.commands.executeCommand('altrobyte.trainer.focus');
       await this.startSession({ labId: link.lab, moduleId: link.module });
     }
+  }
+
+  /** A course project from /learn opens straight in VS Code (15 Nov 2026, founder): the code comes from our server with
+   *  the learner's own sign-in (public or private repo, the lesson's own access), into Documents/Altrobyte/projects. */
+  async openProject(moduleId: number, contentId: number): Promise<void> {
+    if (!(await this.ctx.secrets.get(TOKEN_KEY))) {
+      await this.signIn();
+    }
+    const token = await this.ctx.secrets.get(TOKEN_KEY);
+    if (!token) {
+      return;
+    }
+    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Getting the project…' }, async () => {
+      let res: Response;
+      try {
+        res = await fetch(`${this.apiBase()}/learn/project/${moduleId}/${contentId}/zip`, { headers: { Authorization: `Bearer ${token}` } });
+      } catch {
+        void vscode.window.showErrorMessage('No internet. Connect and open the project again.');
+        return;
+      }
+      if (!res.ok) {
+        const body: any = await res.json().catch(() => ({}));
+        const msg = res.status === 401 ? 'Your sign-in has ended. Sign in again from the Altrobyte panel, then open the project again.'
+          : res.status === 403 ? 'This project is locked for your account. Unlock it on altrobytelab.com.'
+          : typeof body.detail === 'string' ? body.detail : 'Could not get the project just now. Please try again in a minute.';
+        void vscode.window.showErrorMessage(msg);
+        return;
+      }
+      const name = (/filename="([^"]+)\.zip"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'project').replace(/[^A-Za-z0-9_.-]/g, '_');
+      const root = path.join(os.homedir(), 'Documents', 'Altrobyte', 'projects');
+      let dest = path.join(root, name);
+      if (fs.existsSync(dest)) {
+        const pick = await vscode.window.showInformationMessage(`You already have ${name}.`, 'Open mine', 'Get a fresh copy');
+        if (pick === 'Open mine') {
+          await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(dest));
+          return;
+        }
+        if (!pick) {
+          return;
+        }
+        let i = 2;
+        while (fs.existsSync(`${dest}-${i}`)) {
+          i++;
+        }
+        dest = `${dest}-${i}`;
+      }
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'altro-proj-'));
+      const zip = path.join(tmp, 'p.zip');
+      fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
+      const out = path.join(tmp, 'x');
+      fs.mkdirSync(out);
+      const { execFileSync } = await import('node:child_process');
+      try {
+        execFileSync('tar', ['-xf', zip, '-C', out]);          // Windows 10+ and macOS: bsdtar reads zip
+      } catch {
+        try {
+          execFileSync('unzip', ['-q', zip, '-d', out]);       // Linux
+        } catch {
+          void vscode.window.showErrorMessage('Could not unpack the project on this computer.');
+          return;
+        }
+      }
+      const inner = fs.readdirSync(out);
+      const from = inner.length === 1 && fs.statSync(path.join(out, inner[0])).isDirectory() ? path.join(out, inner[0]) : out;
+      fs.mkdirSync(root, { recursive: true });
+      fs.cpSync(from, dest, { recursive: true });
+      fs.rmSync(tmp, { recursive: true, force: true });
+      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(dest));
+    });
   }
 
   async startSession(what: { labId?: number; moduleId?: number; course?: string } = {}): Promise<void> {
