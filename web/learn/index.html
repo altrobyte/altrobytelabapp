@@ -856,10 +856,24 @@
       var link = it.resource_url || '';
       body = '<div class="body"><div class="pad"><h1>' + (ICON[it.type] || '📎') + ' ' + esc(it.title) + '</h1>' +
         (it.html_content ? '<div style="margin:12px 0">' + it.html_content + '</div>' : '<p class="muted" style="margin:8px 0 16px">Build it on your board, then compare with the reference project.</p>') +
-        (link ? projectLinks(link) : '') + '</div></div>';
+        (link ? projectLinks(link) : '') +
+        // The code as a ZIP from our server (15 Nov 2026): works whether the repo is public or private.
+        (it.type === 'github' ? '<div class="row" style="margin-top:10px"><button class="btn btn-ghost" id="dlzip">⬇ Download project (ZIP)</button></div><p class="muted" id="dlmsg" style="font-size:13px;margin-top:6px"></p>' : '') + '</div></div>';
     }
     main.innerHTML = '<div class="lv">' + top + body + '</div>';
     var sh = document.getElementById('share'); if (sh) sh.onclick = function () { shareLesson(it.title, sh); };
+    var dz = document.getElementById('dlzip');
+    if (dz) dz.onclick = function () {
+      var msg = document.getElementById('dlmsg'); dz.disabled = true; dz.textContent = 'Preparing…'; funnel('project_zip', String(it.id));
+      fetch(API + '/learn/project/' + it.module.id + '/' + it.id + '/zip', { headers: hdr() }).then(function (r) {
+        if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw Object.assign(j, { status: r.status }); });
+        var name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'project.zip';
+        return r.blob().then(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); msg.textContent = 'Downloaded ' + name + '. Unzip it and open the folder in VS Code.'; });
+      }).catch(function (e) {
+        if (e && e.status === 401) { signIn(); return; }
+        msg.textContent = (e && typeof e.detail === 'string') ? e.detail : 'Could not download just now. Please try again in a minute.';
+      }).then(function () { dz.disabled = false; dz.textContent = '⬇ Download project (ZIP)'; });
+    };
     // Learn with AI: a lesson with a tested board class (the same list as LESSON_CLASS on the server) opens it; any other
     // note opens the Altron strip under it, the one testers had. Nothing starts until the learner taps.
     var ai = document.getElementById('learnai');
