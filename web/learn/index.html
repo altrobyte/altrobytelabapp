@@ -413,11 +413,8 @@
   // A course project opens straight in the learner's VS Code (15 Nov 2026, founder): the Altrobyte Trainer extension
   // fetches it from our server with the learner's sign-in, so it works for public and private repos alike.
   function openLinks(it, link) {
-    var m = /^https?:\/\/github\.com\/([^\/?#]+)\/([^\/?#]+)(.*)$/.exec(link || '');
-    var web = m ? 'https://vscode.dev/github/' + m[1] + '/' + m[2].replace(/\.git$/, '') + m[3].replace(/\.git$/, '') : '';
     return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
-      '<a class="btn btn-main" href="vscode://altrobytelab.altrobyte-trainer/project?m=' + it.module.id + '&c=' + it.id + '">Open in VS Code</a>' +
-      (web ? '<a class="btn btn-ghost" href="' + esc(web) + '" target="_blank" rel="noopener">Open in the browser</a>' : '') + '</div>' +
+      '<a class="btn btn-main" href="vscode://altrobytelab.altrobyte-trainer/project?m=' + it.module.id + '&c=' + it.id + '">Open in VS Code</a></div>' +
       '<p class="muted" style="font-size:13px;margin-top:10px">"Open in VS Code" puts the project in Documents/Altrobyte/projects and opens it, ready to build with PlatformIO or ESP-IDF. It needs the Altrobyte Trainer extension in VS Code, signed in with your WhatsApp number: <a href="/downloads/altrobyte-trainer-win32-x64.vsix">get the extension</a> (VS Code → Extensions → ⋯ → Install from VSIX).</p>';
   }
   // A GitHub project opens in VS Code (founder, 31 Oct 2026): vscode.dev in the browser, or cloned into VS Code on the laptop.
@@ -877,7 +874,7 @@
       var msg = document.getElementById('dlmsg'); dz.disabled = true; dz.textContent = 'Preparing…'; funnel('project_zip', String(it.id));
       fetch(API + '/learn/project/' + it.module.id + '/' + it.id + '/zip', { headers: hdr() }).then(function (r) {
         if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw Object.assign(j, { status: r.status }); });
-        var name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'project.zip';
+        var name = ((r.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/) || [])[1] || ((/github\.com\/[^\/]+\/([^\/?#]+)/.exec(it.resource_url || '') || [])[1] || 'project').replace(/\.git$/, '') + '.zip';
         return r.blob().then(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); msg.textContent = 'Downloaded ' + name + '. Unzip it and open the folder in VS Code.'; });
       }).catch(function (e) {
         if (e && e.status === 401) { signIn(); return; }
