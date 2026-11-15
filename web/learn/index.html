@@ -763,10 +763,10 @@
   }
   // Share a lesson (12 Nov 2026, founder: every lesson can be shared with a candidate; whoever has access opens it, the
   // rest ask us on WhatsApp). The link is the lesson's own address: the server decides who may open it, as before.
-  function shareLesson(title, btn) {
-    var url = location.origin + location.pathname;
+  function shareLesson(title, btn, link) {
+    var url = link || (location.origin + location.pathname);
     var text = '"' + title + '" on Altrobyte Lab. If it is locked for you, tap Request access on the page.';
-    funnel('lesson_share', location.pathname);
+    funnel('lesson_share', url.replace(location.origin, ''));
     if (navigator.share) { navigator.share({ title: title + ' · Altrobyte Lab', text: text, url: url }).catch(function () {}); return; }
     var old = document.getElementById('sharebox'); if (old) { old.remove(); return; }
     var box = document.createElement('div'); box.id = 'sharebox'; box.className = 'meterbox';
@@ -1021,20 +1021,26 @@
         var rows = '';
         (m.topics || []).forEach(function (t) { t.subtopics.forEach(function (s) { s.items.forEach(function (it) {
           if (!want(it.type)) return;
-          var got = sub[String(it.id)]; n++; if (it.locked) nl++; if (got) nd++;
+          var got = A ? sub[String(it.id)] : (done(it.id) ? { link: '' } : null); n++; if (it.locked) nl++; if (got) nd++;
+          var url = location.origin + '/learn/' + m.id + '/' + it.id;
           rows += '<div class="wkrow"><span class="ic">' + (it.locked ? '🔒' : ICON[it.type] || '📄') + '</span><span class="nm"><b>' + esc(String(it.title).replace(/^Assignment:\s*/, '')) + '</b><small>' + esc(t.title + ' · ' + s.title) + '</small></span>' +
             (it.locked ? '<a class="wkgo lk" data-mgo="seat" href="/unlock">🔒 Unlock</a>'
-                       : (got ? '<span class="ok">✓ Handed in</span>' : '') + '<a class="wkgo" href="/learn/' + m.id + '/' + it.id + '">' + (got ? 'View' : 'Open') + '</a>') + '</div>';
+                       : (got ? '<span class="ok">✓ ' + (A ? 'Handed in' : 'Done') + '</span>' : '') + '<a class="wkgo" href="/learn/' + m.id + '/' + it.id + '">' + (got ? 'View' : 'Open') + '</a>') +
+            '<button class="iconbtn wksh" title="Share" aria-label="Share" data-t="' + esc(it.title) + '" data-u="' + esc(url) + '">⤴</button></div>';
         }); }); });
         if (rows) out += '<h2>' + esc(m.title) + '</h2><div class="wklist">' + rows + '</div>';
       });
       var intro = A ? 'One assignment for every section of the course. Do it after the section\'s notes, then hand in the link to your work: your trainer reviews it.'
                     : 'The projects of the course, section by section: build them on your board and compare with the reference code.';
-      var stat = n + ' ' + name.toLowerCase() + (A && token() ? ' · ' + nd + ' handed in' : '') + (nl ? ' · ' + nl + ' locked' : '');
-      root.querySelector('.pad').innerHTML = '<h1>' + name + '</h1><p class="muted" style="margin:6px 0 4px">' + intro + '</p><p class="muted" style="font-size:13px;margin-bottom:6px">' + stat + '</p>' +
+      var stat = n + ' ' + name.toLowerCase() + (nl ? ' · ' + nl + ' locked' : '');
+      var pct = n ? Math.round(100 * nd / n) : 0;
+      var prog = '<div style="margin:12px 0 4px"><div style="display:flex;justify-content:space-between;font-size:13.5px"><b>' + nd + ' of ' + n + ' ' + (A ? 'handed in' : 'done') + '</b><span class="muted">' + pct + '%</span></div>' +
+        '<div style="height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:' + pct + '%;background:var(--orange)"></i></div></div>';
+      root.querySelector('.pad').innerHTML = '<h1>' + name + '</h1><p class="muted" style="margin:6px 0 4px">' + intro + '</p><p class="muted" style="font-size:13px;margin-bottom:6px">' + stat + '</p>' + (token() ? prog : '') +
         (nl ? '<div class="row" style="margin:10px 0 4px"><a class="btn btn-main btn-sm" data-mgo="seat" href="/unlock">🔓 Unlock</a>' + (token() ? '' : '<button class="btn btn-ghost btn-sm" id="wksign">Sign in</button>') + '</div>' : '') +
         (out || '<p class="muted">Nothing here yet.</p>');
       var si = document.getElementById('wksign'); if (si) si.onclick = signIn;
+      root.querySelectorAll('.wksh').forEach(function (b) { b.onclick = function () { shareLesson(b.dataset.t, b, b.dataset.u); }; });
       root.querySelectorAll('.pad [data-mgo="seat"]').forEach(function (a) { a.addEventListener('click', function () { funnel('meter_seat', kind); }); });
     }).catch(function () {
       root.querySelector('.pad').innerHTML = '<h1>Could not load the ' + name.toLowerCase() + '</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a>';
