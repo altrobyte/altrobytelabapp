@@ -134,7 +134,7 @@
 </div></section>
 
 <section id="live"><div class="wrap">
-  <div class="reveal"><div class="kicker">Live with an industrial expert</div><h2>Three plans, one roadmap</h2><p class="lead">Each plan covers more of the roadmap. Fees depend on the batch and the mode; message us and we send the exact fee and the next start date.</p></div>
+  <div class="reveal"><div class="kicker">Three plans · pay month by month · join any time</div><h2>Pro, Premium or Elite</h2><p class="lead">The live classes run in a loop: Embedded → Advanced Embedded → IIoT → AIoT. Join in any week; you start your own path at the beginning with Altron and the recordings, and join the live class running now. Prices are per month, + 18% GST. Add a lab kit to any plan.</p></div>
   <div class="plans3" id="plans3"></div>
   <div id="batches" style="scroll-margin-top:90px">
     <h3 style="margin-top:40px;font-size:22px">Batches and live classes you can join</h3>
@@ -155,10 +155,10 @@
     </div>
     <div class="card best reveal">
       <span class="badge">LEARN WITH AI</span>
-      <div class="ic">🎙</div><h3>Self-paced with Altron AI</h3><div class="who">For: learning on your own time</div>
-      <div class="price">₹4,999<small> /month</small></div><div class="sub">+ GST</div>
+      <div class="ic">🎙</div><h3>Pro · Learn with Altron AI</h3><div class="who">For: learning on your own time</div>
+      <div class="price">₹1,999<small> /month</small></div><div class="sub">+ GST</div>
       <ul><li>Altron teaches every lesson by voice</li><li>Class recordings unlocked</li><li>One live class every week</li><li>GitHub projects and a certificate</li></ul>
-      <a class="btn btn-main" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20the%20self-paced%20plan%20with%20Altron%20AI.">Get the AI plan</a>
+      <a class="btn btn-main" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20the%20Pro%20plan%20(%E2%82%B91%2C999%20a%20month)%20with%20Altron%20AI.">Get Pro</a>
     </div>
     <div class="card reveal">
       <div class="ic">🧰</div><h3>Add a lab at home</h3><div class="who">For: doing every lesson on real hardware</div>
@@ -242,9 +242,10 @@
   <div class="reveal"><div class="kicker">Questions</div><h2>Before you join</h2></div>
   <details><summary>Are the notes really free?</summary><p>Yes. Every note on the roadmap is free to read, with a short summary. Class recordings unlock with a paid plan.</p></details>
   <details><summary>What does a live plan cost?</summary><p>It depends on the plan, the batch and whether you join online or at our Indore centre. Message us on WhatsApp and we send the exact fee and the next start date. EMI is available.</p></details>
-  <details><summary>What is the ₹999 seat booking?</summary><p>It holds your seat in the next live batch, and it counts towards your fee.</p></details>
+  <details><summary>What is the ₹999 seat booking?</summary><p>It holds your seat in the live loop, and it counts towards your first month.</p></details>
   <details><summary>Can I see a class before I pay?</summary><p>Yes. Join a free live demo class from the batches above, and try Altron on any lesson.</p></details>
-  <details><summary>Is GST included?</summary><p>Self-paced is ₹4,999 + 18% GST a month. We send a GST invoice for every payment.</p></details>
+  <details><summary>Is GST included?</summary><p>No: every plan is + 18% GST. Pro ₹1,999, Premium ₹7,800, Elite ₹12,800 a month, + GST. We send the payment link each month on WhatsApp, with a GST invoice.</p></details>
+  <details><summary>When can I join?</summary><p>Any time. The live classes run in a loop (Embedded → Advanced Embedded → IIoT → AIoT), so there is no batch to wait for.</p></details>
 </div></section>
 
 <div class="wrap"><div class="final reveal">
@@ -269,21 +270,26 @@
   var API = 'https://edu.altrobytelab.com';
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   // The three live plans, the same as the roadmap page (web/admissions).
+  // Pro, Premium and Elite, month by month (15 Nov 2026, founder): no fixed 3-month plans; the live classes run in a loop
+  // anyone joins any time; a lab kit is an add-on to any plan.
   var PLANS = [
-    { n: 1, name: 'Self-Paced + Live Mentorship', months: '3 months', mode: 'Online, self-paced', for: 'Learn at your own pace with Altron, plus live mentor sessions for doubts and reviews.', inc: '',
-      f: ['Embedded Systems: Embedded C, GPIO, sensors, FreeRTOS, Wi-Fi', 'PCB design in KiCad, assembly and enclosure', 'Industrial IoT: MQTT, cloud dashboard, AWS IoT Core, OTA', 'Altron AI teacher for every lesson', 'Live mentorship', 'Placement assistance'] },
-    { n: 2, name: 'Live Industrial Training', months: '3 months', mode: 'Live classes', for: 'Live classes with a trainer, your own lab kit, and industrial control on STM32.', inc: 'Everything in Plan 1, plus',
-      f: ['Lab set-up kit, free', 'Live classes with a trainer', 'Advanced Embedded: STM32, FreeRTOS advanced, GDB, testing', 'Advanced IIoT: Modbus, CAN, HMI dashboard', 'BLE and IoT security'] },
-    { n: 3, name: 'Live Engineering Program', months: '4 months', mode: 'Live classes', top: true, for: 'The complete roadmap, edge AI, your own developer lab and an internship.', inc: 'Everything in Plan 2, plus',
-      f: ['Edge AI: computer vision, object detection, AI on IoT data', 'Developer lab set-up', '6-month internship certificate'] }
+    { name: 'Pro', tag: 'Learn with Altron AI', price: '1,999', for: 'Learn on your own time with Altron, the AI teacher.', inc: '',
+      f: ['Every lesson of the roadmap: notes, recordings, experiments', 'Altron teaches every lesson by voice', 'Every assignment and project, with reviews of your hand-ins', 'Certificate'] },
+    { name: 'Premium', tag: 'Live loop with an industrial expert', price: '7,800', top: true, for: 'Live classes with engineers who build for industry, online or in Indore.', inc: 'Everything in Pro, plus',
+      f: ['Live classes in the loop: Embedded → Advanced Embedded → IIoT → AIoT', 'Live projects and doubt support', 'Mentor reviews', 'Placement assistance'] },
+    { name: 'Elite', tag: 'Everything, with the most support', price: '12,800', for: 'For a job or a career switch, with the most personal help.', inc: 'Everything in Premium, plus',
+      f: ['Edge AI: computer vision, object detection, AI on IoT data', '6-month internship certificate'] }
   ];
   document.getElementById('plans3').innerHTML = PLANS.map(function (p) {
-    return '<div class="card' + (p.top ? ' best' : '') + '">' + (p.top ? '<span class="badge">ALL INCLUSIVE</span>' : '') +
-      '<div class="num">Plan ' + p.n + '</div><h3>' + esc(p.name) + '</h3><div class="meta"><span>' + p.months + '</span><span>' + p.mode + '</span></div>' +
+    return '<div class="card' + (p.top ? ' best' : '') + '">' + (p.top ? '<span class="badge">MOST PICKED</span>' : '') +
+      '<div class="num">' + esc(p.tag) + '</div><h3>' + esc(p.name) + '</h3>' +
+      '<div class="price" style="margin:6px 0 2px">₹' + p.price + '<small> /month</small></div><div class="sub" style="margin-bottom:8px">+ GST · join any time</div>' +
       '<div class="who">' + esc(p.for) + '</div>' + (p.inc ? '<div class="inc">' + p.inc + '</div>' : '') +
       '<ul>' + p.f.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
-      '<div class="sub" style="margin:0 0 10px"><b style="color:#fff">Contact for pricing</b> · seat ₹999</div>' +
-      '<a class="btn ' + (p.top ? 'btn-main' : 'btn-ghost') + '" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want the fees and next batch for Plan ' + p.n + ': ' + p.name + '.') + '">Ask fees and next batch</a></div>';
+      '<div class="sub" style="margin:0 0 10px">+ Lab kit add-on, any plan · <a href="/kits">see kits</a></div>' +
+      (p.name === 'Pro' ? '<a class="btn btn-ghost" href="https://wa.me/917222977927?text=' + encodeURIComponent('Hi, I want the Pro plan (₹1,999 a month).') + '">Get Pro</a>'
+        : '<a class="btn ' + (p.top ? 'btn-main' : 'btn-ghost') + '" href="/enroll/program-enrolment?plan=token" data-seat>Book my seat · ₹999</a>' +
+          '<div class="sub" style="margin-top:6px">₹999 counts towards your first month</div>') + '</div>';
   }).join('');
 
   // Batches: published live classes still open to join (a future date, a repeating class, or open registration).
