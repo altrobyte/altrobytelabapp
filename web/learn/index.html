@@ -847,7 +847,8 @@
       (document.fullscreenEnabled ? '<button class="iconbtn hide-s" id="fs" title="Full screen">⛶</button>' : '') + '</div>';
     var body;
     if (it.type === 'notes' || it.type === 'assignment') {
-      body = summary(it.html_content) + '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>' +
+      // No 'In this lesson' strip above the note (16 Nov 2026, founder: it took space for nothing; the note has its own headings).
+      body = '<iframe class="note" sandbox="allow-scripts allow-popups allow-forms" title="Lesson"></iframe>' +
         (it.type === 'assignment' ? '<div class="handin"></div>' : '');
     } else if (yt(it.youtube_url)) {
       body = '<div class="body"><div class="pad"><iframe class="video" src="' + yt(it.youtube_url) + '" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe>' +
