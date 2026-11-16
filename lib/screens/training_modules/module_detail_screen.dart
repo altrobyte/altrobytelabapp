@@ -1,3 +1,5 @@
+import 'dart:convert';
+import '../../utils/file_download.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1574,6 +1576,19 @@ class _SubtopicTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Download a note or an assignment as its HTML file (16 Nov 2026, founder).
+                if ((item.type == 'notes' || item.type == 'assignment') && (item.htmlContent ?? '').isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.download_rounded, size: 17),
+                    color: Colors.grey,
+                    tooltip: 'Download',
+                    onPressed: () => downloadBytes(
+                      '${item.title.replaceAll(RegExp(r'[^A-Za-z0-9 _.-]+'), '').trim().replaceAll(' ', '_')}.html',
+                      utf8.encode(item.htmlContent!),
+                      mime: 'text/html',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
                 IconButton(
                   icon: const Icon(Icons.drive_file_move, size: 17),
                   color: Colors.grey,
