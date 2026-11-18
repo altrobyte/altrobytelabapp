@@ -31,6 +31,11 @@
   .quote { border-left: 3px solid var(--orange); padding: 2px 0 2px 14px; color: var(--soft); margin: 16px 0; }
   .cta { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin: 28px 0 40px; }
   .muted { color: var(--soft); }
+  form label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  form input, form select, form textarea { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: #0F1B2E; color: var(--text); font: 15px Inter, sans-serif; }
+  form .chk { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; }
+  form .chk input { width: 18px; height: 18px; flex: none; margin-top: 3px; }
+  button.btn { border: 0; cursor: pointer; font: 600 15px Inter, sans-serif; padding: 12px 22px; margin-top: 18px; }
 </style>
 </head>
 <body>
@@ -44,6 +49,41 @@
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function day(d) { return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
   var cta = '<div class="cta"><b>Build your own at Altrobyte Lab</b><p class="muted" style="margin:4px 0 12px;font-size:14.5px">Embedded systems and IoT, from your first ESP32 to industrial products: live classes in Indore and online, or with Altron, our AI teacher.</p><a class="btn btn-main" href="/learn">Start free</a> <a class="btn btn-ghost" href="/pricing">See plans</a></div>';
+  // The shareable form (18 Nov 2026, founder: "a link to share; they fill it and submit").
+  if (/^\/work\/submit\/?$/.test(location.pathname)) {
+    document.title = 'Submit your assignment · Altrobyte Lab';
+    app.innerHTML = '<h1>Submit your assignment</h1><p class="lead">Your mentor reviews it. With your permission, it goes on altrobytelab.com/work: a public page to share on LinkedIn.</p>' +
+      '<form id="f"><label>Your name</label><input name="name" required maxlength="80" autocomplete="name">' +
+      '<label>WhatsApp number</label><input name="phone" required inputmode="tel" maxlength="20" placeholder="98xxxxxxxx">' +
+      '<label>Assignment</label><select name="title" required><option value="">Loading the assignments…</option></select>' +
+      '<input name="other" maxlength="200" placeholder="Name of the assignment" style="display:none;margin-top:8px">' +
+      '<label>Mentor</label><input name="mentor" maxlength="80" value="Pawan Meena">' +
+      '<label>Link to your work</label><input name="link" required type="url" placeholder="https://github.com/you/project">' +
+      '<label>What did you learn? (2-3 lines)</label><textarea name="learned" rows="3" maxlength="1000"></textarea>' +
+      '<label class="chk"><input type="checkbox" name="consent"> Show my work with my name on altrobytelab.com/work</label>' +
+      '<button class="btn btn-main" type="submit">Submit</button><p class="muted" id="msg" style="margin-top:10px"></p></form>';
+    var f = document.getElementById('f'), E = f.elements, sel = E.title;
+    fetch(API + '/learn/roadmap').then(function (r) { return r.json(); }).then(function (d) {
+      var opts = '<option value="">Choose…</option>';
+      (d.modules || []).forEach(function (m) { (m.items || []).forEach(function (it) { if (it.type === 'assignment') opts += '<option>' + esc(String(it.title).replace(/^Assignment:\s*/, '')) + '</option>'; }); });
+      sel.innerHTML = opts + '<option value="__other">Other</option>';
+    }).catch(function () { sel.innerHTML = '<option value="__other">Other</option>'; E.other.style.display = 'block'; });
+    sel.onchange = function () { E.other.style.display = sel.value === '__other' ? 'block' : 'none'; };
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var msg = document.getElementById('msg'), b = f.querySelector('button');
+      var title = sel.value === '__other' ? E.other.value.trim() : sel.value;
+      if (!title) { msg.textContent = 'Choose the assignment.'; return; }
+      b.disabled = true; b.textContent = 'Sending…';
+      fetch(API + '/work/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        name: E.name.value.trim(), phone: E.phone.value.trim(), title: title, mentor: E.mentor.value.trim(), link: E.link.value.trim(),
+        learned: E.learned.value.trim(), consent: E.consent.checked }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+        .then(function () { app.innerHTML = '<h1>Submitted ✓</h1><p class="lead">Thank you! Your mentor will review your work. Once it is published, you will find it on <a href="/work" style="color:var(--orange)">altrobytelab.com/work</a>.</p>' + cta; })
+        .catch(function (j) { b.disabled = false; b.textContent = 'Submit'; msg.textContent = (j && typeof j.detail === 'string') ? j.detail : 'Could not send just now. Please try again in a minute.'; });
+    };
+    return;
+  }
   var slug = (location.pathname.match(/^\/work\/([a-z0-9-]+)\/?$/) || [])[1];
   function fail() { app.innerHTML = '<h1>Student work</h1><p class="lead">Could not load this just now. Please try again.</p><a class="btn btn-ghost" href="/work">All student work</a>'; }
   if (slug) {
