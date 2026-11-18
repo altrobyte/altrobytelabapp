@@ -52,10 +52,15 @@
   // The shareable form (18 Nov 2026, founder: "a link to share; they fill it and submit").
   if (/^\/work\/submit\/?$/.test(location.pathname)) {
     document.title = 'Submit your assignment · Altrobyte Lab';
+    // Only signed-in learners submit (18 Nov 2026, founder); their name and number come from the sign-in.
+    var tok = ''; try { tok = JSON.parse(localStorage.getItem('flutter.student_token') || '""') || ''; } catch (x) {}
+    if (!tok) {
+      app.innerHTML = '<h1>Submit your assignment</h1><p class="lead">Sign in with your WhatsApp number first, then come back to this page.</p>' +
+        '<a class="btn btn-main" href="/signin?next=' + encodeURIComponent('/work/submit') + '">Sign in with WhatsApp</a>';
+      return;
+    }
     app.innerHTML = '<h1>Submit your assignment</h1><p class="lead">Your mentor reviews it. With your permission, it goes on altrobytelab.com/work: a public page to share on LinkedIn.</p>' +
-      '<form id="f"><label>Your name</label><input name="name" required maxlength="80" autocomplete="name">' +
-      '<label>WhatsApp number</label><input name="phone" required inputmode="tel" maxlength="20" placeholder="98xxxxxxxx">' +
-      '<label>Assignment</label><select name="title" required><option value="">Loading the assignments…</option></select>' +
+      '<form id="f"><label>Assignment</label><select name="title" required><option value="">Loading the assignments…</option></select>' +
       '<input name="other" maxlength="200" placeholder="Name of the assignment" style="display:none;margin-top:8px">' +
       '<label>Mentor</label><input name="mentor" maxlength="80" value="Pawan Meena">' +
       '<label>Link to your work</label><input name="link" required type="url" placeholder="https://github.com/you/project">' +
@@ -75,12 +80,12 @@
       var title = sel.value === '__other' ? E.other.value.trim() : sel.value;
       if (!title) { msg.textContent = 'Choose the assignment.'; return; }
       b.disabled = true; b.textContent = 'Sending…';
-      fetch(API + '/work/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        name: E.name.value.trim(), phone: E.phone.value.trim(), title: title, mentor: E.mentor.value.trim(), link: E.link.value.trim(),
+      fetch(API + '/work/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({
+        name: '', title: title, mentor: E.mentor.value.trim(), link: E.link.value.trim(),
         learned: E.learned.value.trim(), consent: E.consent.checked }) })
-        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw Object.assign(j, { status: r.status }); return j; }); })
         .then(function () { app.innerHTML = '<h1>Submitted ✓</h1><p class="lead">Thank you! Your mentor will review your work. Once it is published, you will find it on <a href="/work" style="color:var(--orange)">altrobytelab.com/work</a>.</p>' + cta; })
-        .catch(function (j) { b.disabled = false; b.textContent = 'Submit'; msg.textContent = (j && typeof j.detail === 'string') ? j.detail : 'Could not send just now. Please try again in a minute.'; });
+        .catch(function (j) { if (j && j.status === 401) { location.href = '/signin?next=' + encodeURIComponent('/work/submit'); return; } b.disabled = false; b.textContent = 'Submit'; msg.textContent = (j && typeof j.detail === 'string') ? j.detail : 'Could not send just now. Please try again in a minute.'; });
     };
     return;
   }
