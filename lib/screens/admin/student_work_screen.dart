@@ -153,6 +153,7 @@ class _StudentWorkScreenState extends State<StudentWorkScreen> {
             if (status == 'published') ...[
               OutlinedButton(onPressed: () => launchUrl(Uri.parse('https://altrobytelab.com/work/${w['slug']}')), child: const Text('View')),
               const SizedBox(width: 8),
+              TextButton(onPressed: busy ? null : () => _act(w, 'rewrite'), child: Text(busy ? 'Writing…' : 'Rewrite')),
               TextButton(onPressed: busy ? null : () => _act(w, 'hide'), child: const Text('Hide')),
             ],
           ]),
