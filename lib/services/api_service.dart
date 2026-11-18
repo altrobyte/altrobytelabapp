@@ -1068,6 +1068,22 @@ class ApiService {
   }
 
   // The founder's task list, shared with Jarvis (14 Nov 2026).
+  // Student work in public (18 Nov 2026): hand-ins, Publish / Hide, and a hand-in added by the team.
+  static Future<Map<String, dynamic>> studentWork() async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/admin/student-work'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<Map<String, dynamic>> studentWorkAct(int id, String what) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/student-work/$id/$what'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<Map<String, dynamic>> studentWorkAdd(Map<String, dynamic> work) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/admin/student-work'), headers: _headers(prefs.getString('token')), body: jsonEncode(work)));
+  }
+
   static Future<Map<String, dynamic>> founderTasks(String status) async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/founder/tasks?status=$status'), headers: _headers(prefs.getString('token'))));

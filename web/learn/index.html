@@ -1007,7 +1007,10 @@
     var paint = function (got, msg) {
       box.innerHTML = '<b style="flex:1 1 100%;font-size:14px">' + (got ? '✓ Handed in: <a href="' + esc(got.link) + '" target="_blank" rel="noopener">' + esc(got.link) + '</a>' : '📋 Hand in your work') + '</b>' +
         '<input id="hlink" type="url" inputmode="url" placeholder="Link to your work: https://github.com/you/project" value="' + esc(got ? got.link : '') + '">' +
-        '<input id="hnote" maxlength="1000" placeholder="A note for your trainer (optional)" value="' + esc(got ? got.note : '') + '">' +
+        '<input id="hnote" maxlength="1000" placeholder="What did you learn? (2-3 lines)" value="' + esc(got ? got.note : '') + '">' +
+        '<input id="hmentor" maxlength="80" placeholder="Mentor" value="' + esc((got && got.mentor) || 'Pawan Meena') + '" style="flex:0 1 180px">' +
+        // Shown in public by name only when the learner ticks this (18 Nov 2026); otherwise as "A learner", with no link.
+        '<label style="flex:1 1 100%;font-size:13.5px;display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="hconsent"' + (got && got.consent ? ' checked' : '') + ' style="flex:none;width:18px;height:18px"> Show my work with my name on altrobytelab.com/work: a public page to share on LinkedIn</label>' +
         '<button class="btn btn-main btn-sm" id="hgo">' + (got ? 'Hand in again' : 'Hand in') + '</button>' +
         '<span class="muted" id="hmsg" style="flex:1 1 100%;font-size:13px">' + esc(msg || (got ? 'Your trainer reviews it. You can hand in a newer link any time.' : 'GitHub, Google Drive or a video link. Make sure it opens for anyone with the link.')) + '</span>';
       document.getElementById('hgo').onclick = go;
@@ -1017,8 +1020,8 @@
       var link = document.getElementById('hlink').value.trim(), note = document.getElementById('hnote').value.trim(), msg = document.getElementById('hmsg');
       if (!/^https?:\/\/\S{4,}$/.test(link)) { msg.textContent = 'Paste the full link, starting with https://'; return; }
       var b = document.getElementById('hgo'); b.disabled = true; b.textContent = 'Sending…';
-      getJSON('/learn/assignment/' + it.module.id + '/' + it.id + '/submit', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ link: link, note: note }) })
-        .then(function () { funnel('assignment_handin', String(it.id)); paint({ link: link, note: note }, 'Handed in ✓ Your trainer will review it.'); })
+      getJSON('/learn/assignment/' + it.module.id + '/' + it.id + '/submit', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr()), body: JSON.stringify({ link: link, note: note, mentor: document.getElementById('hmentor').value.trim(), consent: document.getElementById('hconsent').checked }) })
+        .then(function () { funnel('assignment_handin', String(it.id)); paint({ link: link, note: note, mentor: document.getElementById('hmentor').value.trim(), consent: document.getElementById('hconsent').checked }, 'Handed in ✓ Your mentor reviews it, then it can appear on altrobytelab.com/work.'); })
         .catch(function (e) {
           if (e && e.status === 401) { signIn(); return; }
           b.disabled = false; b.textContent = 'Hand in';

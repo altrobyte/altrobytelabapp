@@ -23,6 +23,11 @@
         "destination": "/admissions/index.html"
       },
       {
+        "//": "Student work in public (18 Nov 2026): /work lists it, /work/<slug> is one post.",
+        "source": "/work{,/**}",
+        "destination": "/work/index.html"
+      },
+      {
         "//": "The full pricing is a static page (30 Oct 2026, founder); /unlock, where the app sends people, shows it too on a fresh load.",
         "source": "/@(pricing|unlock|plans)",
         "destination": "/pricing/index.html"
