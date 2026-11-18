@@ -54,6 +54,7 @@
   .wkrow .ok { color: #3DDC97; font-size: 13px; font-weight: 600; white-space: nowrap; }
   .wkgo { padding: 6px 12px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 700; font-size: 13px; white-space: nowrap; }
   .wkgo.lk { background: #fff; color: #0A1220; }
+  body.has-handin .golive { display: none !important; }
   .handin { flex: none; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--panel); }
   .handin input { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink2); color: var(--text); font: 14px Inter, sans-serif; }
   .handin a { color: var(--orange); word-break: break-all; }
@@ -454,9 +455,16 @@
   }
   function load() {
     return Promise.all([
-      getJSON('/learn/roadmap').then(function (d) { mods = {}; var order = []; (d.modules || []).forEach(function (m) { noAsg(m); mods[m.id] = m; order.push(m.id); }); buildLevels(order); }),
+      getJSON('/learn/roadmap').then(function (d) { warmWorks(d); mods = {}; var order = []; (d.modules || []).forEach(function (m) { noAsg(m); mods[m.id] = m; order.push(m.id); }); buildLevels(order); }),
       token() ? getJSON('/trial/me').then(function (t) { trial = t; }).catch(function () { trial = null; }) : Promise.resolve()
     ]).then(function () { store(cacheKey(), JSON.stringify({ mods: mods, trial: trial, order: ORDER })); });
+  }
+  // The Assignments and Projects tabs open at once the first time too: the course page leaves them its roadmap.
+  function warmWorks(d) {
+    try {
+      var raw = JSON.stringify([d, {}]);
+      ['assignments', 'projects'].forEach(function (k) { var key = 'altro_works_' + k + '_' + String(token()).slice(-12); if (!store(key)) store(key, raw); });
+    } catch (x) {}
   }
   // Assignments are on the Assignments tab only (15 Nov 2026, founder), never in the course list or its counts.
   function noAsg(m) {
@@ -1004,6 +1012,7 @@
   // Hand in an assignment (15 Nov 2026, founder): a link to the work; it lands on the learner's CRM lead for the trainer.
   function handIn(it) {
     var box = root.querySelector('.handin'); if (!box) return;
+    document.body.classList.add('has-handin');      // the floating Learn Live button covered the form (18 Nov 2026)
     var paint = function (got, msg) {
       box.innerHTML = '<b style="flex:1 1 100%;font-size:14px">' + (got ? '✓ Handed in: <a href="' + esc(got.link) + '" target="_blank" rel="noopener">' + esc(got.link) + '</a>' : '📋 Hand in your work') + '</b>' +
         '<input id="hlink" type="url" inputmode="url" placeholder="Link to your work: https://github.com/you/project" value="' + esc(got ? got.link : '') + '">' +
@@ -1040,7 +1049,7 @@
     root.innerHTML = bar(kind) + '<div class="pad" style="margin:0 auto;max-width:900px"><h1>' + name + '</h1><div class="skel" style="margin-top:16px"></div><div class="skel"></div></div>';
     bindOutline();
     var want = A ? function (t) { return t === 'assignment'; } : function (t) { return t === 'project' || t === 'github'; };
-    Promise.all([getJSON('/learn/roadmap'), A && token() ? getJSON('/learn/assignments/mine').catch(function () { return {}; }) : Promise.resolve({})]).then(function (r) {
+    var paint = function (r) {
       var sub = r[1].submitted || {}, n = 0, nl = 0, nd = 0, out = '';
       (r[0].modules || []).forEach(function (m) {
         var rows = '';
@@ -1067,7 +1076,16 @@
       var si = document.getElementById('wksign'); if (si) si.onclick = signIn;
       root.querySelectorAll('.wksh').forEach(function (b) { b.onclick = function () { shareLesson(b.dataset.t, b, b.dataset.u); }; });
       root.querySelectorAll('.pad [data-mgo="seat"]').forEach(function (a) { a.addEventListener('click', function () { funnel('meter_seat', kind); }); });
+    };
+    // Drawn at once from the last visit, then refreshed (18 Nov 2026, founder: the list took seconds to load).
+    var KEYR = 'altro_works_' + kind + '_' + String(token()).slice(-12), c0 = null;
+    try { c0 = JSON.parse(store(KEYR) || 'null'); } catch (x) {}
+    if (c0) paint(c0);
+    Promise.all([getJSON('/learn/roadmap'), A && token() ? getJSON('/learn/assignments/mine').catch(function () { return {}; }) : Promise.resolve({})]).then(function (r) {
+      try { store(KEYR, JSON.stringify(r)); } catch (x) {}
+      paint(r);
     }).catch(function () {
+      if (c0) return;
       root.querySelector('.pad').innerHTML = '<h1>Could not load the ' + name.toLowerCase() + '</h1><p class="muted" style="margin:6px 0 14px">Check the internet and try again.</p><a class="btn btn-main" href="">Try again</a>';
     });
   }
