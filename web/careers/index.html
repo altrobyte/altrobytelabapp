@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Careers · Altrobyte Lab</title>
-<meta name="description" content="Internships in IoT and embedded systems at Altrobyte Automation, Indore: build real industrial products with ESP32, STM32, MQTT and the cloud.">
+<meta name="description" content="IoT & Embedded Systems Internship at Altrobyte Automation, Indore: 2 positions, ₹5,000–7,000 stipend, work from office on real industrial products.">
 <link rel="canonical" href="https://altrobytelab.com/careers">
 <link rel="icon" href="/icons/Icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,82 +38,45 @@
   <h1>Careers at Altrobyte</h1>
   <p class="lead">Altrobyte Automation builds IoT and embedded products for industry, and trains engineers at Altrobyte Lab. Join us and work on real products from day one.</p>
 
-  <div class="card" id="iot">
-    <h2>IoT Intern</h2>
-    <div class="tags"><span>Internship</span><span>Indore</span><span>ESP32 · MQTT · Python · Cloud</span></div>
+  <div class="card" id="intern">
+    <h2>IoT &amp; Embedded Systems Intern</h2>
+    <div class="tags"><span>2 positions</span><span>Stipend ₹5,000 – 7,000 / month</span><span>Work from office · Indore</span></div>
     <h3>What you will do</h3>
     <ul>
-      <li>Connect ESP32 devices to MQTT brokers and the cloud (AWS IoT Core) for our industrial monitoring products</li>
+      <li>Write firmware in Embedded C with ESP-IDF and STM32 for our industrial products</li>
+      <li>Bring up sensors and peripherals: ADC, PWM, I2C, SPI, UART, CAN, RS485/Modbus, with FreeRTOS</li>
+      <li>Connect devices to MQTT and the cloud (AWS IoT Core), with Wi-Fi provisioning and OTA updates</li>
       <li>Build Python backends and live dashboards for machine data</li>
-      <li>Set up Wi-Fi provisioning, OTA updates and device security</li>
-      <li>Test devices on the bench and at customer plants, and write the documentation</li>
+      <li>Test and debug boards on the bench and at customer plants, and write the documentation</li>
     </ul>
     <h3>You should know</h3>
     <ul>
-      <li>Basics of C/C++ and Python</li>
-      <li>How Wi-Fi, HTTP and MQTT work; you have sent data from a board to a server at least once</li>
+      <li>Embedded C and basic Python</li>
+      <li>You have programmed an ESP32, STM32 or Arduino and sent data from a board to a server at least once</li>
+      <li>Basic electronics: Ohm's law, pull-ups, reading a schematic and a datasheet</li>
       <li>Git and GitHub</li>
-      <li>Good to have: AWS IoT, Node-RED or Grafana, Linux on a Raspberry Pi</li>
+      <li>Good to have: FreeRTOS, MQTT, AWS IoT, KiCad, Linux on a Raspberry Pi</li>
     </ul>
-    <a class="btn btn-main" href="#apply" data-role="IoT Intern" style="margin-top:12px">Apply for IoT Intern</a>
-  </div>
-
-  <div class="card" id="embedded">
-    <h2>Embedded Systems Intern</h2>
-    <div class="tags"><span>Internship</span><span>Indore</span><span>Embedded C · ESP-IDF · STM32 · FreeRTOS</span></div>
-    <h3>What you will do</h3>
+    <h3>Benefits</h3>
     <ul>
-      <li>Write firmware in Embedded C with ESP-IDF and STM32 HAL for our products</li>
-      <li>Bring up sensors and peripherals: ADC, PWM, I2C, SPI, UART, CAN, RS485/Modbus</li>
-      <li>Use FreeRTOS tasks, queues and interrupts in real projects</li>
-      <li>Debug boards with a multimeter, logic analyser and debugger, and help with PCB bring-up</li>
+      <li>Monthly stipend of ₹5,000 – 7,000</li>
+      <li>Work on real industrial IoT products, not dummy projects</li>
+      <li>Mentorship from engineers who ship products for industry</li>
+      <li>Full access to the Altrobyte Lab courses and Altron, the AI teacher</li>
+      <li>Our embedded and IoT lab, boards and tools at the office</li>
+      <li>Internship certificate</li>
     </ul>
-    <h3>You should know</h3>
-    <ul>
-      <li>Embedded C: pointers, structs, bit manipulation</li>
-      <li>You have programmed an ESP32, STM32 or Arduino and read a datasheet</li>
-      <li>Basic electronics: Ohm's law, pull-ups, reading a schematic</li>
-      <li>Good to have: FreeRTOS, KiCad, oscilloscope use</li>
-    </ul>
-    <a class="btn btn-main" href="#apply" data-role="Embedded Systems Intern" style="margin-top:12px">Apply for Embedded Systems Intern</a>
+    <h3>Where</h3>
+    <p style="margin:4px 0 0">Work from office: <b>Altrobyte Automation, 5th Floor, Gravity Mall, Mechanic Nagar, Indore 452010</b></p>
   </div>
 
   <div class="card" id="apply" style="scroll-margin-top:80px">
     <h2>Apply</h2>
-    <p class="muted" style="margin:4px 0 0;font-size:14.5px">We read every application and call the ones that fit.</p>
-    <form id="f">
-      <label>Role</label><select name="role"><option>IoT Intern</option><option>Embedded Systems Intern</option><option>Other job or internship</option></select>
-      <label>Your name</label><input name="name" required maxlength="80" autocomplete="name">
-      <label>WhatsApp number</label><input name="phone" required inputmode="tel" maxlength="20" placeholder="+91 98xxxxxxxx">
-      <label>Email</label><input name="email" type="email" maxlength="120" autocomplete="email">
-      <label>College / company, and year</label><input name="college" maxlength="120" placeholder="e.g. SGSITS Indore, final year">
-      <label>Your best work: GitHub, LinkedIn or resume link</label><input name="link" type="url" maxlength="300" placeholder="https://github.com/you">
-      <label>Why you, in 2-3 lines</label><textarea name="why" rows="3" maxlength="800"></textarea>
-      <button class="btn btn-main" type="submit" style="margin-top:18px">Send application</button>
-      <p class="muted" id="msg" style="margin-top:10px"></p>
-    </form>
+    <p class="muted" style="margin:4px 0 14px;font-size:14.5px">Send your resume (PDF) on WhatsApp with your name, college and year. Add your GitHub or a project you built, if you have one. We call the ones that fit.</p>
+    <a class="btn btn-main" href="https://wa.me/917222977927?text=Hi%2C%20I%20want%20to%20apply%20for%20the%20IoT%20%26%20Embedded%20Systems%20Internship.%20My%20resume%20is%20attached.%20Name%3A%20%20%7C%20College%20%26%20year%3A%20" target="_blank" rel="noopener">📄 Send resume on WhatsApp</a>
+    <p class="muted" style="font-size:13.5px;margin:10px 0 0">WhatsApp: +91 72229 77927</p>
   </div>
   <p class="muted" style="font-size:14px;margin:0 0 40px">Questions? <a href="https://wa.me/917222977927" style="color:var(--orange)">WhatsApp us</a>.</p>
 </main>
-<script>
-(function () {
-  // Careers (19 Nov 2026, founder): two internships and an application that lands in the CRM as a lead (source "careers").
-  var f = document.getElementById('f'), E = f.elements;
-  document.querySelectorAll('[data-role]').forEach(function (a) { a.addEventListener('click', function () { E.role.value = a.dataset.role; }); });
-  f.onsubmit = function (e) {
-    e.preventDefault();
-    var msg = document.getElementById('msg'), b = f.querySelector('button');
-    var digits = E.phone.value.replace(/\D/g, '');
-    if (digits.length < 10) { msg.textContent = 'Enter your WhatsApp number.'; return; }
-    b.disabled = true; b.textContent = 'Sending…';
-    var note = 'Application: ' + E.role.value + ' | ' + E.college.value.trim() + ' | ' + E.link.value.trim() + ' | ' + E.why.value.trim();
-    fetch('https://edu.altrobytelab.com/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      name: E.name.value.trim(), phone: digits.length === 10 ? '91' + digits : digits, email: E.email.value.trim(),
-      segment: 'career', plan: E.role.value, note: note.slice(0, 1500), source: 'careers' }) })
-      .then(function (r) { if (!r.ok) throw r; f.innerHTML = '<p style="font-size:17px;margin-top:14px"><b>Application sent ✓</b> Thank you! We will reach you on WhatsApp if your profile fits.</p>'; })
-      .catch(function () { b.disabled = false; b.textContent = 'Send application'; msg.textContent = 'Could not send just now. Please try again, or WhatsApp us.'; });
-  };
-})();
-</script>
 </body>
 </html>
