@@ -1067,6 +1067,22 @@ class ApiService {
         headers: _headers(prefs.getString('token')), body: jsonEncode(catalog)));
   }
 
+  // The founder's task list, shared with Jarvis (14 Nov 2026).
+  static Future<Map<String, dynamic>> founderTasks(String status) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/founder/tasks?status=$status'), headers: _headers(prefs.getString('token'))));
+  }
+
+  static Future<Map<String, dynamic>> founderTaskAdd(Map<String, dynamic> task) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.post(Uri.parse('${ApiConstants.baseUrl}/founder/tasks'), headers: _headers(prefs.getString('token')), body: jsonEncode(task)));
+  }
+
+  static Future<Map<String, dynamic>> founderTaskPatch(int id, Map<String, dynamic> change) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _parse(await http.patch(Uri.parse('${ApiConstants.baseUrl}/founder/tasks/$id'), headers: _headers(prefs.getString('token')), body: jsonEncode(change)));
+  }
+
   static Future<Map<String, dynamic>> crmAuto() async {
     final prefs = await SharedPreferences.getInstance();
     return _parse(await http.get(Uri.parse('${ApiConstants.baseUrl}/crm/auto'), headers: _headers(prefs.getString('token'))));
