@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'bulk_screen.dart';
 import 'caller_api.dart';
 import 'caller_controller.dart';
 
@@ -103,7 +104,8 @@ class _WhatsAppScreenState extends State<WhatsAppScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Stack(children: [
+      Container(
       color: Colors.white,
       child: Column(children: [
         // Today, in one thin line.
@@ -186,13 +188,31 @@ class _WhatsAppScreenState extends State<WhatsAppScreen> {
                               Padding(padding: EdgeInsets.all(32), child: Text('No chats here.', textAlign: TextAlign.center, style: TextStyle(color: _grey))),
                             ])
                           : ListView.builder(
+                              padding: const EdgeInsets.only(bottom: 88),
                               itemCount: _chats!.length,
                               itemBuilder: (context, i) => _ChatRow(_chats![i], onTap: () => _open(_chats![i])),
                             ),
                     ),
         ),
       ]),
-    );
+    ),
+      // One message to many leads (20 Nov 2026, founder).
+      Positioned(
+        right: 16,
+        bottom: 16,
+        child: FloatingActionButton.extended(
+          heroTag: 'bulk',
+          backgroundColor: const Color(0xFF008069),
+          foregroundColor: Colors.white,
+          onPressed: () async {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BulkScreen()));
+            _load(quiet: true);
+          },
+          icon: const Icon(Icons.campaign_rounded),
+          label: const Text('Bulk message'),
+        ),
+      ),
+    ]);
   }
 }
 

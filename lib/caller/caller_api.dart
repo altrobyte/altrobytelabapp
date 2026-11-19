@@ -177,6 +177,16 @@ class CallerApi {
 
   Future<void> quickWa(String phone, String kind) => _send('POST', '/crm/leads/$phone/quick-wa', {'kind': kind});
 
+  // ── bulk WhatsApp (crm_bulk.py; owner and admins) ──
+  Future<Map<String, dynamic>> bulk(List<String> phones, String text, {DateTime? sendAt}) async =>
+      ((await _send('POST', '/crm/bulk', {'phones': phones, 'text': text, if (sendAt != null) 'send_at': sendAt.toUtc().toIso8601String()},
+              const Duration(seconds: 60))) as Map)
+          .cast<String, dynamic>();
+
+  Future<List<Map<String, dynamic>>> bulkJobs() async => _maps(await _send('GET', '/crm/bulk/jobs'), 'jobs');
+
+  Future<void> bulkCancel(int id) => _send('DELETE', '/crm/bulk/jobs/$id');
+
   // ── team leads ──
   Future<Map<String, dynamic>> teamStats(int days) async =>
       ((await _send('GET', '/crm/team-stats?days=$days')) as Map).cast<String, dynamic>();
