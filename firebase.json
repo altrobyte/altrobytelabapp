@@ -23,6 +23,11 @@
         "destination": "/admissions/index.html"
       },
       {
+        "//": "Careers: internships and the application (19 Nov 2026).",
+        "source": "/careers",
+        "destination": "/careers/index.html"
+      },
+      {
         "//": "Student work in public (18 Nov 2026): /work lists it, /work/<slug> is one post.",
         "source": "/work{,/**}",
         "destination": "/work/index.html"
