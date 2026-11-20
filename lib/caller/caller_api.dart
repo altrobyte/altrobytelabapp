@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../constants/api_constants.dart';
 
@@ -186,6 +187,49 @@ class CallerApi {
   Future<List<Map<String, dynamic>>> bulkJobs() async => _maps(await _send('GET', '/crm/bulk/jobs'), 'jobs');
 
   Future<void> bulkCancel(int id) => _send('DELETE', '/crm/bulk/jobs/$id');
+
+  // ── templates and campaigns (crm_campaigns.py) ──
+  Future<List<Map<String, dynamic>>> waTemplates() async => _maps(await _send('GET', '/crm/wa-templates', null, const Duration(seconds: 40)), 'templates');
+
+  Future<void> deleteTemplate(String name) => _send('DELETE', '/crm/wa-templates/${Uri.encodeComponent(name)}');
+
+  /// A form with an optional file, sent once to the host that answered last.
+  Future<Map<String, dynamic>> _multipart(String path, Map<String, String> fields, {List<int>? bytes, String? filename, String field = 'file'}) async {
+    final req = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))..fields.addAll(fields);
+    if (token != null && token!.isNotEmpty) req.headers['Authorization'] = 'Bearer $token';
+    if (bytes != null) req.files.add(http.MultipartFile.fromBytes(field, bytes, filename: filename ?? 'file', contentType: _mime(filename ?? '')));
+    try {
+      final res = await http.Response.fromStream(await _client.send(req).timeout(const Duration(seconds: 120)));
+      return ((_read(res) as Map?) ?? const {}).cast<String, dynamic>();
+    } on CallerError {
+      rethrow;
+    } catch (_) {
+      throw const CallerError('Could not upload just now. Check the internet and try again.');
+    }
+  }
+
+  static MediaType? _mime(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return MediaType('image', 'jpeg');
+    if (n.endsWith('.png')) return MediaType('image', 'png');
+    if (n.endsWith('.pdf')) return MediaType('application', 'pdf');
+    if (n.endsWith('.mp4')) return MediaType('video', 'mp4');
+    return null;
+  }
+
+  Future<Map<String, dynamic>> createTemplate(Map<String, String> fields, {List<int>? sample, String? sampleName}) =>
+      _multipart('/crm/wa-templates', fields, bytes: sample, filename: sampleName, field: 'sample');
+
+  Future<Map<String, dynamic>> campaignMedia(List<int> bytes, String filename) => _multipart('/crm/campaign-media', const {}, bytes: bytes, filename: filename);
+
+  Future<Map<String, dynamic>> campaign(Map<String, dynamic> body) async =>
+      ((await _send('POST', '/crm/campaigns', body, const Duration(seconds: 60))) as Map).cast<String, dynamic>();
+
+  Future<List<Map<String, dynamic>>> campaigns() async => _maps(await _send('GET', '/crm/campaigns'), 'campaigns');
+
+  Future<Map<String, dynamic>> campaignOne(int id) async => ((await _send('GET', '/crm/campaigns/$id')) as Map).cast<String, dynamic>();
+
+  Future<void> campaignCancel(int id) => _send('DELETE', '/crm/campaigns/$id');
 
   // ── team leads ──
   Future<Map<String, dynamic>> teamStats(int days) async =>
